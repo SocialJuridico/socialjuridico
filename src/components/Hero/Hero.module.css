@@ -2,24 +2,24 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   text-align: center;
-  padding: 100px 24px;
+  padding: 80px 20px;
   position: relative;
   overflow: hidden;
-  min-height: 80vh;
+  /* Degrade de cima (Preto profundo) para baixo (Marrom extremamente escuro) */
+  background: linear-gradient(120deg, var(--color-black) 20%, rgba(255, 255, 255) 180%);
 }
 
-/* Subtle circular glow behind the hero for a premium dark mode texture */
+/* Brilho circular Dourado ainda mais suave no centro, como um feixe de luz clássico */
 .heroSection::before {
   content: '';
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 700px;
-  height: 700px;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.08) 0%, rgba(26, 26, 26, 0) 70%);
+  width: 900px;
+  height: 900px;
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.05) 0%, rgba(26, 26, 26, 0) 65%);
   z-index: 0;
   border-radius: 50%;
   pointer-events: none;
@@ -31,7 +31,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  max-width: 800px;
+  max-width: 900px;
 }
 
 .badge {
@@ -61,10 +61,11 @@
 .title {
   font-size: 4rem;
   font-weight: 800;
-  line-height: 1.1;
+  line-height: 1.9;
   color: var(--color-white);
   margin-bottom: 24px;
   letter-spacing: -1.5px;
+  
 }
 
 .highlight {

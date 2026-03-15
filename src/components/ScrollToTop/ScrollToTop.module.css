@@ -1,0 +1,44 @@
+.scrollToTopBtn {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: var(--color-gold);
+  color: var(--color-black);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 9999; /* Fica acima de quase tudo */
+}
+
+/* Quando visível (classe condicional do JS) */
+.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.scrollToTopBtn:hover {
+  background-color: var(--color-white);
+  color: var(--color-gold);
+  transform: translateY(-4px); /* Pulinho charmoso ao focar com mouse */
+  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4); /* Brilho dourado atrás */
+}
+
+@media (max-width: 600px) {
+  .scrollToTopBtn {
+    bottom: 24px;
+    right: 24px;
+    width: 44px;
+    height: 44px;
+  }
+}

@@ -3,7 +3,7 @@ import styles from './Differences.module.css';
 
 export default function Differences() {
   return (
-    <section className={styles.section}>
+    <section id="diferenciais" className={styles.section}>
       <div className={styles.header}>
         <h2 className={styles.title}>
           Por que o <span className={styles.titleHighlight}>SocialJurídico</span> é diferente?

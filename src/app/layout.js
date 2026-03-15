@@ -16,18 +16,18 @@ export const metadata = {
   description: "A sua plataforma jurídica de confiança.",
 };
 
-import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <Header />
         <main>
           {children}
         </main>
         <Footer />
+        <ScrollToTop />
       </body>
     </html>
   );

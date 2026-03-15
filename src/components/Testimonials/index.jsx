@@ -43,7 +43,7 @@ export default function Testimonials() {
   }, []);
 
   return (
-    <section className={styles.section}>
+    <section id="depoimentos" className={styles.section}>
       <h2 className={styles.title}>O que dizem nossos usuários</h2>
 
       <div className={styles.carouselContainer}>

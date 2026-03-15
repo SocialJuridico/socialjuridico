@@ -4,7 +4,7 @@ import styles from './HowItWorks.module.css';
 
 export default function HowItWorks() {
   return (
-    <section className={styles.section}>
+    <section id="como-funciona" className={styles.section}>
       <div className={styles.header}>
         <span className={styles.badge}>Passo a Passo</span>
         <h2 className={styles.title}>Como funciona na prática?</h2>

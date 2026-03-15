@@ -1,12 +1,23 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Paleta Oficial SocialJurídico */
+  --color-gold: #D4AF37;
+  --color-gold-dark: #b5952f;
+  --color-black: #1A1A1A;
+  --color-black-light: #2a2a2a;
+  --color-brown: #5C4033;
+  --color-brown-dark: #3b2820;
+  --color-silver: #E0E0E0;
+  --color-silver-dark: #C0C0C0;
+  --color-white: #FFFFFF;
+
+  --background: var(--color-black);
+  --foreground: var(--color-silver);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--color-black);
+    --foreground: var(--color-silver);
   }
 }
 

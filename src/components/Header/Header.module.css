@@ -1,0 +1,79 @@
+.headerWrapper {
+  width: 100%;
+  background-color: var(--color-black-light);
+  border-top: 4px solid var(--color-brown); /* Detalhe Marrom superior */
+  border-bottom: 1px solid var(--color-black); /* Linha divisória */
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.headerContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.logoIconBox {
+  background-color: #D4AF37; /* Fundo Dourado da logomarca */
+  color: #1A1A1A; /* Ícone Preto */
+  width: 44px;
+  height: 44px;
+  border-radius: 12px; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoText {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-white); /* Branco do texto */
+  letter-spacing: -0.5px;
+}
+
+/* Oculta navegação no mobile e exibe apenas a partir de tablet */
+.nav {
+  display: none; 
+}
+
+@media (min-width: 768px) {
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+}
+
+.navLink {
+  text-decoration: none;
+  color: var(--color-silver); /* Prata */
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.navLink:hover {
+  color: #D4AF37; /* Muda para dourado ao passar o mouse */
+}
+
+.loginAction {
+  display: flex;
+  align-items: center;
+}
+
+/* Estilo arredondado (pílula) para o botão do Header para ficar idêntico à imagem */
+.loginButton {
+  border-radius: 9999px !important; 
+  padding: 10px 28px !important;
+}

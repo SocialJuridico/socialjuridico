@@ -1,0 +1,53 @@
+.button {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+}
+
+/* Variante Principal: Dourado com texto Preto */
+.primary {
+  background-color: #D4AF37; /* Dourado */
+  color: #1A1A1A; /* Preto */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.primary:hover {
+  background-color: #b5952f;
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Variante Secundária: Preto com detalhes Dourados */
+.secondary {
+  background-color: #1A1A1A; /* Preto */
+  color: #D4AF37; /* Dourado */
+  border: 1px solid #D4AF37;
+}
+
+.secondary:hover {
+  background-color: #2a2a2a;
+}
+
+/* Variante Terciária: Prata/Cinza com texto escuro */
+.silver {
+  background-color: #E0E0E0; /* Prata claro */
+  color: #333333;
+}
+
+.silver:hover {
+  background-color: #C0C0C0; /* Prata mais escuro */
+}
+
+/* Variante Marrom */
+.brown {
+  background-color: #5C4033; /* Marrom escuro */
+  color: #F5DEB3; /* Tom claro/dourado suave para contraste */
+}
+
+.brown:hover {
+  background-color: #3b2820;
+}

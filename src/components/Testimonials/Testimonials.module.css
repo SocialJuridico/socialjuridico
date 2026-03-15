@@ -1,0 +1,154 @@
+.section {
+  padding: 100px 24px;
+  background-color: var(--color-black-light); /* Alternando para gerar contraste com a seção anterior */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 64px;
+  text-align: center;
+  letter-spacing: -1px;
+}
+
+.carouselContainer {
+  position: relative;
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cardsWrapper {
+  position: relative;
+  width: 100%;
+  min-height: 280px; /* Garante que a altura não fique pulando */
+  display: flex;
+  justify-content: center;
+}
+
+.card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background-color: var(--color-black);
+  border: 1px solid rgba(212, 175, 55, 0.2); /* Borda dourada sutil */
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(20px) scale(0.95);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 0;
+}
+
+.cardActive {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  z-index: 10;
+  position: relative; /* Para ocupar o espaço na DOM e dar altura ao wrapper */
+}
+
+.quoteIcon {
+  position: absolute;
+  top: 32px;
+  right: 32px;
+  color: rgba(212, 175, 55, 0.1); /* Dourado quase transparente de fundo */
+}
+
+.stars {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+.starIcon {
+  color: var(--color-gold);
+  fill: var(--color-gold);
+}
+
+.text {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--color-silver);
+  font-style: italic;
+  margin-bottom: 32px;
+  font-weight: 300;
+}
+
+.authorRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: auto; /* Empurra pra baixo se o texto for curto */
+}
+
+.avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-white);
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.authorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.authorName {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+.authorRole {
+  font-size: 0.85rem;
+  color: var(--color-silver-dark);
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 40px;
+}
+
+.dot {
+  width: 40px;
+  height: 6px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.4s ease, width 0.4s ease;
+}
+
+.dotActive {
+  background-color: var(--color-gold);
+  width: 60px; /* Adiciona um charme: o dot ativo fica mais largo */
+}
+
+@media (max-width: 600px) {
+  .text {
+    font-size: 1rem;
+  }
+  .card {
+    padding: 24px;
+  }
+}

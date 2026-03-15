@@ -3,6 +3,9 @@ import Features from "@/components/Features";
 import Differences from "@/components/Differences";
 import HowItWorks from "@/components/HowItWorks";
 import Community from "@/components/Community";
+import Testimonials from "@/components/Testimonials";
+import FAQ from "@/components/FAQ";
+import CTA from "@/components/CTA";
 
 export default function Home() {
   return (
@@ -12,6 +15,9 @@ export default function Home() {
       <Differences />
       <HowItWorks />
       <Community />
+      <Testimonials />
+      <FAQ />
+      <CTA />
     </>
   );
 }

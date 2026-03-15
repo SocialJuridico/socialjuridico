@@ -1,0 +1,178 @@
+.section {
+  padding: 100px 24px;
+  background-color: var(--color-black);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.header {
+  text-align: center;
+  max-width: 800px;
+  margin-bottom: 64px;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+}
+
+.titleHighlight {
+  color: var(--color-gold);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--color-silver-dark);
+}
+
+.cardsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 1000px;
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .cardsContainer {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+/* --- Card Tradicional --- */
+.cardTraditional {
+  flex: 1;
+  background-color: rgba(255, 255, 255, 0.03); /* Fundo quase imperceptível */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  padding: 40px 32px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.cardTraditional:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.cardTraditionalHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #888888; /* Cinza chumbo/apagado */
+  margin-bottom: 32px;
+}
+
+.listTraditional {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.listItemTraditional {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: #999999;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.iconX {
+  color: #EF4444; /* Vermelho suave para os 'X' */
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* --- Card SocialJurídico --- */
+.cardPremium {
+  flex: 1;
+  background: linear-gradient(145deg, var(--color-black-light) 0%, rgba(92, 64, 51, 0.4) 100%);
+  border: 2px solid var(--color-gold);
+  border-radius: 16px;
+  padding: 40px 32px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(212, 175, 55, 0.15); /* Brilho dourado */
+  position: relative;
+  transform: scale(1);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+}
+
+.cardPremium:hover {
+  transform: scale(1.02);
+  box-shadow: 0 15px 50px rgba(212, 175, 55, 0.35); /* Glow dourado muito maior */
+}
+
+@media (min-width: 900px) {
+  .cardPremium {
+    transform: scale(1.05); /* Deixa o card do SJ levemente maior/em destaque */
+    z-index: 10;
+  }
+  .cardPremium:hover {
+    transform: scale(1.08); /* Salta ainda mais pro usuário no Desktop */
+  }
+}
+
+.cardPremiumHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Para colocar a Tag "O FUTURO" */
+  margin-bottom: 32px;
+}
+
+.premiumTitleWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-gold);
+}
+
+.tagFuturo {
+  background-color: var(--color-gold);
+  color: var(--color-black);
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.listPremium {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.listItemPremium {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--color-silver);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.iconCheck {
+  color: var(--color-gold); 
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.itemHeading {
+  font-weight: 700;
+  color: var(--color-white);
+}

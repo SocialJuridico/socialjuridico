@@ -1,0 +1,85 @@
+.featuresSection {
+  background-color: var(--color-black-light); /* Preto um pouco mais claro para destacar do Hero */
+  border-top: 1px solid rgba(212, 175, 55, 0.15); /* Linha sutil dourada no topo */
+  border-bottom: 1px solid rgba(212, 175, 55, 0.15); /* Linha sutil dourada embaixo */
+  padding: 40px 0;
+  width: 100%;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 32px;
+  padding: 0 24px;
+}
+
+/* Responsivo para Tablet */
+@media (min-width: 768px) {
+  .container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Responsivo para Desktop (Fica em 1 linha, igual na imagem) */
+@media (min-width: 1024px) {
+  .container {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0; /* Remove o gap para usar bordas divisórias */
+  }
+}
+
+.featureItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 24px;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.featureItem:hover {
+  transform: translateY(-5px);
+}
+
+/* Adiciona as linhas divisórias apenas no desktop (parecido com a imagem) */
+@media (min-width: 1024px) {
+  .featureItem:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 15%;
+    bottom: 15%;
+    width: 1px;
+    background-color: rgba(224, 224, 224, 0.1); /* Linha Prata ultra suave */
+  }
+}
+
+.iconWrapper {
+  color: var(--color-gold); /* Ícones Dourados (Mantendo a paleta!) */
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(212, 175, 55, 0.05); /* Fundo sutil circular para o ícone */
+  padding: 16px;
+  border-radius: 50%;
+}
+
+.title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: var(--color-silver-dark);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}

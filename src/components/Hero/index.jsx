@@ -7,11 +7,11 @@ export default function Hero() {
     <section className={styles.heroSection}>
       <div className={styles.content}>
         
-        {/* Badge Superior */}
+        {/* Badge Superior
         <div className={styles.badge}>
           <div className={styles.greenDot}></div>
           PLATAFORMA DIGITAL DE DIREITO
-        </div>
+        </div> */}
 
         {/* Título Principal */}
         <h1 className={styles.title}>

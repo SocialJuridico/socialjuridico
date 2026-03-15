@@ -1,0 +1,197 @@
+.section {
+  padding: 100px 24px;
+  background-color: var(--color-black-light); /* Background que contraste com o black puro anterior */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 64px;
+}
+
+.badge {
+  color: var(--color-gold);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-white);
+  letter-spacing: -1px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 64px;
+  max-width: 1100px;
+  width: 100%;
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Common Column Header (Title 'Para Clientes' etc) */
+.columnHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+.iconBoxSolid {
+  width: 48px;
+  height: 48px;
+  background-color: var(--color-black); /* Preto muito escuro pra simular o box da esq */
+  border: 1px solid var(--color-silver-dark);
+  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.iconBoxGold {
+  width: 48px;
+  height: 48px;
+  background-color: var(--color-gold); /* Refletindo o box roxo da foto, mudado para dourado */
+  color: var(--color-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.columnTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-white);
+}
+
+/* Steps list */
+.stepsList {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  position: relative;
+}
+
+/* Vertical line connecting steps (hidden on small devices, or keep it short) */
+.stepsList::before {
+  content: '';
+  position: absolute;
+  top: 40px;
+  bottom: 0;
+  left: 17px; /* Centralizando com a bolinha gerada de 36px (17 = 36/2 - 1 da borda) */
+  width: 2px;
+  background-color: rgba(212, 175, 55, 0.15); /* Linha divisória dourada apagado */
+  z-index: 0;
+}
+
+.stepItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Bolinhas de número */
+.stepNumberClient {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-silver-dark); /* Cor prata contorno da esquerda */
+  background-color: var(--color-black-light);
+  color: var(--color-silver);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.stepNumberLawyer {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-gold); /* Cor dourada contorno da direita (equiv roxo foto) */
+  background-color: var(--color-black-light);
+  color: var(--color-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.stepContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+}
+
+.stepTitle {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-white);
+}
+
+.stepDesc {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-silver-dark);
+}
+
+/* Links em baixo */
+.linkButtonClient {
+  margin-top: 48px;
+  color: var(--color-silver);
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.linkButtonClient:hover {
+  color: var(--color-white);
+}
+
+.linkButtonLawyer {
+  margin-top: 48px;
+  color: var(--color-gold);
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.linkButtonLawyer:hover {
+  color: var(--color-gold-dark);
+}

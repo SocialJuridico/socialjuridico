@@ -1,0 +1,301 @@
+.section {
+  padding: 100px 24px;
+  background-color: var(--color-black);
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+  max-width: 1200px;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .container {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* --- Left Column (Text & Benefits) --- */
+.leftColumn {
+  flex: 1;
+  max-width: 600px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(224, 224, 224, 0.1);
+  padding: 8px 20px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-silver);
+  letter-spacing: 1px;
+  margin-bottom: 24px;
+  text-transform: uppercase;
+}
+
+.greenDot {
+  width: 6px;
+  height: 6px;
+  background-color: #10B981;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+
+.title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--color-white);
+  margin-bottom: 24px;
+  letter-spacing: -1px;
+}
+
+.highlight {
+  color: var(--color-gold);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--color-silver-dark);
+  margin-bottom: 40px;
+}
+
+.benefitsList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.benefitItem {
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+
+.benefitItem:hover {
+  transform: translateY(-3px);
+  border-color: rgba(212, 175, 55, 0.2);
+}
+
+.iconWrapper {
+  color: var(--color-gold);
+  background-color: rgba(212, 175, 55, 0.05);
+  padding: 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.benefitTextContent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.benefitTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--color-white);
+}
+
+.benefitDesc {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-silver-dark);
+}
+
+/* --- Right Column (Custom Reviews Card) --- */
+.rightColumn {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.reviewsCard {
+  background: var(--color-white);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid #E5E7EB;
+  background-color: var(--color-white);
+}
+
+.groupIconWrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #6366F1; /* Roxo para remeter a redes sociais/grupos */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.groupIcon {
+  color: var(--color-white);
+}
+
+.groupTitleInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.groupName {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-black);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.groupPlatform {
+  font-size: 0.75rem;
+  color: #6B7280;
+}
+
+.reviewsList {
+  display: flex;
+  flex-direction: column;
+  padding: 0 24px;
+  background-color: var(--color-white);
+}
+
+.reviewItem {
+  padding: 24px 0;
+  border-bottom: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reviewItem:last-child {
+  border-bottom: none;
+}
+
+.reviewHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-white);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.reviewerInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.reviewerName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-black);
+}
+
+.reviewTime {
+  font-size: 0.75rem;
+  color: #9CA3AF;
+}
+
+.reviewText {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #4B5563; /* cinza escuro */
+}
+
+.stars {
+  display: flex;
+  gap: 2px;
+}
+
+.groupStats {
+  display: flex;
+  justify-content: space-between;
+  padding: 24px;
+  background-color: var(--color-white); 
+  border-top: 1px solid #E5E7EB;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.statValue {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-black);
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.joinLink {
+  text-decoration: none;
+  width: 100%;
+  display: block;
+}
+
+/* Override the global button for this specific location to make it blend well with the white card */
+.fbButton {
+  width: 100% !important;
+  border-radius: 0 !important;
+  padding: 20px 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  background-color: var(--color-black) !important;
+  color: var(--color-white) !important;
+  border: none !important;
+}
+
+.fbButton:hover {
+  background-color: var(--color-black-light) !important;
+}

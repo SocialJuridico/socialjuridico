@@ -1,0 +1,71 @@
+﻿[dotenv@17.3.1] injecting env (6) from .env -- tip: ­ƒöÉ encrypt with Dotenvx: https://dotenvx.com
+--- Auth Users ---
+Total Auth Users: 50
+
+--- Advogados Table ---
+- Jessica Ter├ºariol  (jessicatercarioladv@gmail.com): ID=e8173e17-ac56-42dc-8aa4-7de5d16de63a, Has Auth=false, Auth Email=undefined
+-  Doutor Joao (doutorjoao01@gmail.com): ID=c11940d3-cd11-4670-905e-9d8a05767e7d, Has Auth=false, Auth Email=undefined
+- Dr Gil (drgil@gmail.com): ID=a71de110-c613-4725-8cfc-22481dee367d, Has Auth=false, Auth Email=undefined
+- Robson Pereira  (robsonn251082@hotmail.com): ID=71954648-1219-420c-8fc2-a3868c4e5714, Has Auth=false, Auth Email=undefined
+- Rafael Silveira Ferreira  (rafael51090@oab-sc.org.br): ID=8f16e218-1d21-4310-b054-035952bbffe4, Has Auth=false, Auth Email=undefined
+- Michelle campos  (mih.campos@yahoo.com.br): ID=2f45f885-7e5f-4ccc-a0ef-3eb3dba88e69, Has Auth=false, Auth Email=undefined
+- Katia Gaziola  (gaziolakatia@gmail.com): ID=36a65087-a997-4130-a460-e6832ecd0ca3, Has Auth=false, Auth Email=undefined
+- Paula Moreira Cezar (moreiracezaradvocacia@gmail.com): ID=f7c95c9a-aba9-4e78-a52f-9f1d3223b06f, Has Auth=false, Auth Email=undefined
+- Franco Bichara  (francobichara@hotmail.com): ID=a212f71b-eecc-4b7c-a298-d0e9ab890ce6, Has Auth=false, Auth Email=undefined
+- GUSTAVO MANSUR SCHIMALESKI (mansur_adv@hotmail.com): ID=288849b4-cba2-415f-bba6-23a08d4f478c, Has Auth=false, Auth Email=undefined
+- Rafael Da Silva (roque.rafael.audacess@gmail.com): ID=4983fb1d-292e-48de-8caa-0ec7372fbc34, Has Auth=false, Auth Email=undefined
+- Isabel Eugenio  (beleugeniox@gmail.com): ID=6f505e9c-9092-4454-8756-635d51595974, Has Auth=false, Auth Email=undefined
+- Roque Rafael Proen├ºa (roque.rafael.audaces@gmail.com): ID=b175578e-f10c-4d61-9bd1-d2767d53529f, Has Auth=false, Auth Email=undefined
+- Nat├ília Siqueira Ribeiro Rizzi  (nataliaadv25@gmail.com): ID=4e114f5c-ef58-4a8b-924f-400401028165, Has Auth=false, Auth Email=undefined
+- Jonas Oz├®ias do Ramo Carvalho (ramojonas845@gmail.com): ID=f6838088-30dd-4f9c-bd1a-68d0444b02e0, Has Auth=false, Auth Email=undefined
+- Adaynne bianca viana gomes  (Dra.adaynnegomes@gmail.com): ID=fba28e8f-cbdb-4843-9303-db2c34eba780, Has Auth=false, Auth Email=undefined
+- Adriel Santiago da Silva (adrielsantiago.advocacia@gmail.com): ID=dc60f705-9809-4ea9-9512-e982fe736295, Has Auth=true, Auth Email=adrielsantiago.advocacia@gmail.com
+- Maria Eduarda Muniz Neves Santos  (mariaeduardaneves1@gmail.com): ID=cf31237a-9236-4a7b-8f92-14e9b3ddbab5, Has Auth=true, Auth Email=mariaeduardaneves1@gmail.com
+- T├íssii melo de Almeida  (tassioo_mello@hotmail.com): ID=0d1ee310-e163-48de-8041-1dff5c948c58, Has Auth=true, Auth Email=tassioo_mello@hotmail.com
+- Leandro Aparecido Agostinho (leaodroagostinho@gmail.com): ID=5ba784c0-2e66-4bb9-b034-556d4bf41a1c, Has Auth=true, Auth Email=leaodroagostinho@gmail.com
+- Fernanda Freire de Siqueira  (fernanda.freire1990@gmail.com): ID=11220442-2ff1-44b6-a32b-6cd1521c7d20, Has Auth=true, Auth Email=fernanda.freire1990@gmail.com
+- Gilmar Gomes  (gilmargomesadvogado@gmail.com): ID=479347f2-73da-4c88-a903-abbd10902daf, Has Auth=true, Auth Email=gilmargomesadvogado@gmail.com
+- M├írcio Napoleone Chueri Gurgel  (marcioncgurgel@gmail.com): ID=b2094383-85ce-4727-822e-c485398addde, Has Auth=true, Auth Email=marcioncgurgel@gmail.com
+- Eduarda Bittencourt  (eduardabittencourt199918@gmail.com): ID=5fa14a10-4e65-4b11-bd4f-d9627fce6b95, Has Auth=true, Auth Email=eduardabittencourt199918@gmail.com
+- Jo├úo F├íbio da Silva Filho  (fabiofilho.jfds@gmail.com): ID=8f4bb247-d1d6-4db1-9972-8461f09adb33, Has Auth=true, Auth Email=fabiofilho.jfds@gmail.com
+- Gabriella Machado da Silva  (machadogabriella6@gmail.com): ID=a760ca87-40c7-4fdd-af71-25f1b28cc1ed, Has Auth=true, Auth Email=machadogabriella6@gmail.com
+- B├írbara Soares de Azevedo  (barbarasoaresazevedo@gmail.com): ID=d3b734c1-ed4a-4f2a-aa8f-046b3f0b4587, Has Auth=true, Auth Email=barbarasoaresazevedo@gmail.com
+- Carlos Rog├®rio Ferreira  (carlos-tupa@hotmail.com): ID=f88171c8-64b4-4a61-9b77-6821fa763e38, Has Auth=true, Auth Email=carlos-tupa@hotmail.com
+- PAULO ROG├ëRIO DE OLIVEIRA AZEVEDO (paulorogerioazevedo.adv@gmail.com): ID=cd630efa-fa26-4de2-98f6-fbc446949c16, Has Auth=true, Auth Email=paulorogerioazevedo.adv@gmail.com
+- Rebecca Linda dos Santos Souza (rebeccalindasouza@gmail.com): ID=6fa11f42-cbbc-41b4-a4d9-b58743684a81, Has Auth=true, Auth Email=rebeccalindasouza@gmail.com
+- Talison dos Santos Ferreira  (talison.santos749@gmail.com): ID=22179d88-4347-464a-b0d6-242cf3f7c869, Has Auth=true, Auth Email=talison.santos749@gmail.com
+- Ricardo Moreno Mialski Garcia (mialskigarcia@gmail.com): ID=da9f097a-8c5a-4b39-8cf5-8e4badf07187, Has Auth=true, Auth Email=mialskigarcia@gmail.com
+- Mois├®s oliveira de Santanna (advmoisescorrespondente@gmail.com): ID=1f43da6e-3362-46c1-8e85-a88cdc21be32, Has Auth=true, Auth Email=advmoisescorrespondente@gmail.com
+- Aritana Melo de Souza Queiroz (adv.aritanaqueiroz@gmail.com): ID=2454809c-4e62-413f-8cbd-417a35c99675, Has Auth=true, Auth Email=adv.aritanaqueiroz@gmail.com
+- M├írcio Dias Gaspar  (marciodgaspar@gmail.com): ID=44620d41-6291-4f6a-a228-b23f1d45f0e2, Has Auth=true, Auth Email=marciodgaspar@gmail.com
+- Jo├úo Elias Marcondes Farah  (joao@farahmarcondes.com.br): ID=ff44e8b3-b3fc-474d-ad99-cec920b772d5, Has Auth=true, Auth Email=joao@farahmarcondes.com.br
+- Tatiana Esteve Buzze (advtatianabuzze@gmail.com): ID=1d7704c5-38b9-4b29-81d5-8fc21bc186d6, Has Auth=true, Auth Email=advtatianabuzze@gmail.com
+- Gabriela Nascimento  (gfn82@hotmail.com): ID=762df08e-170a-473c-af39-efee3a7fe260, Has Auth=true, Auth Email=gfn82@hotmail.com
+- Jamil Abdelrazzak Abdala Abo Abdo (jamil@abdo.com.br): ID=22465254-934d-40b5-b89a-8d54d8b28972, Has Auth=true, Auth Email=jamil@abdo.com.br
+- Kelita da Costa Cavalcante  (kelitakezia21@gmail.com): ID=d8d97d08-ff9d-4640-90e4-a78fdf5ae9d4, Has Auth=true, Auth Email=kelitakezia21@gmail.com
+- Tiago Lauton  (tiagolauton@gmail.com): ID=060b4ce7-c9d2-49ab-b44c-7b534e7a3231, Has Auth=true, Auth Email=tiagolauton@gmail.com
+- Raimundo Francisco de Elias  (r.f.elias2006@hotmail.com): ID=ed22c3a1-e4aa-4344-8083-4eca82e0952a, Has Auth=true, Auth Email=r.f.elias2006@hotmail.com
+- Amanda Bi├úo Vieira  (amandabiao036@gmail.com): ID=95f7ed44-0330-4113-9b4c-153608f22c70, Has Auth=true, Auth Email=amandabiao036@gmail.com
+- Voce tem problemas de seguran├ºa (jsilva@gmail.com): ID=02695581-e9b0-44d1-b703-72cc96621e7e, Has Auth=true, Auth Email=jsilva@gmail.com
+- Geraldo Freire  (geraldofreire.advogadorj@gmail.com): ID=bd8473e1-8d10-4d09-aa71-24ba5177ee76, Has Auth=true, Auth Email=geraldofreire.advogadorj@gmail.com
+- Rafael Costa Soares  (rcsoaresadvocacia@gmail.com): ID=8ca4e4e3-9a9c-40d5-af62-d17ab07e63a0, Has Auth=true, Auth Email=rcsoaresadvocacia@gmail.com
+- Leonardo Henrique Barb├│s Salles (leohbsalles@gmail.com): ID=8b01d4f5-e004-49c8-a481-16352c7fddbb, Has Auth=true, Auth Email=leohbsalles@gmail.com
+- Bruno Henrique Acosta Brochieri  (brunobrochieri@gmail.com): ID=97ee2f42-b236-4921-9b6e-91d0fbd6c998, Has Auth=true, Auth Email=brunobrochieri@gmail.com
+- Denis Leal (advdenisleal@gmail.com): ID=ef31d8fb-2405-490b-bbc2-04653a5f0df0, Has Auth=true, Auth Email=advdenisleal@gmail.com
+- Jonas Carvalho (jonas.ramo.carvalho@gmail.com): ID=cfa0d0b4-47d8-4c63-9c79-5a198942927e, Has Auth=true, Auth Email=jonas.ramo.carvalho@gmail.com
+- Nadia Santana dos Santos  (nadiasantana.adv@gmail.com): ID=9c565a33-c3dd-473f-ad6d-acdd4a6e2102, Has Auth=true, Auth Email=nadiasantana.adv@gmail.com
+- Sarah Caroline de Andrade Firmino (sarahcarolinedeandrade@gmail.com): ID=26d4c8b6-1afc-45ba-a99d-dc09cac2bc03, Has Auth=true, Auth Email=sarahcarolinedeandrade@gmail.com
+- Cristiane Bonessoni  (crisbonessoni.adv.ms@gmail.com): ID=4c772246-3db3-46b1-9fce-f123a47c1c69, Has Auth=true, Auth Email=crisbonessoni.adv.ms@gmail.com
+- Eliesler Gon├ºalves Dominges Jaime (elieslergdjaime@gmail.com): ID=597d2da4-4a0c-4715-aabe-5c6c28aa7325, Has Auth=true, Auth Email=elieslergdjaime@gmail.com
+- Camila (mila113@hotmail.com): ID=c13ed3b4-562f-4bfb-afb7-28023cae2255, Has Auth=true, Auth Email=mila113@hotmail.com
+- Anderson Silva  (dr.anderson.silva.adv@gmail.com): ID=ed353041-1b92-42d9-b8f0-f3a03552a4d7, Has Auth=true, Auth Email=dr.anderson.silva.adv@gmail.com
+- Eduardo Ramos  (adv.eduardosramos@gmail.com): ID=435b027f-64bd-415f-a29f-9e3e6b2ef788, Has Auth=true, Auth Email=adv.eduardosramos@gmail.com
+- Marcus Vin├¡cius Guimar├úes Mendes da Silva  (marcusguimaraes.adv@gmail.com): ID=a85ff27d-311f-470c-96c5-d222c602dd1e, Has Auth=true, Auth Email=marcusguimaraes.adv@gmail.com
+- Antonio Carlos da Silva Vieira J├║nior  (antoniocarlosjr@adv.oabsp.org.br): ID=07348114-fe2a-4009-9589-ae30bb513d6d, Has Auth=true, Auth Email=antoniocarlosjr@adv.oabsp.org.br
+- Adelucia Bas├¡lio coura  (couraadeluciabasilioadv@gmail.com): ID=cedc3622-0a65-4892-8200-6b9d287148f7, Has Auth=true, Auth Email=couraadeluciabasilioadv@gmail.com
+- Cristiane Fogliarini (cf.advogada@gmail.com): ID=6c760df3-e5b8-4b72-baa1-2c9d50413be4, Has Auth=true, Auth Email=cf.advogada@gmail.com
+- VERG├ìLIO PAULO TUOTO STEMBERG (advolex@advolex.com.br): ID=43ada412-e294-4468-84fd-e6370383893a, Has Auth=true, Auth Email=advolex@advolex.com.br
+- Marco A. N. Passos (adv.marcopassos@gmail.com): ID=4ccd8f17-2931-4da0-93c5-dcaa4c8124df, Has Auth=true, Auth Email=adv.marcopassos@gmail.com
+- Ronan de Lima Castro (ronan.castro@rocketmail.com): ID=0b0648d8-82a2-488d-87d4-a8236978d98f, Has Auth=true, Auth Email=ronan.castro@rocketmail.com
+- admistrador da socialjuris adv (matrixinformatica@gmail.com): ID=c1abde7c-5068-4209-8c3c-95f46e6b7b06, Has Auth=true, Auth Email=matrixinformatica@gmail.com
+- Saulo (marysaujps@gmail.com): ID=51d2e315-d8a7-41b9-a93d-5cef7268a65c, Has Auth=false, Auth Email=undefined

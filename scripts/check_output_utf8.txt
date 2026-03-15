@@ -1,0 +1,161 @@
+﻿[dotenv@17.3.1] injecting env (6) from .env -- tip: ÔÜÖ´©Å  write to custom object with { processEnv: myObject }
+Checking Auth Users...
+Found 50 users.
+- Email: marysaujps@gmail.com, ID: beacdb5e-291c-4231-a024-952805edfd14, Role: LAWYER
+- Email: matrixinformatica@gmail.com, ID: c1abde7c-5068-4209-8c3c-95f46e6b7b06, Role: LAWYER
+- Email: ronan.castro@rocketmail.com, ID: 0b0648d8-82a2-488d-87d4-a8236978d98f, Role: LAWYER
+- Email: adv.marcopassos@gmail.com, ID: 4ccd8f17-2931-4da0-93c5-dcaa4c8124df, Role: LAWYER
+- Email: advolex@advolex.com.br, ID: 43ada412-e294-4468-84fd-e6370383893a, Role: LAWYER
+- Email: cf.advogada@gmail.com, ID: 6c760df3-e5b8-4b72-baa1-2c9d50413be4, Role: LAWYER
+- Email: couraadeluciabasilioadv@gmail.com, ID: cedc3622-0a65-4892-8200-6b9d287148f7, Role: LAWYER
+- Email: antoniocarlosjr@adv.oabsp.org.br, ID: 07348114-fe2a-4009-9589-ae30bb513d6d, Role: LAWYER
+- Email: marcusguimaraes.adv@gmail.com, ID: a85ff27d-311f-470c-96c5-d222c602dd1e, Role: LAWYER
+- Email: adv.eduardosramos@gmail.com, ID: 435b027f-64bd-415f-a29f-9e3e6b2ef788, Role: LAWYER
+- Email: dr.anderson.silva.adv@gmail.com, ID: ed353041-1b92-42d9-b8f0-f3a03552a4d7, Role: LAWYER
+- Email: mila113@hotmail.com, ID: c13ed3b4-562f-4bfb-afb7-28023cae2255, Role: LAWYER
+- Email: elieslergdjaime@gmail.com, ID: 597d2da4-4a0c-4715-aabe-5c6c28aa7325, Role: LAWYER
+- Email: crisbonessoni.adv.ms@gmail.com, ID: 4c772246-3db3-46b1-9fce-f123a47c1c69, Role: LAWYER
+- Email: sarahcarolinedeandrade@gmail.com, ID: 26d4c8b6-1afc-45ba-a99d-dc09cac2bc03, Role: LAWYER
+- Email: nadiasantana.adv@gmail.com, ID: 9c565a33-c3dd-473f-ad6d-acdd4a6e2102, Role: LAWYER
+- Email: jonas.ramo.carvalho@gmail.com, ID: cfa0d0b4-47d8-4c63-9c79-5a198942927e, Role: LAWYER
+- Email: advdenisleal@gmail.com, ID: ef31d8fb-2405-490b-bbc2-04653a5f0df0, Role: LAWYER
+- Email: brunobrochieri@gmail.com, ID: 97ee2f42-b236-4921-9b6e-91d0fbd6c998, Role: LAWYER
+- Email: leohbsalles@gmail.com, ID: 8b01d4f5-e004-49c8-a481-16352c7fddbb, Role: LAWYER
+- Email: rcsoaresadvocacia@gmail.com, ID: 8ca4e4e3-9a9c-40d5-af62-d17ab07e63a0, Role: LAWYER
+- Email: geraldofreire.advogadorj@gmail.com, ID: bd8473e1-8d10-4d09-aa71-24ba5177ee76, Role: LAWYER
+- Email: jsilva@gmail.com, ID: 02695581-e9b0-44d1-b703-72cc96621e7e, Role: LAWYER
+- Email: amandabiao036@gmail.com, ID: 95f7ed44-0330-4113-9b4c-153608f22c70, Role: LAWYER
+- Email: r.f.elias2006@hotmail.com, ID: ed22c3a1-e4aa-4344-8083-4eca82e0952a, Role: LAWYER
+- Email: tiagolauton@gmail.com, ID: 060b4ce7-c9d2-49ab-b44c-7b534e7a3231, Role: LAWYER
+- Email: kelitakezia21@gmail.com, ID: d8d97d08-ff9d-4640-90e4-a78fdf5ae9d4, Role: LAWYER
+- Email: jamil@abdo.com.br, ID: 22465254-934d-40b5-b89a-8d54d8b28972, Role: LAWYER
+- Email: gfn82@hotmail.com, ID: 762df08e-170a-473c-af39-efee3a7fe260, Role: LAWYER
+- Email: advtatianabuzze@gmail.com, ID: 1d7704c5-38b9-4b29-81d5-8fc21bc186d6, Role: LAWYER
+- Email: joao@farahmarcondes.com.br, ID: ff44e8b3-b3fc-474d-ad99-cec920b772d5, Role: LAWYER
+- Email: marciodgaspar@gmail.com, ID: 44620d41-6291-4f6a-a228-b23f1d45f0e2, Role: LAWYER
+- Email: adv.aritanaqueiroz@gmail.com, ID: 2454809c-4e62-413f-8cbd-417a35c99675, Role: LAWYER
+- Email: advmoisescorrespondente@gmail.com, ID: 1f43da6e-3362-46c1-8e85-a88cdc21be32, Role: LAWYER
+- Email: mialskigarcia@gmail.com, ID: da9f097a-8c5a-4b39-8cf5-8e4badf07187, Role: LAWYER
+- Email: talison.santos749@gmail.com, ID: 22179d88-4347-464a-b0d6-242cf3f7c869, Role: LAWYER
+- Email: rebeccalindasouza@gmail.com, ID: 6fa11f42-cbbc-41b4-a4d9-b58743684a81, Role: LAWYER
+- Email: paulorogerioazevedo.adv@gmail.com, ID: cd630efa-fa26-4de2-98f6-fbc446949c16, Role: LAWYER
+- Email: carlos-tupa@hotmail.com, ID: f88171c8-64b4-4a61-9b77-6821fa763e38, Role: LAWYER
+- Email: barbarasoaresazevedo@gmail.com, ID: d3b734c1-ed4a-4f2a-aa8f-046b3f0b4587, Role: LAWYER
+- Email: machadogabriella6@gmail.com, ID: a760ca87-40c7-4fdd-af71-25f1b28cc1ed, Role: LAWYER
+- Email: fabiofilho.jfds@gmail.com, ID: 8f4bb247-d1d6-4db1-9972-8461f09adb33, Role: LAWYER
+- Email: eduardabittencourt199918@gmail.com, ID: 5fa14a10-4e65-4b11-bd4f-d9627fce6b95, Role: LAWYER
+- Email: marcioncgurgel@gmail.com, ID: b2094383-85ce-4727-822e-c485398addde, Role: LAWYER
+- Email: gilmargomesadvogado@gmail.com, ID: 479347f2-73da-4c88-a903-abbd10902daf, Role: LAWYER
+- Email: fernanda.freire1990@gmail.com, ID: 11220442-2ff1-44b6-a32b-6cd1521c7d20, Role: LAWYER
+- Email: leaodroagostinho@gmail.com, ID: 5ba784c0-2e66-4bb9-b034-556d4bf41a1c, Role: LAWYER
+- Email: tassioo_mello@hotmail.com, ID: 0d1ee310-e163-48de-8041-1dff5c948c58, Role: LAWYER
+- Email: mariaeduardaneves1@gmail.com, ID: cf31237a-9236-4a7b-8f92-14e9b3ddbab5, Role: LAWYER
+- Email: adrielsantiago.advocacia@gmail.com, ID: dc60f705-9809-4ea9-9512-e982fe736295, Role: LAWYER
+
+Checking "advogados" table...
+Found 66 advogados.
+- Name: Jessica Ter├ºariol , Email: jessicatercarioladv@gmail.com, ID: e8173e17-ac56-42dc-8aa4-7de5d16de63a
+- Name:  Doutor Joao, Email: doutorjoao01@gmail.com, ID: c11940d3-cd11-4670-905e-9d8a05767e7d
+- Name: Dr Gil, Email: drgil@gmail.com, ID: a71de110-c613-4725-8cfc-22481dee367d
+- Name: Robson Pereira , Email: robsonn251082@hotmail.com, ID: 71954648-1219-420c-8fc2-a3868c4e5714
+- Name: Rafael Silveira Ferreira , Email: rafael51090@oab-sc.org.br, ID: 8f16e218-1d21-4310-b054-035952bbffe4
+- Name: Michelle campos , Email: mih.campos@yahoo.com.br, ID: 2f45f885-7e5f-4ccc-a0ef-3eb3dba88e69
+- Name: Katia Gaziola , Email: gaziolakatia@gmail.com, ID: 36a65087-a997-4130-a460-e6832ecd0ca3
+- Name: Paula Moreira Cezar, Email: moreiracezaradvocacia@gmail.com, ID: f7c95c9a-aba9-4e78-a52f-9f1d3223b06f
+- Name: Franco Bichara , Email: francobichara@hotmail.com, ID: a212f71b-eecc-4b7c-a298-d0e9ab890ce6
+- Name: GUSTAVO MANSUR SCHIMALESKI, Email: mansur_adv@hotmail.com, ID: 288849b4-cba2-415f-bba6-23a08d4f478c
+- Name: Rafael Da Silva, Email: roque.rafael.audacess@gmail.com, ID: 4983fb1d-292e-48de-8caa-0ec7372fbc34
+- Name: Isabel Eugenio , Email: beleugeniox@gmail.com, ID: 6f505e9c-9092-4454-8756-635d51595974
+- Name: Roque Rafael Proen├ºa, Email: roque.rafael.audaces@gmail.com, ID: b175578e-f10c-4d61-9bd1-d2767d53529f
+- Name: Nat├ília Siqueira Ribeiro Rizzi , Email: nataliaadv25@gmail.com, ID: 4e114f5c-ef58-4a8b-924f-400401028165
+- Name: Jonas Oz├®ias do Ramo Carvalho, Email: ramojonas845@gmail.com, ID: f6838088-30dd-4f9c-bd1a-68d0444b02e0
+- Name: Adaynne bianca viana gomes , Email: Dra.adaynnegomes@gmail.com, ID: fba28e8f-cbdb-4843-9303-db2c34eba780
+- Name: Adriel Santiago da Silva, Email: adrielsantiago.advocacia@gmail.com, ID: dc60f705-9809-4ea9-9512-e982fe736295
+- Name: Maria Eduarda Muniz Neves Santos , Email: mariaeduardaneves1@gmail.com, ID: cf31237a-9236-4a7b-8f92-14e9b3ddbab5
+- Name: T├íssii melo de Almeida , Email: tassioo_mello@hotmail.com, ID: 0d1ee310-e163-48de-8041-1dff5c948c58
+- Name: Leandro Aparecido Agostinho, Email: leaodroagostinho@gmail.com, ID: 5ba784c0-2e66-4bb9-b034-556d4bf41a1c
+- Name: Fernanda Freire de Siqueira , Email: fernanda.freire1990@gmail.com, ID: 11220442-2ff1-44b6-a32b-6cd1521c7d20
+- Name: Gilmar Gomes , Email: gilmargomesadvogado@gmail.com, ID: 479347f2-73da-4c88-a903-abbd10902daf
+- Name: M├írcio Napoleone Chueri Gurgel , Email: marcioncgurgel@gmail.com, ID: b2094383-85ce-4727-822e-c485398addde
+- Name: Eduarda Bittencourt , Email: eduardabittencourt199918@gmail.com, ID: 5fa14a10-4e65-4b11-bd4f-d9627fce6b95
+- Name: Jo├úo F├íbio da Silva Filho , Email: fabiofilho.jfds@gmail.com, ID: 8f4bb247-d1d6-4db1-9972-8461f09adb33
+- Name: Gabriella Machado da Silva , Email: machadogabriella6@gmail.com, ID: a760ca87-40c7-4fdd-af71-25f1b28cc1ed
+- Name: B├írbara Soares de Azevedo , Email: barbarasoaresazevedo@gmail.com, ID: d3b734c1-ed4a-4f2a-aa8f-046b3f0b4587
+- Name: Carlos Rog├®rio Ferreira , Email: carlos-tupa@hotmail.com, ID: f88171c8-64b4-4a61-9b77-6821fa763e38
+- Name: PAULO ROG├ëRIO DE OLIVEIRA AZEVEDO, Email: paulorogerioazevedo.adv@gmail.com, ID: cd630efa-fa26-4de2-98f6-fbc446949c16
+- Name: Rebecca Linda dos Santos Souza, Email: rebeccalindasouza@gmail.com, ID: 6fa11f42-cbbc-41b4-a4d9-b58743684a81
+- Name: Talison dos Santos Ferreira , Email: talison.santos749@gmail.com, ID: 22179d88-4347-464a-b0d6-242cf3f7c869
+- Name: Ricardo Moreno Mialski Garcia, Email: mialskigarcia@gmail.com, ID: da9f097a-8c5a-4b39-8cf5-8e4badf07187
+- Name: Mois├®s oliveira de Santanna, Email: advmoisescorrespondente@gmail.com, ID: 1f43da6e-3362-46c1-8e85-a88cdc21be32
+- Name: Aritana Melo de Souza Queiroz, Email: adv.aritanaqueiroz@gmail.com, ID: 2454809c-4e62-413f-8cbd-417a35c99675
+- Name: M├írcio Dias Gaspar , Email: marciodgaspar@gmail.com, ID: 44620d41-6291-4f6a-a228-b23f1d45f0e2
+- Name: Jo├úo Elias Marcondes Farah , Email: joao@farahmarcondes.com.br, ID: ff44e8b3-b3fc-474d-ad99-cec920b772d5
+- Name: Tatiana Esteve Buzze, Email: advtatianabuzze@gmail.com, ID: 1d7704c5-38b9-4b29-81d5-8fc21bc186d6
+- Name: Gabriela Nascimento , Email: gfn82@hotmail.com, ID: 762df08e-170a-473c-af39-efee3a7fe260
+- Name: Jamil Abdelrazzak Abdala Abo Abdo, Email: jamil@abdo.com.br, ID: 22465254-934d-40b5-b89a-8d54d8b28972
+- Name: Kelita da Costa Cavalcante , Email: kelitakezia21@gmail.com, ID: d8d97d08-ff9d-4640-90e4-a78fdf5ae9d4
+- Name: Tiago Lauton , Email: tiagolauton@gmail.com, ID: 060b4ce7-c9d2-49ab-b44c-7b534e7a3231
+- Name: Raimundo Francisco de Elias , Email: r.f.elias2006@hotmail.com, ID: ed22c3a1-e4aa-4344-8083-4eca82e0952a
+- Name: Amanda Bi├úo Vieira , Email: amandabiao036@gmail.com, ID: 95f7ed44-0330-4113-9b4c-153608f22c70
+- Name: Voce tem problemas de seguran├ºa, Email: jsilva@gmail.com, ID: 02695581-e9b0-44d1-b703-72cc96621e7e
+- Name: Geraldo Freire , Email: geraldofreire.advogadorj@gmail.com, ID: bd8473e1-8d10-4d09-aa71-24ba5177ee76
+- Name: Rafael Costa Soares , Email: rcsoaresadvocacia@gmail.com, ID: 8ca4e4e3-9a9c-40d5-af62-d17ab07e63a0
+- Name: Leonardo Henrique Barb├│s Salles, Email: leohbsalles@gmail.com, ID: 8b01d4f5-e004-49c8-a481-16352c7fddbb
+- Name: Bruno Henrique Acosta Brochieri , Email: brunobrochieri@gmail.com, ID: 97ee2f42-b236-4921-9b6e-91d0fbd6c998
+- Name: Denis Leal, Email: advdenisleal@gmail.com, ID: ef31d8fb-2405-490b-bbc2-04653a5f0df0
+- Name: Jonas Carvalho, Email: jonas.ramo.carvalho@gmail.com, ID: cfa0d0b4-47d8-4c63-9c79-5a198942927e
+- Name: Nadia Santana dos Santos , Email: nadiasantana.adv@gmail.com, ID: 9c565a33-c3dd-473f-ad6d-acdd4a6e2102
+- Name: Sarah Caroline de Andrade Firmino, Email: sarahcarolinedeandrade@gmail.com, ID: 26d4c8b6-1afc-45ba-a99d-dc09cac2bc03
+- Name: Cristiane Bonessoni , Email: crisbonessoni.adv.ms@gmail.com, ID: 4c772246-3db3-46b1-9fce-f123a47c1c69
+- Name: Eliesler Gon├ºalves Dominges Jaime, Email: elieslergdjaime@gmail.com, ID: 597d2da4-4a0c-4715-aabe-5c6c28aa7325
+- Name: Camila, Email: mila113@hotmail.com, ID: c13ed3b4-562f-4bfb-afb7-28023cae2255
+- Name: Anderson Silva , Email: dr.anderson.silva.adv@gmail.com, ID: ed353041-1b92-42d9-b8f0-f3a03552a4d7
+- Name: Eduardo Ramos , Email: adv.eduardosramos@gmail.com, ID: 435b027f-64bd-415f-a29f-9e3e6b2ef788
+- Name: Marcus Vin├¡cius Guimar├úes Mendes da Silva , Email: marcusguimaraes.adv@gmail.com, ID: a85ff27d-311f-470c-96c5-d222c602dd1e
+- Name: Antonio Carlos da Silva Vieira J├║nior , Email: antoniocarlosjr@adv.oabsp.org.br, ID: 07348114-fe2a-4009-9589-ae30bb513d6d
+- Name: Adelucia Bas├¡lio coura , Email: couraadeluciabasilioadv@gmail.com, ID: cedc3622-0a65-4892-8200-6b9d287148f7
+- Name: Cristiane Fogliarini, Email: cf.advogada@gmail.com, ID: 6c760df3-e5b8-4b72-baa1-2c9d50413be4
+- Name: VERG├ìLIO PAULO TUOTO STEMBERG, Email: advolex@advolex.com.br, ID: 43ada412-e294-4468-84fd-e6370383893a
+- Name: Marco A. N. Passos, Email: adv.marcopassos@gmail.com, ID: 4ccd8f17-2931-4da0-93c5-dcaa4c8124df
+- Name: Ronan de Lima Castro, Email: ronan.castro@rocketmail.com, ID: 0b0648d8-82a2-488d-87d4-a8236978d98f
+- Name: admistrador da socialjuris adv, Email: matrixinformatica@gmail.com, ID: c1abde7c-5068-4209-8c3c-95f46e6b7b06
+- Name: Saulo, Email: marysaujps@gmail.com, ID: 51d2e315-d8a7-41b9-a93d-5cef7268a65c
+
+Checking "clientes" table...
+Found 36 clientes.
+- Name: Jose dos Santos, Email: josedossantos@gmail.com, ID: 08c17113-52bb-4b9a-aac5-a66bc9877584
+- Name: Jose da Silva, Email: cliente01@gmail.com, ID: 0cfc68ee-7e38-471c-af1d-e135ec6dd682
+- Name: Roque Rafael, Email: roquerafael@gmail.com, ID: e682b07f-6fb2-4577-ba57-60622a1ab911
+- Name: Saulo, Email: mxsgamejps@gmail.com, ID: d346c024-09f6-4c19-ac4c-579917928b5a
+- Name: cliente teste, Email: testecliente@gmail.com, ID: a765c1d4-6341-4241-bf3b-4d2380382901
+- Name: Roque Rafael, Email: roque00@gmai.com, ID: fa695c60-4dbb-4cb0-8bae-3398b4dc9ada
+- Name: cliente 1000, Email: cliente1000@gmail.com, ID: f9dfd899-8925-4ae4-9284-2a9ab840d990
+- Name: Roque Rafael, Email: roquerafael13@gmail.com, ID: bb2ffe50-a29f-4a9c-a853-35bd97217498
+- Name: Roque Rafael, Email: roquerafael00@gmail.com, ID: 94047161-b2f7-4273-873e-d984db9e4639
+- Name: Debora brito, Email: deboraxavieroliveira227@gmail.com, ID: a2b3b50e-092a-4352-80aa-bde0bc4c8687
+- Name: Teste Usuario, Email: testeusuario@gmail.com, ID: efc5dd05-5726-4b1c-8131-97ca371b35d7
+- Name: Usuario Teste, Email: usuarioteste1@gmail.com, ID: c2e8a8e4-4a7d-4a3c-ac4d-8b107d06e069
+- Name: Joao da Silva, Email: joaodasilva1@gmail.com, ID: 9dd193e8-8460-4a9a-a433-82f024de3853
+- Name: Joao couve, Email: joaocouve1@gmail.com, ID: 70bb135f-f687-467f-a3a8-f93cb32a1f6e
+- Name: Jo├úo das Couves, Email: joaodascouves1@gmail.com, ID: bd01d48f-1445-45fe-b83d-2b32b682a2e0
+- Name: Jo├úo Das Couves, Email: joaodascouves01@gmail.com, ID: 776e8697-a600-4ac8-af03-9e252d8fdb48
+- Name: Jo├úo Dos Santos, Email: joaodossantos01@gmail.com, ID: 66bb597c-5166-4558-af6d-3f847725a0cc
+- Name: Joao dos Santos, Email: joaodossantos001@gmail.com, ID: 454eab57-d1da-4f93-bca8-802bb446c961
+- Name: Jos├® da Silva, Email: josedasila@gmail.com, ID: 961393ff-d7b8-4d54-8821-a32f2502a89a
+- Name: Roque Proenca, Email: roque@gmail.com, ID: 724cd56b-518e-45a8-854a-8ce6286a2148
+- Name: Rafael dos Santos, Email: rafaeldossantos@gmail.com, ID: 9fb6c047-2ffa-4f56-a467-e295bdd2cfb2
+- Name: Walter White, Email: ww@gmail.com, ID: 16c3d86c-6f16-450d-a53f-610969ddbaf9
+- Name: Monique Cury Follador , Email: monique.cury.follador@gmail.com, ID: b7592cbd-9448-4f6c-a2df-8840ac01573d
+- Name: Rayane Pinheiro de Lima, Email: rayane.lima24@outlook.com, ID: 2a386622-140a-424b-946c-2fd4b7e1b57a
+- Name: Administrador, Email: admin@socialjuris.com, ID: c548b842-c52e-4275-a175-933d6f23b32a
+- Name: Carlos Santos, Email: chsantos172@gmail.com, ID: 6f827fd9-3b4e-4f25-92ea-3654b361aa5c
+- Name: Rafael Futino de Paula Garcia, Email: futinu@gmail.com, ID: 15add925-2091-4aac-801a-ca97939f74b0
+- Name: Rosinete da Silva Moreira , Email: advogadarosemoreira@gmail.com, ID: 1b6fe244-9e2f-4bf1-b35d-6088e9e6dc1b
+- Name: Jiorge Javier Nunes Lopez baez, Email: jiorgelopez@gmail.com, ID: de36e1be-a6fc-4bbb-a47f-9734eca2b457
+- Name: vitor rian, Email: vitorrianuzumaki@gmail.com, ID: 7601dcff-b615-49ab-832f-d70e3268bbf7
+- Name: Eduarda Santos Costa Bittencourt, Email: eduardabittencourt.adv@gmail.com, ID: f60c1ef3-42ec-4fe0-8a04-acb19b68f035
+- Name: Alessandra Sivek Perez , Email: alessandra.perez@ifpr.edu.br, ID: 64344b2b-1f65-4ae5-bdc2-2e41c3c0d6df
+- Name: Guilherme, Email: gsilvadeoliveira530@gmail.com, ID: 0f299169-5397-4735-a6a6-5ebc718461ca
+- Name: Leandro Aparecido Agostinho, Email: latreinamentosp@gmail.com, ID: c6ceef36-e350-44b0-93f6-0ad7b9ebaa3e
+- Name: Eduardo Ramos , Email: contato@eduardosramos.adv.br, ID: a406d3ff-eb5b-4d9a-84f7-23c85452e28b
+- Name: Ronan de Lima Castro, Email: ronancastro@adv.oabsp.org.br, ID: 122f01dd-26f4-433b-a2cc-393dd69cc2a3

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import Button from '../Button';
 import styles from './Hero.module.css';
@@ -27,10 +28,12 @@ export default function Hero() {
 
         {/* Action Area (apenas 1 botão e selo de gratuidade) */}
         <div className={styles.ctaWrapper}>
-          <Button variant="primary" className={styles.ctaButton}>
-            Cadastre-se agora
-            <ArrowRight size={20} />
-          </Button>
+          <Link href="/cadastro" style={{ textDecoration: 'none' }}>
+            <Button variant="primary" className={styles.ctaButton}>
+              Cadastre-se agora
+              <ArrowRight size={20} />
+            </Button>
+          </Link>
 
           <div className={styles.freeLabel}>
             <CheckCircle2 size={18} strokeWidth={2.5} />

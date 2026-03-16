@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import Button from '../Button';
 import styles from './CTA.module.css';
 
@@ -11,8 +12,12 @@ export default function CTA() {
         </p>
 
         <div className={styles.buttonsWrapper}>
-          <Button variant="primary">Criar Conta e Publicar</Button>
-          <Button variant="secondary">Sou Advogado</Button>
+          <Link href="/cadastro" style={{ textDecoration: 'none' }}>
+            <Button variant="primary">Criar Conta e Publicar</Button>
+          </Link>
+          <Link href="/advogados" style={{ textDecoration: 'none' }}>
+            <Button variant="secondary">Sou Advogado</Button>
+          </Link>
         </div>
       </div>
     </section>

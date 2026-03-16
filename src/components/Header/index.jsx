@@ -34,9 +34,11 @@ export default function Header() {
 
         {/* Action Button */}
         <div className={styles.loginAction}>
-          <Button variant="secondary" className={styles.loginButton}>
-            Entrar Agora
-          </Button>
+          <Link href="/login" style={{ textDecoration: 'none' }}>
+            <Button variant="secondary" className={styles.loginButton}>
+              Entrar Agora
+            </Button>
+          </Link>
         </div>
 
       </div>

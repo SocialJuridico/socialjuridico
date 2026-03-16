@@ -1,0 +1,128 @@
+.page {
+  padding-top: 140px;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 100px;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 100px;
+}
+
+.title {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--color-white);
+  margin-bottom: 24px;
+}
+
+.highlight {
+  color: var(--color-gold);
+}
+
+.subtitle {
+  font-size: 1.25rem;
+  color: var(--color-silver-dark);
+  max-width: 800px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Feature Grid */
+.features {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 32px;
+  margin-bottom: 120px;
+}
+
+@media (min-width: 768px) {
+  .features {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 48px;
+  border-radius: 32px;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--color-gold-light);
+}
+
+.iconBox {
+  width: 64px;
+  height: 64px;
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--color-gold);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.card h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-white);
+  margin-bottom: 16px;
+}
+
+.card p {
+  color: var(--color-silver-dark);
+  line-height: 1.7;
+  font-size: 1.05rem;
+}
+
+/* Call to Action Row */
+.ctaRow {
+  background: linear-gradient(135deg, var(--color-brown) 0%, var(--color-black) 100%);
+  padding: 60px;
+  border-radius: 40px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ctaRow h2 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.ctaRow p {
+  color: var(--color-silver);
+  margin-bottom: 32px;
+  font-size: 1.1rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 40px;
+  background: var(--color-gold);
+  color: var(--color-black);
+  text-decoration: none;
+  font-weight: 800;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background: var(--color-white);
+  transform: scale(1.05);
+}

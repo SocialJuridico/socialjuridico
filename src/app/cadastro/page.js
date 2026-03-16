@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Scale, Loader2 } from 'lucide-react';
 import styles from './Cadastro.module.css';
 import { verifyOAB } from '@/app/actions/verifyOAB';
+import { signUpAction } from '@/app/actions/authActions';
 
 export default function Cadastro() {
   const [activeTab, setActiveTab] = useState('client');
@@ -46,27 +47,37 @@ export default function Cadastro() {
       const vResp = await verifyOAB(formData.oab, formData.estado, formData.nome);
       
       if (!vResp.isValid) {
-        setErrorMsg(vResp.message); // ex: nome no CNA é diferente
+        setErrorMsg(vResp.message);
         setLoading(false);
         return;
       }
-      
-      // Se passou da OAB:
-      setSuccessMsg(`OAB ${vResp.data?.oab || formData.oab} validada junto ao CNA. Finalizando criação da conta...`);
-      // Simulação fake de insert final no DB até o usuário ligar o backend:
-      setTimeout(() => {
-        setSuccessMsg('Conta Advogado Criada Com Sucesso!');
-        setLoading(false);
-      }, 1500);
-      
-    } else {
-      // Se for apenas cliente, cria direto
-      setSuccessMsg('Iniciando criação na tabela "clientes"...');
-      setTimeout(() => {
-        setSuccessMsg('Conta Cliente Criada Com Sucesso!');
-        setLoading(false);
-      }, 1000);
+      setSuccessMsg(`OAB ${vResp.data?.oab || formData.oab} validada junto ao CNA.`);
     }
+
+    // Preparar dados para o Server Action
+    const authPayload = {
+      email: formData.email,
+      password: formData.senha,
+      name: formData.nome,
+      phone: formData.whatsapp,
+      role: activeTab === 'lawyer' ? 'LAWYER' : 'CLIENT',
+      oab: formData.oab,
+      estado: formData.estado
+    };
+
+    const response = await signUpAction(authPayload);
+
+    if (response.success) {
+      setSuccessMsg(response.message);
+      // Opcional: Limpar formulário
+      setFormData({
+        nome: '', email: '', whatsapp: '', senha: '', confirmarSenha: '', oab: '', estado: ''
+      });
+    } else {
+      setErrorMsg(response.message);
+    }
+
+    setLoading(false);
   };
 
   return (

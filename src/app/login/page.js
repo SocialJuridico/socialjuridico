@@ -4,11 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Scale, Loader2 } from 'lucide-react';
 import styles from './Login.module.css';
+import { signInAction } from '@/app/actions/authActions';
+import { useRouter } from 'next/navigation';
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [needsUpdate, setNeedsUpdate] = useState(false);
+  const router = useRouter();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -25,17 +29,23 @@ export default function Login() {
     setSuccessMsg('');
     setLoading(true);
 
-    // Simulação fake de login até que o Supabase seja conectado
-    setTimeout(() => {
-      if (formData.email && formData.senha) {
-        setSuccessMsg('Login realizado com sucesso! Redirecionando...');
-        // router.push('/dashboard') seria chamado aqui
+    const response = await signInAction(formData.email, formData.senha);
+
+    if (response.success) {
+      if (response.needsPasswordUpdate) {
+        setNeedsUpdate(true);
+        setSuccessMsg('Login realizado. Como sua conta foi importada, você precisa atualizar sua senha por segurança.');
         setLoading(false);
       } else {
-        setErrorMsg('Por favor, preencha todos os campos.');
-        setLoading(false);
+        setSuccessMsg('Login realizado com sucesso! Redirecionando...');
+        setTimeout(() => {
+          router.push('/'); 
+        }, 1500);
       }
-    }, 1500);
+    } else {
+      setErrorMsg(response.message || 'Erro ao realizar login. Verifique suas credenciais.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -142,16 +152,22 @@ export default function Login() {
               </div>
             )}
 
-            <button type="submit" className={styles.submitBtn} disabled={loading}>
-              {loading ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <Loader2 className="animate-spin" size={20} />
-                  Entrando...
-                </div>
-              ) : (
-                'Entrar na plataforma'
-              )}
-            </button>
+            {needsUpdate ? (
+              <Link href="/atualizar-senha" className={styles.submitBtn} style={{ textAlign: 'center', display: 'block', textDecoration: 'none' }}>
+                Ir para Atualizar Senha
+              </Link>
+            ) : (
+              <button type="submit" className={styles.submitBtn} disabled={loading}>
+                {loading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <Loader2 className="animate-spin" size={20} />
+                    Entrando...
+                  </div>
+                ) : (
+                  'Entrar na plataforma'
+                )}
+              </button>
+            )}
 
             <div className={styles.loginHint}>
               Ainda não tem uma conta? <Link href="/cadastro" className={styles.linkTag}>Cadastre-se grátis</Link>

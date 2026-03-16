@@ -91,6 +91,7 @@ export async function POST(request) {
         email: user.email,
         name: profile?.name || user.email.split('@')[0],
         role: profile?.role || 'CLIENT',
+        needsPasswordUpdate: user.user_metadata?.needs_password_update === true,
       },
     });
 

@@ -1,856 +1,457 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
-  LayoutDashboard, 
   PlusCircle, 
   Bell, 
   User, 
   LogOut, 
   Scale, 
-  Star,
-  ShieldCheck,
-  Menu,
-  X,
-  Upload,
+  Search,
+  Globe,
+  Briefcase,
+  Users,
   FileText,
-  ImageIcon,
-  Trash2,
-  MessageSquare,
+  Sparkles,
+  Calculator,
+  Calendar,
+  Filter,
+  BookOpen,
+  Settings,
+  ChevronRight,
+  Gavel,
   CheckCircle2,
+  Trash2,
   Lock,
   Mail,
   Phone,
-  Calendar
+  Coins,
+  ArrowRight,
+  Zap,
+  TrendingUp,
+  Shield,
+  MessageSquare
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
-import { 
-  createCasoAction, 
-  updateCasoAction,
-  getNotificacoesAction,
-  updatePasswordAction,
-  deleteAccountAction
-} from '@/app/actions/authActions';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
+import { createJurisCheckout } from '@/services/stripeCheckoutService';
 
 export default function AdvogadoDashboard() {
   const [userName, setUserName] = useState('Advogado');
-  const [activeTab, setActiveTab] = useState('painel');
+  const [activeTab, setActiveTab] = useState('oportunidades');
   const [casos, setCasos] = useState([]);
   const [loadingCasos, setLoadingCasos] = useState(true);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
-  // States para Edição de Caso
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedCaso, setSelectedCaso] = useState(null);
-  const [editFormData, setEditFormData] = useState({
-    titulo: '',
-    area: '',
-    descricao: ''
-  });
-  
-  // States para Notificações
-  const [notificacoes, setNotificacoes] = useState([]);
-  const [loadingNotificacoes, setLoadingNotificacoes] = useState(false);
-
-  // States para Novo Caso
-  const [formLoading, setFormLoading] = useState(false);
-  const [formSuccess, setFormSuccess] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const fileInputRef = useRef(null);
-  const [formData, setFormData] = useState({
-    titulo: '',
-    area: '',
-    descricao: ''
-  });
-
-  // States para Perfil
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    name: '',
-    phone: '',
-    password: ''
-  });
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth <= 768) setIsSidebarCollapsed(true);
-      else setIsSidebarCollapsed(false);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
+    async function loadData() {
+      setLoadingProfile(true);
+      try {
+        const res = await fetch('/api/perfil');
+        const data = await res.json();
+        if (data.success) {
+          setProfileData(data.data);
+          setUserName(data.data.name);
+        }
+      } catch (e) {
+        console.error("Erro perfil:", e);
+      } finally {
+        setLoadingProfile(false);
+      }
 
-    async function loadInitialData() {
-      console.log("Iniciando carga de dados do dashboard...");
-      
-
-
-      // 1.1 Carregar Casos
-      console.log("Chamando loadCasos do loadInitialData...");
-      loadCasos();
-
-      // 2. Carregar Perfil
-      console.log("Chamando loadProfile do loadInitialData...");
-      loadProfile();
+      setLoadingCasos(true);
+      try {
+        await fetchCasos();
+      } catch (e) {
+        console.error("Erro casos:", e);
+      } finally {
+        setLoadingCasos(false);
+      }
     }
-    loadInitialData();
 
-    // Inscrição em tempo real para novas notificações
-    let channel;
-    const setupRealtime = async () => {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
+    async function fetchCasos() {
+      const res = await fetch('/api/casos');
+      const data = await res.json();
+      if (data.success) setCasos(data.data);
+    }
 
-      channel = supabase
-        .channel(`public:notificacoes:user_id=eq.${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notificacoes',
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            setNotificacoes(prev => [payload.new, ...prev]);
+    loadData();
 
-            toast.custom((t) => (
-              <div className={`${styles.toastNotification} ${t.visible ? styles.toastIn : styles.toastOut}`}>
-                <div className={styles.toastIcon}>
-                   <Bell size={20} color="var(--color-gold)" />
-                </div>
-                <div className={styles.toastContent}>
-                  <p className={styles.toastTitle}>{payload.new.titulo}</p>
-                  <p className={styles.toastDesc}>{payload.new.mensagem}</p>
-                </div>
-              </div>
-            ), { duration: 5000 });
-          }
-        )
-        .subscribe();
-    };
-
-    setupRealtime();
+    // REAL-TIME: Assinar mudanças na tabela casos
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'casos' }, (payload) => {
+        console.log('Real-time change detected:', payload);
+        fetchCasos();
+      })
+      .subscribe();
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      if (channel) supabase.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   }, []);
 
-  // Monitorar mudança de Tab
-  useEffect(() => {
-    if (activeTab === 'painel') {
-      loadCasos();
-    }
-    if (activeTab === 'notificacoes') {
-      loadNotificacoes();
-    }
-    if (activeTab === 'perfil') {
-      loadProfile();
-    }
-  }, [activeTab]);
+  // Filtros estritos para garantir a separação correta
+  // Oportunidades: Somente casos SEM advogado e com status ABERTO
+  const openCases = casos.filter(c => 
+    (!c.advogado_id || c.advogado_id === null) && 
+    c.status === 'ABERTO'
+  );
 
-  const loadProfile = async () => {
-    setLoadingProfile(true);
-    try {
-      const response = await fetch('/api/perfil');
-      const data = await response.json();
-      
-      if (data.success) {
-        setProfileData(data.data);
-        setUserName(data.data.name);
-        setProfileForm({
-          name: data.data.name,
-          phone: data.data.phone || '',
-          password: ''
-        });
-      } else {
-        toast.error(data.message || "Erro ao carregar perfil.");
-      }
-    } catch (err) {
-      console.error("Erro carregar perfil:", err);
-      toast.error("Erro de conexão ao carregar perfil.");
-    } finally {
-      setLoadingProfile(false);
+  // Meus Casos: Somente casos vinculados ao MEU ID
+  const myCases = casos.filter(c => 
+    profileData?.id && 
+    c.advogado_id === profileData.id
+  );
+
+  const renderActiveContent = () => {
+    switch (activeTab) {
+      case 'oportunidades':
+        return renderOportunidades();
+      case 'meus-casos':
+        return renderMeusCasos();
+      case 'crm':
+        return renderCRM();
+      case 'docs':
+        return renderDocs();
+      case 'redator':
+        return renderRedator();
+      case 'juris':
+        return renderJuris();
+      case 'agenda':
+        return renderAgenda();
+      case 'triagem':
+        return renderTriagem();
+      case 'perfil':
+        return renderPerfil();
+      case 'config':
+        return renderConfig();
+      default:
+        return renderOportunidades();
     }
   };
 
-  const loadCasos = async () => {
-    console.log("Chamando loadCasos...");
-    setLoadingCasos(true);
-    try {
-      const response = await fetch('/api/casos');
-      console.log("Resposta loadCasos:", response.status);
-      const data = await response.json();
-      if (data.success) {
-        console.log("Casos carregados:", data.data.length);
-        setCasos(data.data);
-      } else {
-        console.warn("Falha ao carregar casos:", data.message);
-      }
-    } catch (err) {
-      console.error("Erro ao carregar casos:", err);
-    } finally {
-      setLoadingCasos(false);
-    }
-  };
+  const renderOportunidades = () => (
+    <div className={styles.toolContainer}>
+      <div className={styles.searchWrapper}>
+        <input 
+          type="text" 
+          placeholder="Buscar por qualquer coisa..." 
+          className={styles.searchInput}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
 
-  const handleOpenEditModal = (caso) => {
-    setSelectedCaso(caso);
-    setEditFormData({
-      titulo: caso.titulo || '',
-      area: caso.area_atuacao || '',
-      descricao: caso.descricao || ''
-    });
-    setIsEditModalOpen(true);
-  };
+      <div className={styles.contentRow}>
+        <aside className={styles.bannerLeft}>
+          <div className={styles.bannerCard}>
+            <Image src="/img/banner_sidebar.png" alt="Anuncie" width={240} height={360} className={styles.bannerImg} />
+          </div>
+        </aside>
 
-  const handleUpdateCaso = async (e) => {
-    e.preventDefault();
-    setFormLoading(true);
+        <section className={styles.opportunityGrid}>
+          {loadingCasos ? (
+            <div className={styles.loadingState}>Carregando oportunidades...</div>
+          ) : openCases.length > 0 ? (
+            openCases.filter(c => c.titulo.toLowerCase().includes(searchQuery.toLowerCase())).map(caso => (
+              <div key={caso.id} className={styles.opCard}>
+                <div className={styles.opHeader}>
+                  <div className={styles.opArea}>
+                    <div className={styles.opIcon}>{caso.area_atuacao?.charAt(0) || 'J'}</div>
+                    <div className={styles.opTitleGroup}>
+                      <h3>{caso.titulo || 'Caso Jurídico'}</h3>
+                      <span className={styles.opLocation}>{caso.area_atuacao || 'Direito Geral'}</span>
+                    </div>
+                  </div>
+                  <span className={styles.opDate}>{new Date(caso.created_at).toLocaleDateString()}</span>
+                </div>
+                <p className={styles.opDesc}>{caso.descricao}</p>
+                <div className={styles.opFooter}>
+                  <div className={styles.opPrice}>
+                    <Coins size={14} /> 5 Juris
+                  </div>
+                  <button className={styles.applyBtn} onClick={() => vincularCaso(caso.id)}>Manifestar Interesse</button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className={styles.emptyState}>Nenhuma oportunidade aberta no momento.</div>
+          )}
+        </section>
+
+        <aside className={styles.bannerRight}>
+          <div className={styles.bannerCard}>
+             <Image src="/img/banner_whatsapp.png" alt="Suporte" width={240} height={360} className={styles.bannerImg} />
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+
+  const vincularCaso = async (casoId) => {
+    if (!confirm("Deseja assumir este caso?")) return;
     try {
-      const res = await fetch('/api/casos', {
-        method: 'PUT',
+      const res = await fetch('/api/casos/vincular', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: selectedCaso.id,
-          titulo: editFormData.titulo,
-          area_atuacao: editFormData.area,
-          descricao: editFormData.descricao
-        })
+        body: JSON.stringify({ casoId })
       });
-
       const data = await res.json();
-
       if (data.success) {
-        toast.success("Caso atualizado com sucesso!");
-        setIsEditModalOpen(false);
-        loadCasos();
+        toast.success("Caso vinculado com sucesso!");
+        window.location.reload();
       } else {
-        toast.error(data.message || "Erro ao atualizar caso.");
+        toast.error(data.message);
       }
     } catch (err) {
-      console.error("Erro ao atualizar caso:", err);
-      toast.error("Erro de conexão ao atualizar caso.");
-    } finally {
-      setFormLoading(false);
+      toast.error("Erro ao vincular caso.");
     }
   };
 
-  const loadNotificacoes = async () => {
-    setLoadingNotificacoes(true);
-    const user = (await supabase.auth.getUser()).data.user;
-    if (user) {
-      const response = await getNotificacoesAction(user.id);
-      if (response.success) {
-        setNotificacoes(response.data);
-      }
-    }
-    setLoadingNotificacoes(false);
-  };
+  const renderMeusCasos = () => (
+    <div className={styles.toolContainer}>
+       <div className={styles.sectionHeader}>
+         <h2 className={styles.sectionTitle}>Meus Casos Atunais</h2>
+       </div>
+       <div className={styles.opportunityGrid}>
+          {myCases.map(caso => (
+            <div key={caso.id} className={styles.opCard}>
+                <div className={styles.opHeader}>
+                  <div className={styles.opArea}>
+                    <div className={styles.opIcon} style={{background: '#10b981'}}><CheckCircle2 size={16} /></div>
+                    <div className={styles.opTitleGroup}>
+                      <h3>{caso.titulo}</h3>
+                      <span className={styles.opLocation}>{caso.area_atuacao}</span>
+                    </div>
+                  </div>
+                  <span className={styles.opDate}>{new Date(caso.created_at).toLocaleDateString()}</span>
+                </div>
+                <p className={styles.opDesc}>{caso.descricao}</p>
+                <div className={styles.opFooter}>
+                   <span className={styles.badge} style={{background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: 'none'}}>{caso.status}</span>
+                   <button className={styles.applyBtn} style={{background: '#6366f1'}} onClick={() => window.location.href=`/chat/${caso.id}`}>Abrir Conversa</button>
+                </div>
+            </div>
+          ))}
+          {myCases.length === 0 && <div className={styles.emptyState}>Você ainda não possui casos vinculados.</div>}
+       </div>
+    </div>
+  );
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    const validFiles = files.filter(file => {
-      const isLt5MB = file.size / 1024 / 1024 < 5;
-      const isAllowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(file.type);
-      return isLt5MB && isAllowed;
-    });
+  const renderCRM = () => (
+    <div className={styles.toolContainer}>
+       <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>CRM & KYC Jurídico</h2>
+          <button className={styles.premiumBtn} style={{margin: 0}}>+ Novo Cliente</button>
+       </div>
+       <div className={styles.infoBox} style={{background: '#eef2ff', padding: '20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #c7d2fe'}}>
+          <p style={{fontSize: '0.9rem', color: '#3730a3'}}>Gerencie sua carteira de clientes com inteligência artificial. Analise risco automaticamente e segmente clientes por potencial.</p>
+       </div>
+       <div className={styles.emptyState}>Base de clientes em processamento...</div>
+    </div>
+  );
 
-    if (selectedFiles.length + validFiles.length > 5) {
-      toast.error('Limite máximo de 5 arquivos atingido.');
-      return;
-    }
+  const renderDocs = () => (
+    <div className={styles.toolContainer}>
+       <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Smart Docs</h2>
+       </div>
+       <div className={styles.infoBox} style={{background: '#fdf2f8', padding: '20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #fce7f3'}}>
+          <p style={{fontSize: '0.9rem', color: '#9d174d'}}>Faça upload de documentos e deixe a IA organizá-los. Detectamos tipos de petição, contratos e sentenças automaticamente.</p>
+       </div>
+       <div className={styles.emptyState}>Nenhum documento armazenado.</div>
+    </div>
+  );
 
-    setSelectedFiles(prev => [...prev, ...validFiles]);
-  };
+  const renderRedator = () => (
+    <div className={styles.toolContainer}>
+       <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Redator IA (Copilot)</h2>
+       </div>
+       <div className={styles.infoBox} style={{background: '#fff7ed', padding: '20px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #ffedd5'}}>
+          <p style={{fontSize: '0.9rem', color: '#9a3412'}}>Gere minutas jurídicas completas com um clique. Configure o tipo de peça, tom de voz e dados do cliente.</p>
+       </div>
+       <div className={styles.emptyState}>Inicie uma nova redação para ver o editor.</div>
+    </div>
+  );
 
-  const removeFile = (index) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  const renderJuris = () => (
+    <div className={styles.toolContainer}>
+       <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Jurisprudência AI</h2>
+       </div>
+       <div style={{display: 'flex', gap: '10px', marginBottom: '20px'}}>
+         <input type="text" placeholder="Pesquisar teses, tribunais ou temas..." className={styles.searchInput} style={{margin: 0}} />
+         <button className={styles.applyBtn} style={{width: 'auto', flex: 'none'}}>Pesquisar</button>
+       </div>
+       <div className={styles.emptyState}>O motor de busca JurisAI está pronto.</div>
+    </div>
+  );
 
-  const handleSubmitCaso = async (e) => {
-    e.preventDefault();
-    setFormLoading(true);
+  const renderAgenda = () => (
+    <div className={styles.toolContainer}>
+       <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Agenda Inteligente</h2>
+       </div>
+       <div className={styles.emptyState}>Não há compromissos para hoje.</div>
+    </div>
+  );
 
+  const renderTriagem = () => (
+    <div className={styles.toolContainer}>
+       <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Triagem (Intake)</h2>
+       </div>
+       <div className={styles.emptyState}>Nenhuma triagem em andamento.</div>
+    </div>
+  );
+
+  const renderPerfil = () => (
+    <div className={styles.toolContainer}>
+       <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Meu Perfil Profissional</h2>
+       </div>
+       {profileData && (
+         <div className={styles.opCard} style={{background: '#fff'}}>
+            <p><strong>Nome:</strong> {profileData.name}</p>
+            <p><strong>OAB:</strong> {profileData.oab}</p>
+            <p><strong>Email:</strong> {profileData.email}</p>
+            <p><strong>Telefone:</strong> {profileData.phone || 'Não informado'}</p>
+            <p><strong>Saldo:</strong> {profileData.balance} Juris</p>
+         </div>
+       )}
+    </div>
+  );
+
+  const renderConfig = () => (
+    <div className={styles.toolContainer}>
+       <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Configurações do Sistema</h2>
+       </div>
+       <div className={styles.emptyState}>Painel de configurações em desenvolvimento.</div>
+    </div>
+  );
+
+  const handleBuyJuris = async (amount = 20) => {
     try {
-      const uploadedUrls = [];
-      const user = (await supabase.auth.getUser()).data.user;
-
-      if (!user) throw new Error("Usuário não autenticado.");
-
-      for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = fileName;
-
-        const { error: uploadError } = await supabase.storage
-          .from('CASES')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('CASES')
-          .getPublicUrl(filePath);
-        
-        uploadedUrls.push(publicUrl);
-      }
-
-      const result = await createCasoAction({
-        titulo: formData.titulo,
-        descricao: formData.descricao,
-        area_atuacao: formData.area,
-        cliente_id: user.id,
-        anexos: uploadedUrls
-      });
-
-      if (result.success) {
-        setFormSuccess(true);
-        setFormData({ titulo: '', area: '', descricao: '' });
-        setSelectedFiles([]);
-        setTimeout(() => {
-          setFormSuccess(false);
-          setActiveTab('painel');
-        }, 3000);
-      } else {
-        toast.error(result.message);
-      }
-    } catch (error) {
-      console.error("Erro ao enviar caso:", error);
-      toast.error("Erro ao enviar caso.");
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
-    setFormLoading(true);
-    
-    try {
-      // 1. Atualizar Nome e Telefone via API real
-      const resProfile = await fetch('/api/perfil', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              name: profileForm.name,
-              phone: profileForm.phone
-          })
-      });
-      const dataProfile = await resProfile.json();
-
-      if (!dataProfile.success) throw new Error(dataProfile.message);
-
-      // 2. Atualizar Senha se preenchida
-      if (profileForm.password) {
-        const resPass = await updatePasswordAction(profileForm.password);
-        if (!resPass.success) throw new Error(resPass.message);
-      }
-
-      toast.success("Perfil atualizado com sucesso!");
-      setUserName(profileForm.name);
-      loadProfile();
-    } catch (error) {
-      toast.error(error.message);
-    } finally {
-      setFormLoading(false);
-    }
-  };
-
-  const handleDeleteAccount = async () => {
-    if (!confirm("TEM CERTEZA? Esta ação é irreversível e excluirá todos os seus dados.")) return;
-    
-    setFormLoading(true);
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) return;
-
-    const response = await deleteAccountAction(user.id);
-    if (response.success) {
-      toast.success("Conta excluída. Sentiremos sua falta.");
-      await fetch('/api/auth/logout', { method: 'POST' });
-      window.location.href = "/";
-    } else {
-      toast.error(response.message);
-      setFormLoading(false);
+      toast.loading("Iniciando pagamento...");
+      await createJurisCheckout(amount);
+    } catch (err) {
+      toast.dismiss();
+      toast.error("Erro ao iniciar compra: " + err.message);
     }
   };
 
   return (
-    <div className={`${styles.dashboardContainer} ${isSidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
-      
+    <div className={styles.dashboardContainer}>
       {/* SIDEBAR */}
       <aside className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
-          <button className={styles.menuToggle} onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
-            {isSidebarCollapsed ? <Menu size={24} /> : <X size={24} />}
-          </button>
-          
-          {!isSidebarCollapsed && (
-            <Link href="/" className={styles.logoWrapper}>
-              <div className={styles.logoIcon}><Scale size={20} color="#1A1A1A" /></div>
-              <span className={styles.logoText}>SocialJurídico</span>
-            </Link>
-          )}
+          <div className={styles.logoWrapper}>
+            <span className={styles.logoText}>SocialJurídico</span>
+            <span className={styles.logoSub}>Advogado</span>
+          </div>
+        </div>
 
-          {isSidebarCollapsed && (
-            <div className={styles.collapsedLogo}>
-               <div className={styles.logoIconCompact}><Scale size={20} color="#fff" /></div>
-            </div>
-          )}
+        <button className={styles.premiumBtn}>Seja Premium</button>
+
+        <div className={styles.quotaContainer}>
+           <div className={styles.quotaLabel}>
+              <span>0 / 5.000</span>
+              <span className={styles.quotaValue}>5.000 restantes</span>
+           </div>
+           <div className={styles.progressBar}>
+              <div className={styles.progressFill}></div>
+           </div>
         </div>
 
         <nav className={styles.nav}>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'painel' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('painel')} title="Painel">
-            <LayoutDashboard size={22} />
-            {!isSidebarCollapsed && <span>Painel</span>}
-          </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'novo' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('novo')} title="Novos Casos">
-            <PlusCircle size={22} />
-            {!isSidebarCollapsed && <span>Novos Casos</span>}
-          </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'notificacoes' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('notificacoes')} title="Notificações">
-            <Bell size={22} />
-            {!isSidebarCollapsed && <span>Notificações</span>}
-          </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'perfil' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('perfil')} title="Meu Perfil">
-            <User size={22} />
-            {!isSidebarCollapsed && <span>Meu Perfil</span>}
-          </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'meus-casos' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('meus-casos')} title="Meus Casos">
-            <FileText size={22} />
-            {!isSidebarCollapsed && <span>Meus Casos</span>}
-          </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'conversas' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('conversas')} title="Minhas Conversas">
-            <MessageSquare size={22} />
-            {!isSidebarCollapsed && <span>Minhas Conversas</span>}
-          </Link>
-          <button className={`${styles.navItem} ${styles.logoutBtn}`}
-            title="Sair"
-            onClick={async () => {
+          <div className={styles.navGroupLabel}>Navegação</div>
+          <div className={`${styles.navItem} ${activeTab === 'oportunidades' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('oportunidades')}>
+            <Globe size={18} /> <span>Oportunidades</span>
+          </div>
+          <div className={`${styles.navItem} ${activeTab === 'meus-casos' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('meus-casos')}>
+            <Briefcase size={18} /> <span>Meus Casos</span>
+          </div>
+
+          <div className={styles.navGroupLabel}>Ferramentas PRO</div>
+          <div className={`${styles.navItem} ${activeTab === 'crm' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('crm')}>
+            <Users size={18} /> <span>CRM & KYC</span>
+          </div>
+          <div className={`${styles.navItem} ${activeTab === 'docs' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('docs')}>
+            <FileText size={18} /> <span>Smart Docs</span>
+          </div>
+          <div className={`${styles.navItem} ${activeTab === 'redator' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('redator')}>
+            <Sparkles size={18} /> <span>Redator IA</span>
+          </div>
+          <div className={`${styles.navItem} ${activeTab === 'juris' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('juris')}>
+            <Scale size={18} /> <span>Jurisprudência</span>
+          </div>
+          <div className={`${styles.navItem} ${activeTab === 'agenda' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('agenda')}>
+            <Calendar size={18} /> <span>Agenda</span>
+          </div>
+          <div className={`${styles.navItem} ${activeTab === 'triagem' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('triagem')}>
+            <Filter size={18} /> <span>Triagem</span>
+          </div>
+
+          <div className={styles.navGroupLabel}>Sistema</div>
+          <div className={styles.navItem} onClick={() => alert('Documentação em breve...')}>
+            <BookOpen size={18} /> <span>Documentação</span>
+          </div>
+        </nav>
+
+        <div className={styles.sidebarFooter}>
+           <div className={`${styles.navItem} ${activeTab === 'perfil' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('perfil')}>
+              <User size={18} /> <span>Meu Perfil</span>
+           </div>
+           <div className={styles.navItem} onClick={() => setActiveTab('config')}>
+              <Settings size={18} /> <span>Ajustes</span>
+           </div>
+           <div className={`${styles.navItem} ${styles.footerLogout}`} onClick={async () => {
               await fetch('/api/auth/logout', { method: 'POST' });
               window.location.href = '/login';
-            }}
-          >
-            <LogOut size={22} />
-            {!isSidebarCollapsed && <span>Sair</span>}
-          </button>
-        </nav>
+           }}>
+              <LogOut size={18} /> <span>Sair</span>
+           </div>
+        </div>
       </aside>
 
       {/* MAIN */}
       <main className={styles.mainContent}>
-        <header className={styles.topHeader}>
-          <div className={styles.headerInfo}>
-            <h1>{
-              activeTab === 'painel' ? 'Painel' :
-              activeTab === 'novo' ? 'Novos Casos' :
-              activeTab === 'notificacoes' ? 'Notificações' :
-              activeTab === 'meus-casos' ? 'Meus Casos' :
-              activeTab === 'conversas' ? 'Minhas Conversas' :
-              'Meu Perfil'
-            }</h1>
-            <p>Bem-vindo, {userName}</p>
-            {profileData && (
-              <span style={{fontSize: '10px', opacity: 0.5, display: 'block'}}>ID: {profileData.id} | {profileData.email}</span>
-            )}
+        <header className={styles.topBar}>
+          <div className={styles.breadcrumb}>
+            <Globe size={20} className={styles.breadcrumbIcon} />
+            <span>Oportunidades em Aberto</span>
           </div>
-          <div className={styles.userProfile}>
-            <div className={styles.avatarCircle}>{userName.substring(0, 2).toUpperCase()}</div>
+
+          <div className={styles.userActions}>
+            <div className={styles.jurisBadge}>
+               <Coins size={14} color="var(--brand-gold)" />
+               <span className={styles.jurisCount}>{profileData?.balance || 0} Juris</span>
+               <button className={styles.buyJurisBtn} onClick={() => handleBuyJuris(20)}>Comprar</button>
+            </div>
+            
+            <div className={styles.userInfo}>
+               <span className={styles.userName}>{userName}</span>
+               <span className={styles.userOAB}>{profileData?.oab || 'OAB Pendente'}</span>
+            </div>
+
+            <div className={styles.avatar}>
+               {userName.substring(0, 2).toUpperCase()}
+            </div>
           </div>
         </header>
 
         <section className={styles.pageBody}>
-          
-          {activeTab === 'painel' && (
-            <div className={styles.contentGrid}>
-              <div className={styles.listSection}>
-                <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitle}>Meus Casos Atuais</h2>
-                </div>
-                
-                {loadingCasos ? (
-                  <p style={{padding: '20px'}}>Carregando seus casos...</p>
-                ) : casos.filter(c => c.advogado_id === profileData?.id).length > 0 ? (
-                  casos.filter(c => c.advogado_id === profileData?.id).map((caso) => (
-                    <div key={caso.id} className={styles.caseCard} onClick={() => handleOpenEditModal(caso)}>
-                      <div className={styles.cardTop}>
-                        <span className={styles.badge}>{caso.status}</span>
-                        <span className={styles.date}>
-                          {new Date(caso.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <h3 className={styles.caseTitleCard} style={{color: 'var(--color-gold)', margin: '8px 0', fontSize: '1rem'}}>{caso.titulo}</h3>
-                      <p className={styles.caseDesc}>{caso.descricao.substring(0, 100)}...</p>
-                    </div>
-                  ))
-                ) : (
-                  <div className={styles.emptyStateMinimal} style={{padding: '40px 20px', textAlign: 'center', opacity: 0.7}}>
-                    <FileText size={48} style={{marginBottom: '12px', color: 'var(--color-gold)'}} />
-                    <p>Você ainda não pegou nenhum caso.</p>
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.lawyersSection}>
-                <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitle}>Resumo de Atividades</h2>
-                </div>
-                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px'}}>
-                  <div className={styles.statCard} style={{background: 'rgba(212, 175, 55, 0.05)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(212, 175, 55, 0.1)'}}>
-                    <span style={{display: 'block', fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-gold)'}}>
-                      {casos.filter(c => c.advogado_id === profileData?.id).length}
-                    </span>
-                    <span style={{fontSize: '0.8rem', opacity: 0.6}}>Casos ativos</span>
-                  </div>
-                  <div className={styles.statCard} style={{background: 'rgba(212, 175, 55, 0.05)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(212, 175, 55, 0.1)'}}>
-                    <span style={{display: 'block', fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-gold)'}}>
-                      {notificacoes.filter(n => !n.lida).length}
-                    </span>
-                    <span style={{fontSize: '0.8rem', opacity: 0.6}}>Notificações</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'novo' && (
-            <div className={styles.novosCasosGrid}>
-              <div className={styles.sectionHeader} style={{marginBottom: '24px'}}>
-                 <h2 className={styles.sectionTitle}>Novos Casos Disponíveis</h2>
-                 <p style={{fontSize: '0.8rem', opacity: 0.6}}>Estes casos ainda não possuem um advogado vinculado.</p>
-              </div>
-
-              {casos.filter(c => !c.advogado_id && c.status === 'ABERTO').length > 0 ? (
-                <div className={styles.lawyersGrid}>
-                  {casos.filter(c => !c.advogado_id && c.status === 'ABERTO').map(caso => (
-                    <div key={caso.id} className={styles.lawyerCard} style={{textAlign: 'left', alignItems: 'flex-start'}}>
-                      <div className={styles.cardTop} style={{width: '100%', display: 'flex', justifyContent: 'space-between'}}>
-                        <span className={styles.badge}>{caso.area_atuacao || 'Geral'}</span>
-                        <span className={styles.date}>{new Date(caso.created_at).toLocaleDateString()}</span>
-                      </div>
-                      <h3 className={styles.lawyerName} style={{minHeight: 'auto', textAlign: 'left', justifyContent: 'flex-start', marginTop: '12px'}}>{caso.titulo}</h3>
-                      <p className={styles.lawyerSpecs} style={{minHeight: 'auto', textAlign: 'left', justifyContent: 'flex-start', fontSize: '0.8rem'}}>{caso.descricao.substring(0, 120)}...</p>
-                      
-                      <button 
-                        className={styles.contactBtn} 
-                        style={{marginTop: 'auto'}}
-                        onClick={async () => {
-                          if (!confirm("Deseja assumir este caso?")) return;
-                          setFormLoading(true);
-                          try {
-                            const res = await fetch('/api/casos/vincular', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ casoId: caso.id })
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                              toast.success("Caso vinculado com sucesso!");
-                              loadCasos();
-                            } else {
-                              toast.error(data.message);
-                            }
-                          } catch (err) {
-                            toast.error("Erro ao vincular caso.");
-                          } finally {
-                            setFormLoading(false);
-                          }
-                        }}
-                      >
-                        Assumir Caso
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={styles.emptyState}>
-                  <Scale size={48} className={styles.emptyIcon} />
-                  <p className={styles.emptyText}>Não há novos casos disponíveis no momento.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'notificacoes' && (
-            <div className={styles.notificationsContainer}>
-              <div className={styles.notificationsHeader}>
-                <h2 className={styles.sectionTitle}>Suas Notificações</h2>
-                <span className={styles.unreadCount}>
-                  {notificacoes.filter(n => !n.lida).length} não lidas
-                </span>
-              </div>
-              
-              {loadingNotificacoes ? (
-                <p style={{padding: '24px', textAlign: 'center'}}>Carregando notificações...</p>
-              ) : notificacoes.length > 0 ? (
-                notificacoes.map(notif => (
-                  <div key={notif.id} className={styles.notificationItem}>
-                    <div className={styles.notificationIcon}>
-                      <Bell size={20} />
-                    </div>
-                    <div className={styles.notificationInfo}>
-                      <div className={styles.notificationTop}>
-                        <span className={styles.notifTitle}>{notif.titulo}</span>
-                        <span className={styles.notifDate}>
-                          {new Date(notif.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className={styles.notifDesc}>{notif.mensagem}</p>
-                    </div>
-                    {!notif.lida && <div className={styles.unreadDot}></div>}
-                  </div>
-                ))
-              ) : (
-                <div className={styles.emptyState} style={{border: 'none'}}>
-                  <Bell size={48} className={styles.emptyIcon} />
-                  <p className={styles.emptyText}>Você não tem notificações no momento.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'perfil' && (
-            <div className={styles.profileContainer}>
-               {loadingProfile ? (
-                 <p style={{textAlign: 'center'}}>Carregando seu perfil...</p>
-               ) : profileData ? (
-                 <>
-                   <div className={styles.profileHeader}>
-                      <div className={styles.profileAvatarLarge}>
-                        {profileData.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div className={styles.profileHeaderText}>
-                        <h2>{profileData.name}</h2>
-                        <p>{profileData.role === 'ADMIN' ? 'Administrador' : profileData.role === 'LAWYER' ? 'Advogado' : 'Cliente'} SocialJurídico</p>
-                      </div>
-                   </div>
-
-                   <form onSubmit={handleUpdateProfile}>
-                      <div className={styles.profileGrid}>
-                        <div className={`${styles.profileField} ${styles.editable}`}>
-                          <label><User size={14} style={{marginRight: 6}} /> Nome Completo</label>
-                          <input 
-                            type="text" 
-                            className={styles.profileInput}
-                            value={profileForm.name}
-                            onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
-                          />
-                        </div>
-
-                        <div className={`${styles.profileField} ${styles.editable}`}>
-                          <label><Phone size={14} style={{marginRight: 6}} /> Telefone/WhatsApp</label>
-                          <input 
-                            type="text" 
-                            className={styles.profileInput}
-                            value={profileForm.phone}
-                            onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
-                          />
-                        </div>
-
-                        <div className={styles.profileField}>
-                          <label><Mail size={14} style={{marginRight: 6}} /> E-mail (Inalterável)</label>
-                          <div className={styles.value}>{profileData.email}</div>
-                        </div>
-
-                        <div className={`${styles.profileField} ${styles.editable}`}>
-                          <label><Lock size={14} style={{marginRight: 6}} /> Alterar Senha</label>
-                          <input 
-                            type="password" 
-                            className={styles.profileInput}
-                            placeholder="Deixe em branco para manter"
-                            value={profileForm.password}
-                            onChange={(e) => setProfileForm({...profileForm, password: e.target.value})}
-                          />
-                        </div>
-
-                        <div className={styles.profileField}>
-                          <label><Calendar size={14} style={{marginRight: 6}} /> Membro desde</label>
-                          <div className={styles.value}>
-                            {new Date(profileData.created_at || Date.now()).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                          </div>
-                        </div>
-
-                        <div className={styles.profileField}>
-                          <label><Scale size={14} style={{marginRight: 6}} /> Tipo de Conta</label>
-                          <div className={styles.value}>{profileData.role}</div>
-                        </div>
-                      </div>
-
-                      <div className={styles.profileActions}>
-                        <button type="submit" className={styles.saveProfileBtn} disabled={formLoading}>
-                          {formLoading ? 'Salvando...' : 'Salvar Alterações'}
-                        </button>
-                        <button type="button" className={styles.deleteAccountBtn} onClick={handleDeleteAccount} disabled={formLoading}>
-                          <Trash2 size={18} style={{marginRight: 8}} /> Excluir Minha Conta
-                        </button>
-                      </div>
-                   </form>
-                 </>
-               ) : (
-                <div className={styles.emptyState}>
-                   <User size={48} className={styles.emptyIcon} />
-                   <h3 className={styles.sectionTitle}>Perfil não encontrado</h3>
-                   <p className={styles.emptyText}>Não foi possível carregar os dados. Verifique sua conexão.</p>
-                 </div>
-               )}
-            </div>
-          )}
-
-          {activeTab === 'meus-casos' && (
-            <div className={styles.meusCasosPage}>
-              <div className={styles.sectionHeader} style={{marginBottom: '24px'}}>
-                <h2 className={styles.sectionTitle}>Todos os Meus Casos</h2>
-                <button onClick={() => setActiveTab('novo')} className={styles.addNewBtn}>+ Novo Caso</button>
-              </div>
-              {loadingCasos ? (
-                <p style={{padding: '20px', opacity: 0.6}}>Carregando seus casos...</p>
-              ) : casos.filter(c => c.advogado_id === profileData?.id).length > 0 ? (
-                <div className={styles.casosFullGrid}>
-                  {casos.filter(c => c.advogado_id === profileData?.id).map((caso) => (
-                    <div key={caso.id} className={styles.caseCardFull} onClick={() => handleOpenEditModal(caso)}>
-                      <div className={styles.caseCardHeader}>
-                        <span className={styles.badge}>{caso.status}</span>
-                        <span className={styles.date}>{new Date(caso.created_at).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                      <h3 className={styles.caseTitleCard}>{caso.titulo}</h3>
-                      <p className={styles.caseAreaTag}>{caso.area_atuacao || 'Área não definida'}</p>
-                      <p className={styles.caseDesc}>{caso.descricao?.substring(0, 150)}...</p>
-                      <div className={styles.caseCardFooter}>
-                        <span className={styles.advTag}>✔ Caso sob seu cuidado</span>
-                        <span className={styles.editHint}>Clique para ver detalhes →</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={styles.emptyStateMinimal} style={{padding: '60px 20px', textAlign: 'center', opacity: 0.7}}>
-                  <FileText size={56} style={{marginBottom: '16px', color: 'var(--color-gold)'}} />
-                  <p style={{fontSize: '1.1rem', fontWeight: 700}}>Nenhum caso sob sua responsabilidade</p>
-                  <p style={{marginTop: '8px', opacity: 0.6}}>Vá em &quot;Novos Casos&quot; para assumir uma nova solicitação.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'conversas' && (
-            <div className={styles.conversasPage}>
-              <div className={styles.sectionHeader} style={{marginBottom: '24px'}}>
-                <h2 className={styles.sectionTitle}>Minhas Conversas</h2>
-              </div>
-              {loadingCasos ? (
-                <p style={{padding: '20px', opacity: 0.6}}>Carregando...</p>
-              ) : casos.filter(c => c.advogado_id === profileData?.id).length > 0 ? (
-                <div className={styles.conversasList}>
-                  {casos.filter(caso => caso.advogado_id === profileData?.id).map((caso) => (
-                    <div
-                      key={caso.id}
-                      className={styles.conversaItem}
-                      onClick={() => window.location.href = `/chat/${caso.id}`}
-                    >
-                      <div className={styles.conversaAvatar}>
-                        <Scale size={20} />
-                      </div>
-                      <div className={styles.conversaInfo}>
-                        <h3 className={styles.conversaTitulo}>{caso.titulo}</h3>
-                        <p className={styles.conversaArea}>{caso.area_atuacao || 'Área não definida'}</p>
-                      </div>
-                      <div className={styles.conversaStatus}>
-                        <span className={styles.badge}>{caso.status}</span>
-                        <span className={styles.conversaArrow}>→</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={styles.emptyStateMinimal} style={{padding: '60px 20px', textAlign: 'center', opacity: 0.7}}>
-                  <MessageSquare size={56} style={{marginBottom: '16px', color: 'var(--color-gold)'}} />
-                  <p style={{fontSize: '1.1rem', fontWeight: 700}}>Nenhuma conversa ativa</p>
-                  <p style={{marginTop: '8px', opacity: 0.6}}>Suas conversas com os clientes aparecerão aqui assim que você assumir um caso.</p>
-                </div>
-              )}
-            </div>
-          )}
-
+           {renderActiveContent()}
         </section>
       </main>
-      
-      {/* MODAL DE EDIÇÃO DE CASO */}
-      {isEditModalOpen && selectedCaso && (
-        <div className={styles.modalOverlay} onClick={() => setIsEditModalOpen(false)}>
-          <div className={styles.editModal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h2>Editar Caso</h2>
-              <button className={styles.closeBtn} onClick={() => setIsEditModalOpen(false)}>
-                <X size={24} />
-              </button>
-            </div>
-            
-            <form onSubmit={handleUpdateCaso} className={styles.editForm}>
-              <div className={styles.formGroup}>
-                <label>Título do Caso</label>
-                <input 
-                  type="text" 
-                  value={editFormData.titulo}
-                  onChange={(e) => setEditFormData({...editFormData, titulo: e.target.value})}
-                  className={styles.modalInput}
-                  required
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Área de Atuação</label>
-                <select 
-                  value={editFormData.area}
-                  onChange={(e) => setEditFormData({...editFormData, area: e.target.value})}
-                  className={styles.modalSelect}
-                  required
-                >
-                  <option value="">Selecione a área</option>
-                  <option value="CIVIL">Direito Civil</option>
-                  <option value="TRABALHISTA">Direito Trabalhista</option>
-                  <option value="PENAL">Direito Penal</option>
-                  <option value="FAMILIA">Direito de Família</option>
-                  <option value="CONSUMIDOR">Direito do Consumidor</option>
-                  <option value="OUTROS">Outros</option>
-                </select>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Descrição Detalhada</label>
-                <textarea 
-                  value={editFormData.descricao}
-                  onChange={(e) => setEditFormData({...editFormData, descricao: e.target.value})}
-                  className={styles.modalTextarea}
-                  required
-                />
-              </div>
-
-              <div className={styles.modalActions}>
-                <button type="submit" className={styles.saveChangesBtn} disabled={formLoading}>
-                  {formLoading ? 'Salvando...' : 'Salvar Alterações'}
-                </button>                
-                {selectedCaso.advogado_id ? (
-                  <Link href={`/chat/${selectedCaso.id}`} className={styles.chatBtn} style={{textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    <MessageSquare size={18} style={{marginRight:8}} />
-                    Iniciar Chat com Advogado
-                  </Link>
-                ) : (
-                  <button type="button" className={styles.chatBtn} disabled title="Aguardando um advogado ser vinculado ao caso">
-                    <MessageSquare size={18} style={{marginRight:8}} />
-                    Aguardando advogado...
-                  </button>
-                )}
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

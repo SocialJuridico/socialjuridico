@@ -39,11 +39,16 @@ function LoginContent() {
     if (response.success) {
       setSuccessMsg('Login realizado com sucesso! Redirecionando...');
       const role = response.user?.role || 'CLIENT';
+      const needsUpdate = response.user?.needsPasswordUpdate === true;
       
       setTimeout(() => {
-        if (role === 'ADMIN') router.push('/admin');
-        else if (role === 'LAWYER') router.push('/dashboard/advogado');
-        else router.push('/dashboard/cliente');
+        if (needsUpdate) {
+          router.push('/atualizar-senha');
+        } else {
+          if (role === 'ADMIN') router.push('/admin');
+          else if (role === 'LAWYER') router.push('/dashboard/advogado');
+          else router.push('/dashboard/cliente');
+        }
       }, 1500);
     } else {
       setErrorMsg(response.message || 'Erro ao realizar login. Verifique suas credenciais.');

@@ -94,6 +94,14 @@
   margin-top: auto;
   margin-bottom: 12px;
   color: #ef4444;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
 }
 
 .logoutBtn:hover {
@@ -257,6 +265,9 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
 .caseCard {
@@ -1199,6 +1210,207 @@
   .editModal {
     padding: 24px;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   TABS: MEUS CASOS & MINHAS CONVERSAS
+   ────────────────────────────────────────────────────────────────────────── */
+
+.meusCasosPage, .conversasPage {
+  padding: 10px 0 40px;
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* GRID DE CASOS FULL */
+.casosFullGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 24px;
+}
+
+.caseCardFull {
+  background: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 24px;
+  padding: 28px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.caseCardFull:hover {
+  transform: translateY(-8px);
+  background: rgba(35, 35, 35, 0.8);
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.caseCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.caseTitleCard {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.caseAreaTag {
+  align-self: flex-start;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--color-gold);
+  background: rgba(212, 175, 55, 0.1);
+  padding: 6px 12px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.caseDesc {
+  font-size: 0.95rem;
+  color: var(--color-silver-dark);
+  line-height: 1.6;
+  margin: 0;
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.caseCardFooter {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.advTag {
+  color: #10b981;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.noAdvTag {
+  color: #f59e0b;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editHint {
+  color: var(--color-gold);
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.caseCardFull:hover .editHint {
+  opacity: 1;
+}
+
+/* LISTA DE CONVERSAS */
+.conversasList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  max-width: 800px;
+}
+
+.conversaItem {
+  background: rgba(30, 30, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 24px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.conversaItem:hover {
+  background: rgba(35, 35, 35, 0.9);
+  border-color: rgba(212, 175, 55, 0.3);
+  transform: translateX(8px);
+}
+
+.conversaAvatar {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-black);
+  flex-shrink: 0;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+}
+
+.conversaInfo {
+  flex: 1;
+}
+
+.conversaTitulo {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 4px;
+}
+
+.conversaArea {
+  font-size: 0.88rem;
+  color: var(--color-silver-dark);
+  font-weight: 500;
+}
+
+.conversaStatus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.conversaArrow {
+  font-size: 1.5rem;
+  color: var(--color-gold);
+  opacity: 0.3;
+  transition: all 0.3s ease;
+}
+
+.conversaItem:hover .conversaArrow {
+  opacity: 1;
+  transform: translateX(4px);
+}
+
+/* AJUSTES DE HEADER NAS TABS */
+.sectionHeader {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100%;
 }
 
 

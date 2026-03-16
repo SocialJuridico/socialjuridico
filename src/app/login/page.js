@@ -2,17 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Scale, Loader2 } from 'lucide-react';
+import { ArrowLeft, Scale, Loader2, AlertCircle } from 'lucide-react';
 import styles from './Login.module.css';
-import { signInAction } from '@/app/actions/authActions';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [needsUpdate, setNeedsUpdate] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionExpired = searchParams.get('expired') === 'true';
 
   const [formData, setFormData] = useState({
     email: '',
@@ -101,6 +101,46 @@ export default function Login() {
             </p>
           </div>
 
+          {/* Banner de sessão expirada */}
+          {sessionExpired && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: 'rgba(234, 179, 8, 0.08)',
+              border: '1px solid rgba(234, 179, 8, 0.3)',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              marginBottom: '8px',
+              color: '#eab308',
+              fontSize: '0.88rem',
+              fontWeight: 600
+            }}>
+              <AlertCircle size={18} style={{flexShrink: 0}} />
+              Sua sessão expirou após 4 horas de inatividade. Por segurança, faça login novamente.
+            </div>
+          )}
+
+          {/* Mensagem de erro */}
+          {errorMsg && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              marginBottom: '8px',
+              color: '#ef4444',
+              fontSize: '0.88rem',
+              fontWeight: 600
+            }}>
+              <AlertCircle size={18} style={{flexShrink: 0}} />
+              {errorMsg}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
             
             <div className={styles.formGroup}>
@@ -142,35 +182,23 @@ export default function Login() {
               </Link>
             </div>
 
-            {/* ERROR AND SUCCESS MESSAGES */}
-            {errorMsg && (
-              <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                🚨 {errorMsg}
-              </div>
-            )}
-            
+            {/* SUCCESS MESSAGES */}
             {successMsg && (
               <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem', fontWeight: 'bold' }}>
                 ✅ {successMsg}
               </div>
             )}
 
-            {needsUpdate ? (
-              <Link href="/atualizar-senha" className={styles.submitBtn} style={{ textAlign: 'center', display: 'block', textDecoration: 'none' }}>
-                Ir para Atualizar Senha
-              </Link>
-            ) : (
-              <button type="submit" className={styles.submitBtn} disabled={loading}>
-                {loading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    <Loader2 className="animate-spin" size={20} />
-                    Entrando...
-                  </div>
-                ) : (
-                  'Entrar na plataforma'
-                )}
-              </button>
-            )}
+            <button type="submit" className={styles.submitBtn} disabled={loading}>
+              {loading ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <Loader2 className="animate-spin" size={20} />
+                  Entrando...
+                </div>
+              ) : (
+                'Entrar na plataforma'
+              )}
+            </button>
 
             <div className={styles.loginHint}>
               Ainda não tem uma conta? <Link href="/cadastro" className={styles.linkTag}>Cadastre-se grátis</Link>

@@ -2,73 +2,106 @@ import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
+// ── RATE LIMITING ──
+const loginAttempts = new Map();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  if (!entry || now - entry.firstAttempt > WINDOW_MS) {
+    loginAttempts.set(ip, { count: 1, firstAttempt: now });
+    return { allowed: true };
+  }
+  if (entry.count >= MAX_ATTEMPTS) {
+    const retryMin = Math.ceil((WINDOW_MS - (now - entry.firstAttempt)) / 60000);
+    return { allowed: false, retryMin };
+  }
+  entry.count++;
+  return { allowed: true };
+}
+
 export async function POST(request) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+  const rateCheck = checkRateLimit(ip);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { success: false, message: `Muitas tentativas. Aguarde ${rateCheck.retryMin} minuto(s).` },
+      { status: 429 }
+    );
+  }
+
   try {
     const { email, password } = await request.json();
+    if (!email || !password) {
+      return NextResponse.json({ success: false, message: 'Email e senha são obrigatórios.' }, { status: 400 });
+    }
+
     const supabase = createClient();
 
-    // 1. Autenticar no Supabase Auth
+    // 1. Autenticar no Supabase Auth (O supabaseServer já cuida dos cookies de sessão)
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     });
 
     if (authError) {
-      return NextResponse.json({ success: false, message: authError.message }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: 'Credenciais inválidas. Verifique seu email e senha.' },
+        { status: 401 }
+      );
     }
 
     const user = authData.user;
-    const clientToUse = supabaseAdmin || supabase;
+    const db = supabaseAdmin || supabase;
 
-    // 2. Buscar o perfil nas tabelas
+    // 2. Buscar perfil — select('*') para compatibilidade entre tabelas
     let profile = null;
-    let roleFound = 'CLIENT';
-
     const tables = ['clientes', 'advogados', 'admins'];
     for (const table of tables) {
-      const { data, error } = await clientToUse
-        .from(table)
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (data && !error) {
-        profile = data;
-        roleFound = data.role;
-        break;
-      }
+      const { data } = await db.from(table).select('id, name, email, role, phone, avatar').eq('id', user.id).single();
+      if (data) { profile = data; break; }
     }
 
-    // 3. Se não achou perfil mas está logado, criar um padrão para evitar tela em branco
+    // 3. Criar perfil padrão se não existir
     if (!profile) {
-      console.warn("User authenticated but profile not found. Creating default client profile.");
       const newProfile = {
         id: user.id,
         email: user.email,
         name: user.user_metadata?.full_name || user.email.split('@')[0],
         role: 'CLIENT',
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       };
-
-      const { error: insertError } = await clientToUse
-        .from('clientes')
-        .insert([newProfile]);
-      
-      if (!insertError) profile = newProfile;
+      const { data: inserted } = await db.from('clientes').insert([newProfile]).select('id, name, email, role').single();
+      if (inserted) profile = inserted;
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    // 4. Montar resposta — os cookies de sessão Supabase são gerenciados automaticamente pelo createClient()
+    const res = NextResponse.json({
+      success: true,
       user: {
         id: user.id,
         email: user.email,
         name: profile?.name || user.email.split('@')[0],
-        role: profile?.role || 'CLIENT'
-      }
+        role: profile?.role || 'CLIENT',
+      },
     });
 
+    // Cookie de controle de 4 horas
+    const loginData = Buffer.from(JSON.stringify({ loginAt: new Date().toISOString(), userId: user.id })).toString('base64');
+    res.cookies.set('sj_login_time', loginData, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 4 * 60 * 60,
+      path: '/',
+    });
+
+    return res;
+
   } catch (error) {
-    console.error("Erro na API de Login:", error);
-    return NextResponse.json({ success: false, message: "Erro interno no servidor" }, { status: 500 });
+    console.error('Erro na API de Login:', error);
+    return NextResponse.json({ success: false, message: 'Erro interno no servidor.' }, { status: 500 });
   }
 }

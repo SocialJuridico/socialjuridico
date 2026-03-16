@@ -1,0 +1,107 @@
+import { createServerClient } from '@supabase/ssr';
+import { NextResponse } from 'next/server';
+
+// Rotas que exigem autenticação
+const PROTECTED_ROUTES = ['/dashboard', '/chat', '/admin'];
+
+// Rotas de autenticação (redirecionar para dashboard se já logado)
+const AUTH_ROUTES = ['/login', '/cadastro'];
+
+export async function middleware(request) {
+  const { pathname } = request.nextUrl;
+
+  const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+  const isAuthRoute = AUTH_ROUTES.some(route => pathname.startsWith(route));
+
+  // Rota neutra: deixar passar
+  if (!isProtected && !isAuthRoute) {
+    return NextResponse.next();
+  }
+
+  let response = NextResponse.next({
+    request: { headers: request.headers },
+  });
+
+  // Criar cliente Supabase para middleware (sem access a next/headers)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request: { headers: request.headers } });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  // Verificar sessão do Supabase
+  const { data: { user }, error } = await supabase.auth.getUser();
+  const isAuthenticated = !!user && !error;
+
+  // ── ROTA PROTEGIDA SEM SESSÃO → REDIRECIONAR PARA LOGIN ──
+  if (isProtected && !isAuthenticated) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // ── VERIFICAÇÃO DE EXPIRAÇÃO DA SESSÃO DE 4 HORAS ──
+  // Apenas para rotas protegidas com usuário autenticado
+  if (isProtected && isAuthenticated) {
+    const loginTimeCookie = request.cookies.get('sj_login_time');
+
+    if (loginTimeCookie?.value) {
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(loginTimeCookie.value, 'base64').toString('utf8')
+        );
+        const loginDate = new Date(decoded.loginAt);
+        const hoursElapsed = (Date.now() - loginDate.getTime()) / (1000 * 60 * 60);
+
+        if (hoursElapsed >= 4) {
+          // Sessão expirou → forçar logout
+          await supabase.auth.signOut();
+          const url = request.nextUrl.clone();
+          url.pathname = '/login';
+          url.searchParams.set('expired', 'true');
+          const expiredResponse = NextResponse.redirect(url);
+          expiredResponse.cookies.delete('sj_login_time');
+          return expiredResponse;
+        }
+      } catch {
+        // Cookie corrompido → ignorar (não derrubar a sessão por isso)
+        response.cookies.delete('sj_login_time');
+      }
+    }
+    // Se não tiver o cookie sj_login_time, pode ser que o usuário logou
+    // antes desse sistema ser implementado. Deixamos passar normalmente.
+  }
+
+  // ── ROTA DE AUTH COM SESSÃO ATIVA → REDIRECIONAR PARA DASHBOARD ──
+  if (isAuthRoute && isAuthenticated) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/dashboard/cliente';
+    return NextResponse.redirect(url);
+  }
+
+  return response;
+}
+
+export const config = {
+  matcher: [
+    '/dashboard/:path*',
+    '/chat/:path*',
+    '/admin/:path*',
+    '/login',
+    '/cadastro',
+  ],
+};

@@ -474,25 +474,26 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   animation: fadeIn 0.3s ease;
 }
 
 .modalContent {
-  background: #fff;
-  border-radius: 32px;
+  background: var(--color-black-light);
+  border-radius: 24px;
   padding: 40px;
   width: 90%;
   max-width: 650px;
-  color: #1e293b;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  color: var(--color-silver);
+  box-shadow: 0 0 50px rgba(212, 175, 55, 0.15);
   position: relative;
   text-align: center;
+  border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
 .modalHeader {
@@ -504,18 +505,18 @@
   font-size: 1.8rem;
   font-weight: 800;
   margin-bottom: 8px;
-  color: #0f172a;
+  color: var(--color-white);
 }
 
 .modalSubtitle {
   font-size: 0.95rem;
-  color: #64748b;
+  color: var(--color-gold);
   margin-bottom: 4px;
 }
 
 .modalDescription {
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--color-silver-dark);
 }
 
 .packageGrid {
@@ -526,7 +527,8 @@
 }
 
 .packageCard {
-  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   padding: 24px 16px;
   cursor: pointer;
@@ -538,51 +540,53 @@
 }
 
 .packageCard:hover {
-  border-color: #6366f1;
-  background: #f8fafc;
+  border-color: var(--color-gold);
+  background: rgba(212, 175, 55, 0.05);
+  transform: translateY(-5px);
 }
 
 .popularCard {
-  border: 2px solid #6366f1;
-  background: #f5f7ff;
+  border: 2px solid var(--color-gold);
+  background: rgba(212, 175, 55, 0.08);
 }
 
 .popularBadge {
   position: absolute;
-  top: 12px;
-  background: #e0e7ff;
-  color: #4338ca;
+  top: -12px;
+  background: var(--color-gold);
+  color: var(--color-black);
   padding: 4px 12px;
   border-radius: 20px;
   font-size: 0.65rem;
   font-weight: 800;
+  box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
 }
 
 .packageAmount {
   font-size: 2rem;
   font-weight: 800;
   margin-top: 10px;
-  color: #0f172a;
+  color: var(--color-white);
 }
 
 .packageUnit {
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--color-silver-dark);
   margin-bottom: 16px;
 }
 
 .packagePrice {
   font-size: 1.4rem;
   font-weight: 800;
-  color: #6366f1;
+  color: var(--color-gold);
   margin-bottom: 20px;
 }
 
 .packageBtn {
   width: 100%;
-  background: #f1f5f9;
-  color: #0f172a;
-  border: none;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-white);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 10px;
   border-radius: 12px;
   font-weight: 800;
@@ -592,29 +596,254 @@
 }
 
 .popularPkgBtn {
-  background: #4f46e5;
-  color: #fff;
+  background: var(--color-gold);
+  color: var(--color-black);
+  border: none;
 }
 
 .packageCard:hover .packageBtn {
-  background: #e2e8f0;
+  border-color: var(--color-gold);
+  color: var(--color-gold);
 }
 
 .popularCard:hover .packageBtn {
-  background: #4338ca;
+  background: var(--color-gold-dark);
 }
 
 .closeModalBtn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--color-silver-dark);
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
   margin-top: 10px;
+  transition: color 0.2s;
 }
 
 .closeModalBtn:hover {
-  color: #0f172a;
+  color: var(--color-gold);
 }
+
+/* MODAL SEJA PREMIUM (PRO) */
+.premiumModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(15px);
+  animation: fadeIn 0.4s ease;
+}
+
+.premiumModalContent {
+  background: #0f172a;
+  border-radius: 28px;
+  width: 95%;
+  max-width: 850px;
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  overflow: hidden;
+  box-shadow: 0 0 100px rgba(0,0,0,0.8), 0 0 30px rgba(212, 175, 55, 0.1);
+  position: relative;
+  border: 1px solid rgba(212, 175, 55, 0.15);
+}
+
+.modalLeft {
+  background: linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-brown) 100%);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--color-black);
+}
+
+.proBadge {
+  background: rgba(0, 0, 0, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-black);
+  width: fit-content;
+}
+
+.proTitle {
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1.1;
+  margin: 30px 0 20px;
+  letter-spacing: -1px;
+}
+
+.proSubline {
+  font-size: 1rem;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.priceContainer {
+  margin-top: auto;
+}
+
+.priceLarge {
+  font-size: 3rem;
+  font-weight: 900;
+  display: flex;
+  align-items: baseline;
+}
+
+.priceCents {
+  font-size: 1.2rem;
+  margin-left: 2px;
+}
+
+.pricePeriod {
+  font-size: 0.8rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.modalRight {
+  padding: 40px;
+  background: #111827;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.closeIconBtn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255,255,255,0.05);
+  border: none;
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.closeIconBtn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.rightHeader {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin-bottom: 30px;
+  color: var(--color-silver);
+}
+
+.featureList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.featureItem {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.featureIconBox {
+  width: 40px;
+  height: 40px;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gold);
+  flex-shrink: 0;
+}
+
+.featureText h4 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.featureText p {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.4;
+}
+
+.bonusBox {
+  background: rgba(212, 175, 55, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 16px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.bonusLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--color-gold);
+}
+
+.bonusValue {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.subscribeBtn {
+  background: var(--color-gold);
+  color: var(--color-black);
+  border: none;
+  padding: 18px;
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s;
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.2);
+}
+
+.subscribeBtn:hover {
+  transform: translateY(-2px);
+  background: var(--color-gold-dark);
+  box-shadow: 0 15px 30px rgba(212, 175, 55, 0.3);
+}
+
+@media (max-width: 800px) {
+  .premiumModalContent {
+    grid-template-columns: 1fr;
+  }
+  .modalLeft {
+    padding: 30px;
+    height: 250px;
+  }
+}
+
 

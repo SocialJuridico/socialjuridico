@@ -25,7 +25,11 @@ function checkRateLimit(ip) {
 export async function POST(request) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
   const rateCheck = checkRateLimit(ip);
-  if (!rateCheck.allowed) {
+  
+  // Ignorar rate limit em localhost para testes
+  const isLocalhost = ip === '127.0.0.1' || ip === '::1';
+
+  if (!rateCheck.allowed && !isLocalhost) {
     return NextResponse.json(
       { success: false, message: `Muitas tentativas. Aguarde ${rateCheck.retryMin} minuto(s).` },
       { status: 429 }

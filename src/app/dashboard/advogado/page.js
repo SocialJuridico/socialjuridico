@@ -32,7 +32,8 @@ import {
   Zap,
   TrendingUp,
   Shield,
-  MessageSquare
+  MessageSquare,
+  X
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
 import { supabase } from '@/lib/supabase';
@@ -48,6 +49,7 @@ export default function AdvogadoDashboard() {
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showBuyModal, setShowBuyModal] = useState(false);
+  const [showProModal, setShowProModal] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -401,6 +403,84 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const renderProModal = () => {
+    if (!showProModal) return null;
+
+    return (
+      <div className={styles.premiumModalOverlay} onClick={() => setShowProModal(false)}>
+        <div className={styles.premiumModalContent} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalLeft}>
+             <div className={styles.proBadge}><Sparkles size={14} /> SocialJurídicoPRO</div>
+             <div className={styles.proMainInfo}>
+                <h1 className={styles.proTitle}>Desbloqueie o poder máximo da advocacia.</h1>
+                <p className={styles.proSubline}>Ferramentas de IA e gestão para quem joga em outro nível.</p>
+             </div>
+             <div className={styles.priceContainer}>
+                <div className={styles.priceLarge}>R$ 69<span className={styles.priceCents}>,90</span></div>
+                <div className={styles.pricePeriod}>cobrado mensalmente</div>
+             </div>
+          </div>
+
+          <div className={styles.modalRight}>
+             <button className={styles.closeIconBtn} onClick={() => setShowProModal(false)}><X size={18} /></button>
+             <h3 className={styles.rightHeader}>O que está incluído:</h3>
+             
+             <div className={styles.featureList}>
+                <div className={styles.featureItem}>
+                   <div className={styles.featureIconBox}><Users size={20} /></div>
+                   <div className={styles.featureText}>
+                      <h4>CRM & KYC Avançado</h4>
+                      <p>Gestão de clientes com análise de risco e dossiê completo.</p>
+                   </div>
+                </div>
+
+                <div className={styles.featureItem}>
+                   <div className={styles.featureIconBox}><FileText size={20} /></div>
+                   <div className={styles.featureText}>
+                      <h4>Smart Docs</h4>
+                      <p>Organização automática e vinculação de arquivos.</p>
+                   </div>
+                </div>
+
+                <div className={styles.featureItem}>
+                   <div className={styles.featureIconBox}><Sparkles size={20} /></div>
+                   <div className={styles.featureText}>
+                      <h4>Redator IA</h4>
+                      <p>Geração de minutas com um clique usando dados do CRM.</p>
+                   </div>
+                </div>
+
+                <div className={styles.featureItem}>
+                   <div className={styles.featureIconBox}><Calculator size={20} /></div>
+                   <div className={styles.featureText}>
+                      <h4>Calculadoras Jurídicas</h4>
+                      <p>Trabalhista, Cível, Penal, Família e mais.</p>
+                   </div>
+                </div>
+
+                <div className={styles.featureItem}>
+                   <div className={styles.featureIconBox}><Scale size={20} /></div>
+                   <div className={styles.featureText}>
+                      <h4>Inteligência Estratégica</h4>
+                      <p>Análise de jurisprudência e triagem automática.</p>
+                   </div>
+                </div>
+             </div>
+
+             <div className={styles.bonusBox}>
+                <div className={styles.bonusLabel}><Coins size={16} /> BÔNUS EXCLUSIVO</div>
+                <div className={styles.bonusValue}>+20 Juris todo mês</div>
+             </div>
+
+             <button className={styles.subscribeBtn} onClick={handleBecomePro}>
+                Assinar Agora <ChevronRight size={20} />
+             </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={styles.dashboardContainer}>
       {/* SIDEBAR */}
@@ -412,7 +492,7 @@ export default function AdvogadoDashboard() {
           </div>
         </div>
 
-        <button className={styles.premiumBtn} onClick={handleBecomePro}>Seja Premium</button>
+        <button className={styles.premiumBtn} onClick={() => setShowProModal(true)}>Seja Premium</button>
 
         <div className={styles.quotaContainer}>
            <div className={styles.quotaLabel}>
@@ -507,6 +587,7 @@ export default function AdvogadoDashboard() {
       </main>
 
       {renderBuyModal()}
+      {renderProModal()}
     </div>
   );
 }

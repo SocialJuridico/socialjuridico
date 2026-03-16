@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export async function signUpAction(formData) {
-  const { email, password, name, phone, role, oab, estado } = formData;
+  const { email, password, name, phone, role, oab, estado, origem_descoberta } = formData;
   const supabase = createClient();
 
   try {
@@ -34,6 +34,7 @@ export async function signUpAction(formData) {
       name: name,
       phone: phone,
       role: role,
+      origem_descoberta: origem_descoberta || 'Não informado',
       created_at: new Date().toISOString(),
     };
 

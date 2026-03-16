@@ -22,7 +22,8 @@ export default function Cadastro() {
     confirmarSenha: '',
     // Advogados fields
     oab: '',
-    estado: ''
+    estado: '',
+    origem_descoberta: ''
   });
 
   const handleChange = (e) => {
@@ -62,7 +63,8 @@ export default function Cadastro() {
       phone: formData.whatsapp,
       role: activeTab === 'lawyer' ? 'LAWYER' : 'CLIENT',
       oab: formData.oab,
-      estado: formData.estado
+      estado: formData.estado,
+      origem_descoberta: formData.origem_descoberta
     };
 
     const response = await signUpAction(authPayload);
@@ -71,7 +73,7 @@ export default function Cadastro() {
       setSuccessMsg(response.message);
       // Opcional: Limpar formulário
       setFormData({
-        nome: '', email: '', whatsapp: '', senha: '', confirmarSenha: '', oab: '', estado: ''
+        nome: '', email: '', whatsapp: '', senha: '', confirmarSenha: '', oab: '', estado: '', origem_descoberta: ''
       });
     } else {
       setErrorMsg(response.message);
@@ -237,6 +239,23 @@ export default function Cadastro() {
                 </div>
               </div>
             )}
+
+            <div className={styles.formGroup} style={{ marginTop: '16px' }}>
+              <label className={styles.label}>Onde conheceu o Social Jurídico?</label>
+              <select 
+                name="origem_descoberta"
+                value={formData.origem_descoberta}
+                onChange={handleChange}
+                className={styles.input} 
+                required 
+              >
+                <option value="" disabled>Selecione uma opção</option>
+                <option value="Grupo do Facebook">Grupo do Facebook</option>
+                <option value="Linkedin">Linkedin</option>
+                <option value="Instagram">Instagram</option>
+                <option value="Pesquisa Google">Pesquisa Google</option>
+              </select>
+            </div>
 
             <div className={styles.formRow}>
               <div>

@@ -248,6 +248,11 @@
   background-color: rgba(212, 175, 55, 0.05);
 }
 
+select.input option {
+  background-color: #1a1a1a;
+  color: white;
+}
+
 .input::placeholder {
   color: rgba(255, 255, 255, 0.2);
 }

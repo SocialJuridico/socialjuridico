@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Scale, Loader2, AlertCircle } from 'lucide-react';
 import styles from './Login.module.css';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function Login() {
+function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -209,5 +209,24 @@ export default function Login() {
       </div>
 
     </div>
+  );
+}
+
+export default function Login() {
+  return (
+    <Suspense fallback={
+      <div style={{ 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        backgroundColor: '#000', 
+        color: '#D4AF37' 
+      }}>
+        <Loader2 className="animate-spin" size={48} />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

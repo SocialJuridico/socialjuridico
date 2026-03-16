@@ -14,7 +14,59 @@
   margin-bottom: 64px;
 }
 
-@media (min-width: 600px) {
+@media (max-width: 768px) {
+  .footer {
+    padding: 40px 16px 24px 86px;
+    text-align: center;
+  }
+
+  .container {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    justify-items: center;
+    margin-bottom: 40px;
+  }
+
+  .brandColumn {
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .logoWrapper {
+    font-size: 1.25rem;
+    justify-content: center;
+  }
+
+  .brandDesc {
+    max-width: 100%;
+    font-size: 0.85rem;
+  }
+
+  .socials {
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .columnTitle {
+    margin-bottom: 12px;
+    font-size: 1rem;
+  }
+
+  .linkList {
+    align-items: center;
+    gap: 12px;
+  }
+
+  .navLink {
+    font-size: 0.85rem;
+  }
+
+  .adminBtn {
+    margin: 24px auto 0;
+  }
+}
+
+@media (min-width: 769px) {
   .container {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -66,7 +118,9 @@
   justify-content: center;
   color: var(--color-silver);
   text-decoration: none;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .socialIcon:hover {

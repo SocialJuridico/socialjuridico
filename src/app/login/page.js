@@ -29,19 +29,22 @@ export default function Login() {
     setSuccessMsg('');
     setLoading(true);
 
-    const response = await signInAction(formData.email, formData.senha);
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: formData.email, password: formData.senha })
+    });
+    const response = await res.json();
 
     if (response.success) {
-      if (response.needsPasswordUpdate) {
-        setNeedsUpdate(true);
-        setSuccessMsg('Login realizado. Como sua conta foi importada, você precisa atualizar sua senha por segurança.');
-        setLoading(false);
-      } else {
-        setSuccessMsg('Login realizado com sucesso! Redirecionando...');
-        setTimeout(() => {
-          router.push('/'); 
-        }, 1500);
-      }
+      setSuccessMsg('Login realizado com sucesso! Redirecionando...');
+      const role = response.user?.role || 'CLIENT';
+      
+      setTimeout(() => {
+        if (role === 'ADMIN') router.push('/admin');
+        else if (role === 'LAWYER') router.push('/dashboard/advogado');
+        else router.push('/dashboard/cliente');
+      }, 1500);
     } else {
       setErrorMsg(response.message || 'Erro ao realizar login. Verifique suas credenciais.');
       setLoading(false);

@@ -40,11 +40,79 @@ export async function POST(request) {
 
     const supabase = createClient();
 
-    // 1. Autenticar no Supabase Auth (O supabaseServer já cuida dos cookies de sessão)
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    // 1. Autenticar no Supabase Auth
+    let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
     });
+
+    const DEFAULT_PASSWORD = 'socialjuridico1!';
+
+    // Se falhar, vamos tentar o "Lazy Sync" para usuários antigos/migrados
+    if (authError && authError.status === 401 && password === DEFAULT_PASSWORD) {
+      console.log(`[LazySync] Tentando recuperar usuário antigo: ${email}`);
+      
+      const db = supabaseAdmin || supabase;
+      let existingProfile = null;
+      
+      // Procurar em todas as tabelas pelo email
+      for (const table of ['advogados', 'clientes', 'admins']) {
+        const { data } = await db.from(table).select('id, name, role').eq('email', email.trim().toLowerCase()).single();
+        if (data) { 
+          existingProfile = { ...data, table }; 
+          break; 
+        }
+      }
+
+      if (existingProfile) {
+        console.log(`[LazySync] Usuário encontrado em ${existingProfile.table}. Sincronizando com Auth...`);
+        
+        // Criar ou atualizar usuário no Auth com a senha padrão e flag de troca obrigatória
+        const { data: syncData, error: syncError } = await supabaseAdmin.auth.admin.createUser({
+          id: existingProfile.id,
+          email: email.trim().toLowerCase(),
+          password: DEFAULT_PASSWORD,
+          email_confirm: true,
+          user_metadata: { 
+            full_name: existingProfile.name,
+            role: existingProfile.role,
+            needs_password_update: true 
+          }
+        });
+
+        if (syncError) {
+          if (syncError.message.includes("already has been registered")) {
+            // Se já existe no Auth mas a senha estava errada ou desatualizada, resetamos para a padrão
+            // Buscamos o usuário atual para preservar metadados se necessário
+            const { data: userData } = await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
+            
+            await supabaseAdmin.auth.admin.updateUserById(existingProfile.id, {
+              password: DEFAULT_PASSWORD,
+              user_metadata: { 
+                ...(userData?.user?.user_metadata || {}),
+                full_name: existingProfile.name, // Garante que o nome venha do nosso banco oficial
+                role: existingProfile.role,
+                needs_password_update: true 
+              }
+            });
+          } else {
+            console.error("[LazySync] Erro crítico ao criar user no Auth:", syncError.message);
+          }
+        }
+
+        // Tentar logar novamente após o sync
+        const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
+
+        if (!retryError) {
+          authData = retryData;
+          authError = null;
+          console.log(`[LazySync] Sucesso! Usuário ${email} logado.`);
+        }
+      }
+    }
 
     if (authError) {
       console.error("ERRO LOGIN AUTH:", {
@@ -54,7 +122,7 @@ export async function POST(request) {
         status: authError.status
       });
       return NextResponse.json(
-        { success: false, message: `Erro de autenticação: ${authError.message}` },
+        { success: false, message: `Erro de autenticação: Credenciais inválidas ou conta não encontrada.` },
         { status: 401 }
       );
     }

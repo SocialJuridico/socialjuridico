@@ -37,7 +37,7 @@ import {
 import styles from './Dashboard.module.css';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
-import { createJurisCheckout } from '@/services/stripeCheckoutService';
+import { createJurisCheckout, createProSubscription } from '@/services/stripeCheckoutService';
 
 export default function AdvogadoDashboard() {
   const [userName, setUserName] = useState('Advogado');
@@ -47,6 +47,7 @@ export default function AdvogadoDashboard() {
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showBuyModal, setShowBuyModal] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -348,6 +349,58 @@ export default function AdvogadoDashboard() {
     }
   };
 
+  const handleBecomePro = async () => {
+    try {
+      toast.loading("Iniciando assinatura...");
+      await createProSubscription();
+    } catch (err) {
+      toast.dismiss();
+      toast.error("Erro ao iniciar assinatura: " + err.message);
+    }
+  };
+
+  const renderBuyModal = () => {
+    if (!showBuyModal) return null;
+
+    return (
+      <div className={styles.modalOverlay} onClick={() => setShowBuyModal(false)}>
+        <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle}>Comprar Juris</h2>
+            <p className={styles.modalSubtitle}>Escolha um pacote para créditos instantâneos</p>
+            <p className={styles.modalDescription}>Adicione créditos e manifeste interesse em demandas de seus clientes.</p>
+          </div>
+
+          <div className={styles.packageGrid}>
+            <div className={styles.packageCard} onClick={() => handleBuyJuris(10)}>
+              <span className={styles.packageAmount}>10</span>
+              <span className={styles.packageUnit}>Juris</span>
+              <span className={styles.packagePrice}>R$ 9.90</span>
+              <button className={styles.packageBtn}>Comprar</button>
+            </div>
+
+            <div className={`${styles.packageCard} ${styles.popularCard}`} onClick={() => handleBuyJuris(20)}>
+              <span className={styles.popularBadge}>Mais Popular</span>
+              <span className={styles.packageAmount}>20</span>
+              <span className={styles.packageUnit}>Juris</span>
+              <span className={styles.packagePrice}>R$ 16.90</span>
+              <button className={`${styles.packageBtn} ${styles.popularPkgBtn}`}>Comprar</button>
+            </div>
+
+            <div className={styles.packageCard} onClick={() => handleBuyJuris(50)}>
+              <span className={styles.packageAmount}>50</span>
+              <span className={styles.packageUnit}>Juris</span>
+              <span className={styles.packagePrice}>R$ 39.90</span>
+              <button className={styles.packageBtn}>Comprar</button>
+            </div>
+          </div>
+
+          <button className={styles.closeModalBtn} onClick={() => setShowBuyModal(false)}>Fechar</button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={styles.dashboardContainer}>
       {/* SIDEBAR */}
@@ -359,7 +412,7 @@ export default function AdvogadoDashboard() {
           </div>
         </div>
 
-        <button className={styles.premiumBtn}>Seja Premium</button>
+        <button className={styles.premiumBtn} onClick={handleBecomePro}>Seja Premium</button>
 
         <div className={styles.quotaContainer}>
            <div className={styles.quotaLabel}>
@@ -434,7 +487,7 @@ export default function AdvogadoDashboard() {
             <div className={styles.jurisBadge}>
                <Coins size={14} color="var(--brand-gold)" />
                <span className={styles.jurisCount}>{profileData?.balance || 0} Juris</span>
-               <button className={styles.buyJurisBtn} onClick={() => handleBuyJuris(20)}>Comprar</button>
+               <button className={styles.buyJurisBtn} onClick={() => setShowBuyModal(true)}>Comprar</button>
             </div>
             
             <div className={styles.userInfo}>
@@ -452,6 +505,8 @@ export default function AdvogadoDashboard() {
            {renderActiveContent()}
         </section>
       </main>
+
+      {renderBuyModal()}
     </div>
   );
 }

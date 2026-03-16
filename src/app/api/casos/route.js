@@ -12,35 +12,41 @@ export async function GET(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    console.log(`Buscando casos para o usuário ID: ${user.id} (${user.email})`);
+    const role = user.user_metadata?.role || 'CLIENT';
+    console.log(`Buscando casos para o usuário ID: ${user.id} (${user.email}), Role: ${role}`);
 
-    // Usamos supabaseAdmin para garantir que RLS não bloqueie a visualização em dev
-    const { data, error } = await supabaseAdmin
-      .from('casos')
-      .select('*')
-      .eq('cliente_id', user.id)
-      .order('created_at', { ascending: false });
+    let query = supabaseAdmin.from('casos').select('*');
 
-    if (error) {
-        console.error("Erro ao buscar casos no Supabase:", error);
-        throw error;
-    }
+    if (role === 'LAWYER') {
+      // Advogado vê casos vinculados a ele OU casos abertos sem advogado
+      const { data, error } = await supabaseAdmin
+        .from('casos')
+        .select('*')
+        .or(`advogado_id.eq.${user.id},and(status.eq.ABERTO,advogado_id.is.null)`)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return NextResponse.json({ success: true, data: data || [] });
+    } else {
+      // Cliente vê apenas os próprios casos
+      const { data, error } = await supabaseAdmin
+        .from('casos')
+        .select('*')
+        .eq('cliente_id', user.id)
+        .order('created_at', { ascending: false });
 
-    // Se não achou nada, talvez os casos estejam vinculados ao email dele em outro ID?
-    // (Apenas para debug em desenvolvimento)
-    if (data.length === 0) {
-        console.log("Nenhum caso encontrado para este ID. Verificando por email...");
+      if (error) throw error;
+
+      // Se não achou nada, verificamos por email (debug)
+      if (data.length === 0) {
         const { data: profile } = await supabaseAdmin.from('clientes').select('id').eq('email', user.email).single();
         if (profile && profile.id !== user.id) {
-             const { data: emailData } = await supabaseAdmin.from('casos').select('*').eq('cliente_id', profile.id);
-             if (emailData && emailData.length > 0) {
-                  console.log(`Encontrados ${emailData.length} casos vinculados a outro ID deste email. Retornando-os.`);
-                  return NextResponse.json({ success: true, data: emailData });
-             }
+          const { data: emailData } = await supabaseAdmin.from('casos').select('*').eq('cliente_id', profile.id);
+          if (emailData && emailData.length > 0) return NextResponse.json({ success: true, data: emailData });
         }
+      }
+      return NextResponse.json({ success: true, data: data || [] });
     }
-
-    return NextResponse.json({ success: true, data: data || [] });
 
   } catch (error) {
     console.error("Erro na API de Casos:", error);

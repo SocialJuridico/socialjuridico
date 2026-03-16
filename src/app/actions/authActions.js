@@ -8,52 +8,98 @@ export async function signUpAction(formData) {
   const supabase = createClient();
 
   try {
-    // 1. Criar o usuário no Auth do Supabase
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
+    // 1. Criar o usuário no Auth com email já confirmado
+    let user;
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email.trim().toLowerCase(),
       password,
-      options: {
-        data: {
-          full_name: name,
-          role: role
-        }
+      email_confirm: true,
+      user_metadata: {
+        full_name: name,
+        role: role
       }
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      if (authError.message.includes("already be registered") || authError.status === 422) {
+        console.log("Usuário já existe no Auth. Recuperando e atualizando senha...");
+        // Pegar todos os usuários para encontrar o ID (devido à falta de busca por email no admin API)
+        let allUsers = [];
+        let page = 1;
+        while (true) {
+          const { data: { users: pagedUsers } } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+          if (!pagedUsers || pagedUsers.length === 0) break;
+          allUsers = allUsers.concat(pagedUsers);
+          page++;
+        }
+        user = allUsers.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
+        
+        if (!user) throw new Error("Usuário está registrado mas não pôde ser recuperado.");
 
-    const user = authData.user;
-    if (!user) throw new Error("Erro ao criar usuário.");
+        // Atualizar senha e metadados para o que foi digitado agora
+        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+          password: password,
+          email_confirm: true,
+          user_metadata: { full_name: name, role: role }
+        });
+        if (updateAuthError) throw updateAuthError;
+      } else {
+        throw authError;
+      }
+    } else {
+        user = authData.user;
+    }
 
-    // 2. Inserir na tabela correspondente (clientes ou advogados)
+    if (!user) throw new Error("Erro ao identificar usuário.");
+
+    // 2. Verificar se já existe um perfil com esse email (órfão)
     const table = role === 'LAWYER' ? 'advogados' : 'clientes';
-    
-    const insertData = {
-      id: user.id,
-      email: email,
-      name: name,
-      phone: phone,
-      role: role,
-      origem_descoberta: origem_descoberta || 'Não informado',
-      created_at: new Date().toISOString(),
-    };
-
-    if (role === 'LAWYER') {
-      insertData.oab = oab;
-      insertData.estado = estado;
-    }
-
-    const { error: dbError } = await supabase
+    const { data: existingProfile } = await supabaseAdmin
       .from(table)
-      .insert([insertData]);
+      .select('id')
+      .eq('email', email.trim().toLowerCase())
+      .single();
 
-    if (dbError) {
-      console.error(`Erro ao inserir na tabela ${table}:`, dbError);
-      // Opcional: deletar o usuário do auth se o banco falhar (requer service role)
-      throw new Error(`Usuário criado, mas erro ao salvar perfil: ${dbError.message}`);
+    if (existingProfile) {
+      console.log(`Perfil órfão encontrado para ${email}. Vinculando ao novo Auth ID: ${user.id}`);
+      // Atualizar o ID do perfil antigo para o novo ID do Auth
+      const { error: updateError } = await supabaseAdmin
+        .from(table)
+        .update({ id: user.id })
+        .eq('id', existingProfile.id);
+
+      if (updateError) {
+        console.error("Erro ao vincular perfil órfão:", updateError);
+        throw new Error("Erro ao vincular seu perfil existente. Contate o suporte.");
+      }
+    } else {
+      // Inserir novo perfil se não existir
+      const insertData = {
+        id: user.id,
+        email: email.trim().toLowerCase(),
+        name: name,
+        phone: phone,
+        role: role,
+        origem_descoberta: origem_descoberta || 'Não informado',
+        created_at: new Date().toISOString(),
+      };
+
+      if (role === 'LAWYER') {
+        insertData.oab = oab;
+        insertData.estado = estado;
+      }
+
+      const { error: dbError } = await supabaseAdmin
+        .from(table)
+        .insert([insertData]);
+
+      if (dbError) {
+        console.error(`Erro ao inserir na tabela ${table}:`, dbError);
+        throw new Error(`Usuário criado, mas erro ao salvar perfil: ${dbError.message}`);
+      }
     }
 
-    return { success: true, message: "Cadastro realizado! Verifique seu email para confirmar." };
+    return { success: true, message: "Conta preparada com sucesso! Você já pode fazer login." };
 
   } catch (error) {
     console.error("Erro no signUpAction:", error);
@@ -65,7 +111,7 @@ export async function signInAction(email, password) {
   try {
     const supabase = createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim().toLowerCase(),
       password,
     });
 

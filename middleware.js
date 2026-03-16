@@ -86,10 +86,10 @@ export async function middleware(request) {
     // antes desse sistema ser implementado. Deixamos passar normalmente.
   }
 
-  // ── ROTA DE AUTH COM SESSÃO ATIVA → REDIRECIONAR PARA DASHBOARD ──
   if (isAuthRoute && isAuthenticated) {
+    const role = user.user_metadata?.role || 'CLIENT';
     const url = request.nextUrl.clone();
-    url.pathname = '/dashboard/cliente';
+    url.pathname = role === 'LAWYER' ? '/dashboard/advogado' : '/dashboard/cliente';
     return NextResponse.redirect(url);
   }
 

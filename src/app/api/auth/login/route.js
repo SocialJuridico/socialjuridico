@@ -42,13 +42,19 @@ export async function POST(request) {
 
     // 1. Autenticar no Supabase Auth (O supabaseServer já cuida dos cookies de sessão)
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
       password,
     });
 
     if (authError) {
+      console.error("ERRO LOGIN AUTH:", {
+        email: email,
+        errorCode: authError.code,
+        errorMessage: authError.message,
+        status: authError.status
+      });
       return NextResponse.json(
-        { success: false, message: 'Credenciais inválidas. Verifique seu email e senha.' },
+        { success: false, message: `Erro de autenticação: ${authError.message}` },
         { status: 401 }
       );
     }

@@ -36,11 +36,9 @@ import {
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 
-export default function ClienteDashboard() {
-  const [userName, setUserName] = useState('Cliente');
+export default function AdvogadoDashboard() {
+  const [userName, setUserName] = useState('Advogado');
   const [activeTab, setActiveTab] = useState('painel');
-  const [advogados, setAdvogados] = useState([]);
-  const [loadingAdvogados, setLoadingAdvogados] = useState(true);
   const [casos, setCasos] = useState([]);
   const [loadingCasos, setLoadingCasos] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -89,14 +87,7 @@ export default function ClienteDashboard() {
     async function loadInitialData() {
       console.log("Iniciando carga de dados do dashboard...");
       
-      // 1. Carregar Advogados
-      fetch('/api/advogados')
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) setAdvogados(data.data);
-        })
-        .catch(err => console.error("Erro advogados:", err))
-        .finally(() => setLoadingAdvogados(false));
+
 
       // 1.1 Carregar Casos
       console.log("Chamando loadCasos do loadInitialData...");
@@ -419,9 +410,9 @@ export default function ClienteDashboard() {
             <LayoutDashboard size={22} />
             {!isSidebarCollapsed && <span>Painel</span>}
           </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'novo' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('novo')} title="Novo Caso">
+          <Link href="#" className={`${styles.navItem} ${activeTab === 'novo' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('novo')} title="Novos Casos">
             <PlusCircle size={22} />
-            {!isSidebarCollapsed && <span>Novo Caso</span>}
+            {!isSidebarCollapsed && <span>Novos Casos</span>}
           </Link>
           <Link href="#" className={`${styles.navItem} ${activeTab === 'notificacoes' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('notificacoes')} title="Notificações">
             <Bell size={22} />
@@ -458,7 +449,7 @@ export default function ClienteDashboard() {
           <div className={styles.headerInfo}>
             <h1>{
               activeTab === 'painel' ? 'Painel' :
-              activeTab === 'novo' ? 'Novo Caso' :
+              activeTab === 'novo' ? 'Novos Casos' :
               activeTab === 'notificacoes' ? 'Notificações' :
               activeTab === 'meus-casos' ? 'Meus Casos' :
               activeTab === 'conversas' ? 'Minhas Conversas' :
@@ -480,14 +471,13 @@ export default function ClienteDashboard() {
             <div className={styles.contentGrid}>
               <div className={styles.listSection}>
                 <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitle}>Meus Casos</h2>
-                  <button onClick={() => setActiveTab('novo')} className={styles.addNewBtn}>+ Novo</button>
+                  <h2 className={styles.sectionTitle}>Meus Casos Atuais</h2>
                 </div>
                 
                 {loadingCasos ? (
                   <p style={{padding: '20px'}}>Carregando seus casos...</p>
-                ) : casos.length > 0 ? (
-                  casos.map((caso) => (
+                ) : casos.filter(c => c.advogado_id === profileData?.id).length > 0 ? (
+                  casos.filter(c => c.advogado_id === profileData?.id).map((caso) => (
                     <div key={caso.id} className={styles.caseCard} onClick={() => handleOpenEditModal(caso)}>
                       <div className={styles.cardTop}>
                         <span className={styles.badge}>{caso.status}</span>
@@ -502,161 +492,87 @@ export default function ClienteDashboard() {
                 ) : (
                   <div className={styles.emptyStateMinimal} style={{padding: '40px 20px', textAlign: 'center', opacity: 0.7}}>
                     <FileText size={48} style={{marginBottom: '12px', color: 'var(--color-gold)'}} />
-                    <p>Você ainda não tem casos registrados.</p>
+                    <p>Você ainda não pegou nenhum caso.</p>
                   </div>
                 )}
               </div>
 
               <div className={styles.lawyersSection}>
                 <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitle}>Advogados Disponíveis</h2>
+                  <h2 className={styles.sectionTitle}>Resumo de Atividades</h2>
                 </div>
-                <div className={styles.lawyersGrid}>
-                  {loadingAdvogados ? (
-                    <p>Carregando advogados...</p>
-                  ) : advogados.length > 0 ? (
-                    advogados.map((adv) => (
-                      <div key={adv.id} className={styles.lawyerCard}>
-                        <div className={styles.statusBadge}>
-                          <div className={styles.offlineDot}></div> Offline
-                        </div>
-
-                        {adv.avatar ? (
-                          <div className={styles.lawyerAvatarWrapper}>
-                            <Image 
-                              src={adv.avatar} 
-                              alt={adv.name} 
-                              width={80} 
-                              height={80} 
-                              className={styles.lawyerAvatar} 
-                            />
-                          </div>
-                        ) : (
-                          <div className={styles.lawyerAvatar}>{adv.name.substring(0, 2).toUpperCase()}</div>
-                        )}
-
-                        <div className={styles.lawyerInfo}>
-                          <h3 className={styles.lawyerName}>
-                            {adv.name}
-                            {adv.verified && <ShieldCheck size={16} className={styles.verifiedIcon} />}
-                          </h3>
-                          <p className={styles.lawyerOab}>OAB {adv.oab || 'N/A'}</p>
-                          <p className={styles.lawyerSpecs}>{adv.specialties || 'Cliníco Geral'}</p>
-
-                          {adv.avg_rating > 0 && (
-                            <div className={styles.ratingRow}>
-                              <Star size={16} fill="var(--color-gold)" className={styles.starIcon} />
-                              <span className={styles.ratingValue}>{adv.avg_rating.toFixed(1)}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className={styles.statsRow}>
-                          <div className={styles.statItem}>
-                            <span className={styles.statValue}>{adv.total_ratings || 0}</span>
-                            <span className={styles.statLabel}>Avaliações</span>
-                          </div>
-                          <div className={styles.statItem}>
-                            <span className={styles.statValue}>100%</span>
-                            <span className={styles.statLabel}>Sucesso</span>
-                          </div>
-                        </div>
-
-                        <button className={styles.contactBtn}>Falar com Advogado</button>
-                      </div>
-                    ))
-                  ) : (
-                    <p>Nenhum advogado encontrado.</p>
-                  )}
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '20px'}}>
+                  <div className={styles.statCard} style={{background: 'rgba(212, 175, 55, 0.05)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(212, 175, 55, 0.1)'}}>
+                    <span style={{display: 'block', fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-gold)'}}>
+                      {casos.filter(c => c.advogado_id === profileData?.id).length}
+                    </span>
+                    <span style={{fontSize: '0.8rem', opacity: 0.6}}>Casos ativos</span>
+                  </div>
+                  <div className={styles.statCard} style={{background: 'rgba(212, 175, 55, 0.05)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(212, 175, 55, 0.1)'}}>
+                    <span style={{display: 'block', fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-gold)'}}>
+                      {notificacoes.filter(n => !n.lida).length}
+                    </span>
+                    <span style={{fontSize: '0.8rem', opacity: 0.6}}>Notificações</span>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {activeTab === 'novo' && (
-            <div className={styles.formContainer}>
-              {formSuccess ? (
-                <div className={styles.emptyState}>
-                  <CheckCircle2 size={64} color="var(--color-gold)" className={styles.emptyIcon} />
-                  <h3 className={styles.sectionTitle}>Caso Criado com Sucesso!</h3>
-                  <p className={styles.emptyText}>Os advogados serão notificados imediatamente.</p>
+            <div className={styles.novosCasosGrid}>
+              <div className={styles.sectionHeader} style={{marginBottom: '24px'}}>
+                 <h2 className={styles.sectionTitle}>Novos Casos Disponíveis</h2>
+                 <p style={{fontSize: '0.8rem', opacity: 0.6}}>Estes casos ainda não possuem um advogado vinculado.</p>
+              </div>
+
+              {casos.filter(c => !c.advogado_id && c.status === 'ABERTO').length > 0 ? (
+                <div className={styles.lawyersGrid}>
+                  {casos.filter(c => !c.advogado_id && c.status === 'ABERTO').map(caso => (
+                    <div key={caso.id} className={styles.lawyerCard} style={{textAlign: 'left', alignItems: 'flex-start'}}>
+                      <div className={styles.cardTop} style={{width: '100%', display: 'flex', justifyContent: 'space-between'}}>
+                        <span className={styles.badge}>{caso.area_atuacao || 'Geral'}</span>
+                        <span className={styles.date}>{new Date(caso.created_at).toLocaleDateString()}</span>
+                      </div>
+                      <h3 className={styles.lawyerName} style={{minHeight: 'auto', textAlign: 'left', justifyContent: 'flex-start', marginTop: '12px'}}>{caso.titulo}</h3>
+                      <p className={styles.lawyerSpecs} style={{minHeight: 'auto', textAlign: 'left', justifyContent: 'flex-start', fontSize: '0.8rem'}}>{caso.descricao.substring(0, 120)}...</p>
+                      
+                      <button 
+                        className={styles.contactBtn} 
+                        style={{marginTop: 'auto'}}
+                        onClick={async () => {
+                          if (!confirm("Deseja assumir este caso?")) return;
+                          setFormLoading(true);
+                          try {
+                            const res = await fetch('/api/casos/vincular', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ casoId: caso.id })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              toast.success("Caso vinculado com sucesso!");
+                              loadCasos();
+                            } else {
+                              toast.error(data.message);
+                            }
+                          } catch (err) {
+                            toast.error("Erro ao vincular caso.");
+                          } finally {
+                            setFormLoading(false);
+                          }
+                        }}
+                      >
+                        Assumir Caso
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <form onSubmit={handleSubmitCaso}>
-                  <div className={styles.formGroup}>
-                    <label>Título do Caso</label>
-                    <input 
-                      type="text" 
-                      className={styles.formInput} 
-                      placeholder="Ex: Problema com contrato de aluguel"
-                      required
-                      value={formData.titulo}
-                      onChange={e => setFormData({...formData, titulo: e.target.value})}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Área de Atuação</label>
-                    <select 
-                      className={styles.formSelect} 
-                      required
-                      value={formData.area}
-                      onChange={e => setFormData({...formData, area: e.target.value})}
-                    >
-                      <option value="">Selecione uma área</option>
-                      <option value="Civil">Direito Civil</option>
-                      <option value="Trabalhista">Direito Trabalhista</option>
-                      <option value="Penal">Direito Penal</option>
-                      <option value="Familia">Direito de Família</option>
-                      <option value="Consumidor">Direito do Consumidor</option>
-                    </select>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Descrição Detalhada</label>
-                    <textarea 
-                      className={styles.formTextarea} 
-                      placeholder="Explique o que aconteceu da forma mais detalhada possível..."
-                      required
-                      value={formData.descricao}
-                      onChange={e => setFormData({...formData, descricao: e.target.value})}
-                    ></textarea>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Anexos (Opcional - Máx 5)</label>
-                    <div className={styles.uploadArea} onClick={() => fileInputRef.current.click()}>
-                      <PlusCircle size={32} className={styles.uploadIcon} />
-                      <p className={styles.uploadText}>Clique para selecionar Imagens ou PDFs</p>
-                    </div>
-                    <input 
-                      type="file" 
-                      multiple 
-                      hidden 
-                      ref={fileInputRef} 
-                      onChange={handleFileChange}
-                      accept="image/*,application/pdf"
-                    />
-
-                    {selectedFiles.length > 0 && (
-                      <div className={styles.fileList}>
-                        {selectedFiles.map((file, index) => (
-                          <div key={index} className={styles.fileItem}>
-                            <button type="button" className={styles.removeFile} onClick={() => removeFile(index)}>
-                              <X size={12} />
-                            </button>
-                            {file.type.includes('image') ? <ImageIcon size={24} color="var(--color-gold)" /> : <FileText size={24} color="#ef4444" />}
-                            <span className={styles.fileName}>{file.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <button type="submit" className={styles.submitBtn} disabled={formLoading}>
-                    {formLoading ? 'Enviando...' : 'Publicar Solicitação'}
-                  </button>
-                </form>
+                <div className={styles.emptyState}>
+                  <Scale size={48} className={styles.emptyIcon} />
+                  <p className={styles.emptyText}>Não há novos casos disponíveis no momento.</p>
+                </div>
               )}
             </div>
           )}
@@ -794,9 +710,9 @@ export default function ClienteDashboard() {
               </div>
               {loadingCasos ? (
                 <p style={{padding: '20px', opacity: 0.6}}>Carregando seus casos...</p>
-              ) : casos.length > 0 ? (
+              ) : casos.filter(c => c.advogado_id === profileData?.id).length > 0 ? (
                 <div className={styles.casosFullGrid}>
-                  {casos.map((caso) => (
+                  {casos.filter(c => c.advogado_id === profileData?.id).map((caso) => (
                     <div key={caso.id} className={styles.caseCardFull} onClick={() => handleOpenEditModal(caso)}>
                       <div className={styles.caseCardHeader}>
                         <span className={styles.badge}>{caso.status}</span>
@@ -806,12 +722,8 @@ export default function ClienteDashboard() {
                       <p className={styles.caseAreaTag}>{caso.area_atuacao || 'Área não definida'}</p>
                       <p className={styles.caseDesc}>{caso.descricao?.substring(0, 150)}...</p>
                       <div className={styles.caseCardFooter}>
-                        {caso.advogado_id ? (
-                          <span className={styles.advTag}>✔ Advogado vinculado</span>
-                        ) : (
-                          <span className={styles.noAdvTag}>⏳ Aguardando advogado</span>
-                        )}
-                        <span className={styles.editHint}>Clique para editar →</span>
+                        <span className={styles.advTag}>✔ Caso sob seu cuidado</span>
+                        <span className={styles.editHint}>Clique para ver detalhes →</span>
                       </div>
                     </div>
                   ))}
@@ -819,8 +731,8 @@ export default function ClienteDashboard() {
               ) : (
                 <div className={styles.emptyStateMinimal} style={{padding: '60px 20px', textAlign: 'center', opacity: 0.7}}>
                   <FileText size={56} style={{marginBottom: '16px', color: 'var(--color-gold)'}} />
-                  <p style={{fontSize: '1.1rem', fontWeight: 700}}>Nenhum caso registrado</p>
-                  <p style={{marginTop: '8px', opacity: 0.6}}>Clique em &quot;Novo Caso&quot; para criar o seu primeiro caso.</p>
+                  <p style={{fontSize: '1.1rem', fontWeight: 700}}>Nenhum caso sob sua responsabilidade</p>
+                  <p style={{marginTop: '8px', opacity: 0.6}}>Vá em &quot;Novos Casos&quot; para assumir uma nova solicitação.</p>
                 </div>
               )}
             </div>
@@ -833,9 +745,9 @@ export default function ClienteDashboard() {
               </div>
               {loadingCasos ? (
                 <p style={{padding: '20px', opacity: 0.6}}>Carregando...</p>
-              ) : casos.filter(c => c.advogado_id).length > 0 ? (
+              ) : casos.filter(c => c.advogado_id === profileData?.id).length > 0 ? (
                 <div className={styles.conversasList}>
-                  {casos.filter(caso => caso.advogado_id).map((caso) => (
+                  {casos.filter(caso => caso.advogado_id === profileData?.id).map((caso) => (
                     <div
                       key={caso.id}
                       className={styles.conversaItem}
@@ -858,8 +770,8 @@ export default function ClienteDashboard() {
               ) : (
                 <div className={styles.emptyStateMinimal} style={{padding: '60px 20px', textAlign: 'center', opacity: 0.7}}>
                   <MessageSquare size={56} style={{marginBottom: '16px', color: 'var(--color-gold)'}} />
-                  <p style={{fontSize: '1.1rem', fontWeight: 700}}>Nenhuma conversa iniciada</p>
-                  <p style={{marginTop: '8px', opacity: 0.6}}>Conversas aparecem quando um advogado é vinculado ao seu caso.</p>
+                  <p style={{fontSize: '1.1rem', fontWeight: 700}}>Nenhuma conversa ativa</p>
+                  <p style={{marginTop: '8px', opacity: 0.6}}>Suas conversas com os clientes aparecerão aqui assim que você assumir um caso.</p>
                 </div>
               )}
             </div>

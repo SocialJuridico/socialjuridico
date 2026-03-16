@@ -94,7 +94,7 @@
 .progressFill {
   height: 100%;
   background: var(--color-gold);
-  width: 5%; 
+  width: 5%;
 }
 
 .nav {
@@ -846,4 +846,997 @@
   }
 }
 
+/* CRM & KYC STYLES */
+.crmHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.crmIntro {
+  background: rgba(212, 175, 55, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.crmIntroIcon {
+  width: 48px;
+  height: 48px;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-gold);
+  flex-shrink: 0;
+}
+
+.crmIntroText h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: var(--color-white);
+}
+
+.crmIntroText p {
+  font-size: 0.9rem;
+  color: var(--color-silver-dark);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.crmToolGrid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.crmToolTag {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-silver);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.newClientBtn {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.newClientBtn:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.clientList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.clientCard {
+  background: var(--color-black-light);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s;
+}
+
+.clientCard:hover {
+  border-color: var(--color-gold);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.clientMainInfo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.clientAvatar {
+  width: 40px;
+  height: 40px;
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--color-gold);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+
+.clientMeta h4 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 2px;
+}
+
+.clientMeta p {
+  font-size: 0.75rem;
+  color: var(--color-silver-dark);
+}
+
+.clientSecondaryInfo {
+  display: flex;
+  gap: 40px;
+  align-items: center;
+}
+
+.infoGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infoLabel {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--color-gold);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.infoValue {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-silver);
+}
+
+.riskBadge {
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.riskLow { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.riskMed { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.riskHigh { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+/* FORM MODAL */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  text-align: left;
+}
+
+.formItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formItemFull {
+  grid-column: span 2;
+}
+
+.formLabel {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.formInput, .formSelect, .formTextarea {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.formInput:focus, .formSelect:focus, .formTextarea:focus {
+  border-color: #4f46e5;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.formTextarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.submitBtn {
+  grid-column: span 2;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.submitBtn:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* DOSSIER MODAL */
+.dossierContent {
+  background: var(--color-black-light);
+  border-radius: 24px;
+  width: 95%;
+  max-width: 900px;
+  color: var(--color-silver);
+  box-shadow: 0 0 100px rgba(0,0,0,0.8);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: 90vh;
+}
+
+.dossierHeader {
+  padding: 30px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dossierProfile {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.dossierAvatar {
+  width: 64px;
+  height: 64px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 2px solid var(--color-gold);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-gold);
+}
+
+.dossierTitleInfo h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 5px;
+}
+
+.dossierBadges {
+  display: flex;
+  gap: 8px;
+}
+
+.miniBadge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: rgba(255,255,255,0.05);
+}
+
+.dossierBody {
+  padding: 30px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  overflow-y: auto;
+}
+
+.dossierSection {
+  margin-bottom: 30px;
+}
+
+.dossierSectionTitle {
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.dossierDataGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.dataItem label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--color-silver-dark);
+  margin-bottom: 4px;
+}
+
+.dataItem span {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-silver);
+}
+
+.notesBox {
+  background: rgba(212, 175, 55, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 12px;
+  padding: 15px;
+  font-size: 0.85rem;
+  color: var(--color-silver-dark);
+  min-height: 100px;
+}
+
+.documentsSectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.attachBtn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--color-white);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.attachBtn:hover {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: var(--color-gold);
+}
+
+.docList {
+  border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: 12px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-silver-dark);
+  font-size: 0.8rem;
+}
+
+.dossierFooterIA {
+  background: rgba(255, 255, 255, 0.02);
+  padding: 25px 30px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.iaHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.iaTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  color: var(--color-white);
+}
+
+.updateIABtn {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.iaActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.iaActionBtn {
+  background: #1e1e1e;
+  border: 1px solid rgba(255,255,255,0.05);
+  color: white;
+  padding: 15px;
+  border-radius: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.iaActionBtn:hover {
+  background: #2a2a2a;
+  transform: translateY(-2px);
+}
+
+.chatIABtn {
+  background: #4f46e5;
+  border: none;
+}
+
+.chatIABtn:hover {
+  background: #4338ca;
+}
+
+.closeDossierBtn {
+  margin: 20px 30px;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: white;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+/* CONFIRM DELETE MODAL */
+.confirmModal {
+  background: var(--color-black-light);
+  border-radius: 20px;
+  width: 90%;
+  max-width: 400px;
+  padding: 30px;
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+
+.confirmIcon {
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 77, 77, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  color: #ff4d4d;
+}
+
+.confirmTitle {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.confirmText {
+  font-size: 0.9rem;
+  color: var(--color-silver-dark);
+  margin-bottom: 30px;
+  line-height: 1.5;
+}
+
+.confirmActions {
+  display: flex;
+  gap: 15px;
+}
+
+.cancelBtn {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelBtn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.confirmDeleteBtn {
+  flex: 1;
+  background: #ff4d4d;
+  border: none;
+  color: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirmDeleteBtn:hover {
+  background: #e60000;
+  transform: translateY(-2px);
+}
+
+/* CHAT IA MODAL */
+.chatModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 25000;
+  backdrop-filter: blur(20px);
+}
+
+.chatContainer {
+  background: var(--color-black-light);
+  border-radius: 24px;
+  width: 95%;
+  max-width: 800px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  box-shadow: 0 50px 100px rgba(0,0,0,0.8);
+  overflow: hidden;
+}
+
+.chatHeader {
+  padding: 20px 30px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255,255,255,0.02);
+}
+
+.chatTitleArea {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.chatTitle {
+  font-weight: 800;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.chatStatus {
+  font-size: 0.7rem;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.chatMessagesArea {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.messageWrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+}
+
+.userMessage {
+  align-self: flex-end;
+}
+
+.aiMessage {
+  align-self: flex-start;
+}
+
+.messageBubble {
+  padding: 15px 20px;
+  border-radius: 18px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #fff;
+}
+
+.userBubble {
+  background: #4f46e5;
+  border-bottom-right-radius: 4px;
+}
+
+.aiBubble {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom-left-radius: 4px;
+}
+
+.messageInfo {
+  font-size: 0.7rem;
+  color: var(--color-silver-dark);
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+.userMessage .messageInfo {
+  text-align: right;
+}
+
+.chatInputArea {
+  padding: 25px 30px;
+  background: rgba(255,255,255,0.02);
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.chatInputWrapper {
+  display: flex;
+  gap: 15px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 16px;
+  padding: 10px 15px;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.chatInputWrapper:focus-within {
+  border-color: var(--color-gold);
+  background: rgba(255,255,255,0.08);
+}
+
+.chatTextInput {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #fff;
+  padding: 10px 5px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.chatSendBtn {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chatSendBtn:hover {
+  background: #4338ca;
+  transform: scale(1.05);
+}
+
+.chatSendBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.typingIndicator {
+  font-size: 0.8rem;
+  color: var(--color-gold);
+  font-style: italic;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* SMART DOCS */
+.smartDocsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.smartDocsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.smartDocsInfoCard {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(147, 51, 234, 0.05) 100%);
+  border: 1px solid rgba(147, 51, 234, 0.15);
+  border-radius: 20px;
+  padding: 30px;
+  display: flex;
+  gap: 25px;
+  position: relative;
+  overflow: hidden;
+}
+
+.smartDocsInfoCard::before {
+  content: "";
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 150px;
+  height: 150px;
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.infoIconLarge {
+  background: rgba(147, 51, 234, 0.1);
+  color: #a855f7;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.infoContent {
+  flex: 1;
+}
+
+.infoContent h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.infoContent p {
+  font-size: 0.9rem;
+  color: var(--color-silver-dark);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.featureTagGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.featureTag {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s;
+}
+
+.featureTag:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-2px);
+  border-color: var(--color-gold);
+}
+
+.filterCard {
+  background: var(--color-black-light);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 18px;
+  padding: 25px;
+}
+
+.filterHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.filterTitle {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+}
+
+.filterItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filterLabel {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-silver-dark);
+  text-transform: uppercase;
+}
+
+.filterInput, .filterSelect {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 15px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.filterInput:focus, .filterSelect:focus {
+  border-color: var(--color-gold);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.clearFiltersBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-silver-dark);
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.clearFiltersBtn:hover {
+  background: rgba(255, 0, 0, 0.1);
+  color: #ff4d4d;
+  border-color: rgba(255, 0, 0, 0.2);
+}
+
+.docTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+  margin-top: 10px;
+}
+
+.docTable th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-silver-dark);
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border: none;
+}
+
+.docRow {
+  background: var(--color-black-light);
+  transition: all 0.2s;
+}
+
+.docRow:hover {
+  transform: scale(1.002);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.docRow td {
+  padding: 18px 20px;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.docRow td:first-child {
+  border-top-left-radius: 15px;
+  border-bottom-left-radius: 15px;
+  font-weight: 700;
+}
+
+.docRow td:last-child {
+  border-top-right-radius: 15px;
+  border-bottom-right-radius: 15px;
+}
+
+.clientLink {
+  color: var(--color-gold);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.iaBadge {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.docTag {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-silver);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  margin-right: 5px;
+}
+
+.docActions {
+  display: flex;
+  gap: 12px;
+}
+
+.docActionBtn {
+  color: var(--color-silver);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.docActionBtn:hover {
+  color: var(--color-gold);
+}
+
+.trashBtn:hover {
+  color: #ff4d4d;
+}
 

@@ -16,16 +16,18 @@ import {
   Upload,
   FileText,
   ImageIcon,
+  Trash2,
+  MessageSquare,
   CheckCircle2,
   Lock,
   Mail,
   Phone,
-  Calendar,
-  Trash2
+  Calendar
 } from 'lucide-react';
 import styles from './Dashboard.module.css';
 import { 
   createCasoAction, 
+  updateCasoAction,
   getNotificacoesAction,
   updatePasswordAction,
   deleteAccountAction
@@ -38,7 +40,18 @@ export default function ClienteDashboard() {
   const [activeTab, setActiveTab] = useState('painel');
   const [advogados, setAdvogados] = useState([]);
   const [loadingAdvogados, setLoadingAdvogados] = useState(true);
+  const [casos, setCasos] = useState([]);
+  const [loadingCasos, setLoadingCasos] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
+  // States para Edição de Caso
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedCaso, setSelectedCaso] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    titulo: '',
+    area: '',
+    descricao: ''
+  });
   
   // States para Notificações
   const [notificacoes, setNotificacoes] = useState([]);
@@ -73,18 +86,23 @@ export default function ClienteDashboard() {
     window.addEventListener('resize', handleResize);
 
     async function loadInitialData() {
-      // 1. Carregar Advogados via API real (JSON visível na Rede)
-      try {
-        const resp = await fetch('/api/advogados');
-        const data = await resp.json();
-        if (data.success) setAdvogados(data.data);
-      } catch (err) {
-        console.error("Erro ao carregar advogados:", err);
-      } finally {
-        setLoadingAdvogados(false);
-      }
+      console.log("Iniciando carga de dados do dashboard...");
+      
+      // 1. Carregar Advogados
+      fetch('/api/advogados')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) setAdvogados(data.data);
+        })
+        .catch(err => console.error("Erro advogados:", err))
+        .finally(() => setLoadingAdvogados(false));
 
-      // 2. Carregar Perfil via API real (JSON visível na Rede)
+      // 1.1 Carregar Casos
+      console.log("Chamando loadCasos do loadInitialData...");
+      loadCasos();
+
+      // 2. Carregar Perfil
+      console.log("Chamando loadProfile do loadInitialData...");
       loadProfile();
     }
     loadInitialData();
@@ -134,6 +152,9 @@ export default function ClienteDashboard() {
 
   // Monitorar mudança de Tab
   useEffect(() => {
+    if (activeTab === 'painel') {
+      loadCasos();
+    }
     if (activeTab === 'notificacoes') {
       loadNotificacoes();
     }
@@ -164,6 +185,68 @@ export default function ClienteDashboard() {
       toast.error("Erro de conexão ao carregar perfil.");
     } finally {
       setLoadingProfile(false);
+    }
+  };
+
+  const loadCasos = async () => {
+    console.log("Chamando loadCasos...");
+    setLoadingCasos(true);
+    try {
+      const response = await fetch('/api/casos');
+      console.log("Resposta loadCasos:", response.status);
+      const data = await response.json();
+      if (data.success) {
+        console.log("Casos carregados:", data.data.length);
+        setCasos(data.data);
+      } else {
+        console.warn("Falha ao carregar casos:", data.message);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar casos:", err);
+    } finally {
+      setLoadingCasos(false);
+    }
+  };
+
+  const handleOpenEditModal = (caso) => {
+    setSelectedCaso(caso);
+    setEditFormData({
+      titulo: caso.titulo || '',
+      area: caso.area_atuacao || '',
+      descricao: caso.descricao || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateCaso = async (e) => {
+    e.preventDefault();
+    setFormLoading(true);
+    try {
+      const res = await fetch('/api/casos', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedCaso.id,
+          titulo: editFormData.titulo,
+          area_atuacao: editFormData.area,
+          descricao: editFormData.descricao
+        })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Caso atualizado com sucesso!");
+        setIsEditModalOpen(false);
+        loadCasos();
+      } else {
+        toast.error(data.message || "Erro ao atualizar caso.");
+      }
+    } catch (err) {
+      console.error("Erro ao atualizar caso:", err);
+      toast.error("Erro de conexão ao atualizar caso.");
+    } finally {
+      setFormLoading(false);
     }
   };
 
@@ -364,6 +447,9 @@ export default function ClienteDashboard() {
               activeTab === 'notificacoes' ? 'Notificações' : 'Meu Perfil'
             }</h1>
             <p>Bem-vindo, {userName}</p>
+            {profileData && (
+              <span style={{fontSize: '10px', opacity: 0.5, display: 'block'}}>ID: {profileData.id} | {profileData.email}</span>
+            )}
           </div>
           <div className={styles.userProfile}>
             <div className={styles.avatarCircle}>{userName.substring(0, 2).toUpperCase()}</div>
@@ -379,14 +465,28 @@ export default function ClienteDashboard() {
                   <h2 className={styles.sectionTitle}>Meus Casos</h2>
                   <button onClick={() => setActiveTab('novo')} className={styles.addNewBtn}>+ Novo</button>
                 </div>
-                {/* Caso Estático para Exemplo */}
-                <div className={styles.caseCard}>
-                  <div className={styles.cardTop}>
-                    <span className={styles.badge}>Solicitado</span>
-                    <span className={styles.date}>14/03/2026</span>
+                
+                {loadingCasos ? (
+                  <p style={{padding: '20px'}}>Carregando seus casos...</p>
+                ) : casos.length > 0 ? (
+                  casos.map((caso) => (
+                    <div key={caso.id} className={styles.caseCard} onClick={() => handleOpenEditModal(caso)}>
+                      <div className={styles.cardTop}>
+                        <span className={styles.badge}>{caso.status}</span>
+                        <span className={styles.date}>
+                          {new Date(caso.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <h3 className={styles.caseTitleCard} style={{color: 'var(--color-gold)', margin: '8px 0', fontSize: '1rem'}}>{caso.titulo}</h3>
+                      <p className={styles.caseDesc}>{caso.descricao.substring(0, 100)}...</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className={styles.emptyStateMinimal} style={{padding: '40px 20px', textAlign: 'center', opacity: 0.7}}>
+                    <FileText size={48} style={{marginBottom: '12px', color: 'var(--color-gold)'}} />
+                    <p>Você ainda não tem casos registrados.</p>
                   </div>
-                  <p className={styles.caseDesc}>Aguardo retorno de advogados...</p>
-                </div>
+                )}
               </div>
 
               <div className={styles.lawyersSection}>
@@ -662,6 +762,78 @@ export default function ClienteDashboard() {
 
         </section>
       </main>
+      
+      {/* MODAL DE EDIÇÃO DE CASO */}
+      {isEditModalOpen && selectedCaso && (
+        <div className={styles.modalOverlay} onClick={() => setIsEditModalOpen(false)}>
+          <div className={styles.editModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2>Editar Caso</h2>
+              <button className={styles.closeBtn} onClick={() => setIsEditModalOpen(false)}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateCaso} className={styles.editForm}>
+              <div className={styles.formGroup}>
+                <label>Título do Caso</label>
+                <input 
+                  type="text" 
+                  value={editFormData.titulo}
+                  onChange={(e) => setEditFormData({...editFormData, titulo: e.target.value})}
+                  className={styles.modalInput}
+                  required
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Área de Atuação</label>
+                <select 
+                  value={editFormData.area}
+                  onChange={(e) => setEditFormData({...editFormData, area: e.target.value})}
+                  className={styles.modalSelect}
+                  required
+                >
+                  <option value="">Selecione a área</option>
+                  <option value="CIVIL">Direito Civil</option>
+                  <option value="TRABALHISTA">Direito Trabalhista</option>
+                  <option value="PENAL">Direito Penal</option>
+                  <option value="FAMILIA">Direito de Família</option>
+                  <option value="CONSUMIDOR">Direito do Consumidor</option>
+                  <option value="OUTROS">Outros</option>
+                </select>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Descrição Detalhada</label>
+                <textarea 
+                  value={editFormData.descricao}
+                  onChange={(e) => setEditFormData({...editFormData, descricao: e.target.value})}
+                  className={styles.modalTextarea}
+                  required
+                />
+              </div>
+
+              <div className={styles.modalActions}>
+                <button type="submit" className={styles.saveChangesBtn} disabled={formLoading}>
+                  {formLoading ? 'Salvando...' : 'Salvar Alterações'}
+                </button>                
+                {selectedCaso.advogado_id ? (
+                  <Link href={`/chat/${selectedCaso.id}`} className={styles.chatBtn} style={{textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <MessageSquare size={18} style={{marginRight:8}} />
+                    Iniciar Chat com Advogado
+                  </Link>
+                ) : (
+                  <button type="button" className={styles.chatBtn} disabled title="Aguardando um advogado ser vinculado ao caso">
+                    <MessageSquare size={18} style={{marginRight:8}} />
+                    Aguardando advogado...
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

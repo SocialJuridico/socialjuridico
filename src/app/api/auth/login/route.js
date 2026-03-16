@@ -1,9 +1,11 @@
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { createClient } from '@/lib/supabaseServer';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
     const { email, password } = await request.json();
+    const supabase = createClient();
 
     // 1. Autenticar no Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({

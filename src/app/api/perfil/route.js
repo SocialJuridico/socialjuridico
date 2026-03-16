@@ -1,8 +1,10 @@
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { createClient } from '@/lib/supabaseServer';
+import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 
 export async function GET(request) {
   try {
+    const supabase = createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -41,6 +43,7 @@ export async function GET(request) {
 
 export async function PUT(request) {
     try {
+        const supabase = createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) return NextResponse.json({ success: false }, { status: 401 });
 

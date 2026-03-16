@@ -1,9 +1,11 @@
 "use server";
 
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { createClient } from '@/lib/supabaseServer';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function signUpAction(formData) {
   const { email, password, name, phone, role, oab, estado } = formData;
+  const supabase = createClient();
 
   try {
     // 1. Criar o usuário no Auth do Supabase
@@ -60,6 +62,7 @@ export async function signUpAction(formData) {
 
 export async function signInAction(email, password) {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -89,6 +92,7 @@ export async function signInAction(email, password) {
 
 export async function updatePasswordAction(newPassword) {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase.auth.updateUser({
       password: newPassword,
       data: { needs_password_update: false } // Remove o marcador após sucesso
@@ -105,6 +109,7 @@ export async function updatePasswordAction(newPassword) {
 
 export async function getAdvogadosAction() {
   try {
+    const supabase = createClient();
     const { data, error } = await supabaseAdmin
       .from('advogados')
       .select('id, name, avatar, oab, estado, avg_rating, verified, specialties')
@@ -126,6 +131,7 @@ export async function getAdvogadosAction() {
 export async function createCasoAction(casoData) {
   try {
     const { titulo, descricao, area_atuacao, cliente_id, anexos } = casoData;
+    const supabase = createClient();
 
     const { data, error } = await supabase
       .from('casos')
@@ -151,8 +157,45 @@ export async function createCasoAction(casoData) {
   }
 }
 
+export async function updateCasoAction(casoId, updateData) {
+  try {
+    const { titulo, descricao, area_atuacao } = updateData;
+    
+    console.log("Iniciando updateCasoAction para ID:", casoId);
+    console.log("Dados de atualização:", { titulo, descricao, area_atuacao });
+
+    const { data, error } = await supabaseAdmin
+      .from('casos')
+      .update({
+        titulo,
+        descricao,
+        area_atuacao,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', casoId)
+      .select();
+
+    if (error) {
+      console.error("Erro no Supabase ao atualizar caso:", error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.warn("Nenhum caso foi atualizado (ID não encontrado ou sem permissão).");
+      return { success: false, message: "Não foi possível encontrar o caso para atualizar." };
+    }
+
+    console.log("Caso atualizado com sucesso:", data[0].id);
+    return { success: true, data: data[0] };
+  } catch (error) {
+    console.error("Erro no updateCasoAction:", error);
+    return { success: false, message: error.message || "Erro ao atualizar caso." };
+  }
+}
+
 export async function getNotificacoesAction(userId) {
   try {
+    const supabase = createClient();
     const { data, error } = await supabase
       .from('notificacoes')
       .select('*')
@@ -171,6 +214,7 @@ export async function getNotificacoesAction(userId) {
 
 export async function getClientProfileAction(userId) {
   try {
+    const supabase = createClient();
     const clientToUse = supabaseAdmin || supabase;
     
     // 1. Tenta em Clientes
@@ -214,6 +258,7 @@ export async function getClientProfileAction(userId) {
 export async function updateClientProfileAction(userId, updateData) {
   try {
     const { name, phone } = updateData;
+    const supabase = createClient();
 
     // 1. Atualizar na tabela clientes
     const { error: dbError } = await supabase
@@ -237,7 +282,8 @@ export async function updateClientProfileAction(userId, updateData) {
 
 export async function deleteAccountAction(userId) {
   try {
-    // 1. Deletar da tabela clientes (devido ao CASCADE ou manual se não houver)
+    const supabase = createClient();
+    // 1. Deletar da tabela clientes
     const { error: dbError } = await supabase
       .from('clientes')
       .delete()

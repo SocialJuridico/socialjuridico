@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest"
+    "test": "jest --config jest.config.js"
   },
   "dependencies": {
     "@google/genai": "^1.45.0",

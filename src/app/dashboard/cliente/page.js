@@ -150,13 +150,19 @@ export default function ClienteDashboard() {
       // Filtro de busca
       const normalizedName = String(adv.name || "").toLowerCase();
       const normalizedOab = String(adv.oab || "").toLowerCase();
-      
-      if (searchTerm && !normalizedName.includes(searchTerm) && !normalizedOab.includes(searchTerm)) {
+
+      if (
+        searchTerm &&
+        !normalizedName.includes(searchTerm) &&
+        !normalizedOab.includes(searchTerm)
+      ) {
         return; // Pula este advogado se não corresponder à busca
       }
 
       // Processa especialidades (pode ter múltiplas separadas por vírgula)
-      const specs = String(adv.specialties || "").split(",").map(s => s.trim());
+      const specs = String(adv.specialties || "")
+        .split(",")
+        .map((s) => s.trim());
       specs.forEach((spec) => {
         if (spec && spec !== "Clínico Geral") {
           if (!grupos[spec]) {
@@ -842,9 +848,7 @@ export default function ClienteDashboard() {
             <>
               <strong>Consulta paga</strong>
               <span>
-                {adv.tempo
-                  ? adv.tempo
-                  : "Duração não informada"}
+                {adv.tempo ? adv.tempo : "Duração não informada"}
                 {adv.valor
                   ? ` • R$ ${Number(adv.valor).toFixed(2)}`
                   : " • Valor sob consulta"}
@@ -853,9 +857,7 @@ export default function ClienteDashboard() {
           ) : (
             <>
               <strong>Consulta gratuita</strong>
-              <span>
-                Primeiro contato sem custo informado.
-              </span>
+              <span>Primeiro contato sem custo informado.</span>
             </>
           )}
         </div>
@@ -876,9 +878,7 @@ export default function ClienteDashboard() {
 
       <div className={styles.statsRow}>
         <div className={styles.statItem}>
-          <span className={styles.statValue}>
-            {adv.total_ratings || 0}
-          </span>
+          <span className={styles.statValue}>{adv.total_ratings || 0}</span>
           <span className={styles.statLabel}>Avaliações</span>
         </div>
         <div className={styles.statItem}>
@@ -891,9 +891,7 @@ export default function ClienteDashboard() {
         <button
           className={styles.contactBtn}
           onClick={() =>
-            toast(
-              "Em breve: envio de mensagem direta para advogados PRO.",
-            )
+            toast("Em breve: envio de mensagem direta para advogados PRO.")
           }
         >
           Falar com Advogado
@@ -1203,9 +1201,12 @@ export default function ClienteDashboard() {
                   <p>Carregando advogados...</p>
                 ) : Object.keys(groupedAdvogadosBySpecialty).length > 0 ? (
                   Object.keys(groupedAdvogadosBySpecialty).map((specialty) => {
-                    const advsInSpecialty = groupedAdvogadosBySpecialty[specialty];
+                    const advsInSpecialty =
+                      groupedAdvogadosBySpecialty[specialty];
                     const isExpanded = expandedSpecialties[specialty] || false;
-                    const displayedAdvs = isExpanded ? advsInSpecialty : advsInSpecialty.slice(0, 5);
+                    const displayedAdvs = isExpanded
+                      ? advsInSpecialty
+                      : advsInSpecialty.slice(0, 5);
                     const hasMoreAdvs = advsInSpecialty.length > 5;
 
                     return (
@@ -1244,7 +1245,9 @@ export default function ClienteDashboard() {
                     );
                   })
                 ) : (
-                  <p>Nenhum advogado com especialidade preenchida encontrado.</p>
+                  <p>
+                    Nenhum advogado com especialidade preenchida encontrado.
+                  </p>
                 )}
               </div>
             </div>

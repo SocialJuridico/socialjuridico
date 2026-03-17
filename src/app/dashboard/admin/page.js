@@ -9,6 +9,7 @@ import {
   Scale,
   FileText,
   Bell,
+  MessageSquare,
   LogOut,
   Image as ImageIcon,
   UserCog,
@@ -129,6 +130,14 @@ export default function AdminDashboardPage() {
                 <Bell size={16} /> Comunicados
               </div>
               <strong>{stats.totalNotificacoes}</strong>
+            </article>
+          </Link>
+          <Link href="/dashboard/admin/mensagens" className={styles.cardLink}>
+            <article className={`${styles.card} ${styles.cardClickable}`}>
+              <div className={styles.cardTop}>
+                <MessageSquare size={16} /> Mensagens
+              </div>
+              <strong>Conversas</strong>
             </article>
           </Link>
           <Link href="/dashboard/admin/banners" className={styles.cardLink}>

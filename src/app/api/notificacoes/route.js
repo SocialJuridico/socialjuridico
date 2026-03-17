@@ -18,7 +18,9 @@ export async function GET() {
       );
     }
 
-    const { data, error } = await supabaseAdmin
+    const db = supabaseAdmin || supabase;
+
+    const { data, error } = await db
       .from("notificacoes")
       .select("*")
       .eq("user_id", user.id)

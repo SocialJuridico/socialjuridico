@@ -81,6 +81,8 @@ export default function AdvogadoDashboard() {
   const [activeTab, setActiveTab] = useState("oportunidades");
   const [casos, setCasos] = useState([]);
   const [loadingCasos, setLoadingCasos] = useState(true);
+  const [notificacoes, setNotificacoes] = useState([]);
+  const [loadingNotificacoes, setLoadingNotificacoes] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -269,12 +271,6 @@ export default function AdvogadoDashboard() {
       }
     }
 
-    async function fetchCasos() {
-      const res = await fetch("/api/casos");
-      const data = await res.json();
-      if (data.success) setCasos(data.data);
-    }
-
     async function fetchCrmClients() {
       setLoadingCrm(true);
       try {
@@ -357,6 +353,55 @@ export default function AdvogadoDashboard() {
       setLoadingAllDocs(false);
     }
   };
+
+  const fetchCasos = async () => {
+    const res = await fetch("/api/casos");
+    const data = await res.json();
+    if (data.success) setCasos(data.data);
+  };
+
+  const fetchNotificacoes = async () => {
+    setLoadingNotificacoes(true);
+    try {
+      const res = await fetch("/api/notificacoes", { cache: "no-store" });
+      const data = await res.json();
+      if (data.success) {
+        setNotificacoes(data.data || []);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar notificações:", error);
+      toast.error("Não foi possível carregar suas mensagens.");
+    } finally {
+      setLoadingNotificacoes(false);
+    }
+  };
+
+  const parseNotificationMeta = (notification) => {
+    const rawMeta = notification?.meta;
+    if (!rawMeta) return {};
+    if (typeof rawMeta === "object") return rawMeta;
+
+    try {
+      return JSON.parse(rawMeta);
+    } catch {
+      return {};
+    }
+  };
+
+  const handleOpenAdminChat = (notification) => {
+    const meta = parseNotificationMeta(notification);
+    const adminId = meta?.sender_id || meta?.sent_by || null;
+
+    if (!adminId) {
+      toast.error(
+        "Não foi possível identificar o administrador desta mensagem.",
+      );
+      return;
+    }
+
+    window.location.href = `/chat/admin/${adminId}`;
+  };
+
   useEffect(() => {
     // REAL-TIME: Assinar mudanças na tabela casos
     const channel = supabase
@@ -375,6 +420,12 @@ export default function AdvogadoDashboard() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "minhas-mensagens") {
+      fetchNotificacoes();
+    }
+  }, [activeTab]);
 
   // REAL-TIME: Notificações do advogado em tempo real
   useEffect(() => {
@@ -396,6 +447,12 @@ export default function AdvogadoDashboard() {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
+            setNotificacoes((prev) => {
+              const incoming = payload.new;
+              const deduped = prev.filter((item) => item.id !== incoming.id);
+              return [incoming, ...deduped];
+            });
+
             toast.custom(
               (t) => (
                 <div
@@ -459,6 +516,8 @@ export default function AdvogadoDashboard() {
         return renderOportunidades();
       case "meus-casos":
         return renderMeusCasos();
+      case "minhas-mensagens":
+        return renderMinhasMensagens();
       case "crm":
         return renderCRM();
       case "docs":
@@ -711,6 +770,54 @@ export default function AdvogadoDashboard() {
         {myCases.length === 0 && (
           <div className={styles.emptyState}>
             Você ainda não possui casos vinculados.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderMinhasMensagens = () => (
+    <div className={styles.toolContainer}>
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionTitle}>Minhas Mensagens</h2>
+      </div>
+
+      <div className={styles.opportunityGrid}>
+        {loadingNotificacoes ? (
+          <div className={styles.loadingState}>Carregando mensagens...</div>
+        ) : notificacoes.length > 0 ? (
+          notificacoes.map((msg) => (
+            <button
+              type="button"
+              key={msg.id}
+              className={`${styles.opCard} ${styles.clickableMessageCard}`}
+              onClick={() => handleOpenAdminChat(msg)}
+            >
+              <div className={styles.opHeader}>
+                <div className={styles.opArea}>
+                  <div
+                    className={styles.opIcon}
+                    style={{ background: "#f59e0b" }}
+                  >
+                    <Bell size={16} />
+                  </div>
+                  <div className={styles.opTitleGroup}>
+                    <h3>{msg.titulo || "Mensagem"}</h3>
+                    <span className={styles.opLocation}>Administrador</span>
+                  </div>
+                </div>
+                <span className={styles.opDate}>
+                  {msg.created_at
+                    ? new Date(msg.created_at).toLocaleString("pt-BR")
+                    : "Agora"}
+                </span>
+              </div>
+              <p className={styles.opDesc}>{msg.mensagem || "Sem conteúdo."}</p>
+            </button>
+          ))
+        ) : (
+          <div className={styles.emptyState}>
+            Você ainda não recebeu mensagens.
           </div>
         )}
       </div>
@@ -5837,6 +5944,12 @@ export default function AdvogadoDashboard() {
           >
             <Briefcase size={18} /> <span>Meus Casos</span>
           </div>
+          <div
+            className={`${styles.navItem} ${activeTab === "minhas-mensagens" ? styles.activeNavItem : ""}`}
+            onClick={() => setActiveTab("minhas-mensagens")}
+          >
+            <Bell size={18} /> <span>Minhas Mensagens</span>
+          </div>
 
           <div className={styles.navGroupLabel}>Ferramentas PRO</div>
           <div
@@ -5982,6 +6095,9 @@ export default function AdvogadoDashboard() {
             {activeTab === "meus-casos" && (
               <Briefcase size={20} className={styles.breadcrumbIcon} />
             )}
+            {activeTab === "minhas-mensagens" && (
+              <Bell size={20} className={styles.breadcrumbIcon} />
+            )}
             {activeTab === "crm" && (
               <Users size={20} className={styles.breadcrumbIcon} />
             )}
@@ -6017,25 +6133,27 @@ export default function AdvogadoDashboard() {
                 ? "Oportunidades em Aberto"
                 : activeTab === "meus-casos"
                   ? "Meus Casos"
-                  : activeTab === "crm"
-                    ? "CRM & KYC"
-                    : activeTab === "docs"
-                      ? "Smart Docs"
-                      : activeTab === "redator"
-                        ? "Redator IA"
-                        : activeTab === "calculadora"
-                          ? "Calculadora"
-                          : activeTab === "juris"
-                            ? "Jurisprudência"
-                            : activeTab === "agenda"
-                              ? "Agenda"
-                              : activeTab === "triagem"
-                                ? "Triagem"
-                                : activeTab === "cartao-visitas"
-                                  ? "Cartão Digital"
-                                  : activeTab === "perfil"
-                                    ? "Perfil"
-                                    : "Documentação"}
+                  : activeTab === "minhas-mensagens"
+                    ? "Minhas Mensagens"
+                    : activeTab === "crm"
+                      ? "CRM & KYC"
+                      : activeTab === "docs"
+                        ? "Smart Docs"
+                        : activeTab === "redator"
+                          ? "Redator IA"
+                          : activeTab === "calculadora"
+                            ? "Calculadora"
+                            : activeTab === "juris"
+                              ? "Jurisprudência"
+                              : activeTab === "agenda"
+                                ? "Agenda"
+                                : activeTab === "triagem"
+                                  ? "Triagem"
+                                  : activeTab === "cartao-visitas"
+                                    ? "Cartão Digital"
+                                    : activeTab === "perfil"
+                                      ? "Perfil"
+                                      : "Documentação"}
             </span>
           </div>
 

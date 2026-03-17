@@ -13,6 +13,7 @@ import {
   LogOut,
   Image as ImageIcon,
   UserCog,
+  Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./AdminDashboard.module.css";
@@ -154,6 +155,14 @@ export default function AdminDashboardPage() {
                 <UserCog size={16} /> Admins
               </div>
               <strong>Gerenciar</strong>
+            </article>
+          </Link>
+          <Link href="/dashboard/admin/solicitacoes-exclusao" className={styles.cardLink}>
+            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #ef4444" }}>
+              <div className={styles.cardTop}>
+                <Trash2 size={16} color="#ef4444" /> Solicitações Exclusão
+              </div>
+              <strong>Ver Pedidos</strong>
             </article>
           </Link>
         </section>

@@ -183,6 +183,114 @@
   cursor: not-allowed;
 }
 
+.jurisBadge {
+  background: rgba(212, 175, 55, 0.15);
+  color: #d4af37;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.proBadge {
+  color: #10b981;
+  font-weight: bold;
+}
+
+.freeBadge {
+  color: #9ca3af;
+}
+
+.manageBtn {
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: rgba(212, 175, 55, 0.12);
+  color: #d4af37;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manageBtn:hover {
+  background: rgba(212, 175, 55, 0.2);
+}
+
+/* Modal Content Management */
+.modalContent {
+  margin-top: 15px;
+}
+
+.manageSection {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.manageSection h4 {
+  margin: 0 0 5px;
+  color: #d4af37;
+  font-size: 0.95rem;
+}
+
+.manageDesc {
+  font-size: 0.85rem !important;
+  color: #9ca3af !important;
+  margin-bottom: 12px !important;
+}
+
+.giveProBtn {
+  width: 100%;
+  padding: 10px;
+  background: #d4af37;
+  color: #1a1a1a;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.removeProBtn {
+  width: 100%;
+  padding: 10px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.jurisInputRow {
+  display: flex;
+  gap: 10px;
+}
+
+.numberInput {
+  width: 80px;
+  background: #12151b;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.addJurisBtn {
+  flex: 1;
+  background: rgba(212, 175, 55, 0.1);
+  color: #d4af37;
+  border: 1px solid #d4af37;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.addJurisBtn:hover {
+  background: rgba(212, 175, 55, 0.2);
+}
+
 @media (max-width: 760px) {
   .tableWrap {
     overflow-x: auto;

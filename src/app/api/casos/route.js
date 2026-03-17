@@ -229,7 +229,7 @@ export async function PATCH(request) {
     }
 
     const normalizedStatus = String(status).trim().toUpperCase();
-    if (!["ABERTO", "FECHADO"].includes(normalizedStatus)) {
+    if (!["ABERTO", "FECHADO", "CANCELADO"].includes(normalizedStatus)) {
       return NextResponse.json(
         { success: false, message: "Status inválido" },
         { status: 400 },
@@ -284,9 +284,10 @@ export async function DELETE(request) {
       );
     }
 
+    // 1. Verificar se o caso tem advogado vinculado antes de apagar
     const { data: caso, error: casoError } = await supabaseAdmin
       .from("casos")
-      .select("id, cliente_id")
+      .select("id, cliente_id, advogado_id")
       .eq("id", casoId)
       .eq("cliente_id", user.id)
       .single();
@@ -298,6 +299,36 @@ export async function DELETE(request) {
       );
     }
 
+    // 2. Se houver advogado, apenas CANCELA para que ele tenha feedback
+    if (caso.advogado_id) {
+      const { error: cancelError } = await supabaseAdmin
+        .from("casos")
+        .update({
+          status: "CANCELADO",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", casoId);
+
+      if (cancelError) throw cancelError;
+
+      // Opcional: Notificar o advogado explicitamente
+      await supabaseAdmin.from("notificacoes").insert([
+        {
+          user_id: caso.advogado_id,
+          titulo: "Um caso foi cancelado",
+          mensagem: "O cliente decidiu encerrar um dos casos que você estava atendendo.",
+          tipo: "CASO_CANCELADO",
+          meta: JSON.stringify({ case_id: casoId }),
+        },
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        message: "Caso cancelado e arquivado para o advogado.",
+      });
+    }
+
+    // 3. Se não houver advogado, apaga definitivamente (limpeza)
     await supabaseAdmin.from("mensagens").delete().eq("caso_id", casoId);
     await supabaseAdmin.from("case_interests").delete().eq("case_id", casoId);
 

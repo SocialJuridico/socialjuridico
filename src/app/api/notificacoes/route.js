@@ -6,24 +6,32 @@ import { NextResponse } from "next/server";
 export async function GET() {
   try {
     const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    
+    // 1. Tentar pegar o usuário diretamente (mais seguro)
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    let finalUser = user;
 
-    if (authError || !user) {
+    // 2. Fallback: Se getUser() falhar, tenta getSession() 
+    if (!finalUser) {
+       const { data: { session } } = await supabase.auth.getSession();
+       finalUser = session?.user;
+    }
+
+    if (!finalUser) {
+      console.error("[notificacoes] Auth error: No user or session found");
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
       );
     }
-
+    
     const db = supabaseAdmin || supabase;
 
     const { data, error } = await db
       .from("notificacoes")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", finalUser.id)
       .order("created_at", { ascending: false });
 
     if (error) throw error;

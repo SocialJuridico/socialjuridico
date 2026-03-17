@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -133,6 +133,12 @@ export default function ClienteDashboard() {
     password: "",
   });
 
+  // States para Modal de Perfil do Advogado e Chat
+  const [isLawyerModalOpen, setIsLawyerModalOpen] = useState(false);
+  const [selectedLawyer, setSelectedLawyer] = useState(null);
+  const [isCaseSelectOpen, setIsCaseSelectOpen] = useState(false);
+  const [isProcessingChat, setIsProcessingChat] = useState(false);
+
   // Filtra advogados com especialidade preenchida
   const advogadosComEspecialidade = useMemo(() => {
     return advogados.filter((adv) => {
@@ -176,192 +182,77 @@ export default function ClienteDashboard() {
     return grupos;
   }, [advogadosComEspecialidade, lawyerSearch]);
 
-  const openNotificationsTab = async () => {
-    setActiveTab("notificacoes");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    await loadNotificacoes();
-  };
+  const showNotificationToast = useCallback(
+    (notif) => {
+      toast.custom(
+        (toastItem) => {
+          const handleToastClick = () => {
+            setActiveTab("notificacoes");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            toast.dismiss(toastItem.id);
+          };
 
-  const showNotificationToast = (notif) => {
-    toast.custom(
-      (toastItem) => {
-        const handleToastClick = () => {
-          void openNotificationsTab();
-          toast.dismiss(toastItem.id);
-        };
+          return (
+            <button
+              type="button"
+              className={`${styles.toastNotification} ${toastItem.visible ? styles.toastIn : styles.toastOut}`}
+              onClick={handleToastClick}
+              aria-label="Abrir notificações"
+            >
+              <div className={styles.toastIcon}>
+                <Bell size={20} color="var(--color-gold)" />
+              </div>
+              <div className={styles.toastContent}>
+                <p className={styles.toastTitle}>{notif.titulo}</p>
+                <p className={styles.toastDesc}>{notif.mensagem}</p>
+              </div>
+            </button>
+          );
+        },
+        { duration: 5000 },
+      );
+    },
+    [setActiveTab],
+  );
 
-        return (
-          <button
-            type="button"
-            className={`${styles.toastNotification} ${toastItem.visible ? styles.toastIn : styles.toastOut}`}
-            onClick={handleToastClick}
-            aria-label="Abrir notificações"
-          >
-            <div className={styles.toastIcon}>
-              <Bell size={20} color="var(--color-gold)" />
-            </div>
-            <div className={styles.toastContent}>
-              <p className={styles.toastTitle}>{notif.titulo}</p>
-              <p className={styles.toastDesc}>{notif.mensagem}</p>
-            </div>
-          </button>
-        );
-      },
-      { duration: 5000 },
-    );
-  };
+  const syncNotificacoes = useCallback(async (showToastsForNew = false) => {
+    if (!profileData?.id) return;
+    try {
+      const res = await fetch("/api/notificacoes", { cache: "no-store" });
+      const response = await res.json();
+      if (!response.success) return;
 
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth <= 768) setIsSidebarCollapsed(true);
-      else setIsSidebarCollapsed(false);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
+      const data = response.data || [];
+      const incomingIds = new Set(data.map((n) => n.id).filter(Boolean));
 
-    async function loadInitialData() {
-      console.log("Iniciando carga de dados do dashboard...");
-
-      // 1. Carregar Advogados (apenas PRO)
-      fetch("/api/advogados")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) setAdvogados(data.data);
-        })
-        .catch((err) => console.error("Erro advogados:", err))
-        .finally(() => setLoadingAdvogados(false));
-
-      // 1.1 Carregar Casos
-      console.log("Chamando loadCasos do loadInitialData...");
-      loadCasos();
-
-      // 1.2 Carregar Interesses Pendentes
-      loadInteresses();
-
-      // 2. Carregar Perfil
-      console.log("Chamando loadProfile do loadInitialData...");
-      loadProfile();
-    }
-    loadInitialData();
-
-    // Inscrição em tempo real para novas notificações
-    let channel;
-    let retryTimer;
-    const setupRealtime = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        retryTimer = setTimeout(setupRealtime, 1200);
+      if (!notifBootstrappedRef.current) {
+        notifIdsRef.current = incomingIds;
+        notifBootstrappedRef.current = true;
+        setNotificacoes(data);
         return;
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        supabase.realtime.setAuth(session.access_token);
+      if (showToastsForNew) {
+        const newNotifs = data.filter(
+          (n) => n.id && !notifIdsRef.current.has(n.id),
+        );
+        newNotifs.reverse().forEach((n) => showNotificationToast(n));
       }
 
-      channel = supabase
-        .channel(`cliente-notificacoes-${user.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "notificacoes",
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const notif = payload.new;
-            if (!notif?.id || notifIdsRef.current.has(notif.id)) return;
-
-            notifIdsRef.current.add(notif.id);
-            setNotificacoes((prev) => [notif, ...prev]);
-            showNotificationToast(notif);
-          },
-        )
-        .subscribe((status) => {
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-            retryTimer = setTimeout(setupRealtime, 1200);
-          }
-        });
-    };
-
-    setupRealtime();
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      if (retryTimer) clearTimeout(retryTimer);
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, []);
-
-  useEffect(() => {
-    let presenceChannel;
-
-    const syncPresence = () => {
-      if (!presenceChannel) return;
-      const state = presenceChannel.presenceState();
-      const ids = Object.values(state)
-        .flat()
-        .map((entry) => entry.user_id)
-        .filter(Boolean);
-      setOnlineLawyerIds(Array.from(new Set(ids)));
-    };
-
-    const setupPresence = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        supabase.realtime.setAuth(session.access_token);
-      }
-
-      presenceChannel = supabase
-        .channel("lawyer-presence-room")
-        .on("presence", { event: "sync" }, syncPresence)
-        .on("presence", { event: "join" }, syncPresence)
-        .on("presence", { event: "leave" }, syncPresence)
-        .subscribe();
-    };
-
-    setupPresence();
-    return () => {
-      if (presenceChannel) supabase.removeChannel(presenceChannel);
-    };
-  }, []);
-
-  // Monitorar mudança de Tab
-  useEffect(() => {
-    if (activeTab === "painel") {
-      loadCasos();
+      notifIdsRef.current = incomingIds;
+      setNotificacoes(data);
+    } catch (err) {
+      console.error("Erro ao sincronizar notificações:", err);
     }
-    if (activeTab === "notificacoes") {
-      loadNotificacoes();
-    }
-    if (activeTab === "perfil") {
-      loadProfile();
-    }
-  }, [activeTab]);
+  }, [showNotificationToast, profileData?.id]);
 
-  useEffect(() => {
-    let intervalId;
-    const start = async () => {
-      await syncNotificacoes(true);
-      intervalId = setInterval(() => {
-        syncNotificacoes(true);
-      }, 5000);
-    };
+  const loadNotificacoes = useCallback(async () => {
+    setLoadingNotificacoes(true);
+    await syncNotificacoes(false);
+    setLoadingNotificacoes(false);
+  }, [syncNotificacoes]);
 
-    start();
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     setLoadingProfile(true);
     try {
       const response = await fetch("/api/perfil");
@@ -384,9 +275,9 @@ export default function ClienteDashboard() {
     } finally {
       setLoadingProfile(false);
     }
-  };
+  }, []);
 
-  const loadCasos = async () => {
+  const loadCasos = useCallback(async () => {
     console.log("Chamando loadCasos...");
     setLoadingCasos(true);
     try {
@@ -404,9 +295,9 @@ export default function ClienteDashboard() {
     } finally {
       setLoadingCasos(false);
     }
-  };
+  }, []);
 
-  const loadInteresses = async () => {
+  const loadInteresses = useCallback(async () => {
     setLoadingInteresses(true);
     try {
       const res = await fetch("/api/casos/interesse");
@@ -417,7 +308,129 @@ export default function ClienteDashboard() {
     } finally {
       setLoadingInteresses(false);
     }
+  }, []);
+
+  const openNotificationsTab = async () => {
+    setActiveTab("notificacoes");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    await loadNotificacoes();
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 768) setIsSidebarCollapsed(true);
+      else setIsSidebarCollapsed(false);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+
+    async function loadInitialData() {
+      // 1. Carregar Advogados
+      fetch("/api/advogados")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setAdvogados(data.data);
+        })
+        .finally(() => setLoadingAdvogados(false));
+
+      // 1.1 Carregar Casos
+      loadCasos();
+      // 1.2 Carregar Interesses
+      loadInteresses();
+      // 2. Carregar Perfil
+      loadProfile();
+    }
+    loadInitialData();
+
+    // Inscrição em tempo real para notificações
+    let channel;
+    let retryTimer;
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        retryTimer = setTimeout(setupRealtime, 1200);
+        return;
+      }
+
+      channel = supabase
+        .channel(`cliente-notificacoes-${user.id}`)
+        .on("postgres_changes", {
+          event: "INSERT",
+          schema: "public",
+          table: "notificacoes",
+          filter: `user_id=eq.${user.id}`,
+        }, (payload) => {
+          const notif = payload.new;
+          if (!notif?.id || notifIdsRef.current.has(notif.id)) return;
+          notifIdsRef.current.add(notif.id);
+          setNotificacoes((prev) => [notif, ...prev]);
+          showNotificationToast(notif);
+        })
+        .subscribe();
+    };
+
+    setupRealtime();
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (retryTimer) clearTimeout(retryTimer);
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [loadCasos, loadInteresses, loadProfile, showNotificationToast]);
+
+  useEffect(() => {
+    let presenceChannel;
+
+    const syncPresence = () => {
+      if (!presenceChannel) return;
+      const state = presenceChannel.presenceState();
+      const ids = Object.values(state)
+        .flat()
+        .map((entry) => entry.user_id)
+        .filter(Boolean);
+      setOnlineLawyerIds(Array.from(new Set(ids)));
+    };
+
+    const setupPresence = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        supabase.realtime.setAuth(session.access_token);
+      }
+
+      presenceChannel = supabase
+        .channel("lawyer-presence-room")
+        .on("presence", { event: "sync" }, syncPresence)
+        .on("presence", { event: "join" }, syncPresence)
+        .on("presence", { event: "leave" }, syncPresence)
+        .subscribe();
+    };
+
+    setupPresence();
+    return () => {
+      if (presenceChannel) supabase.removeChannel(presenceChannel);
+    };
+  }, []);
+
+  // Monitorar mudança de Tab
+  useEffect(() => {
+    if (activeTab === "painel") loadCasos();
+    if (activeTab === "notificacoes") loadNotificacoes();
+    if (activeTab === "perfil") loadProfile();
+  }, [activeTab, loadCasos, loadNotificacoes, loadProfile]);
+
+  useEffect(() => {
+    if (!profileData?.id) return;
+    let intervalId;
+    const start = async () => {
+      await syncNotificacoes(true);
+      intervalId = setInterval(() => syncNotificacoes(true), 15000);
+    };
+    start();
+    return () => clearInterval(intervalId);
+  }, [syncNotificacoes, profileData?.id]);
+
+
+
 
   const handleResponderInteresse = async (interestId, action) => {
     setProcessandoInteresse(interestId);
@@ -546,66 +559,80 @@ export default function ClienteDashboard() {
   };
 
   const shareCaseToFacebookGroup = async (casePayload) => {
-    const siteUrl =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : "https://socialjuridico.com.br";
-    const shareText = [
-      `Novo caso publicado no SocialJuridico`,
-      `Título: ${casePayload.titulo}`,
-      `Descrição: ${casePayload.descricao}`,
-      `Link do site: ${siteUrl}`,
-    ].join("\n\n");
+    const siteUrl = "https://socialjuridico.com.br";
+    
+    // 1. Texto RICO formatado para o Post (O Título e a Descrição vão aqui!)
+    const shareText = `⚖️ NOVO CASO JURÍDICO PUBLICADO NO SOCIALJURÍDICO\n\n📌 TÍTULO: ${casePayload.titulo}\n📝 DESCRIÇÃO: ${casePayload.descricao}\n\n🌐 Veja mais em: ${siteUrl}`;
 
+    // 2. Colocar no clipboard imediatamente (Ação mais importante)
     try {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareText);
+        toast.success("Título e descrição copiados com sucesso!");
       }
-    } catch (error) {
-      console.error("Erro ao copiar texto do caso:", error);
+    } catch (e) {
+      console.error("Erro ao copiar:", e);
     }
 
-    window.open(FACEBOOK_GROUP_URL, "_blank", "noopener,noreferrer");
-    toast.success(
-      "Conteúdo do caso copiado. Cole no grupo do Facebook para publicar.",
-    );
+    // 3. Link Dinâmico para as Meta Tags (Card Visual)
+    // O Facebook lerá o título/descrição deste link e montará o card abaixo do seu texto.
+    const dynamicShareUrl = `${siteUrl}/compartilhar?t=${encodeURIComponent(casePayload.titulo)}&d=${encodeURIComponent(casePayload.descricao.substring(0, 150))}`;
+    
+    // 4. Abrir Janela do Facebook
+    const facebookSharerUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(dynamicShareUrl)}`;
+    
+    window.open(facebookSharerUrl, "_blank", "noopener,noreferrer,width=600,height=600");
+    
+    // 5. Explicar o motivo do card talvez vir genérico no localhost
+    toast("O card visual aparecerá completo assim que o site estiver online. Por enquanto, use o Colar (Ctrl+V) no post!", {
+      icon: '💡',
+      duration: 8000
+    });
   };
 
-  const syncNotificacoes = async (showToastsForNew = false) => {
+  const handleOpenLawyerProfile = (lawyer) => {
+    setSelectedLawyer(lawyer);
+    setIsLawyerModalOpen(true);
+  };
+
+  const handleStartChatRequest = (e, lawyer) => {
+    e.stopPropagation(); // Evitar abrir o modal de perfil se clicar no botão
+    if (!lawyer.is_premium) {
+      toast.error("Apenas advogados PRO aceitam mensagens diretas.");
+      return;
+    }
+    setSelectedLawyer(lawyer);
+    setIsCaseSelectOpen(true);
+  };
+
+  const handleConfirmStartChat = async (casoId) => {
+    setIsProcessingChat(true);
     try {
-      const res = await fetch("/api/notificacoes", { cache: "no-store" });
-      const response = await res.json();
-      if (!response.success) return;
+      const res = await fetch("/api/casos/cliente-iniciar-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: casoId,
+          lawyerId: selectedLawyer.id,
+        }),
+      });
 
-      const data = response.data || [];
-      const incomingIds = new Set(data.map((n) => n.id).filter(Boolean));
-
-      if (!notifBootstrappedRef.current) {
-        notifIdsRef.current = incomingIds;
-        notifBootstrappedRef.current = true;
-        setNotificacoes(data);
-        return;
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Iniciando chat...");
+        window.location.href = `/chat/${casoId}`;
+      } else {
+        toast.error(data.message || "Erro ao iniciar chat.");
       }
-
-      if (showToastsForNew) {
-        const newNotifs = data.filter(
-          (n) => n.id && !notifIdsRef.current.has(n.id),
-        );
-        newNotifs.reverse().forEach((n) => showNotificationToast(n));
-      }
-
-      notifIdsRef.current = incomingIds;
-      setNotificacoes(data);
     } catch (err) {
-      console.error("Erro ao sincronizar notificações:", err);
+      console.error("Erro iniciar chat:", err);
+      toast.error("Falha na conexão.");
+    } finally {
+      setIsProcessingChat(false);
+      setIsCaseSelectOpen(false);
     }
   };
 
-  const loadNotificacoes = async () => {
-    setLoadingNotificacoes(true);
-    await syncNotificacoes(false);
-    setLoadingNotificacoes(false);
-  };
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -787,6 +814,8 @@ export default function ClienteDashboard() {
     <div
       key={adv.id}
       className={`${styles.lawyerCard} ${adv.is_premium ? styles.lawyerCardPro : ""}`}
+      onClick={() => handleOpenLawyerProfile(adv)}
+      style={{ cursor: "pointer" }}
     >
       {adv.is_premium && (
         <div className={styles.proLawyerBadge}>
@@ -864,13 +893,9 @@ export default function ClienteDashboard() {
 
         {adv.avg_rating > 0 && (
           <div className={styles.ratingRow}>
-            <Star
-              size={16}
-              fill="var(--color-gold)"
-              className={styles.starIcon}
-            />
+            <Star size={14} fill="var(--color-gold)" color="var(--color-gold)" />
             <span className={styles.ratingValue}>
-              {adv.avg_rating.toFixed(1)}
+              {(adv.avg_rating || 0).toFixed(1)}
             </span>
           </div>
         )}
@@ -890,9 +915,7 @@ export default function ClienteDashboard() {
       {adv.is_premium ? (
         <button
           className={styles.contactBtn}
-          onClick={() =>
-            toast("Em breve: envio de mensagem direta para advogados PRO.")
-          }
+          onClick={(e) => handleStartChatRequest(e, adv)}
         >
           Falar com Advogado
         </button>
@@ -1095,6 +1118,16 @@ export default function ClienteDashboard() {
                       <p className={styles.caseDesc}>
                         {caso.descricao.substring(0, 100)}...
                       </p>
+                      <button
+                        className={styles.caseShareCardBtn}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          shareCaseToFacebookGroup(caso);
+                        }}
+                        title="Compartilhar no Facebook"
+                      >
+                        <Globe size={14} /> Compartilhar no Facebook
+                      </button>
                     </div>
                   ))
                 ) : (
@@ -1301,6 +1334,8 @@ export default function ClienteDashboard() {
                       <option value="Penal">Direito Penal</option>
                       <option value="Familia">Direito de Família</option>
                       <option value="Consumidor">Direito do Consumidor</option>
+                      <option value="Nao sei">Não sei a área</option>
+                      <option value="Outros">Outros</option>
                     </select>
                   </div>
 
@@ -1317,17 +1352,6 @@ export default function ClienteDashboard() {
                     ></textarea>
                   </div>
 
-                  <label className={styles.shareCheckboxRow}>
-                    <input
-                      type="checkbox"
-                      checked={shareCaseOnFacebook}
-                      onChange={(e) => setShareCaseOnFacebook(e.target.checked)}
-                    />
-                    <span>
-                      Abrir o grupo do Facebook ao publicar e copiar o título, a
-                      descrição e o link do site para compartilhamento.
-                    </span>
-                  </label>
 
                   <div className={styles.formGroup}>
                     <label>Anexos (Opcional - Máx 5)</label>
@@ -1620,15 +1644,27 @@ export default function ClienteDashboard() {
                         {caso.descricao?.substring(0, 150)}...
                       </p>
                       <div className={styles.caseCardFooter}>
-                        {caso.advogado_id ? (
-                          <span className={styles.advTag}>
-                            ✔ Advogado vinculado
-                          </span>
-                        ) : (
-                          <span className={styles.noAdvTag}>
-                            ⏳ Aguardando advogado
-                          </span>
-                        )}
+                        <div className={styles.caseFooterLeft}>
+                          {caso.advogado_id ? (
+                            <span className={styles.advTag}>
+                              ✔ Advogado vinculado
+                            </span>
+                          ) : (
+                            <span className={styles.noAdvTag}>
+                              ⏳ Aguardando advogado
+                            </span>
+                          )}
+                          <button
+                            className={styles.caseShareCardBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              shareCaseToFacebookGroup(caso);
+                            }}
+                            title="Compartilhar no Facebook"
+                          >
+                            <Globe size={14} /> Compartilhar
+                          </button>
+                        </div>
                         <span className={styles.editHint}>
                           Clique para editar →
                         </span>
@@ -1808,6 +1844,7 @@ export default function ClienteDashboard() {
                   <option value="PENAL">Direito Penal</option>
                   <option value="FAMILIA">Direito de Família</option>
                   <option value="CONSUMIDOR">Direito do Consumidor</option>
+                  <option value="NAO_SEI">Não sei a área</option>
                   <option value="OUTROS">Outros</option>
                 </select>
               </div>
@@ -1889,6 +1926,105 @@ export default function ClienteDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* MODAL PERFIL DO ADVOGADO */}
+      {isLawyerModalOpen && selectedLawyer && (
+        <div className={styles.modalOverlay} onClick={() => setIsLawyerModalOpen(false)}>
+          <div className={styles.lawyerProfileModal} onClick={(e) => e.stopPropagation()}>
+            <button className={styles.closeModalBtn} onClick={() => setIsLawyerModalOpen(false)}>
+              <X size={24} />
+            </button>
+            <div className={styles.lpModalHeader}>
+              {selectedLawyer.avatar ? (
+                <div className={styles.lpModalAvatarWrapper}>
+                  <Image src={selectedLawyer.avatar} alt={selectedLawyer.name} width={100} height={100} className={styles.lpModalAvatar} unoptimized />
+                </div>
+              ) : (
+                <div className={styles.lpModalAvatarPlaceholder}>{selectedLawyer.name.substring(0, 2).toUpperCase()}</div>
+              )}
+              <div className={styles.lpModalMainInfo}>
+                <h2>{selectedLawyer.name}</h2>
+                <p className={styles.lpModalOab}>OAB: {selectedLawyer.oab || "Não informada"}</p>
+                {selectedLawyer.is_premium && (
+                  <span className={styles.proTagModal}><Sparkles size={12} /> Advogado PRO</span>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.lpModalBody}>
+              <div className={styles.lpModalSection}>
+                <h3><User size={18} /> Apresentação</h3>
+                <p className={styles.lpBioText}>{selectedLawyer.bio || "Este advogado ainda não preencheu sua apresentação pessoal."}</p>
+              </div>
+
+              {selectedLawyer.specialties && (
+                <div className={styles.lpModalSection}>
+                  <h3><Scale size={18} /> Especialidades</h3>
+                  <div className={styles.lpModalSpecs}>
+                    {selectedLawyer.specialties.split(',').map((spec, i) => (
+                      <span key={i} className={styles.lpSpecTag}>{spec.trim()}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className={styles.lpModalStatsGrid}>
+                <div className={styles.lpStatItem}>
+                   <Star size={20} fill="var(--color-gold)" color="var(--color-gold)" />
+                   <strong>{(selectedLawyer.avg_rating || 0).toFixed(1)}</strong>
+                   <span>({selectedLawyer.total_ratings || 0} avaliações)</span>
+                </div>
+                <div className={styles.lpStatItem}>
+                   <CheckCircle2 size={20} color="#10b981" />
+                   <strong>100%</strong>
+                   <span>Taxa de Sucesso</span>
+                </div>
+                {selectedLawyer.valor > 0 && (
+                   <div className={styles.lpStatItem}>
+                      <strong>R$ {selectedLawyer.valor}</strong>
+                      <span>Valor da Consulta</span>
+                   </div>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.lpModalFooter}>
+                {selectedLawyer.is_premium ? (
+                  <button className={styles.lpContactBtn} onClick={(e) => { setIsLawyerModalOpen(false); handleStartChatRequest(e, selectedLawyer); }}>
+                    Falar com Advogado
+                  </button>
+                ) : (
+                  <p className={styles.lpNote}>Este advogado não aceita contatos diretos no momento.</p>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SELEÇÃO DE CASO PARA CHAT */}
+      {isCaseSelectOpen && selectedLawyer && (
+        <div className={styles.modalOverlay} onClick={() => setIsCaseSelectOpen(false)}>
+          <div className={styles.caseSelectModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.caseSelectHeader}>
+               <h3>Sobre qual caso deseja falar?</h3>
+               <p>Selecione um dos seus casos abaixo para iniciar o atendimento com <strong>{selectedLawyer.name}</strong>.</p>
+            </div>
+            <div className={styles.caseSelectList}>
+              {casos.filter(c => c.status === 'ABERTO' && !c.advogado_id).map(caso => (
+                <div key={caso.id} className={styles.caseSelectItem} onClick={() => handleConfirmStartChat(caso.id)}>
+                   <div className={styles.csItemInfo}>
+                      <strong>{caso.titulo}</strong>
+                      <span>{caso.area_atuacao}</span>
+                   </div>
+                   <MessageSquare size={18} color="var(--color-gold)" />
+                </div>
+              ))}
+            </div>
+            <button className={styles.cancelCaseSelectBtn} onClick={() => setIsCaseSelectOpen(false)}>
+              Cancelar
+            </button>
           </div>
         </div>
       )}

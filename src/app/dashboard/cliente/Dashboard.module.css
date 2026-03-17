@@ -1915,3 +1915,350 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+.caseShareCardBtn {
+  margin-top: 12px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--color-gold);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  width: fit-content;
+}
+
+.caseShareCardBtn:hover {
+  background: var(--color-gold);
+  color: var(--color-black);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+}
+
+.caseFooterLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .caseFooterLeft {
+    width: 100%;
+  }
+  
+  .caseShareCardBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ===== MODAL PERFIL DO ADVOGADO ===== */
+.lawyerProfileModal {
+  background: #1a1a1a;
+  border: 1px solid var(--color-gold);
+  border-radius: 24px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 40px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lpModalHeader {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 24px;
+}
+
+.lpModalAvatarWrapper {
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 2px solid var(--color-gold);
+  flex-shrink: 0;
+}
+
+.lpModalAvatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lpModalAvatarPlaceholder {
+  width: 100px;
+  height: 100px;
+  background: var(--color-gold);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-black);
+  flex-shrink: 0;
+}
+
+.lpModalMainInfo h2 {
+  font-size: 1.8rem;
+  font-weight: 900;
+  margin: 0;
+  background: linear-gradient(to right, #fff, #bbb);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.lpModalOab {
+  font-size: 0.95rem;
+  color: var(--color-silver-dark);
+  margin: 4px 0 12px;
+}
+
+.proTagModal {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--color-gold);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: fit-content;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.lpModalSection {
+  margin-bottom: 24px;
+}
+
+.lpModalSection h3 {
+  font-size: 1rem;
+  color: var(--color-gold);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.lpBioText {
+  line-height: 1.6;
+  color: var(--color-silver);
+  font-size: 0.95rem;
+}
+
+.lpModalSpecs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lpSpecTag {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #ddd;
+}
+
+.lpModalStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 32px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 16px;
+}
+
+.lpStatItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.lpStatItem strong {
+  font-size: 1.2rem;
+  display: block;
+  margin-top: 4px;
+}
+
+.lpStatItem span {
+  font-size: 0.75rem;
+  color: var(--color-silver-dark);
+}
+
+.lpModalFooter {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lpContactBtn {
+    width: 100%;
+    padding: 16px;
+    background: var(--color-gold);
+    color: var(--color-black);
+    border: none;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.lpContactBtn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(212, 175, 55, 0.3);
+}
+
+.lpNote {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--color-silver-dark);
+}
+
+/* ===== MODAL SELEÇÃO DE CASO ===== */
+.caseSelectModal {
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  width: 90%;
+  max-width: 450px;
+  padding: 32px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.caseSelectHeader {
+    margin-bottom: 24px;
+}
+
+.caseSelectHeader h3 {
+    margin: 0 0 8px;
+    color: var(--color-gold);
+    font-size: 1.3rem;
+}
+
+.caseSelectHeader p {
+    font-size: 0.9rem;
+    color: var(--color-silver-dark);
+    line-height: 1.5;
+}
+
+.caseSelectList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+.caseSelectItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.caseSelectItem:hover {
+    background: rgba(212, 175, 55, 0.1);
+    border-color: var(--color-gold);
+    transform: translateX(8px);
+}
+
+.csItemInfo strong {
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+    color: #fff;
+}
+
+.csItemInfo span {
+    font-size: 0.75rem;
+    color: var(--color-silver-dark);
+}
+
+.cancelCaseSelectBtn {
+    margin-top: 24px;
+    width: 100%;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.cancelCaseSelectBtn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.closeModalBtn {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.closeModalBtn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: rotate(90deg);
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .lawyerProfileModal {
+    padding: 24px;
+    padding-top: 60px;
+  }
+  .lpModalHeader {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  .lpModalStatsGrid {
+      grid-template-columns: 1fr 1fr;
+  }
+}

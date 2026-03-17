@@ -41,7 +41,7 @@ export async function GET() {
 
     const { data, error } = await db
       .from("advogados")
-      .select("id, name, email, phone, oab, is_premium, created_at")
+      .select("id, name, email, phone, oab, is_premium, premium_expires_at, balance, created_at")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -190,6 +190,96 @@ export async function PATCH(request) {
     });
   } catch (error) {
     console.error("Erro na API PATCH /api/admin/advogados:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Erro interno no servidor" },
+      { status: 500 },
+    );
+  }
+}
+// PUT /api/admin/advogados -> Gerenciar PRO e Balance
+export async function PUT(request) {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
+    }
+
+    const db = supabaseAdmin || supabase;
+    const isAdmin = await ensureAdmin(db, user.id);
+    if (!isAdmin) {
+      return NextResponse.json(
+        { success: false, message: "Acesso restrito a administradores" },
+        { status: 403 },
+      );
+    }
+
+    const { lawyerId, action, value } = await request.json();
+
+    if (!lawyerId || !action) {
+      return NextResponse.json(
+        { success: false, message: "Parâmetros inválidos" },
+        { status: 400 },
+      );
+    }
+
+    // 1. Buscar o advogado
+    const { data: lawyer, error: lError } = await db
+      .from("advogados")
+      .select("id, is_premium, balance")
+      .eq("id", lawyerId)
+      .single();
+
+    if (lError || !lawyer) {
+      return NextResponse.json(
+        { success: false, message: "Advogado não encontrado" },
+        { status: 404 },
+      );
+    }
+
+    const updates = {};
+
+    if (action === "GIVE_PRO") {
+      // PRO por 30 dias
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+      
+      updates.is_premium = true;
+      updates.premium_expires_at = expiresAt.toISOString();
+    } else if (action === "ADD_JURIS") {
+      const amountToAdd = Number(value);
+      if (isNaN(amountToAdd)) {
+        return NextResponse.json(
+          { success: false, message: "Valor de Juris inválido" },
+          { status: 400 },
+        );
+      }
+      updates.balance = (lawyer.balance || 0) + amountToAdd;
+    } else if (action === "REMOVE_PRO") {
+      updates.is_premium = false;
+      updates.premium_expires_at = null;
+    }
+
+    const { error: updateError } = await db
+      .from("advogados")
+      .update(updates)
+      .eq("id", lawyerId);
+
+    if (updateError) throw updateError;
+
+    return NextResponse.json({
+      success: true,
+      message: "Advogado atualizado com sucesso",
+    });
+  } catch (error) {
+    console.error("Erro na API PUT /api/admin/advogados:", error);
     return NextResponse.json(
       { success: false, message: error.message || "Erro interno no servidor" },
       { status: 500 },

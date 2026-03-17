@@ -283,7 +283,74 @@
 
 .pageBody > * {
   width: 100%;
+  width: 100%;
   max-width: 1200px;
+  position: relative;
+}
+
+/* PROFILE REMINDER BANNER */
+.profileReminderBanner {
+  background: linear-gradient(135deg, rgba(250, 204, 21, 0.1) 0%, rgba(212, 175, 55, 0.05) 100%);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: 12px;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 25px;
+  animation: slideDown 0.5s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reminderIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: rgba(250, 204, 21, 0.1);
+  border-radius: 50%;
+  color: #facc15;
+}
+
+.reminderText {
+  flex: 1;
+}
+
+.reminderText h4 {
+  margin: 0 0 4px;
+  color: #facc15;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.reminderText p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-silver);
+  opacity: 0.9;
+}
+
+.reminderAction {
+  background: #facc15;
+  color: var(--color-black);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.reminderAction:hover {
+  transform: scale(1.05);
+  background: #eab308;
 }
 
 .searchWrapper {
@@ -616,6 +683,23 @@
   position: relative;
   text-align: center;
   border: 1px solid rgba(212, 175, 55, 0.2);
+  display: flex;
+  flex-direction: column;
+  max-height: 95vh;
+  overflow-y: auto;
+}
+
+.modalContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modalContent::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.modalContent::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 10px;
 }
 
 .modalHeader {
@@ -1218,12 +1302,12 @@
 .formInput,
 .formSelect,
 .formTextarea {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 0.9rem;
-  color: #1e293b;
+  color: #fff;
   outline: none;
   transition: all 0.2s;
 }
@@ -1231,9 +1315,9 @@
 .formInput:focus,
 .formSelect:focus,
 .formTextarea:focus {
-  border-color: #4f46e5;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--color-gold);
+  background: rgba(212, 175, 55, 0.05);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
 }
 
 .formTextarea {
@@ -4264,10 +4348,31 @@
 
   .businessCardTop {
     flex-direction: column;
-    align-items: flex-start;
+    text-align: center;
+    gap: 15px;
   }
 
   .businessCardInfoGrid {
     grid-template-columns: 1fr;
   }
+}
+
+.deleteAccountBtn {
+  width: 100%;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.deleteAccountBtn:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
 }

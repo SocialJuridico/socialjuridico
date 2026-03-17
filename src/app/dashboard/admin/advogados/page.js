@@ -14,7 +14,9 @@ export default function AdminAdvogadosPage() {
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState(null);
   const [resettingId, setResettingId] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
   const [modalAction, setModalAction] = useState(null);
+  const [jurisAmount, setJurisAmount] = useState(10);
 
   useEffect(() => {
     const load = async () => {
@@ -97,6 +99,49 @@ export default function AdminAdvogadosPage() {
     }
   };
 
+  const confirmUpdate = async (advogado, action, value = null) => {
+    setUpdatingId(advogado.id);
+    try {
+      const res = await fetch("/api/admin/advogados", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lawyerId: advogado.id,
+          action,
+          value,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Falha ao atualizar advogado.");
+        return;
+      }
+
+      toast.success(data.message);
+      
+      // Atualizar lista local
+      setAdvogados(prev => prev.map(a => {
+        if (a.id === advogado.id) {
+          if (action === "GIVE_PRO") {
+            const exp = new Date();
+            exp.setDate(exp.getDate() + 30);
+            return { ...a, is_premium: true, premium_expires_at: exp.toISOString() };
+          }
+          if (action === "REMOVE_PRO") return { ...a, is_premium: false, premium_expires_at: null };
+          if (action === "ADD_JURIS") return { ...a, balance: (a.balance || 0) + Number(value) };
+        }
+        return a;
+      }));
+    } catch (error) {
+      console.error("Erro ao atualizar advogado:", error);
+      toast.error("Erro ao atualizar advogado.");
+    } finally {
+      setUpdatingId(null);
+      setModalAction(null);
+    }
+  };
+
   if (loading) {
     return <div className={styles.loading}>Carregando advogados...</div>;
   }
@@ -134,7 +179,9 @@ export default function AdminAdvogadosPage() {
                 <th>Email</th>
                 <th>Telefone</th>
                 <th>OAB</th>
+                <th>Juris</th>
                 <th>Plano</th>
+                <th>Expira em</th>
                 <th>Cadastro</th>
                 <th>Ações</th>
               </tr>
@@ -146,16 +193,39 @@ export default function AdminAdvogadosPage() {
                   <td>{advogado.email || "-"}</td>
                   <td>{advogado.phone || "-"}</td>
                   <td>{advogado.oab || "-"}</td>
-                  <td>{advogado.is_premium ? "PRO" : "FREE"}</td>
+                  <td>
+                    <span className={styles.jurisBadge}>
+                      {advogado.balance || 0}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={advogado.is_premium ? styles.proBadge : styles.freeBadge}>
+                      {advogado.is_premium ? "PRO" : "FREE"}
+                    </span>
+                  </td>
+                  <td>
+                    {advogado.is_premium && advogado.premium_expires_at
+                      ? new Date(advogado.premium_expires_at).toLocaleDateString("pt-BR")
+                      : "-"}
+                  </td>
                   <td>
                     {advogado.created_at
-                      ? new Date(advogado.created_at).toLocaleDateString(
-                          "pt-BR",
-                        )
+                      ? new Date(advogado.created_at).toLocaleDateString("pt-BR")
                       : "-"}
                   </td>
                   <td>
                     <div className={styles.actionsCell}>
+                      <button
+                        type="button"
+                        className={styles.manageBtn}
+                        onClick={() =>
+                          setModalAction({ type: "manage", item: advogado })
+                        }
+                        disabled={updatingId === advogado.id}
+                      >
+                        <RotateCcw size={14} style={{ display: 'none' }} />
+                        Gerenciar
+                      </button>
                       <button
                         type="button"
                         className={styles.resetBtn}
@@ -165,7 +235,7 @@ export default function AdminAdvogadosPage() {
                         disabled={resettingId === advogado.id}
                       >
                         <RotateCcw size={14} />
-                        {resettingId === advogado.id ? "Resetando..." : "Reset"}
+                        Reset
                       </button>
                       <button
                         type="button"
@@ -176,9 +246,7 @@ export default function AdminAdvogadosPage() {
                         disabled={deletingId === advogado.id}
                       >
                         <Trash2 size={14} />
-                        {deletingId === advogado.id
-                          ? "Excluindo..."
-                          : "Excluir"}
+                        Excluir
                       </button>
                     </div>
                   </td>
@@ -189,7 +257,7 @@ export default function AdminAdvogadosPage() {
         )}
       </div>
 
-      {modalAction && (
+       {modalAction && (
         <div
           className={styles.modalOverlay}
           onClick={() => setModalAction(null)}
@@ -201,52 +269,109 @@ export default function AdminAdvogadosPage() {
             <h3>
               {modalAction.type === "delete"
                 ? "Excluir advogado"
-                : "Resetar senha"}
+                : modalAction.type === "reset"
+                ? "Resetar senha"
+                : "Gerenciar Advogado"}
             </h3>
-            <p>
-              {modalAction.type === "delete" ? (
-                <>
-                  Confirma a exclusão de{" "}
-                  <strong>{modalAction.item.name || "advogado"}</strong>? Esta
-                  ação é irreversível.
-                </>
+            
+            <div className={styles.modalContent}>
+              {modalAction.type === "manage" ? (
+                <div className={styles.manageOptions}>
+                  <p>Advogado: <strong>{modalAction.item.name}</strong></p>
+                  
+                  <div className={styles.manageSection}>
+                    <h4>Plano PRO</h4>
+                    <p className={styles.manageDesc}>Concede status PRO e validade por 30 dias.</p>
+                    {modalAction.item.is_premium ? (
+                      <button 
+                        className={styles.removeProBtn}
+                        onClick={() => confirmUpdate(modalAction.item, "REMOVE_PRO")}
+                        disabled={updatingId === modalAction.item.id}
+                      >
+                        Remover PRO
+                      </button>
+                    ) : (
+                      <button 
+                        className={styles.giveProBtn}
+                        onClick={() => confirmUpdate(modalAction.item, "GIVE_PRO")}
+                        disabled={updatingId === modalAction.item.id}
+                      >
+                        Conceder 30 dias de PRO
+                      </button>
+                    )}
+                  </div>
+
+                  <div className={styles.manageSection}>
+                    <h4>Saldo de Juris</h4>
+                    <p className={styles.manageDesc}>Adicione uma quantia de Juris ao saldo atual ({modalAction.item.balance || 0}).</p>
+                    <div className={styles.jurisInputRow}>
+                      <input 
+                        type="number" 
+                        value={jurisAmount} 
+                        onChange={(e) => setJurisAmount(e.target.value)}
+                        className={styles.numberInput}
+                      />
+                      <button 
+                        className={styles.addJurisBtn}
+                        onClick={() => confirmUpdate(modalAction.item, "ADD_JURIS", jurisAmount)}
+                        disabled={updatingId === modalAction.item.id}
+                      >
+                        Adicionar Juris
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <>
-                  Confirma resetar a senha de{" "}
-                  <strong>{modalAction.item.name || "advogado"}</strong> para
-                  <strong> socialjuridico1!</strong>?
-                </>
+                <p>
+                  {modalAction.type === "delete" ? (
+                    <>
+                      Confirma a exclusão de{" "}
+                      <strong>{modalAction.item.name || "advogado"}</strong>? Esta
+                      ação é irreversível.
+                    </>
+                  ) : (
+                    <>
+                      Confirma resetar a senha de{" "}
+                      <strong>{modalAction.item.name || "advogado"}</strong> para
+                      <strong> socialjuridico1!</strong>?
+                    </>
+                  )}
+                </p>
               )}
-            </p>
+            </div>
+
             <div className={styles.modalActions}>
               <button
                 type="button"
                 className={styles.cancelBtn}
                 onClick={() => setModalAction(null)}
               >
-                Cancelar
+                {modalAction.type === "manage" ? "Fechar" : "Cancelar"}
               </button>
-              <button
-                type="button"
-                className={styles.confirmBtn}
-                onClick={() =>
-                  modalAction.type === "delete"
-                    ? confirmDelete(modalAction.item)
-                    : confirmReset(modalAction.item)
-                }
-                disabled={
-                  deletingId === modalAction.item.id ||
-                  resettingId === modalAction.item.id
-                }
-              >
-                {modalAction.type === "delete"
-                  ? deletingId === modalAction.item.id
-                    ? "Excluindo..."
-                    : "Confirmar exclusão"
-                  : resettingId === modalAction.item.id
-                    ? "Resetando..."
-                    : "Confirmar reset"}
-              </button>
+              
+              {modalAction.type !== "manage" && (
+                <button
+                  type="button"
+                  className={styles.confirmBtn}
+                  onClick={() =>
+                    modalAction.type === "delete"
+                      ? confirmDelete(modalAction.item)
+                      : confirmReset(modalAction.item)
+                  }
+                  disabled={
+                    deletingId === modalAction.item.id ||
+                    resettingId === modalAction.item.id
+                  }
+                >
+                  {modalAction.type === "delete"
+                    ? deletingId === modalAction.item.id
+                      ? "Excluindo..."
+                      : "Confirmar exclusão"
+                    : resettingId === modalAction.item.id
+                      ? "Resetando..."
+                      : "Confirmar reset"}
+                </button>
+              )}
             </div>
           </div>
         </div>

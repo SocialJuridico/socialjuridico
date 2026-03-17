@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import * as htmlToImage from "html-to-image";
 import Link from "next/link";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -147,6 +148,7 @@ export default function AdvogadoDashboard() {
   });
   const [calcResult, setCalcResult] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [showProfileReminder, setShowProfileReminder] = useState(false);
 
   // JURISPRUDENCIA STATE
   const [jurisSearchQuery, setJurisSearchQuery] = useState("");
@@ -157,6 +159,10 @@ export default function AdvogadoDashboard() {
   const [triagemAnswers, setTriagemAnswers] = useState("");
   const [triagemDiagnosis, setTriagemDiagnosis] = useState(null);
   const [triagemCaseValue, setTriagemCaseValue] = useState(null);
+  const [isExportingCard, setIsExportingCard] = useState(false);
+
+  // REFS
+  const businessCardRef = useRef(null);
   const [triagemViability, setTriagemViability] = useState(null);
   const [isTriagemLoading, setIsTriagemLoading] = useState(false);
   const [triagemStep, setTriagemStep] = useState(1);
@@ -222,6 +228,11 @@ export default function AdvogadoDashboard() {
   const [draftResult, setDraftResult] = useState("");
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
 
+  // SOLICITAÇÃO DE EXCLUSÃO
+  const [showDeleteRequestModal, setShowDeleteRequestModal] = useState(false);
+  const [isSubmittingDeleteRequest, setIsSubmittingDeleteRequest] = useState(false);
+  const [deleteRequestData, setDeleteRequestData] = useState({ nome: "", motivo: "" });
+
   const fileInputRef = useRef(null);
   const smartFileInputRef = useRef(null);
   const avatarInputRef = useRef(null);
@@ -233,62 +244,130 @@ export default function AdvogadoDashboard() {
     }
   }, [chatMessages, isTypingAI]);
 
-  useEffect(() => {
-    async function loadData() {
-      setLoadingProfile(true);
-      try {
-        const res = await fetch("/api/perfil");
-        const data = await res.json();
-        if (data.success) {
-          setProfileData(data.data);
-          setUserName(data.data.name);
-          setProfileForm({
-            name: data.data.name || "",
-            phone: data.data.phone || "",
-            specialties: data.data.specialties || "",
-            bio: data.data.bio || "",
-            oab: data.data.oab || "",
-            consulta: data.data.consulta || "Gratuita",
-            tempo: data.data.tempo || "",
-            valor: data.data.valor || 0,
-            avatar: data.data.avatar || "",
-            password: "",
-          });
-        }
-      } catch (e) {
-        console.error("Erro perfil:", e);
-      } finally {
-        setLoadingProfile(false);
+  const fetchAgenda = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    try {
+      const res = await fetch("/api/crm/agenda");
+      const data = await res.json();
+      if (data.success) {
+        setAgendaItems(data.data);
       }
-
-      setLoadingCasos(true);
-      try {
-        await fetchCasos();
-      } catch (e) {
-        console.error("Erro casos:", e);
-      } finally {
-        setLoadingCasos(false);
-      }
+    } catch (err) {
+      console.error("Erro fetchAgenda API:", err);
     }
-
-    async function fetchCrmClients() {
-      setLoadingCrm(true);
-      try {
-        const res = await fetch("/api/crm");
-        const data = await res.json();
-        if (data.success) setCrmClients(data.data);
-      } catch (e) {
-        console.error("Erro CRM:", e);
-      } finally {
-        setLoadingCrm(false);
-      }
-    }
-
-    loadData();
-    fetchCrmClients();
-    fetchAllDocuments();
-    fetchAgenda();
   }, [profileData?.id]);
+
+  const fetchAllDocuments = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    setLoadingAllDocs(true);
+    try {
+      const res = await fetch("/api/crm/documents");
+      const data = await res.json();
+      if (data.success) setAllDocuments(data.data);
+    } catch (e) {
+      console.error("Erro fetchAllDocs:", e);
+    } finally {
+      setLoadingAllDocs(false);
+    }
+  }, [profileData?.id]);
+
+  const fetchCasos = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    setLoadingCasos(true);
+    try {
+      const res = await fetch("/api/casos");
+      const data = await res.json();
+      if (data.success) setCasos(data.data);
+    } catch (err) {
+      console.error("Erro fetchCasos:", err);
+    } finally {
+      setLoadingCasos(false);
+    }
+  }, [profileData?.id]);
+
+  const fetchCrmClients = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    setLoadingCrm(true);
+    try {
+      const res = await fetch("/api/crm");
+      const data = await res.json();
+      if (data.success) setCrmClients(data.data);
+    } catch (e) {
+      console.error("Erro CRM:", e);
+    } finally {
+      setLoadingCrm(false);
+    }
+  }, [profileData?.id]);
+
+  const syncNotificacoes = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    try {
+      const res = await fetch("/api/notificacoes", { cache: "no-store" });
+      const response = await res.json();
+      if (response.success) {
+        setNotificacoes(response.data || []);
+      } else if (res.status === 401) {
+         console.warn("[LawyerDashboard] 401 no fetchNotificacoes...");
+      }
+    } catch (error) {
+      console.error("Erro ao sincronizar notificações:", error);
+    }
+  }, [profileData?.id]);
+
+  const fetchNotificacoes = useCallback(async () => {
+    setLoadingNotificacoes(true);
+    await syncNotificacoes();
+    setLoadingNotificacoes(false);
+  }, [syncNotificacoes]);
+
+  const loadDataFull = useCallback(async () => {
+    setLoadingProfile(true);
+    try {
+      const res = await fetch("/api/perfil");
+      const data = await res.json();
+      if (data.success) {
+        const profile = data.data;
+        setProfileData(profile);
+        setUserName(profile.name);
+        setProfileForm({
+          name: profile.name || "",
+          phone: profile.phone || "",
+          specialties: profile.specialties || "",
+          bio: profile.bio || "",
+          oab: profile.oab || "",
+          consulta: profile.consulta || "Gratuita",
+          tempo: profile.tempo || "",
+          valor: profile.valor || 0,
+          avatar: profile.avatar || "",
+          password: "",
+        });
+        const isIncomplete =
+          !profile.avatar || !profile.bio || !profile.specialties;
+        setShowProfileReminder(isIncomplete);
+        
+        // Chamada sequencial passando o profile.id explicitamente para evitar closures obsoletas
+        await fetchCasos(profile.id);
+        await fetchCrmClients(profile.id);
+        await fetchAgenda(profile.id);
+        await fetchAllDocuments(profile.id);
+        await syncNotificacoes(profile.id);
+      }
+    } catch (e) {
+      console.error("Erro loadDataFull:", e);
+    } finally {
+      setLoadingProfile(false);
+    }
+  }, [fetchCasos, fetchCrmClients, fetchAgenda, fetchAllDocuments, syncNotificacoes]);
+
+  useEffect(() => {
+    loadDataFull();
+  }, [loadDataFull]);
+
+  useEffect(() => {
+    if (!profileData?.id) return;
+    const intervalId = setInterval(syncNotificacoes, 30000); // Polling 30s
+    return () => clearInterval(intervalId);
+  }, [syncNotificacoes, profileData?.id]);
 
   useEffect(() => {
     if (!profileData?.id) return;
@@ -329,52 +408,6 @@ export default function AdvogadoDashboard() {
     };
   }, [profileData?.id]);
 
-  const fetchAgenda = async () => {
-    try {
-      const res = await fetch("/api/crm/agenda");
-      const data = await res.json();
-      if (data.success) {
-        setAgendaItems(data.data);
-      }
-    } catch (err) {
-      console.error("Erro fetchAgenda API:", err);
-    }
-  };
-
-  const fetchAllDocuments = async () => {
-    setLoadingAllDocs(true);
-    try {
-      const res = await fetch("/api/crm/documents");
-      const data = await res.json();
-      if (data.success) setAllDocuments(data.data);
-    } catch (e) {
-      console.error("Erro fetchAllDocs:", e);
-    } finally {
-      setLoadingAllDocs(false);
-    }
-  };
-
-  const fetchCasos = async () => {
-    const res = await fetch("/api/casos");
-    const data = await res.json();
-    if (data.success) setCasos(data.data);
-  };
-
-  const fetchNotificacoes = async () => {
-    setLoadingNotificacoes(true);
-    try {
-      const res = await fetch("/api/notificacoes", { cache: "no-store" });
-      const data = await res.json();
-      if (data.success) {
-        setNotificacoes(data.data || []);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar notificações:", error);
-      toast.error("Não foi possível carregar suas mensagens.");
-    } finally {
-      setLoadingNotificacoes(false);
-    }
-  };
 
   const parseNotificationMeta = (notification) => {
     const rawMeta = notification?.meta;
@@ -419,13 +452,13 @@ export default function AdvogadoDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchCasos]);
 
   useEffect(() => {
-    if (activeTab === "minhas-mensagens") {
+    if (activeTab === "minhas-mensagens" && profileData?.id) {
       fetchNotificacoes();
     }
-  }, [activeTab]);
+  }, [activeTab, profileData?.id, fetchNotificacoes]);
 
   // REAL-TIME: Notificações do advogado em tempo real
   useEffect(() => {
@@ -748,21 +781,40 @@ export default function AdvogadoDashboard() {
               <span
                 className={styles.badge}
                 style={{
-                  background: "rgba(16, 185, 129, 0.1)",
-                  color: "#10b981",
+                  background:
+                    caso.status === "CANCELADO"
+                      ? "rgba(239, 68, 68, 0.1)"
+                      : caso.status === "FECHADO"
+                        ? "rgba(100, 116, 139, 0.1)"
+                        : "rgba(16, 185, 129, 0.1)",
+                  color:
+                    caso.status === "CANCELADO"
+                      ? "#ef4444"
+                      : caso.status === "FECHADO"
+                        ? "#64748b"
+                        : "#10b981",
                   border: "none",
                 }}
               >
-                {caso.status}
+                {caso.status === "CANCELADO" ? "CANCELADO PELO CLIENTE" : caso.status}
               </span>
               <button
                 className={styles.applyBtn}
-                style={{ background: "#6366f1" }}
-                onClick={() => handleAbrirConversa(caso)}
+                style={{
+                  background: caso.status === "CANCELADO" ? "#334155" : "#6366f1",
+                  opacity: caso.status === "CANCELADO" ? 0.7 : 1,
+                  cursor: caso.status === "CANCELADO" ? "not-allowed" : "pointer",
+                }}
+                onClick={() =>
+                  caso.status !== "CANCELADO" && handleAbrirConversa(caso)
+                }
+                disabled={caso.status === "CANCELADO"}
               >
-                {caso.chat_started
-                  ? "Abrir Conversa"
-                  : "Iniciar Atendimento (4 Juris)"}
+                {caso.status === "CANCELADO"
+                  ? "Atendimento Encerrado"
+                  : caso.chat_started
+                    ? "Abrir Conversa"
+                    : "Iniciar Atendimento (4 Juris)"}
               </button>
             </div>
           </div>
@@ -824,15 +876,6 @@ export default function AdvogadoDashboard() {
     </div>
   );
 
-  const fetchCrmClients = async () => {
-    try {
-      const res = await fetch("/api/crm");
-      const data = await res.json();
-      if (data.success) setCrmClients(data.data);
-    } catch (e) {
-      console.error("Erro CRM:", e);
-    }
-  };
 
   const handleSaveClient = async (e) => {
     e.preventDefault();
@@ -868,6 +911,106 @@ export default function AdvogadoDashboard() {
     } finally {
       setIsSubmittingClient(false);
     }
+  };
+  const handleSendDeleteRequest = async (e) => {
+    e.preventDefault();
+    if (!deleteRequestData.nome || !deleteRequestData.motivo) {
+      toast.error("Por favor, preencha todos os campos.");
+      return;
+    }
+
+    setIsSubmittingDeleteRequest(true);
+    try {
+      const res = await fetch("/api/solicitacoes-exclusao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(deleteRequestData),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Solicitação enviada com sucesso.");
+        setShowDeleteRequestModal(false);
+        toast((t) => (
+          <span style={{ textAlign: "center", display: "block" }}>
+            <strong>Solicitação Recebida!</strong> <br />
+            Se você não tiver casos vinculados, sua conta será excluída em até 48 horas.
+          </span>
+        ), { duration: 6000, icon: "🛡️" });
+      } else {
+        toast.error(data.message || "Erro ao enviar solicitação.");
+      }
+    } catch (err) {
+      console.error("Erro ao enviar solicitação de exclusão:", err);
+      toast.error("Erro na conexão com o servidor.");
+    } finally {
+      setIsSubmittingDeleteRequest(false);
+    }
+  };
+
+  const renderDeleteRequestModal = () => {
+    if (!showDeleteRequestModal) return null;
+
+    return (
+      <div className={styles.modalOverlay} onClick={() => setShowDeleteRequestModal(false)}>
+        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle}>Solicitar Exclusão da Conta</h2>
+            <p className={styles.modalSubtitle}>Sentimos muito em ver você partir.</p>
+          </div>
+
+          <form onSubmit={handleSendDeleteRequest} className={styles.newClientForm}>
+            <div className={styles.formItem}>
+              <label className={styles.formLabel}>Confirme seu Nome</label>
+              <input
+                type="text"
+                className={styles.formInput}
+                value={deleteRequestData.nome}
+                onChange={(e) => setDeleteRequestData({ ...deleteRequestData, nome: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className={styles.formItem}>
+              <label className={styles.formLabel}>Motivo da Exclusão</label>
+              <textarea
+                className={styles.formTextarea}
+                placeholder="Conte-nos o motivo (opcional, mas nos ajuda a melhorar)"
+                value={deleteRequestData.motivo}
+                onChange={(e) => setDeleteRequestData({ ...deleteRequestData, motivo: e.target.value })}
+                required
+              />
+            </div>
+
+            <div className={styles.deleteFeedbackInfo} style={{ 
+              background: "rgba(239, 68, 68, 0.1)", 
+              border: "1px solid rgba(239, 68, 68, 0.2)",
+              padding: "15px",
+              borderRadius: "8px",
+              marginBottom: "20px",
+              fontSize: "0.85rem",
+              color: "var(--color-silver)"
+            }}>
+              <p><strong>Atenção:</strong> Ao clicar em enviar, sua conta entrará em processo de exclusão. </p>
+              <p style={{ marginTop: "10px" }}>Caso você não tenha nenhum caso vinculado na plataforma, sua conta e todos os dados pertinentes serão excluídos em até <strong>48 Horas</strong>.</p>
+            </div>
+
+            <button
+              type="submit"
+              className={styles.submitBtn}
+              style={{ background: "#ef4444" }}
+              disabled={isSubmittingDeleteRequest}
+            >
+              {isSubmittingDeleteRequest ? "Enviando..." : "Confirmar Solicitação de Exclusão"}
+            </button>
+          </form>
+
+          <button className={styles.closeModalBtn} onClick={() => setShowDeleteRequestModal(false)}>
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const renderCRM = () => (
@@ -3211,9 +3354,19 @@ export default function AdvogadoDashboard() {
               <p style={{ fontSize: "0.85rem", marginBottom: 5 }}>
                 <strong>Saldo:</strong> {profileData.balance} Juris
               </p>
-              <p style={{ fontSize: "0.85rem" }}>
+              <p style={{ fontSize: "0.85rem", marginBottom: 15 }}>
                 <strong>ID:</strong> {profileData.id.substring(0, 8)}...
               </p>
+
+              <button 
+                className={styles.deleteAccountBtn}
+                onClick={() => {
+                  setDeleteRequestData({ nome: profileData.name || "", motivo: "" });
+                  setShowDeleteRequestModal(true);
+                }}
+              >
+                Solicitar Exclusão da Conta
+              </button>
             </div>
           </div>
 
@@ -3466,6 +3619,84 @@ export default function AdvogadoDashboard() {
       }
     };
 
+    const handleDownloadCard = async () => {
+      if (!businessCardRef.current || isExportingCard) return;
+
+      setIsExportingCard(true);
+      const toastId = toast.loading("Gerando imagem do seu cartão...");
+
+      try {
+        // Aguarda um momento para garantir que fontes/imagens estejam carregadas
+        await new Promise((r) => setTimeout(r, 500));
+
+        const dataUrl = await htmlToImage.toPng(businessCardRef.current, {
+          quality: 1,
+          pixelRatio: 2,
+          backgroundColor: "#0B0B0E", // Cor de fundo do dashboard
+          style: {
+            borderRadius: "24px",
+            margin: "0",
+          },
+        });
+
+        const link = document.createElement("a");
+        link.download = `cartao-visitas-${profileData.name || "advogado"}.png`;
+        link.href = dataUrl;
+        link.click();
+
+        toast.success("Cartão baixado com sucesso!", { id: toastId });
+      } catch (err) {
+        console.error("Erro ao gerar imagem:", err);
+        toast.error("Erro ao gerar imagem do cartão.", { id: toastId });
+      } finally {
+        setIsExportingCard(false);
+      }
+    };
+
+    const handleShareCard = async () => {
+      if (!businessCardRef.current || isExportingCard) return;
+
+      if (!navigator.share) {
+        handleDownloadCard();
+        return;
+      }
+
+      setIsExportingCard(true);
+      const toastId = toast.loading("Preparando compartilhamento...");
+
+      try {
+        const dataUrl = await htmlToImage.toPng(businessCardRef.current, {
+          pixelRatio: 2,
+          backgroundColor: "#0B0B0E",
+        });
+
+        // Converter DataURL para Blob/File para o Web Share API
+        const blob = await (await fetch(dataUrl)).blob();
+        const file = new File(
+          [blob],
+          `cartao-${profileData.name || "advogado"}.png`,
+          { type: "image/png" },
+        );
+
+        await navigator.share({
+          files: [file],
+          title: "Meu Cartão de Visitas Digital",
+          text: `Olá, este é o meu cartão de visitas digital do SocialJurídico.`,
+        });
+
+        toast.success("Compartilhamento aberto!", { id: toastId });
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          console.error("Erro ao compartilhar:", err);
+          toast.error("Erro ao compartilhar cartão.", { id: toastId });
+        } else {
+          toast.dismiss(toastId);
+        }
+      } finally {
+        setIsExportingCard(false);
+      }
+    };
+
     return (
       <div className={styles.toolContainer}>
         <div className={styles.sectionHeader}>
@@ -3476,7 +3707,11 @@ export default function AdvogadoDashboard() {
         </div>
 
         <div className={styles.businessCardLayout}>
-          <section className={styles.businessCardPreview}>
+          <section
+            ref={businessCardRef}
+            className={styles.businessCardPreview}
+            style={{ padding: isExportingCard ? "40px" : "" }}
+          >
             <div className={styles.businessCardTop}>
               <div className={styles.businessCardAvatar}>
                 {profileData.avatar ? (
@@ -3578,8 +3813,44 @@ export default function AdvogadoDashboard() {
                 className={styles.businessCardCopyButton}
                 onClick={handleCopyCard}
               >
-                <Copy size={16} /> Copiar cartão
+                <Copy size={16} /> Copiar texto
               </button>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px",
+                  marginTop: "10px",
+                }}
+              >
+                <button
+                  type="button"
+                  className={styles.businessCardCopyButton}
+                  style={{
+                    background: "none",
+                    border: "1px solid var(--color-gold)",
+                    color: "var(--color-gold)",
+                  }}
+                  onClick={handleDownloadCard}
+                  disabled={isExportingCard}
+                >
+                  <Download size={16} /> Baixar Imagem
+                </button>
+                <button
+                  type="button"
+                  className={styles.businessCardCopyButton}
+                  style={{
+                    background: "var(--color-gold)",
+                    color: "#111827",
+                    border: "none",
+                  }}
+                  onClick={handleShareCard}
+                  disabled={isExportingCard}
+                >
+                  <Send size={16} /> Compartilhar
+                </button>
+              </div>
             </div>
 
             <div className={styles.businessCardPanel}>
@@ -6184,7 +6455,40 @@ export default function AdvogadoDashboard() {
           </div>
         </header>
 
-        <section className={styles.pageBody}>{renderActiveContent()}</section>
+        <section className={styles.pageBody}>
+          {showProfileReminder && activeTab !== "perfil" && (
+            <div className={styles.profileReminderBanner}>
+              <div className={styles.reminderIcon}>
+                <AlertTriangle size={24} />
+              </div>
+              <div className={styles.reminderText}>
+                <h4>Complete seu Perfil Profissional!</h4>
+                <p>
+                  Perfis com foto, biografia e especialidades atraem até 80% mais
+                  interações de clientes.
+                </p>
+              </div>
+              <button
+                className={styles.reminderAction}
+                onClick={() => setActiveTab("perfil")}
+              >
+                Completar Agora
+              </button>
+              <button
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--color-silver-dark)",
+                  cursor: "pointer",
+                }}
+                onClick={() => setShowProfileReminder(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+          )}
+          {renderActiveContent()}
+        </section>
       </main>
 
       <input
@@ -6193,6 +6497,7 @@ export default function AdvogadoDashboard() {
         style={{ display: "none" }}
         onChange={handleFileUpload}
       />
+      {renderDeleteRequestModal()}
       {renderBuyModal()}
       {renderProModal()}
       {renderNewClientModal()}

@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { 
-  LayoutDashboard, 
-  PlusCircle, 
-  Bell, 
-  User, 
-  LogOut, 
-  Scale, 
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import {
+  LayoutDashboard,
+  PlusCircle,
+  Bell,
+  User,
+  LogOut,
+  Scale,
   Star,
   ShieldCheck,
   Menu,
@@ -23,40 +23,49 @@ import {
   Lock,
   Mail,
   Phone,
-  Calendar
-} from 'lucide-react';
-import styles from './Dashboard.module.css';
-import { 
-  createCasoAction, 
+  Calendar,
+  Sparkles,
+  Check,
+  UserX,
+} from "lucide-react";
+import styles from "./Dashboard.module.css";
+import {
   updateCasoAction,
-  getNotificacoesAction,
   updatePasswordAction,
-  deleteAccountAction
-} from '@/app/actions/authActions';
-import { supabase } from '@/lib/supabase';
-import toast from 'react-hot-toast';
+  deleteAccountAction,
+} from "@/app/actions/authActions";
+import { supabase } from "@/lib/supabase";
+import toast from "react-hot-toast";
 
 export default function ClienteDashboard() {
-  const [userName, setUserName] = useState('Cliente');
-  const [activeTab, setActiveTab] = useState('painel');
+  const [userName, setUserName] = useState("Cliente");
+  const [activeTab, setActiveTab] = useState("painel");
   const [advogados, setAdvogados] = useState([]);
+  const [onlineLawyerIds, setOnlineLawyerIds] = useState([]);
   const [loadingAdvogados, setLoadingAdvogados] = useState(true);
   const [casos, setCasos] = useState([]);
   const [loadingCasos, setLoadingCasos] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
+
+  // States para Interesses de Advogados
+  const [interesses, setInteresses] = useState([]);
+  const [loadingInteresses, setLoadingInteresses] = useState(false);
+  const [processandoInteresse, setProcessandoInteresse] = useState(null);
+
   // States para Edição de Caso
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCaso, setSelectedCaso] = useState(null);
   const [editFormData, setEditFormData] = useState({
-    titulo: '',
-    area: '',
-    descricao: ''
+    titulo: "",
+    area: "",
+    descricao: "",
   });
-  
+
   // States para Notificações
   const [notificacoes, setNotificacoes] = useState([]);
   const [loadingNotificacoes, setLoadingNotificacoes] = useState(false);
+  const notifIdsRef = useRef(new Set());
+  const notifBootstrappedRef = useRef(false);
 
   // States para Novo Caso
   const [formLoading, setFormLoading] = useState(false);
@@ -64,19 +73,54 @@ export default function ClienteDashboard() {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const fileInputRef = useRef(null);
   const [formData, setFormData] = useState({
-    titulo: '',
-    area: '',
-    descricao: ''
+    titulo: "",
+    area: "",
+    descricao: "",
   });
 
   // States para Perfil
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
-    name: '',
-    phone: '',
-    password: ''
+    name: "",
+    phone: "",
+    password: "",
   });
+
+  const openNotificationsTab = async () => {
+    setActiveTab("notificacoes");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    await loadNotificacoes();
+  };
+
+  const showNotificationToast = (notif) => {
+    toast.custom(
+      (toastItem) => {
+        const handleToastClick = () => {
+          void openNotificationsTab();
+          toast.dismiss(toastItem.id);
+        };
+
+        return (
+          <button
+            type="button"
+            className={`${styles.toastNotification} ${toastItem.visible ? styles.toastIn : styles.toastOut}`}
+            onClick={handleToastClick}
+            aria-label="Abrir notificações"
+          >
+            <div className={styles.toastIcon}>
+              <Bell size={20} color="var(--color-gold)" />
+            </div>
+            <div className={styles.toastContent}>
+              <p className={styles.toastTitle}>{notif.titulo}</p>
+              <p className={styles.toastDesc}>{notif.mensagem}</p>
+            </div>
+          </button>
+        );
+      },
+      { duration: 5000 },
+    );
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -84,23 +128,26 @@ export default function ClienteDashboard() {
       else setIsSidebarCollapsed(false);
     };
     handleResize();
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
 
     async function loadInitialData() {
       console.log("Iniciando carga de dados do dashboard...");
-      
-      // 1. Carregar Advogados
-      fetch('/api/advogados')
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) setAdvogados(data.data);
+
+      // 1. Carregar Advogados (apenas PRO)
+      fetch("/api/advogados")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setAdvogados(data.data);
         })
-        .catch(err => console.error("Erro advogados:", err))
+        .catch((err) => console.error("Erro advogados:", err))
         .finally(() => setLoadingAdvogados(false));
 
       // 1.1 Carregar Casos
       console.log("Chamando loadCasos do loadInitialData...");
       loadCasos();
+
+      // 1.2 Carregar Interesses Pendentes
+      loadInteresses();
 
       // 2. Carregar Perfil
       console.log("Chamando loadProfile do loadInitialData...");
@@ -110,73 +157,134 @@ export default function ClienteDashboard() {
 
     // Inscrição em tempo real para novas notificações
     let channel;
+    let retryTimer;
     const setupRealtime = async () => {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return;
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        retryTimer = setTimeout(setupRealtime, 1200);
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        supabase.realtime.setAuth(session.access_token);
+      }
 
       channel = supabase
-        .channel(`public:notificacoes:user_id=eq.${user.id}`)
+        .channel(`cliente-notificacoes-${user.id}`)
         .on(
-          'postgres_changes',
+          "postgres_changes",
           {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notificacoes',
+            event: "INSERT",
+            schema: "public",
+            table: "notificacoes",
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
-            setNotificacoes(prev => [payload.new, ...prev]);
+            const notif = payload.new;
+            if (!notif?.id || notifIdsRef.current.has(notif.id)) return;
 
-            toast.custom((t) => (
-              <div className={`${styles.toastNotification} ${t.visible ? styles.toastIn : styles.toastOut}`}>
-                <div className={styles.toastIcon}>
-                   <Bell size={20} color="var(--color-gold)" />
-                </div>
-                <div className={styles.toastContent}>
-                  <p className={styles.toastTitle}>{payload.new.titulo}</p>
-                  <p className={styles.toastDesc}>{payload.new.mensagem}</p>
-                </div>
-              </div>
-            ), { duration: 5000 });
-          }
+            notifIdsRef.current.add(notif.id);
+            setNotificacoes((prev) => [notif, ...prev]);
+            showNotificationToast(notif);
+          },
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            retryTimer = setTimeout(setupRealtime, 1200);
+          }
+        });
     };
 
     setupRealtime();
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("resize", handleResize);
+      if (retryTimer) clearTimeout(retryTimer);
       if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  useEffect(() => {
+    let presenceChannel;
+
+    const syncPresence = () => {
+      if (!presenceChannel) return;
+      const state = presenceChannel.presenceState();
+      const ids = Object.values(state)
+        .flat()
+        .map((entry) => entry.user_id)
+        .filter(Boolean);
+      setOnlineLawyerIds(Array.from(new Set(ids)));
+    };
+
+    const setupPresence = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.access_token) {
+        supabase.realtime.setAuth(session.access_token);
+      }
+
+      presenceChannel = supabase
+        .channel("lawyer-presence-room")
+        .on("presence", { event: "sync" }, syncPresence)
+        .on("presence", { event: "join" }, syncPresence)
+        .on("presence", { event: "leave" }, syncPresence)
+        .subscribe();
+    };
+
+    setupPresence();
+    return () => {
+      if (presenceChannel) supabase.removeChannel(presenceChannel);
     };
   }, []);
 
   // Monitorar mudança de Tab
   useEffect(() => {
-    if (activeTab === 'painel') {
+    if (activeTab === "painel") {
       loadCasos();
     }
-    if (activeTab === 'notificacoes') {
+    if (activeTab === "notificacoes") {
       loadNotificacoes();
     }
-    if (activeTab === 'perfil') {
+    if (activeTab === "perfil") {
       loadProfile();
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    let intervalId;
+    const start = async () => {
+      await syncNotificacoes(true);
+      intervalId = setInterval(() => {
+        syncNotificacoes(true);
+      }, 5000);
+    };
+
+    start();
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, []);
+
   const loadProfile = async () => {
     setLoadingProfile(true);
     try {
-      const response = await fetch('/api/perfil');
+      const response = await fetch("/api/perfil");
       const data = await response.json();
-      
+
       if (data.success) {
         setProfileData(data.data);
         setUserName(data.data.name);
         setProfileForm({
           name: data.data.name,
-          phone: data.data.phone || '',
-          password: ''
+          phone: data.data.phone || "",
+          password: "",
         });
       } else {
         toast.error(data.message || "Erro ao carregar perfil.");
@@ -193,7 +301,7 @@ export default function ClienteDashboard() {
     console.log("Chamando loadCasos...");
     setLoadingCasos(true);
     try {
-      const response = await fetch('/api/casos');
+      const response = await fetch("/api/casos");
       console.log("Resposta loadCasos:", response.status);
       const data = await response.json();
       if (data.success) {
@@ -209,12 +317,54 @@ export default function ClienteDashboard() {
     }
   };
 
+  const loadInteresses = async () => {
+    setLoadingInteresses(true);
+    try {
+      const res = await fetch("/api/casos/interesse");
+      const data = await res.json();
+      if (data.success) setInteresses(data.data);
+    } catch (err) {
+      console.error("Erro ao carregar interesses:", err);
+    } finally {
+      setLoadingInteresses(false);
+    }
+  };
+
+  const handleResponderInteresse = async (interestId, action) => {
+    setProcessandoInteresse(interestId);
+    try {
+      const res = await fetch("/api/casos/interesse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interestId, action }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(
+          action === "ACCEPT"
+            ? "Advogado aceito! O chat está disponível."
+            : "Interesse recusado.",
+        );
+        // Remover o interesse da lista
+        setInteresses((prev) => prev.filter((i) => i.id !== interestId));
+        // Recarregar casos para refletir advogado vinculado
+        if (action === "ACCEPT") loadCasos();
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error("Erro ao processar resposta.");
+    } finally {
+      setProcessandoInteresse(null);
+    }
+  };
+
   const handleOpenEditModal = (caso) => {
     setSelectedCaso(caso);
     setEditFormData({
-      titulo: caso.titulo || '',
-      area: caso.area_atuacao || '',
-      descricao: caso.descricao || ''
+      titulo: caso.titulo || "",
+      area: caso.area_atuacao || "",
+      descricao: caso.descricao || "",
     });
     setIsEditModalOpen(true);
   };
@@ -223,15 +373,15 @@ export default function ClienteDashboard() {
     e.preventDefault();
     setFormLoading(true);
     try {
-      const res = await fetch('/api/casos', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/casos", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: selectedCaso.id,
           titulo: editFormData.titulo,
           area_atuacao: editFormData.area,
-          descricao: editFormData.descricao
-        })
+          descricao: editFormData.descricao,
+        }),
       });
 
       const data = await res.json();
@@ -251,36 +401,65 @@ export default function ClienteDashboard() {
     }
   };
 
+  const syncNotificacoes = async (showToastsForNew = false) => {
+    try {
+      const res = await fetch("/api/notificacoes", { cache: "no-store" });
+      const response = await res.json();
+      if (!response.success) return;
+
+      const data = response.data || [];
+      const incomingIds = new Set(data.map((n) => n.id).filter(Boolean));
+
+      if (!notifBootstrappedRef.current) {
+        notifIdsRef.current = incomingIds;
+        notifBootstrappedRef.current = true;
+        setNotificacoes(data);
+        return;
+      }
+
+      if (showToastsForNew) {
+        const newNotifs = data.filter(
+          (n) => n.id && !notifIdsRef.current.has(n.id),
+        );
+        newNotifs.reverse().forEach((n) => showNotificationToast(n));
+      }
+
+      notifIdsRef.current = incomingIds;
+      setNotificacoes(data);
+    } catch (err) {
+      console.error("Erro ao sincronizar notificações:", err);
+    }
+  };
+
   const loadNotificacoes = async () => {
     setLoadingNotificacoes(true);
-    const user = (await supabase.auth.getUser()).data.user;
-    if (user) {
-      const response = await getNotificacoesAction(user.id);
-      if (response.success) {
-        setNotificacoes(response.data);
-      }
-    }
+    await syncNotificacoes(false);
     setLoadingNotificacoes(false);
   };
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    const validFiles = files.filter(file => {
+    const validFiles = files.filter((file) => {
       const isLt5MB = file.size / 1024 / 1024 < 5;
-      const isAllowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(file.type);
+      const isAllowed = [
+        "application/pdf",
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+      ].includes(file.type);
       return isLt5MB && isAllowed;
     });
 
     if (selectedFiles.length + validFiles.length > 5) {
-      toast.error('Limite máximo de 5 arquivos atingido.');
+      toast.error("Limite máximo de 5 arquivos atingido.");
       return;
     }
 
-    setSelectedFiles(prev => [...prev, ...validFiles]);
+    setSelectedFiles((prev) => [...prev, ...validFiles]);
   };
 
   const removeFile = (index) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmitCaso = async (e) => {
@@ -289,43 +468,74 @@ export default function ClienteDashboard() {
 
     try {
       const uploadedUrls = [];
-      const user = (await supabase.auth.getUser()).data.user;
+      // Em alguns cenários no client o getUser pode retornar null mesmo com sessão válida no backend.
+      // Preferimos usar profileData já carregado pela API /api/perfil.
+      let userId = profileData?.id || null;
 
-      if (!user) throw new Error("Usuário não autenticado.");
+      if (!userId) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        userId = user?.id || null;
+      }
+
+      if (!userId) {
+        const perfilRes = await fetch("/api/perfil");
+        const perfilData = await perfilRes.json();
+        if (perfilData?.success && perfilData?.data?.id) {
+          userId = perfilData.data.id;
+          setProfileData(perfilData.data);
+        }
+      }
+
+      if (!userId) {
+        toast.error("Sua sessão expirou. Faça login novamente.");
+        window.location.href = "/login";
+        return;
+      }
 
       for (const file of selectedFiles) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
         const filePath = fileName;
 
         const { error: uploadError } = await supabase.storage
-          .from('CASES')
+          .from("CASES")
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('CASES')
-          .getPublicUrl(filePath);
-        
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("CASES").getPublicUrl(filePath);
+
         uploadedUrls.push(publicUrl);
       }
 
-      const result = await createCasoAction({
-        titulo: formData.titulo,
-        descricao: formData.descricao,
-        area_atuacao: formData.area,
-        cliente_id: user.id,
-        anexos: uploadedUrls
+      const createRes = await fetch("/api/casos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          titulo: formData.titulo,
+          descricao: formData.descricao,
+          area_atuacao: formData.area,
+          anexos: uploadedUrls,
+        }),
       });
+
+      const result = await createRes.json();
+
+      if (!createRes.ok || !result.success) {
+        throw new Error(result.message || "Falha ao criar caso.");
+      }
 
       if (result.success) {
         setFormSuccess(true);
-        setFormData({ titulo: '', area: '', descricao: '' });
+        setFormData({ titulo: "", area: "", descricao: "" });
         setSelectedFiles([]);
         setTimeout(() => {
           setFormSuccess(false);
-          setActiveTab('painel');
+          setActiveTab("painel");
         }, 3000);
       } else {
         toast.error(result.message);
@@ -341,16 +551,16 @@ export default function ClienteDashboard() {
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setFormLoading(true);
-    
+
     try {
       // 1. Atualizar Nome e Telefone via API real
-      const resProfile = await fetch('/api/perfil', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-              name: profileForm.name,
-              phone: profileForm.phone
-          })
+      const resProfile = await fetch("/api/perfil", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: profileForm.name,
+          phone: profileForm.phone,
+        }),
       });
       const dataProfile = await resProfile.json();
 
@@ -373,8 +583,13 @@ export default function ClienteDashboard() {
   };
 
   const handleDeleteAccount = async () => {
-    if (!confirm("TEM CERTEZA? Esta ação é irreversível e excluirá todos os seus dados.")) return;
-    
+    if (
+      !confirm(
+        "TEM CERTEZA? Esta ação é irreversível e excluirá todos os seus dados.",
+      )
+    )
+      return;
+
     setFormLoading(true);
     const user = (await supabase.auth.getUser()).data.user;
     if (!user) return;
@@ -382,7 +597,7 @@ export default function ClienteDashboard() {
     const response = await deleteAccountAction(user.id);
     if (response.success) {
       toast.success("Conta excluída. Sentiremos sua falta.");
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch("/api/auth/logout", { method: "POST" });
       window.location.href = "/";
     } else {
       toast.error(response.message);
@@ -391,59 +606,98 @@ export default function ClienteDashboard() {
   };
 
   return (
-    <div className={`${styles.dashboardContainer} ${isSidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
-      
+    <div
+      className={`${styles.dashboardContainer} ${isSidebarCollapsed ? styles.sidebarCollapsed : ""}`}
+    >
       {/* SIDEBAR */}
       <aside className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
-          <button className={styles.menuToggle} onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
+          <button
+            className={styles.menuToggle}
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          >
             {isSidebarCollapsed ? <Menu size={24} /> : <X size={24} />}
           </button>
-          
+
           {!isSidebarCollapsed && (
             <Link href="/" className={styles.logoWrapper}>
-              <div className={styles.logoIcon}><Scale size={20} color="#1A1A1A" /></div>
+              <div className={styles.logoIcon}>
+                <Scale size={20} color="#1A1A1A" />
+              </div>
               <span className={styles.logoText}>SocialJurídico</span>
             </Link>
           )}
 
           {isSidebarCollapsed && (
             <div className={styles.collapsedLogo}>
-               <div className={styles.logoIconCompact}><Scale size={20} color="#fff" /></div>
+              <div className={styles.logoIconCompact}>
+                <Scale size={20} color="#fff" />
+              </div>
             </div>
           )}
         </div>
 
         <nav className={styles.nav}>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'painel' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('painel')} title="Painel">
+          <Link
+            href="#"
+            className={`${styles.navItem} ${activeTab === "painel" ? styles.activeNavItem : ""}`}
+            onClick={() => setActiveTab("painel")}
+            title="Painel"
+          >
             <LayoutDashboard size={22} />
             {!isSidebarCollapsed && <span>Painel</span>}
           </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'novo' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('novo')} title="Novo Caso">
+          <Link
+            href="#"
+            className={`${styles.navItem} ${activeTab === "novo" ? styles.activeNavItem : ""}`}
+            onClick={() => setActiveTab("novo")}
+            title="Novo Caso"
+          >
             <PlusCircle size={22} />
             {!isSidebarCollapsed && <span>Novo Caso</span>}
           </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'notificacoes' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('notificacoes')} title="Notificações">
+          <Link
+            href="#"
+            className={`${styles.navItem} ${activeTab === "notificacoes" ? styles.activeNavItem : ""}`}
+            onClick={openNotificationsTab}
+            title="Notificações"
+          >
             <Bell size={22} />
             {!isSidebarCollapsed && <span>Notificações</span>}
           </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'perfil' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('perfil')} title="Meu Perfil">
+          <Link
+            href="#"
+            className={`${styles.navItem} ${activeTab === "perfil" ? styles.activeNavItem : ""}`}
+            onClick={() => setActiveTab("perfil")}
+            title="Meu Perfil"
+          >
             <User size={22} />
             {!isSidebarCollapsed && <span>Meu Perfil</span>}
           </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'meus-casos' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('meus-casos')} title="Meus Casos">
+          <Link
+            href="#"
+            className={`${styles.navItem} ${activeTab === "meus-casos" ? styles.activeNavItem : ""}`}
+            onClick={() => setActiveTab("meus-casos")}
+            title="Meus Casos"
+          >
             <FileText size={22} />
             {!isSidebarCollapsed && <span>Meus Casos</span>}
           </Link>
-          <Link href="#" className={`${styles.navItem} ${activeTab === 'conversas' ? styles.activeNavItem : ''}`} onClick={() => setActiveTab('conversas')} title="Minhas Conversas">
+          <Link
+            href="#"
+            className={`${styles.navItem} ${activeTab === "conversas" ? styles.activeNavItem : ""}`}
+            onClick={() => setActiveTab("conversas")}
+            title="Minhas Conversas"
+          >
             <MessageSquare size={22} />
             {!isSidebarCollapsed && <span>Minhas Conversas</span>}
           </Link>
-          <button className={`${styles.navItem} ${styles.logoutBtn}`}
+          <button
+            className={`${styles.navItem} ${styles.logoutBtn}`}
             title="Sair"
             onClick={async () => {
-              await fetch('/api/auth/logout', { method: 'POST' });
-              window.location.href = '/login';
+              await fetch("/api/auth/logout", { method: "POST" });
+              window.location.href = "/login";
             }}
           >
             <LogOut size={22} />
@@ -456,52 +710,95 @@ export default function ClienteDashboard() {
       <main className={styles.mainContent}>
         <header className={styles.topHeader}>
           <div className={styles.headerInfo}>
-            <h1>{
-              activeTab === 'painel' ? 'Painel' :
-              activeTab === 'novo' ? 'Novo Caso' :
-              activeTab === 'notificacoes' ? 'Notificações' :
-              activeTab === 'meus-casos' ? 'Meus Casos' :
-              activeTab === 'conversas' ? 'Minhas Conversas' :
-              'Meu Perfil'
-            }</h1>
+            <h1>
+              {activeTab === "painel"
+                ? "Painel"
+                : activeTab === "novo"
+                  ? "Novo Caso"
+                  : activeTab === "notificacoes"
+                    ? "Notificações"
+                    : activeTab === "meus-casos"
+                      ? "Meus Casos"
+                      : activeTab === "conversas"
+                        ? "Minhas Conversas"
+                        : "Meu Perfil"}
+            </h1>
             <p>Bem-vindo, {userName}</p>
             {profileData && (
-              <span style={{fontSize: '10px', opacity: 0.5, display: 'block'}}>ID: {profileData.id} | {profileData.email}</span>
+              <span
+                style={{ fontSize: "10px", opacity: 0.5, display: "block" }}
+              >
+                ID: {profileData.id} | {profileData.email}
+              </span>
             )}
           </div>
           <div className={styles.userProfile}>
-            <div className={styles.avatarCircle}>{userName.substring(0, 2).toUpperCase()}</div>
+            <div className={styles.avatarCircle}>
+              {userName.substring(0, 2).toUpperCase()}
+            </div>
           </div>
         </header>
 
         <section className={styles.pageBody}>
-          
-          {activeTab === 'painel' && (
+          {activeTab === "painel" && (
             <div className={styles.contentGrid}>
               <div className={styles.listSection}>
                 <div className={styles.sectionHeader}>
                   <h2 className={styles.sectionTitle}>Meus Casos</h2>
-                  <button onClick={() => setActiveTab('novo')} className={styles.addNewBtn}>+ Novo</button>
+                  <button
+                    onClick={() => setActiveTab("novo")}
+                    className={styles.addNewBtn}
+                  >
+                    + Novo
+                  </button>
                 </div>
-                
+
                 {loadingCasos ? (
-                  <p style={{padding: '20px'}}>Carregando seus casos...</p>
+                  <p style={{ padding: "20px" }}>Carregando seus casos...</p>
                 ) : casos.length > 0 ? (
                   casos.map((caso) => (
-                    <div key={caso.id} className={styles.caseCard} onClick={() => handleOpenEditModal(caso)}>
+                    <div
+                      key={caso.id}
+                      className={styles.caseCard}
+                      onClick={() => handleOpenEditModal(caso)}
+                    >
                       <div className={styles.cardTop}>
                         <span className={styles.badge}>{caso.status}</span>
                         <span className={styles.date}>
                           {new Date(caso.created_at).toLocaleDateString()}
                         </span>
                       </div>
-                      <h3 className={styles.caseTitleCard} style={{color: 'var(--color-gold)', margin: '8px 0', fontSize: '1rem'}}>{caso.titulo}</h3>
-                      <p className={styles.caseDesc}>{caso.descricao.substring(0, 100)}...</p>
+                      <h3
+                        className={styles.caseTitleCard}
+                        style={{
+                          color: "var(--color-gold)",
+                          margin: "8px 0",
+                          fontSize: "1rem",
+                        }}
+                      >
+                        {caso.titulo}
+                      </h3>
+                      <p className={styles.caseDesc}>
+                        {caso.descricao.substring(0, 100)}...
+                      </p>
                     </div>
                   ))
                 ) : (
-                  <div className={styles.emptyStateMinimal} style={{padding: '40px 20px', textAlign: 'center', opacity: 0.7}}>
-                    <FileText size={48} style={{marginBottom: '12px', color: 'var(--color-gold)'}} />
+                  <div
+                    className={styles.emptyStateMinimal}
+                    style={{
+                      padding: "40px 20px",
+                      textAlign: "center",
+                      opacity: 0.7,
+                    }}
+                  >
+                    <FileText
+                      size={48}
+                      style={{
+                        marginBottom: "12px",
+                        color: "var(--color-gold)",
+                      }}
+                    />
                     <p>Você ainda não tem casos registrados.</p>
                   </div>
                 )}
@@ -511,49 +808,149 @@ export default function ClienteDashboard() {
                 <div className={styles.sectionHeader}>
                   <h2 className={styles.sectionTitle}>Advogados Disponíveis</h2>
                 </div>
+
+                {/* INTERESSES PENDENTES */}
+                {interesses.length > 0 && (
+                  <div className={styles.interessesSection}>
+                    <div className={styles.interessesHeader}>
+                      <Bell size={18} color="var(--color-gold)" />
+                      <h3 className={styles.interessesTitle}>
+                        Advogados interessados nos seus casos (
+                        {interesses.length})
+                      </h3>
+                    </div>
+                    {interesses.map((interesse) => (
+                      <div key={interesse.id} className={styles.interesseCard}>
+                        <div className={styles.interesseInfo}>
+                          <div className={styles.interesseAvatar}>
+                            {(interesse.lawyer_name || "A")
+                              .substring(0, 2)
+                              .toUpperCase()}
+                          </div>
+                          <div>
+                            <p className={styles.interesseAdvName}>
+                              <Sparkles
+                                size={12}
+                                className={styles.proIconSmall}
+                              />
+                              {interesse.lawyer_name || "Advogado"}
+                            </p>
+                            <p className={styles.interesseCasoName}>
+                              Caso: {interesse.caso_titulo}
+                            </p>
+                            <p className={styles.interesseCasoArea}>
+                              {interesse.caso_area}
+                            </p>
+                          </div>
+                        </div>
+                        <div className={styles.interesseActions}>
+                          <button
+                            className={styles.acceptBtn}
+                            onClick={() =>
+                              handleResponderInteresse(interesse.id, "ACCEPT")
+                            }
+                            disabled={processandoInteresse === interesse.id}
+                          >
+                            <Check size={14} />
+                            {processandoInteresse === interesse.id
+                              ? "Processando..."
+                              : "Aceitar"}
+                          </button>
+                          <button
+                            className={styles.declineBtn}
+                            onClick={() =>
+                              handleResponderInteresse(interesse.id, "DECLINE")
+                            }
+                            disabled={processandoInteresse === interesse.id}
+                          >
+                            <UserX size={14} /> Recusar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className={styles.lawyersGrid}>
                   {loadingAdvogados ? (
                     <p>Carregando advogados...</p>
                   ) : advogados.length > 0 ? (
                     advogados.map((adv) => (
-                      <div key={adv.id} className={styles.lawyerCard}>
+                      <div
+                        key={adv.id}
+                        className={`${styles.lawyerCard} ${adv.is_premium ? styles.lawyerCardPro : ""}`}
+                      >
+                        {adv.is_premium && (
+                          <div className={styles.proLawyerBadge}>
+                            <Sparkles size={11} /> PRO
+                          </div>
+                        )}
                         <div className={styles.statusBadge}>
-                          <div className={styles.offlineDot}></div> Offline
+                          <div
+                            className={
+                              onlineLawyerIds.includes(adv.id)
+                                ? styles.onlineDot
+                                : styles.offlineDot
+                            }
+                          ></div>
+                          {onlineLawyerIds.includes(adv.id)
+                            ? "Online"
+                            : "Offline"}
                         </div>
 
                         {adv.avatar ? (
                           <div className={styles.lawyerAvatarWrapper}>
-                            <Image 
-                              src={adv.avatar} 
-                              alt={adv.name} 
-                              width={80} 
-                              height={80} 
-                              className={styles.lawyerAvatar} 
+                            <Image
+                              src={adv.avatar}
+                              alt={adv.name}
+                              width={80}
+                              height={80}
+                              className={styles.lawyerAvatar}
+                              unoptimized
                             />
                           </div>
                         ) : (
-                          <div className={styles.lawyerAvatar}>{adv.name.substring(0, 2).toUpperCase()}</div>
+                          <div className={styles.lawyerAvatar}>
+                            {adv.name.substring(0, 2).toUpperCase()}
+                          </div>
                         )}
 
                         <div className={styles.lawyerInfo}>
                           <h3 className={styles.lawyerName}>
                             {adv.name}
-                            {adv.verified && <ShieldCheck size={16} className={styles.verifiedIcon} />}
+                            {adv.verified && (
+                              <ShieldCheck
+                                size={16}
+                                className={styles.verifiedIcon}
+                              />
+                            )}
                           </h3>
-                          <p className={styles.lawyerOab}>OAB {adv.oab || 'N/A'}</p>
-                          <p className={styles.lawyerSpecs}>{adv.specialties || 'Cliníco Geral'}</p>
+                          <p className={styles.lawyerOab}>
+                            OAB {adv.oab || "N/A"}
+                          </p>
+                          <p className={styles.lawyerSpecs}>
+                            {adv.specialties || "Clínico Geral"}
+                          </p>
 
                           {adv.avg_rating > 0 && (
                             <div className={styles.ratingRow}>
-                              <Star size={16} fill="var(--color-gold)" className={styles.starIcon} />
-                              <span className={styles.ratingValue}>{adv.avg_rating.toFixed(1)}</span>
+                              <Star
+                                size={16}
+                                fill="var(--color-gold)"
+                                className={styles.starIcon}
+                              />
+                              <span className={styles.ratingValue}>
+                                {adv.avg_rating.toFixed(1)}
+                              </span>
                             </div>
                           )}
                         </div>
 
                         <div className={styles.statsRow}>
                           <div className={styles.statItem}>
-                            <span className={styles.statValue}>{adv.total_ratings || 0}</span>
+                            <span className={styles.statValue}>
+                              {adv.total_ratings || 0}
+                            </span>
                             <span className={styles.statLabel}>Avaliações</span>
                           </div>
                           <div className={styles.statItem}>
@@ -562,7 +959,26 @@ export default function ClienteDashboard() {
                           </div>
                         </div>
 
-                        <button className={styles.contactBtn}>Falar com Advogado</button>
+                        {adv.is_premium ? (
+                          <button
+                            className={styles.contactBtn}
+                            onClick={() =>
+                              toast(
+                                "Em breve: envio de mensagem direta para advogados PRO.",
+                              )
+                            }
+                          >
+                            Falar com Advogado
+                          </button>
+                        ) : (
+                          <button
+                            className={`${styles.contactBtn} ${styles.contactBtnDisabled}`}
+                            disabled
+                            title="Apenas advogados PRO aceitam mensagens"
+                          >
+                            <Lock size={12} /> PRO necessário
+                          </button>
+                        )}
                       </div>
                     ))
                   ) : (
@@ -573,35 +989,47 @@ export default function ClienteDashboard() {
             </div>
           )}
 
-          {activeTab === 'novo' && (
+          {activeTab === "novo" && (
             <div className={styles.formContainer}>
               {formSuccess ? (
                 <div className={styles.emptyState}>
-                  <CheckCircle2 size={64} color="var(--color-gold)" className={styles.emptyIcon} />
-                  <h3 className={styles.sectionTitle}>Caso Criado com Sucesso!</h3>
-                  <p className={styles.emptyText}>Os advogados serão notificados imediatamente.</p>
+                  <CheckCircle2
+                    size={64}
+                    color="var(--color-gold)"
+                    className={styles.emptyIcon}
+                  />
+                  <h3 className={styles.sectionTitle}>
+                    Caso Criado com Sucesso!
+                  </h3>
+                  <p className={styles.emptyText}>
+                    Os advogados serão notificados imediatamente.
+                  </p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmitCaso}>
                   <div className={styles.formGroup}>
                     <label>Título do Caso</label>
-                    <input 
-                      type="text" 
-                      className={styles.formInput} 
+                    <input
+                      type="text"
+                      className={styles.formInput}
                       placeholder="Ex: Problema com contrato de aluguel"
                       required
                       value={formData.titulo}
-                      onChange={e => setFormData({...formData, titulo: e.target.value})}
+                      onChange={(e) =>
+                        setFormData({ ...formData, titulo: e.target.value })
+                      }
                     />
                   </div>
 
                   <div className={styles.formGroup}>
                     <label>Área de Atuação</label>
-                    <select 
-                      className={styles.formSelect} 
+                    <select
+                      className={styles.formSelect}
                       required
                       value={formData.area}
-                      onChange={e => setFormData({...formData, area: e.target.value})}
+                      onChange={(e) =>
+                        setFormData({ ...formData, area: e.target.value })
+                      }
                     >
                       <option value="">Selecione uma área</option>
                       <option value="Civil">Direito Civil</option>
@@ -614,26 +1042,33 @@ export default function ClienteDashboard() {
 
                   <div className={styles.formGroup}>
                     <label>Descrição Detalhada</label>
-                    <textarea 
-                      className={styles.formTextarea} 
+                    <textarea
+                      className={styles.formTextarea}
                       placeholder="Explique o que aconteceu da forma mais detalhada possível..."
                       required
                       value={formData.descricao}
-                      onChange={e => setFormData({...formData, descricao: e.target.value})}
+                      onChange={(e) =>
+                        setFormData({ ...formData, descricao: e.target.value })
+                      }
                     ></textarea>
                   </div>
 
                   <div className={styles.formGroup}>
                     <label>Anexos (Opcional - Máx 5)</label>
-                    <div className={styles.uploadArea} onClick={() => fileInputRef.current.click()}>
+                    <div
+                      className={styles.uploadArea}
+                      onClick={() => fileInputRef.current.click()}
+                    >
                       <PlusCircle size={32} className={styles.uploadIcon} />
-                      <p className={styles.uploadText}>Clique para selecionar Imagens ou PDFs</p>
+                      <p className={styles.uploadText}>
+                        Clique para selecionar Imagens ou PDFs
+                      </p>
                     </div>
-                    <input 
-                      type="file" 
-                      multiple 
-                      hidden 
-                      ref={fileInputRef} 
+                    <input
+                      type="file"
+                      multiple
+                      hidden
+                      ref={fileInputRef}
                       onChange={handleFileChange}
                       accept="image/*,application/pdf"
                     />
@@ -642,10 +1077,18 @@ export default function ClienteDashboard() {
                       <div className={styles.fileList}>
                         {selectedFiles.map((file, index) => (
                           <div key={index} className={styles.fileItem}>
-                            <button type="button" className={styles.removeFile} onClick={() => removeFile(index)}>
+                            <button
+                              type="button"
+                              className={styles.removeFile}
+                              onClick={() => removeFile(index)}
+                            >
                               <X size={12} />
                             </button>
-                            {file.type.includes('image') ? <ImageIcon size={24} color="var(--color-gold)" /> : <FileText size={24} color="#ef4444" />}
+                            {file.type.includes("image") ? (
+                              <ImageIcon size={24} color="var(--color-gold)" />
+                            ) : (
+                              <FileText size={24} color="#ef4444" />
+                            )}
                             <span className={styles.fileName}>{file.name}</span>
                           </div>
                         ))}
@@ -653,34 +1096,42 @@ export default function ClienteDashboard() {
                     )}
                   </div>
 
-                  <button type="submit" className={styles.submitBtn} disabled={formLoading}>
-                    {formLoading ? 'Enviando...' : 'Publicar Solicitação'}
+                  <button
+                    type="submit"
+                    className={styles.submitBtn}
+                    disabled={formLoading}
+                  >
+                    {formLoading ? "Enviando..." : "Publicar Solicitação"}
                   </button>
                 </form>
               )}
             </div>
           )}
 
-          {activeTab === 'notificacoes' && (
+          {activeTab === "notificacoes" && (
             <div className={styles.notificationsContainer}>
               <div className={styles.notificationsHeader}>
                 <h2 className={styles.sectionTitle}>Suas Notificações</h2>
                 <span className={styles.unreadCount}>
-                  {notificacoes.filter(n => !n.lida).length} não lidas
+                  {notificacoes.filter((n) => !n.lida).length} não lidas
                 </span>
               </div>
-              
+
               {loadingNotificacoes ? (
-                <p style={{padding: '24px', textAlign: 'center'}}>Carregando notificações...</p>
+                <p style={{ padding: "24px", textAlign: "center" }}>
+                  Carregando notificações...
+                </p>
               ) : notificacoes.length > 0 ? (
-                notificacoes.map(notif => (
+                notificacoes.map((notif) => (
                   <div key={notif.id} className={styles.notificationItem}>
                     <div className={styles.notificationIcon}>
                       <Bell size={20} />
                     </div>
                     <div className={styles.notificationInfo}>
                       <div className={styles.notificationTop}>
-                        <span className={styles.notifTitle}>{notif.titulo}</span>
+                        <span className={styles.notifTitle}>
+                          {notif.titulo}
+                        </span>
                         <span className={styles.notifDate}>
                           {new Date(notif.created_at).toLocaleDateString()}
                         </span>
@@ -691,201 +1142,345 @@ export default function ClienteDashboard() {
                   </div>
                 ))
               ) : (
-                <div className={styles.emptyState} style={{border: 'none'}}>
+                <div className={styles.emptyState} style={{ border: "none" }}>
                   <Bell size={48} className={styles.emptyIcon} />
-                  <p className={styles.emptyText}>Você não tem notificações no momento.</p>
+                  <p className={styles.emptyText}>
+                    Você não tem notificações no momento.
+                  </p>
                 </div>
               )}
             </div>
           )}
 
-          {activeTab === 'perfil' && (
+          {activeTab === "perfil" && (
             <div className={styles.profileContainer}>
-               {loadingProfile ? (
-                 <p style={{textAlign: 'center'}}>Carregando seu perfil...</p>
-               ) : profileData ? (
-                 <>
-                   <div className={styles.profileHeader}>
-                      <div className={styles.profileAvatarLarge}>
-                        {profileData.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div className={styles.profileHeaderText}>
-                        <h2>{profileData.name}</h2>
-                        <p>{profileData.role === 'ADMIN' ? 'Administrador' : profileData.role === 'LAWYER' ? 'Advogado' : 'Cliente'} SocialJurídico</p>
-                      </div>
-                   </div>
+              {loadingProfile ? (
+                <p style={{ textAlign: "center" }}>Carregando seu perfil...</p>
+              ) : profileData ? (
+                <>
+                  <div className={styles.profileHeader}>
+                    <div className={styles.profileAvatarLarge}>
+                      {profileData.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className={styles.profileHeaderText}>
+                      <h2>{profileData.name}</h2>
+                      <p>
+                        {profileData.role === "ADMIN"
+                          ? "Administrador"
+                          : profileData.role === "LAWYER"
+                            ? "Advogado"
+                            : "Cliente"}{" "}
+                        SocialJurídico
+                      </p>
+                    </div>
+                  </div>
 
-                   <form onSubmit={handleUpdateProfile}>
-                      <div className={styles.profileGrid}>
-                        <div className={`${styles.profileField} ${styles.editable}`}>
-                          <label><User size={14} style={{marginRight: 6}} /> Nome Completo</label>
-                          <input 
-                            type="text" 
-                            className={styles.profileInput}
-                            value={profileForm.name}
-                            onChange={(e) => setProfileForm({...profileForm, name: e.target.value})}
-                          />
-                        </div>
-
-                        <div className={`${styles.profileField} ${styles.editable}`}>
-                          <label><Phone size={14} style={{marginRight: 6}} /> Telefone/WhatsApp</label>
-                          <input 
-                            type="text" 
-                            className={styles.profileInput}
-                            value={profileForm.phone}
-                            onChange={(e) => setProfileForm({...profileForm, phone: e.target.value})}
-                          />
-                        </div>
-
-                        <div className={styles.profileField}>
-                          <label><Mail size={14} style={{marginRight: 6}} /> E-mail (Inalterável)</label>
-                          <div className={styles.value}>{profileData.email}</div>
-                        </div>
-
-                        <div className={`${styles.profileField} ${styles.editable}`}>
-                          <label><Lock size={14} style={{marginRight: 6}} /> Alterar Senha</label>
-                          <input 
-                            type="password" 
-                            className={styles.profileInput}
-                            placeholder="Deixe em branco para manter"
-                            value={profileForm.password}
-                            onChange={(e) => setProfileForm({...profileForm, password: e.target.value})}
-                          />
-                        </div>
-
-                        <div className={styles.profileField}>
-                          <label><Calendar size={14} style={{marginRight: 6}} /> Membro desde</label>
-                          <div className={styles.value}>
-                            {new Date(profileData.created_at || Date.now()).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                          </div>
-                        </div>
-
-                        <div className={styles.profileField}>
-                          <label><Scale size={14} style={{marginRight: 6}} /> Tipo de Conta</label>
-                          <div className={styles.value}>{profileData.role}</div>
-                        </div>
+                  <form onSubmit={handleUpdateProfile}>
+                    <div className={styles.profileGrid}>
+                      <div
+                        className={`${styles.profileField} ${styles.editable}`}
+                      >
+                        <label>
+                          <User size={14} style={{ marginRight: 6 }} /> Nome
+                          Completo
+                        </label>
+                        <input
+                          type="text"
+                          className={styles.profileInput}
+                          value={profileForm.name}
+                          onChange={(e) =>
+                            setProfileForm({
+                              ...profileForm,
+                              name: e.target.value,
+                            })
+                          }
+                        />
                       </div>
 
-                      <div className={styles.profileActions}>
-                        <button type="submit" className={styles.saveProfileBtn} disabled={formLoading}>
-                          {formLoading ? 'Salvando...' : 'Salvar Alterações'}
-                        </button>
-                        <button type="button" className={styles.deleteAccountBtn} onClick={handleDeleteAccount} disabled={formLoading}>
-                          <Trash2 size={18} style={{marginRight: 8}} /> Excluir Minha Conta
-                        </button>
+                      <div
+                        className={`${styles.profileField} ${styles.editable}`}
+                      >
+                        <label>
+                          <Phone size={14} style={{ marginRight: 6 }} />{" "}
+                          Telefone/WhatsApp
+                        </label>
+                        <input
+                          type="text"
+                          className={styles.profileInput}
+                          value={profileForm.phone}
+                          onChange={(e) =>
+                            setProfileForm({
+                              ...profileForm,
+                              phone: e.target.value,
+                            })
+                          }
+                        />
                       </div>
-                   </form>
-                 </>
-               ) : (
+
+                      <div className={styles.profileField}>
+                        <label>
+                          <Mail size={14} style={{ marginRight: 6 }} /> E-mail
+                          (Inalterável)
+                        </label>
+                        <div className={styles.value}>{profileData.email}</div>
+                      </div>
+
+                      <div
+                        className={`${styles.profileField} ${styles.editable}`}
+                      >
+                        <label>
+                          <Lock size={14} style={{ marginRight: 6 }} /> Alterar
+                          Senha
+                        </label>
+                        <input
+                          type="password"
+                          className={styles.profileInput}
+                          placeholder="Deixe em branco para manter"
+                          value={profileForm.password}
+                          onChange={(e) =>
+                            setProfileForm({
+                              ...profileForm,
+                              password: e.target.value,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className={styles.profileField}>
+                        <label>
+                          <Calendar size={14} style={{ marginRight: 6 }} />{" "}
+                          Membro desde
+                        </label>
+                        <div className={styles.value}>
+                          {new Date(
+                            profileData.created_at || Date.now(),
+                          ).toLocaleDateString("pt-BR", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </div>
+                      </div>
+
+                      <div className={styles.profileField}>
+                        <label>
+                          <Scale size={14} style={{ marginRight: 6 }} /> Tipo de
+                          Conta
+                        </label>
+                        <div className={styles.value}>{profileData.role}</div>
+                      </div>
+                    </div>
+
+                    <div className={styles.profileActions}>
+                      <button
+                        type="submit"
+                        className={styles.saveProfileBtn}
+                        disabled={formLoading}
+                      >
+                        {formLoading ? "Salvando..." : "Salvar Alterações"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.deleteAccountBtn}
+                        onClick={handleDeleteAccount}
+                        disabled={formLoading}
+                      >
+                        <Trash2 size={18} style={{ marginRight: 8 }} /> Excluir
+                        Minha Conta
+                      </button>
+                    </div>
+                  </form>
+                </>
+              ) : (
                 <div className={styles.emptyState}>
-                   <User size={48} className={styles.emptyIcon} />
-                   <h3 className={styles.sectionTitle}>Perfil não encontrado</h3>
-                   <p className={styles.emptyText}>Não foi possível carregar os dados. Verifique sua conexão.</p>
-                 </div>
-               )}
+                  <User size={48} className={styles.emptyIcon} />
+                  <h3 className={styles.sectionTitle}>Perfil não encontrado</h3>
+                  <p className={styles.emptyText}>
+                    Não foi possível carregar os dados. Verifique sua conexão.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
-          {activeTab === 'meus-casos' && (
+          {activeTab === "meus-casos" && (
             <div className={styles.meusCasosPage}>
-              <div className={styles.sectionHeader} style={{marginBottom: '24px'}}>
+              <div
+                className={styles.sectionHeader}
+                style={{ marginBottom: "24px" }}
+              >
                 <h2 className={styles.sectionTitle}>Todos os Meus Casos</h2>
-                <button onClick={() => setActiveTab('novo')} className={styles.addNewBtn}>+ Novo Caso</button>
+                <button
+                  onClick={() => setActiveTab("novo")}
+                  className={styles.addNewBtn}
+                >
+                  + Novo Caso
+                </button>
               </div>
               {loadingCasos ? (
-                <p style={{padding: '20px', opacity: 0.6}}>Carregando seus casos...</p>
+                <p style={{ padding: "20px", opacity: 0.6 }}>
+                  Carregando seus casos...
+                </p>
               ) : casos.length > 0 ? (
                 <div className={styles.casosFullGrid}>
                   {casos.map((caso) => (
-                    <div key={caso.id} className={styles.caseCardFull} onClick={() => handleOpenEditModal(caso)}>
+                    <div
+                      key={caso.id}
+                      className={styles.caseCardFull}
+                      onClick={() => handleOpenEditModal(caso)}
+                    >
                       <div className={styles.caseCardHeader}>
                         <span className={styles.badge}>{caso.status}</span>
-                        <span className={styles.date}>{new Date(caso.created_at).toLocaleDateString('pt-BR')}</span>
+                        <span className={styles.date}>
+                          {new Date(caso.created_at).toLocaleDateString(
+                            "pt-BR",
+                          )}
+                        </span>
                       </div>
                       <h3 className={styles.caseTitleCard}>{caso.titulo}</h3>
-                      <p className={styles.caseAreaTag}>{caso.area_atuacao || 'Área não definida'}</p>
-                      <p className={styles.caseDesc}>{caso.descricao?.substring(0, 150)}...</p>
+                      <p className={styles.caseAreaTag}>
+                        {caso.area_atuacao || "Área não definida"}
+                      </p>
+                      <p className={styles.caseDesc}>
+                        {caso.descricao?.substring(0, 150)}...
+                      </p>
                       <div className={styles.caseCardFooter}>
                         {caso.advogado_id ? (
-                          <span className={styles.advTag}>✔ Advogado vinculado</span>
+                          <span className={styles.advTag}>
+                            ✔ Advogado vinculado
+                          </span>
                         ) : (
-                          <span className={styles.noAdvTag}>⏳ Aguardando advogado</span>
+                          <span className={styles.noAdvTag}>
+                            ⏳ Aguardando advogado
+                          </span>
                         )}
-                        <span className={styles.editHint}>Clique para editar →</span>
+                        <span className={styles.editHint}>
+                          Clique para editar →
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className={styles.emptyStateMinimal} style={{padding: '60px 20px', textAlign: 'center', opacity: 0.7}}>
-                  <FileText size={56} style={{marginBottom: '16px', color: 'var(--color-gold)'}} />
-                  <p style={{fontSize: '1.1rem', fontWeight: 700}}>Nenhum caso registrado</p>
-                  <p style={{marginTop: '8px', opacity: 0.6}}>Clique em &quot;Novo Caso&quot; para criar o seu primeiro caso.</p>
+                <div
+                  className={styles.emptyStateMinimal}
+                  style={{
+                    padding: "60px 20px",
+                    textAlign: "center",
+                    opacity: 0.7,
+                  }}
+                >
+                  <FileText
+                    size={56}
+                    style={{ marginBottom: "16px", color: "var(--color-gold)" }}
+                  />
+                  <p style={{ fontSize: "1.1rem", fontWeight: 700 }}>
+                    Nenhum caso registrado
+                  </p>
+                  <p style={{ marginTop: "8px", opacity: 0.6 }}>
+                    Clique em &quot;Novo Caso&quot; para criar o seu primeiro
+                    caso.
+                  </p>
                 </div>
               )}
             </div>
           )}
 
-          {activeTab === 'conversas' && (
+          {activeTab === "conversas" && (
             <div className={styles.conversasPage}>
-              <div className={styles.sectionHeader} style={{marginBottom: '24px'}}>
+              <div
+                className={styles.sectionHeader}
+                style={{ marginBottom: "24px" }}
+              >
                 <h2 className={styles.sectionTitle}>Minhas Conversas</h2>
               </div>
               {loadingCasos ? (
-                <p style={{padding: '20px', opacity: 0.6}}>Carregando...</p>
-              ) : casos.filter(c => c.advogado_id).length > 0 ? (
+                <p style={{ padding: "20px", opacity: 0.6 }}>Carregando...</p>
+              ) : casos.filter((c) => c.advogado_id).length > 0 ? (
                 <div className={styles.conversasList}>
-                  {casos.filter(caso => caso.advogado_id).map((caso) => (
-                    <div
-                      key={caso.id}
-                      className={styles.conversaItem}
-                      onClick={() => window.location.href = `/chat/${caso.id}`}
-                    >
-                      <div className={styles.conversaAvatar}>
-                        <Scale size={20} />
+                  {casos
+                    .filter((caso) => caso.advogado_id)
+                    .map((caso) => (
+                      <div
+                        key={caso.id}
+                        className={styles.conversaItem}
+                        onClick={() =>
+                          (window.location.href = `/chat/${caso.id}`)
+                        }
+                      >
+                        <div className={styles.conversaAvatar}>
+                          <Scale size={20} />
+                        </div>
+                        <div className={styles.conversaInfo}>
+                          <h3 className={styles.conversaTitulo}>
+                            {caso.titulo}
+                          </h3>
+                          <p className={styles.conversaArea}>
+                            {caso.area_atuacao || "Área não definida"}
+                          </p>
+                        </div>
+                        <div className={styles.conversaStatus}>
+                          <span className={styles.badge}>{caso.status}</span>
+                          <span className={styles.conversaArrow}>→</span>
+                        </div>
                       </div>
-                      <div className={styles.conversaInfo}>
-                        <h3 className={styles.conversaTitulo}>{caso.titulo}</h3>
-                        <p className={styles.conversaArea}>{caso.area_atuacao || 'Área não definida'}</p>
-                      </div>
-                      <div className={styles.conversaStatus}>
-                        <span className={styles.badge}>{caso.status}</span>
-                        <span className={styles.conversaArrow}>→</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               ) : (
-                <div className={styles.emptyStateMinimal} style={{padding: '60px 20px', textAlign: 'center', opacity: 0.7}}>
-                  <MessageSquare size={56} style={{marginBottom: '16px', color: 'var(--color-gold)'}} />
-                  <p style={{fontSize: '1.1rem', fontWeight: 700}}>Nenhuma conversa iniciada</p>
-                  <p style={{marginTop: '8px', opacity: 0.6}}>Conversas aparecem quando um advogado é vinculado ao seu caso.</p>
+                <div
+                  className={styles.emptyStateMinimal}
+                  style={{
+                    padding: "60px 20px",
+                    textAlign: "center",
+                    opacity: 0.7,
+                  }}
+                >
+                  <MessageSquare
+                    size={56}
+                    style={{ marginBottom: "16px", color: "var(--color-gold)" }}
+                  />
+                  <p style={{ fontSize: "1.1rem", fontWeight: 700 }}>
+                    Nenhuma conversa iniciada
+                  </p>
+                  <p style={{ marginTop: "8px", opacity: 0.6 }}>
+                    Conversas aparecem quando um advogado é vinculado ao seu
+                    caso.
+                  </p>
                 </div>
               )}
             </div>
           )}
-
         </section>
       </main>
-      
+
       {/* MODAL DE EDIÇÃO DE CASO */}
       {isEditModalOpen && selectedCaso && (
-        <div className={styles.modalOverlay} onClick={() => setIsEditModalOpen(false)}>
-          <div className={styles.editModal} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setIsEditModalOpen(false)}
+        >
+          <div
+            className={styles.editModal}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className={styles.modalHeader}>
               <h2>Editar Caso</h2>
-              <button className={styles.closeBtn} onClick={() => setIsEditModalOpen(false)}>
+              <button
+                className={styles.closeBtn}
+                onClick={() => setIsEditModalOpen(false)}
+              >
                 <X size={24} />
               </button>
             </div>
-            
+
             <form onSubmit={handleUpdateCaso} className={styles.editForm}>
               <div className={styles.formGroup}>
                 <label>Título do Caso</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={editFormData.titulo}
-                  onChange={(e) => setEditFormData({...editFormData, titulo: e.target.value})}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, titulo: e.target.value })
+                  }
                   className={styles.modalInput}
                   required
                 />
@@ -893,9 +1488,11 @@ export default function ClienteDashboard() {
 
               <div className={styles.formGroup}>
                 <label>Área de Atuação</label>
-                <select 
+                <select
                   value={editFormData.area}
-                  onChange={(e) => setEditFormData({...editFormData, area: e.target.value})}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, area: e.target.value })
+                  }
                   className={styles.modalSelect}
                   required
                 >
@@ -911,26 +1508,49 @@ export default function ClienteDashboard() {
 
               <div className={styles.formGroup}>
                 <label>Descrição Detalhada</label>
-                <textarea 
+                <textarea
                   value={editFormData.descricao}
-                  onChange={(e) => setEditFormData({...editFormData, descricao: e.target.value})}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      descricao: e.target.value,
+                    })
+                  }
                   className={styles.modalTextarea}
                   required
                 />
               </div>
 
               <div className={styles.modalActions}>
-                <button type="submit" className={styles.saveChangesBtn} disabled={formLoading}>
-                  {formLoading ? 'Salvando...' : 'Salvar Alterações'}
-                </button>                
+                <button
+                  type="submit"
+                  className={styles.saveChangesBtn}
+                  disabled={formLoading}
+                >
+                  {formLoading ? "Salvando..." : "Salvar Alterações"}
+                </button>
                 {selectedCaso.advogado_id ? (
-                  <Link href={`/chat/${selectedCaso.id}`} className={styles.chatBtn} style={{textDecoration:'none',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                    <MessageSquare size={18} style={{marginRight:8}} />
+                  <Link
+                    href={`/chat/${selectedCaso.id}`}
+                    className={styles.chatBtn}
+                    style={{
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <MessageSquare size={18} style={{ marginRight: 8 }} />
                     Iniciar Chat com Advogado
                   </Link>
                 ) : (
-                  <button type="button" className={styles.chatBtn} disabled title="Aguardando um advogado ser vinculado ao caso">
-                    <MessageSquare size={18} style={{marginRight:8}} />
+                  <button
+                    type="button"
+                    className={styles.chatBtn}
+                    disabled
+                    title="Aguardando um advogado ser vinculado ao caso"
+                  >
+                    <MessageSquare size={18} style={{ marginRight: 8 }} />
                     Aguardando advogado...
                   </button>
                 )}

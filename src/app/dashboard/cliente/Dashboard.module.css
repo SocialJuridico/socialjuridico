@@ -80,7 +80,11 @@
 }
 
 .activeNavItem {
-  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-gold) 0%,
+    var(--color-gold-dark) 100%
+  );
   color: var(--color-black);
   box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
 }
@@ -161,7 +165,11 @@
 }
 
 .logoIconCompact {
-  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-gold) 0%,
+    var(--color-gold-dark) 100%
+  );
   padding: 10px;
   border-radius: 12px;
   display: flex;
@@ -367,6 +375,34 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
+.lawyerCardPro {
+  border-color: rgba(212, 175, 55, 0.35) !important;
+  box-shadow: 0 4px 20px rgba(212, 175, 55, 0.1);
+}
+
+.proLawyerBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, var(--color-gold), #b8860b);
+  color: #000;
+  font-size: 0.6rem;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 20px;
+  z-index: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.proIconSmall {
+  color: var(--color-gold);
+  flex-shrink: 0;
+}
+
 .statusBadge {
   position: absolute;
   top: 16px;
@@ -383,9 +419,9 @@
 .onlineDot {
   width: 8px;
   height: 8px;
-  background: #10B981;
+  background: #10b981;
   border-radius: 50%;
-  box-shadow: 0 0 10px #10B981;
+  box-shadow: 0 0 10px #10b981;
 }
 
 .offlineDot {
@@ -521,6 +557,23 @@
   color: var(--color-black);
 }
 
+.contactBtnDisabled {
+  margin-top: 20px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.25);
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: not-allowed;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
 @media (max-width: 1024px) {
   .contentGrid {
     flex-direction: column;
@@ -595,8 +648,14 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .formGroup {
@@ -611,7 +670,9 @@
   margin-bottom: 8px;
 }
 
-.formInput, .formSelect, .formTextarea {
+.formInput,
+.formSelect,
+.formTextarea {
   width: 100%;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(212, 175, 55, 0.1);
@@ -708,7 +769,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .fileName {
@@ -720,7 +781,11 @@
 
 .submitBtn {
   width: 100%;
-  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-gold) 0%,
+    var(--color-gold-dark) 100%
+  );
   color: var(--color-black);
   border: none;
   padding: 16px;
@@ -834,14 +899,24 @@
   background: #1a1a1a;
   border: 1px solid var(--color-gold);
   border-radius: 12px;
+  width: 100%;
   padding: 16px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(212, 175, 55, 0.1);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(212, 175, 55, 0.1);
   min-width: 300px;
   max-width: 400px;
   pointer-events: auto;
+}
+
+.toastNotification:hover {
+  background: #202020;
 }
 
 .toastIn {
@@ -853,13 +928,25 @@
 }
 
 @keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes slideOutRight {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 .toastIcon {
@@ -914,7 +1001,11 @@
   width: 100px;
   height: 100px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-gold) 0%,
+    var(--color-gold-dark) 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1023,17 +1114,18 @@
   .profileGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .profileHeader {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .profileActions {
     flex-direction: column;
   }
-  
-  .saveProfileBtn, .deleteAccountBtn {
+
+  .saveProfileBtn,
+  .deleteAccountBtn {
     width: 100%;
   }
 }
@@ -1056,8 +1148,12 @@
 }
 
 @keyframes fadeInModal {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .editModal {
@@ -1068,15 +1164,23 @@
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(212, 175, 55, 0.1);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(212, 175, 55, 0.1);
   padding: 40px;
   position: relative;
   animation: slideUpModal 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes slideUpModal {
-  from { opacity: 0; transform: translateY(30px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modalHeader {
@@ -1121,7 +1225,9 @@
   padding-right: 42px !important;
 }
 
-.modalInput, .modalSelect, .modalTextarea {
+.modalInput,
+.modalSelect,
+.modalTextarea {
   width: 100%;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(212, 175, 55, 0.15);
@@ -1139,7 +1245,9 @@
   padding: 12px;
 }
 
-.modalInput:focus, .modalSelect:focus, .modalTextarea:focus {
+.modalInput:focus,
+.modalSelect:focus,
+.modalTextarea:focus {
   outline: none;
   border-color: var(--color-gold);
   background: rgba(212, 175, 55, 0.02);
@@ -1161,7 +1269,11 @@
 
 .saveChangesBtn {
   width: 100%;
-  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-gold) 0%,
+    var(--color-gold-dark) 100%
+  );
   color: var(--color-black);
   border: none;
   padding: 18px;
@@ -1216,14 +1328,21 @@
    TABS: MEUS CASOS & MINHAS CONVERSAS
    ────────────────────────────────────────────────────────────────────────── */
 
-.meusCasosPage, .conversasPage {
+.meusCasosPage,
+.conversasPage {
   padding: 10px 0 40px;
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(15px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* GRID DE CASOS FULL */
@@ -1360,7 +1479,11 @@
 .conversaAvatar {
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--color-gold) 0%,
+    var(--color-gold-dark) 100%
+  );
   border-radius: 16px;
   display: flex;
   align-items: center;
@@ -1413,6 +1536,143 @@
   width: 100%;
 }
 
+/* ===== INTERESSES PENDENTES ===== */
+.interessesSection {
+  background: rgba(212, 175, 55, 0.05);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
 
+.interessesHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
 
+.interessesTitle {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-gold);
+  margin: 0;
+}
 
+.interesseCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.interesseInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.interesseAvatar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--color-gold);
+}
+
+.interesseAdvName {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--color-white);
+}
+
+.interesseCasoName {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  margin: 0;
+  color: var(--color-silver);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.interesseCasoArea {
+  font-size: 0.7rem;
+  opacity: 0.4;
+  margin: 0;
+  color: var(--color-silver);
+}
+
+.interesseActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.acceptBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #10b981;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.acceptBtn:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.acceptBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.declineBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.declineBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.declineBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

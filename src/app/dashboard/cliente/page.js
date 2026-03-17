@@ -46,7 +46,7 @@ const USEFUL_LINKS = [
   {
     title: "ConfirmaAdv",
     description: "Consulta pública de dados da advocacia.",
-    href: "https://confirmaadv.oab.org.br/",
+    href: "https://confirmadv.oab.org.br/",
   },
   {
     title: "Receita Federal",

@@ -71,7 +71,7 @@ export async function GET(request) {
 
     // 2ª tentativa: buscar por email (caso o ID Auth difira do ID no banco)
     if (!profile) {
-      console.log(`[perfil] Buscando por email: ${user.email}`);
+      // ⚠️ SEGURANÇA: Não logar user.email
       for (const table of tables) {
         const { data, error } = await db
           .from(table)

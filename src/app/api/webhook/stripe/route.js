@@ -79,7 +79,7 @@ async function handleCheckoutCompleted(session) {
       // await supabaseAdmin.from('transacoes').insert([...]);
     }
   } else if (type === "PRO_SUBSCRIPTION") {
-    console.log(`🌟 Ativando Plano PRO para o usuário ${userId}`);
+    // ⚠️ SEGURANÇA: Não logar user IDs
 
     // Buscar saldo atual para somar os 20 Juris de bônus
     const { data: advProfile } = await supabaseAdmin

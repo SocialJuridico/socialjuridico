@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabaseServer';
-import { supabaseAdmin } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { createClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabase";
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -11,40 +11,51 @@ const openai = new OpenAI({
 export async function GET(request) {
   try {
     const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
     }
 
     const { searchParams } = new URL(request.url);
-    const clientId = searchParams.get('client_id');
+    const clientId = searchParams.get("client_id");
 
     let query = supabaseAdmin
-      .from('crm_documents')
-      .select('*, crm_clients(lawyer_id, name)');
+      .from("crm_documents")
+      .select("*, crm_clients(lawyer_id, name)");
 
     if (clientId) {
-      query = query.eq('client_id', clientId);
+      query = query.eq("client_id", clientId);
     } else {
       // Busca documentos vinculados a clientes do advogado OU documentos avulsos do advogado
-      query = query.eq('lawyer_id', user.id);
+      query = query.eq("lawyer_id", user.id);
     }
 
-    const { data: docs, error } = await query.order('created_at', { ascending: false });
+    const { data: docs, error } = await query.order("created_at", {
+      ascending: false,
+    });
 
     if (error) throw error;
 
     // Formatar para incluir o nome do cliente no nível raiz do objeto
-    const formattedDocs = docs.map(d => ({
+    const formattedDocs = docs.map((d) => ({
       ...d,
-      client_name: d.crm_clients?.name
+      client_name: d.crm_clients?.name,
     }));
 
     return NextResponse.json({ success: true, data: formattedDocs || [] });
   } catch (error) {
     console.error("Erro GET /api/crm/documents:", error);
-    return NextResponse.json({ success: false, message: "Erro ao buscar documentos" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Erro ao buscar documentos" },
+      { status: 500 },
+    );
   }
 }
 
@@ -52,30 +63,39 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
     }
 
     const formData = await request.formData();
-    const file = formData.get('file');
-    const clientId = formData.get('client_id'); // Opcional no Smart Docs
+    const file = formData.get("file");
+    const clientId = formData.get("client_id"); // Opcional no Smart Docs
 
     if (!file) {
-      return NextResponse.json({ success: false, message: "Arquivo é obrigatório" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Arquivo é obrigatório" },
+        { status: 400 },
+      );
     }
 
-    console.log("Iniciando upload. Cliente:", clientId || 'Nenhum (SmartDoc Geral)');
-    const fileExt = file.name.split('.').pop();
+    // ⚠️ SEGURANÇA: Logar nível seguro (sem dados sensíveis)
+    const fileExt = file.name.split(".").pop();
     const folder = clientId ? clientId : `lawyer_${user.id}`;
     const fileName = `${folder}/${crypto.randomUUID()}.${fileExt}`;
     const filePath = `${fileName}`;
 
     // 1. Upload para o Storage
-    console.log("Enviando para storage bucket crm_documents, path:", filePath);
+    // ⚠️ SEGURANÇA: Não logar caminhos de arquivos
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from('crm_documents')
+      .from("crm_documents")
       .upload(filePath, file);
 
     if (uploadError) {
@@ -84,12 +104,12 @@ export async function POST(request) {
     }
 
     // 2. Pegar URL pública
-    const { data: { publicUrl } } = supabaseAdmin.storage
-      .from('crm_documents')
-      .getPublicUrl(filePath);
-    
+    const {
+      data: { publicUrl },
+    } = supabaseAdmin.storage.from("crm_documents").getPublicUrl(filePath);
+
     // 3. AI Processing (Auto-Tagging & Categorization) con OPENAI
-    let aiData = { type: 'Outros', tags: ['Documento'] };
+    let aiData = { type: "Outros", tags: ["Documento"] };
     try {
       if (process.env.OPENAI_API_KEY) {
         const aiPrompt = `Analise este arquivo jurídico: "${file.name}". 
@@ -99,10 +119,14 @@ export async function POST(request) {
         const completion = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
-            { role: "system", content: "Você é um assistente jurídico especializado em organização de documentos brasileiros." },
-            { role: "user", content: aiPrompt }
+            {
+              role: "system",
+              content:
+                "Você é um assistente jurídico especializado em organização de documentos brasileiros.",
+            },
+            { role: "user", content: aiPrompt },
           ],
-          response_format: { type: "json_object" }
+          response_format: { type: "json_object" },
         });
 
         const text = completion.choices[0].message.content;
@@ -121,26 +145,28 @@ export async function POST(request) {
       file_url: publicUrl,
       doc_type: aiData.type,
       tags: aiData.tags,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
 
-    console.log("Inserindo no banco dados:", docData);
+    // ⚠️ SEGURANÇA: Não logar dados sensíveis
     const { data: insertedDoc, error: insertError } = await supabaseAdmin
-      .from('crm_documents')
+      .from("crm_documents")
       .insert([docData])
       .select();
 
     if (insertError) {
       console.error("Erro no Banco:", insertError);
-      await supabaseAdmin.storage.from('crm_documents').remove([filePath]);
+      await supabaseAdmin.storage.from("crm_documents").remove([filePath]);
       throw insertError;
     }
 
     return NextResponse.json({ success: true, data: insertedDoc[0] });
-
   } catch (error) {
     console.error("Erro POST /api/crm/documents:", error);
-    return NextResponse.json({ success: false, message: error.message || "Erro ao salvar documento" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message || "Erro ao salvar documento" },
+      { status: 500 },
+    );
   }
 }
 
@@ -148,40 +174,50 @@ export async function POST(request) {
 export async function DELETE(request) {
   try {
     const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
     }
 
     const { searchParams } = new URL(request.url);
-    const docId = searchParams.get('id');
-    const filePath = searchParams.get('path');
+    const docId = searchParams.get("id");
+    const filePath = searchParams.get("path");
 
     if (!docId || !filePath) {
-      return NextResponse.json({ success: false, message: "ID e Path são obrigatórios" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "ID e Path são obrigatórios" },
+        { status: 400 },
+      );
     }
 
     // 1. Remover do Storage
     const { error: storageError } = await supabaseAdmin.storage
-      .from('crm_documents')
+      .from("crm_documents")
       .remove([filePath]);
 
     if (storageError) throw storageError;
 
     // 2. Remover da Tabela
     const { error: dbError } = await supabaseAdmin
-      .from('crm_documents')
+      .from("crm_documents")
       .delete()
-      .eq('id', docId);
+      .eq("id", docId);
 
     if (dbError) throw dbError;
 
     return NextResponse.json({ success: true, message: "Documento excluído" });
-
   } catch (error) {
     console.error("Erro DELETE /api/crm/documents:", error);
-    return NextResponse.json({ success: false, message: "Erro ao excluir documento" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Erro ao excluir documento" },
+      { status: 500 },
+    );
   }
 }
-

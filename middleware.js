@@ -105,6 +105,41 @@ export async function middleware(request) {
     return NextResponse.redirect(url);
   }
 
+  // ═══════════════════════════════════════════════════════════════════
+  // 🔒 HEADERS DE SEGURANÇA
+  // ═══════════════════════════════════════════════════════════════════
+
+  // Previne clickjacking
+  response.headers.set("X-Frame-Options", "DENY");
+
+  // Previne MIME type sniffing
+  response.headers.set("X-Content-Type-Options", "nosniff");
+
+  // Habilita proteção XSS no navegador
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+
+  // Política de segurança de conteúdo (CSP) básica
+  response.headers.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.openai.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' *.supabase.co *.openai.com; frame-ancestors 'none';",
+  );
+
+  // HSTS (HTTP Strict Transport Security) - força HTTPS
+  // Nota: Usar com cuidado, ativar apenas quando tiver certificado SSL válido
+  // response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+
+  // Referrer Policy - não enviar referrer para externos
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  // Disable de característica de rastreamento
+  response.headers.set(
+    "Permissions-Policy",
+    "geolocation=(), microphone=(), camera=()",
+  );
+
+  // Remove X-Powered-By (não expor tecnologia usada)
+  response.headers.delete("X-Powered-By");
+
   return response;
 }
 

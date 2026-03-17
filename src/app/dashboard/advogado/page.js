@@ -71,6 +71,7 @@ import {
 import * as CalcUtils from "@/lib/calculators";
 import styles from "./Dashboard.module.css";
 import { supabase } from "@/lib/supabase";
+import { maskCPFCNPJ, formatPhone, maskPhone } from "@/lib/securityUtils";
 
 import {
   createJurisCheckout,
@@ -230,8 +231,12 @@ export default function AdvogadoDashboard() {
 
   // SOLICITAÇÃO DE EXCLUSÃO
   const [showDeleteRequestModal, setShowDeleteRequestModal] = useState(false);
-  const [isSubmittingDeleteRequest, setIsSubmittingDeleteRequest] = useState(false);
-  const [deleteRequestData, setDeleteRequestData] = useState({ nome: "", motivo: "" });
+  const [isSubmittingDeleteRequest, setIsSubmittingDeleteRequest] =
+    useState(false);
+  const [deleteRequestData, setDeleteRequestData] = useState({
+    nome: "",
+    motivo: "",
+  });
 
   const fileInputRef = useRef(null);
   const smartFileInputRef = useRef(null);
@@ -244,75 +249,90 @@ export default function AdvogadoDashboard() {
     }
   }, [chatMessages, isTypingAI]);
 
-  const fetchAgenda = useCallback(async (explicitId) => {
-    if (!explicitId && !profileData?.id) return;
-    try {
-      const res = await fetch("/api/crm/agenda");
-      const data = await res.json();
-      if (data.success) {
-        setAgendaItems(data.data);
+  const fetchAgenda = useCallback(
+    async (explicitId) => {
+      if (!explicitId && !profileData?.id) return;
+      try {
+        const res = await fetch("/api/crm/agenda");
+        const data = await res.json();
+        if (data.success) {
+          setAgendaItems(data.data);
+        }
+      } catch (err) {
+        console.error("Erro fetchAgenda API:", err);
       }
-    } catch (err) {
-      console.error("Erro fetchAgenda API:", err);
-    }
-  }, [profileData?.id]);
+    },
+    [profileData?.id],
+  );
 
-  const fetchAllDocuments = useCallback(async (explicitId) => {
-    if (!explicitId && !profileData?.id) return;
-    setLoadingAllDocs(true);
-    try {
-      const res = await fetch("/api/crm/documents");
-      const data = await res.json();
-      if (data.success) setAllDocuments(data.data);
-    } catch (e) {
-      console.error("Erro fetchAllDocs:", e);
-    } finally {
-      setLoadingAllDocs(false);
-    }
-  }, [profileData?.id]);
-
-  const fetchCasos = useCallback(async (explicitId) => {
-    if (!explicitId && !profileData?.id) return;
-    setLoadingCasos(true);
-    try {
-      const res = await fetch("/api/casos");
-      const data = await res.json();
-      if (data.success) setCasos(data.data);
-    } catch (err) {
-      console.error("Erro fetchCasos:", err);
-    } finally {
-      setLoadingCasos(false);
-    }
-  }, [profileData?.id]);
-
-  const fetchCrmClients = useCallback(async (explicitId) => {
-    if (!explicitId && !profileData?.id) return;
-    setLoadingCrm(true);
-    try {
-      const res = await fetch("/api/crm");
-      const data = await res.json();
-      if (data.success) setCrmClients(data.data);
-    } catch (e) {
-      console.error("Erro CRM:", e);
-    } finally {
-      setLoadingCrm(false);
-    }
-  }, [profileData?.id]);
-
-  const syncNotificacoes = useCallback(async (explicitId) => {
-    if (!explicitId && !profileData?.id) return;
-    try {
-      const res = await fetch("/api/notificacoes", { cache: "no-store" });
-      const response = await res.json();
-      if (response.success) {
-        setNotificacoes(response.data || []);
-      } else if (res.status === 401) {
-         console.warn("[LawyerDashboard] 401 no fetchNotificacoes...");
+  const fetchAllDocuments = useCallback(
+    async (explicitId) => {
+      if (!explicitId && !profileData?.id) return;
+      setLoadingAllDocs(true);
+      try {
+        const res = await fetch("/api/crm/documents");
+        const data = await res.json();
+        if (data.success) setAllDocuments(data.data);
+      } catch (e) {
+        console.error("Erro fetchAllDocs:", e);
+      } finally {
+        setLoadingAllDocs(false);
       }
-    } catch (error) {
-      console.error("Erro ao sincronizar notificações:", error);
-    }
-  }, [profileData?.id]);
+    },
+    [profileData?.id],
+  );
+
+  const fetchCasos = useCallback(
+    async (explicitId) => {
+      if (!explicitId && !profileData?.id) return;
+      setLoadingCasos(true);
+      try {
+        const res = await fetch("/api/casos");
+        const data = await res.json();
+        if (data.success) setCasos(data.data);
+      } catch (err) {
+        console.error("Erro fetchCasos:", err);
+      } finally {
+        setLoadingCasos(false);
+      }
+    },
+    [profileData?.id],
+  );
+
+  const fetchCrmClients = useCallback(
+    async (explicitId) => {
+      if (!explicitId && !profileData?.id) return;
+      setLoadingCrm(true);
+      try {
+        const res = await fetch("/api/crm");
+        const data = await res.json();
+        if (data.success) setCrmClients(data.data);
+      } catch (e) {
+        console.error("Erro CRM:", e);
+      } finally {
+        setLoadingCrm(false);
+      }
+    },
+    [profileData?.id],
+  );
+
+  const syncNotificacoes = useCallback(
+    async (explicitId) => {
+      if (!explicitId && !profileData?.id) return;
+      try {
+        const res = await fetch("/api/notificacoes", { cache: "no-store" });
+        const response = await res.json();
+        if (response.success) {
+          setNotificacoes(response.data || []);
+        } else if (res.status === 401) {
+          console.warn("[LawyerDashboard] 401 no fetchNotificacoes...");
+        }
+      } catch (error) {
+        console.error("Erro ao sincronizar notificações:", error);
+      }
+    },
+    [profileData?.id],
+  );
 
   const fetchNotificacoes = useCallback(async () => {
     setLoadingNotificacoes(true);
@@ -344,7 +364,7 @@ export default function AdvogadoDashboard() {
         const isIncomplete =
           !profile.avatar || !profile.bio || !profile.specialties;
         setShowProfileReminder(isIncomplete);
-        
+
         // Chamada sequencial passando o profile.id explicitamente para evitar closures obsoletas
         await fetchCasos(profile.id);
         await fetchCrmClients(profile.id);
@@ -357,7 +377,13 @@ export default function AdvogadoDashboard() {
     } finally {
       setLoadingProfile(false);
     }
-  }, [fetchCasos, fetchCrmClients, fetchAgenda, fetchAllDocuments, syncNotificacoes]);
+  }, [
+    fetchCasos,
+    fetchCrmClients,
+    fetchAgenda,
+    fetchAllDocuments,
+    syncNotificacoes,
+  ]);
 
   useEffect(() => {
     loadDataFull();
@@ -407,7 +433,6 @@ export default function AdvogadoDashboard() {
       }
     };
   }, [profileData?.id]);
-
 
   const parseNotificationMeta = (notification) => {
     const rawMeta = notification?.meta;
@@ -796,14 +821,18 @@ export default function AdvogadoDashboard() {
                   border: "none",
                 }}
               >
-                {caso.status === "CANCELADO" ? "CANCELADO PELO CLIENTE" : caso.status}
+                {caso.status === "CANCELADO"
+                  ? "CANCELADO PELO CLIENTE"
+                  : caso.status}
               </span>
               <button
                 className={styles.applyBtn}
                 style={{
-                  background: caso.status === "CANCELADO" ? "#334155" : "#6366f1",
+                  background:
+                    caso.status === "CANCELADO" ? "#334155" : "#6366f1",
                   opacity: caso.status === "CANCELADO" ? 0.7 : 1,
-                  cursor: caso.status === "CANCELADO" ? "not-allowed" : "pointer",
+                  cursor:
+                    caso.status === "CANCELADO" ? "not-allowed" : "pointer",
                 }}
                 onClick={() =>
                   caso.status !== "CANCELADO" && handleAbrirConversa(caso)
@@ -876,7 +905,6 @@ export default function AdvogadoDashboard() {
     </div>
   );
 
-
   const handleSaveClient = async (e) => {
     e.preventDefault();
     setIsSubmittingClient(true);
@@ -931,12 +959,16 @@ export default function AdvogadoDashboard() {
       if (data.success) {
         toast.success("Solicitação enviada com sucesso.");
         setShowDeleteRequestModal(false);
-        toast((t) => (
-          <span style={{ textAlign: "center", display: "block" }}>
-            <strong>Solicitação Recebida!</strong> <br />
-            Se você não tiver casos vinculados, sua conta será excluída em até 48 horas.
-          </span>
-        ), { duration: 6000, icon: "🛡️" });
+        toast(
+          (t) => (
+            <span style={{ textAlign: "center", display: "block" }}>
+              <strong>Solicitação Recebida!</strong> <br />
+              Se você não tiver casos vinculados, sua conta será excluída em até
+              48 horas.
+            </span>
+          ),
+          { duration: 6000, icon: "🛡️" },
+        );
       } else {
         toast.error(data.message || "Erro ao enviar solicitação.");
       }
@@ -952,21 +984,37 @@ export default function AdvogadoDashboard() {
     if (!showDeleteRequestModal) return null;
 
     return (
-      <div className={styles.modalOverlay} onClick={() => setShowDeleteRequestModal(false)}>
-        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={styles.modalOverlay}
+        onClick={() => setShowDeleteRequestModal(false)}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className={styles.modalHeader}>
             <h2 className={styles.modalTitle}>Solicitar Exclusão da Conta</h2>
-            <p className={styles.modalSubtitle}>Sentimos muito em ver você partir.</p>
+            <p className={styles.modalSubtitle}>
+              Sentimos muito em ver você partir.
+            </p>
           </div>
 
-          <form onSubmit={handleSendDeleteRequest} className={styles.newClientForm}>
+          <form
+            onSubmit={handleSendDeleteRequest}
+            className={styles.newClientForm}
+          >
             <div className={styles.formItem}>
               <label className={styles.formLabel}>Confirme seu Nome</label>
               <input
                 type="text"
                 className={styles.formInput}
                 value={deleteRequestData.nome}
-                onChange={(e) => setDeleteRequestData({ ...deleteRequestData, nome: e.target.value })}
+                onChange={(e) =>
+                  setDeleteRequestData({
+                    ...deleteRequestData,
+                    nome: e.target.value,
+                  })
+                }
                 required
               />
             </div>
@@ -977,22 +1025,37 @@ export default function AdvogadoDashboard() {
                 className={styles.formTextarea}
                 placeholder="Conte-nos o motivo (opcional, mas nos ajuda a melhorar)"
                 value={deleteRequestData.motivo}
-                onChange={(e) => setDeleteRequestData({ ...deleteRequestData, motivo: e.target.value })}
+                onChange={(e) =>
+                  setDeleteRequestData({
+                    ...deleteRequestData,
+                    motivo: e.target.value,
+                  })
+                }
                 required
               />
             </div>
 
-            <div className={styles.deleteFeedbackInfo} style={{ 
-              background: "rgba(239, 68, 68, 0.1)", 
-              border: "1px solid rgba(239, 68, 68, 0.2)",
-              padding: "15px",
-              borderRadius: "8px",
-              marginBottom: "20px",
-              fontSize: "0.85rem",
-              color: "var(--color-silver)"
-            }}>
-              <p><strong>Atenção:</strong> Ao clicar em enviar, sua conta entrará em processo de exclusão. </p>
-              <p style={{ marginTop: "10px" }}>Caso você não tenha nenhum caso vinculado na plataforma, sua conta e todos os dados pertinentes serão excluídos em até <strong>48 Horas</strong>.</p>
+            <div
+              className={styles.deleteFeedbackInfo}
+              style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                border: "1px solid rgba(239, 68, 68, 0.2)",
+                padding: "15px",
+                borderRadius: "8px",
+                marginBottom: "20px",
+                fontSize: "0.85rem",
+                color: "var(--color-silver)",
+              }}
+            >
+              <p>
+                <strong>Atenção:</strong> Ao clicar em enviar, sua conta entrará
+                em processo de exclusão.{" "}
+              </p>
+              <p style={{ marginTop: "10px" }}>
+                Caso você não tenha nenhum caso vinculado na plataforma, sua
+                conta e todos os dados pertinentes serão excluídos em até{" "}
+                <strong>48 Horas</strong>.
+              </p>
             </div>
 
             <button
@@ -1001,11 +1064,16 @@ export default function AdvogadoDashboard() {
               style={{ background: "#ef4444" }}
               disabled={isSubmittingDeleteRequest}
             >
-              {isSubmittingDeleteRequest ? "Enviando..." : "Confirmar Solicitação de Exclusão"}
+              {isSubmittingDeleteRequest
+                ? "Enviando..."
+                : "Confirmar Solicitação de Exclusão"}
             </button>
           </form>
 
-          <button className={styles.closeModalBtn} onClick={() => setShowDeleteRequestModal(false)}>
+          <button
+            className={styles.closeModalBtn}
+            onClick={() => setShowDeleteRequestModal(false)}
+          >
             Cancelar
           </button>
         </div>
@@ -1074,7 +1142,8 @@ export default function AdvogadoDashboard() {
                   <h4>{client.name}</h4>
                   <p>
                     {client.email || "Sem email"} •{" "}
-                    {client.phone || "Sem telefone"}
+                    {/* ⚠️ SEGURANÇA: Telefo ne mascarado na listagem */}
+                    {maskPhone(client.phone) || "Sem telefone"}
                   </p>
                 </div>
               </div>
@@ -1083,7 +1152,8 @@ export default function AdvogadoDashboard() {
                 <div className={styles.infoGroup}>
                   <span className={styles.infoLabel}>Documento</span>
                   <span className={styles.infoValue}>
-                    {client.cpf_cnpj || "--"}
+                    {/* ⚠️ SEGURANÇA: Mascarar CPF/CNPJ - nunca exibir completo */}
+                    {maskCPFCNPJ(client.cpf_cnpj) || "--"}
                   </span>
                 </div>
                 <div className={styles.infoGroup}>
@@ -3351,17 +3421,16 @@ export default function AdvogadoDashboard() {
               <p style={{ fontSize: "0.85rem", marginBottom: 5 }}>
                 <strong>Email:</strong> {profileData.email}
               </p>
-              <p style={{ fontSize: "0.85rem", marginBottom: 5 }}>
-                <strong>Saldo:</strong> {profileData.balance} Juris
-              </p>
-              <p style={{ fontSize: "0.85rem", marginBottom: 15 }}>
-                <strong>ID:</strong> {profileData.id.substring(0, 8)}...
-              </p>
+              {/* ⚠️ SEGURANÇA: Não exibir saldo de Juris no cabeçalho */}
+              {/* REMOVIDO: <strong>Saldo:</strong> {profileData.balance} Juris */}
 
-              <button 
+              <button
                 className={styles.deleteAccountBtn}
                 onClick={() => {
-                  setDeleteRequestData({ nome: profileData.name || "", motivo: "" });
+                  setDeleteRequestData({
+                    nome: profileData.name || "",
+                    motivo: "",
+                  });
                   setShowDeleteRequestModal(true);
                 }}
               >
@@ -3399,14 +3468,14 @@ export default function AdvogadoDashboard() {
                       Celular (WhatsApp)
                     </label>
                     <input
-                      type="text"
+                      type="tel"
                       className={styles.formInput}
-                      placeholder="(00) 00000-0000"
-                      value={profileForm.phone}
+                      placeholder="(51) 99999-9999"
+                      value={formatPhone(profileForm.phone)}
                       onChange={(e) =>
                         setProfileForm({
                           ...profileForm,
-                          phone: e.target.value,
+                          phone: e.target.value.replace(/\D/g, ""),
                         })
                       }
                     />
@@ -3603,7 +3672,7 @@ export default function AdvogadoDashboard() {
       profileData.oab ? `OAB: ${profileData.oab}` : null,
       specialties.length ? `Especialidades: ${specialties.join(", ")}` : null,
       `Atendimento: ${consultationLabel}`,
-      profileData.phone ? `Contato: ${profileData.phone}` : null,
+      profileData.phone ? `Contato: ${formatPhone(profileData.phone)}` : null,
       profileData.bio || null,
       `Perfil na plataforma: ${publicUrl}`,
     ]
@@ -3758,7 +3827,10 @@ export default function AdvogadoDashboard() {
             <div className={styles.businessCardInfoGrid}>
               <div className={styles.businessCardInfoItem}>
                 <Phone size={16} />
-                <span>{profileData.phone || "Telefone não informado"}</span>
+                {/* ⚠️ SEGURANÇA: Formatar telefone */}
+                <span>
+                  {formatPhone(profileData.phone) || "Telefone não informado"}
+                </span>
               </div>
               <div className={styles.businessCardInfoItem}>
                 <Mail size={16} />
@@ -4904,12 +4976,12 @@ export default function AdvogadoDashboard() {
       const personalData = [
         ["Nome", selectedClient.name],
         ["Tipo", selectedClient.type || "Pessoa Fisica"],
-        ["CPF/CNPJ", selectedClient.cpf_cnpj || "---"],
+        ["CPF/CNPJ", maskCPFCNPJ(selectedClient.cpf_cnpj) || "---"],
         ["RG/IE", selectedClient.rg || "---"],
         ["Estado Civil", selectedClient.civil_status || "---"],
         ["Profissao", selectedClient.profession || "---"],
         ["Email", selectedClient.email || "---"],
-        ["Telefone", selectedClient.phone || "---"],
+        ["Telefone", formatPhone(selectedClient.phone) || "---"],
         ["Endereco", selectedClient.address || "---"],
       ];
 
@@ -5452,7 +5524,8 @@ export default function AdvogadoDashboard() {
                 <div className={styles.dossierDataGrid}>
                   <div className={styles.dataItem}>
                     <label>CPF / CNPJ</label>
-                    <span>{selectedClient.cpf_cnpj || "---"}</span>
+                    {/* ⚠️ SEGURANÇA: Mascarar CPF/CNPJ */}
+                    <span>{maskCPFCNPJ(selectedClient.cpf_cnpj) || "---"}</span>
                   </div>
                   <div className={styles.dataItem}>
                     <label>RG / IE</label>
@@ -6464,8 +6537,8 @@ export default function AdvogadoDashboard() {
               <div className={styles.reminderText}>
                 <h4>Complete seu Perfil Profissional!</h4>
                 <p>
-                  Perfis com foto, biografia e especialidades atraem até 80% mais
-                  interações de clientes.
+                  Perfis com foto, biografia e especialidades atraem até 80%
+                  mais interações de clientes.
                 </p>
               </div>
               <button

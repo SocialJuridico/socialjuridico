@@ -37,6 +37,7 @@ import {
   deleteAccountAction,
 } from "@/app/actions/authActions";
 import { supabase } from "@/lib/supabase";
+import { formatPhone } from "@/lib/securityUtils";
 import toast from "react-hot-toast";
 
 const FACEBOOK_GROUP_URL = "https://www.facebook.com/groups/1667675480204134";
@@ -215,36 +216,39 @@ export default function ClienteDashboard() {
     [setActiveTab],
   );
 
-  const syncNotificacoes = useCallback(async (showToastsForNew = false) => {
-    if (!profileData?.id) return;
-    try {
-      const res = await fetch("/api/notificacoes", { cache: "no-store" });
-      const response = await res.json();
-      if (!response.success) return;
+  const syncNotificacoes = useCallback(
+    async (showToastsForNew = false) => {
+      if (!profileData?.id) return;
+      try {
+        const res = await fetch("/api/notificacoes", { cache: "no-store" });
+        const response = await res.json();
+        if (!response.success) return;
 
-      const data = response.data || [];
-      const incomingIds = new Set(data.map((n) => n.id).filter(Boolean));
+        const data = response.data || [];
+        const incomingIds = new Set(data.map((n) => n.id).filter(Boolean));
 
-      if (!notifBootstrappedRef.current) {
+        if (!notifBootstrappedRef.current) {
+          notifIdsRef.current = incomingIds;
+          notifBootstrappedRef.current = true;
+          setNotificacoes(data);
+          return;
+        }
+
+        if (showToastsForNew) {
+          const newNotifs = data.filter(
+            (n) => n.id && !notifIdsRef.current.has(n.id),
+          );
+          newNotifs.reverse().forEach((n) => showNotificationToast(n));
+        }
+
         notifIdsRef.current = incomingIds;
-        notifBootstrappedRef.current = true;
         setNotificacoes(data);
-        return;
+      } catch (err) {
+        console.error("Erro ao sincronizar notificações:", err);
       }
-
-      if (showToastsForNew) {
-        const newNotifs = data.filter(
-          (n) => n.id && !notifIdsRef.current.has(n.id),
-        );
-        newNotifs.reverse().forEach((n) => showNotificationToast(n));
-      }
-
-      notifIdsRef.current = incomingIds;
-      setNotificacoes(data);
-    } catch (err) {
-      console.error("Erro ao sincronizar notificações:", err);
-    }
-  }, [showNotificationToast, profileData?.id]);
+    },
+    [showNotificationToast, profileData?.id],
+  );
 
   const loadNotificacoes = useCallback(async () => {
     setLoadingNotificacoes(true);
@@ -346,7 +350,9 @@ export default function ClienteDashboard() {
     let channel;
     let retryTimer;
     const setupRealtime = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         retryTimer = setTimeout(setupRealtime, 1200);
         return;
@@ -354,18 +360,22 @@ export default function ClienteDashboard() {
 
       channel = supabase
         .channel(`cliente-notificacoes-${user.id}`)
-        .on("postgres_changes", {
-          event: "INSERT",
-          schema: "public",
-          table: "notificacoes",
-          filter: `user_id=eq.${user.id}`,
-        }, (payload) => {
-          const notif = payload.new;
-          if (!notif?.id || notifIdsRef.current.has(notif.id)) return;
-          notifIdsRef.current.add(notif.id);
-          setNotificacoes((prev) => [notif, ...prev]);
-          showNotificationToast(notif);
-        })
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "notificacoes",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const notif = payload.new;
+            if (!notif?.id || notifIdsRef.current.has(notif.id)) return;
+            notifIdsRef.current.add(notif.id);
+            setNotificacoes((prev) => [notif, ...prev]);
+            showNotificationToast(notif);
+          },
+        )
         .subscribe();
     };
 
@@ -392,7 +402,9 @@ export default function ClienteDashboard() {
     };
 
     const setupPresence = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session?.access_token) {
         supabase.realtime.setAuth(session.access_token);
       }
@@ -428,9 +440,6 @@ export default function ClienteDashboard() {
     start();
     return () => clearInterval(intervalId);
   }, [syncNotificacoes, profileData?.id]);
-
-
-
 
   const handleResponderInteresse = async (interestId, action) => {
     setProcessandoInteresse(interestId);
@@ -560,7 +569,7 @@ export default function ClienteDashboard() {
 
   const shareCaseToFacebookGroup = async (casePayload) => {
     const siteUrl = "https://socialjuridico.com.br";
-    
+
     // 1. Texto RICO formatado para o Post (O Título e a Descrição vão aqui!)
     const shareText = `⚖️ NOVO CASO JURÍDICO PUBLICADO NO SOCIALJURÍDICO\n\n📌 TÍTULO: ${casePayload.titulo}\n📝 DESCRIÇÃO: ${casePayload.descricao}\n\n🌐 Veja mais em: ${siteUrl}`;
 
@@ -577,17 +586,24 @@ export default function ClienteDashboard() {
     // 3. Link Dinâmico para as Meta Tags (Card Visual)
     // O Facebook lerá o título/descrição deste link e montará o card abaixo do seu texto.
     const dynamicShareUrl = `${siteUrl}/compartilhar?t=${encodeURIComponent(casePayload.titulo)}&d=${encodeURIComponent(casePayload.descricao.substring(0, 150))}`;
-    
+
     // 4. Abrir Janela do Facebook
     const facebookSharerUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(dynamicShareUrl)}`;
-    
-    window.open(facebookSharerUrl, "_blank", "noopener,noreferrer,width=600,height=600");
-    
+
+    window.open(
+      facebookSharerUrl,
+      "_blank",
+      "noopener,noreferrer,width=600,height=600",
+    );
+
     // 5. Explicar o motivo do card talvez vir genérico no localhost
-    toast("O card visual aparecerá completo assim que o site estiver online. Por enquanto, use o Colar (Ctrl+V) no post!", {
-      icon: '💡',
-      duration: 8000
-    });
+    toast(
+      "O card visual aparecerá completo assim que o site estiver online. Por enquanto, use o Colar (Ctrl+V) no post!",
+      {
+        icon: "💡",
+        duration: 8000,
+      },
+    );
   };
 
   const handleOpenLawyerProfile = (lawyer) => {
@@ -632,7 +648,6 @@ export default function ClienteDashboard() {
       setIsCaseSelectOpen(false);
     }
   };
-
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -893,7 +908,11 @@ export default function ClienteDashboard() {
 
         {adv.avg_rating > 0 && (
           <div className={styles.ratingRow}>
-            <Star size={14} fill="var(--color-gold)" color="var(--color-gold)" />
+            <Star
+              size={14}
+              fill="var(--color-gold)"
+              color="var(--color-gold)"
+            />
             <span className={styles.ratingValue}>
               {(adv.avg_rating || 0).toFixed(1)}
             </span>
@@ -1061,13 +1080,7 @@ export default function ClienteDashboard() {
                           : "Meu Perfil"}
             </h1>
             <p>Bem-vindo, {userName}</p>
-            {profileData && (
-              <span
-                style={{ fontSize: "10px", opacity: 0.5, display: "block" }}
-              >
-                ID: {profileData.id} | {profileData.email}
-              </span>
-            )}
+            {/* ⚠️ SEGURANÇA: Remover exibição de UUID/ID do usuário */}
           </div>
           <div className={styles.userProfile}>
             <div className={styles.avatarCircle}>
@@ -1352,7 +1365,6 @@ export default function ClienteDashboard() {
                     ></textarea>
                   </div>
 
-
                   <div className={styles.formGroup}>
                     <label>Anexos (Opcional - Máx 5)</label>
                     <div
@@ -1505,13 +1517,14 @@ export default function ClienteDashboard() {
                           Telefone/WhatsApp
                         </label>
                         <input
-                          type="text"
+                          type="tel"
                           className={styles.profileInput}
-                          value={profileForm.phone}
+                          placeholder="(51) 99999-9999"
+                          value={formatPhone(profileForm.phone)}
                           onChange={(e) =>
                             setProfileForm({
                               ...profileForm,
-                              phone: e.target.value,
+                              phone: e.target.value.replace(/\D/g, ""),
                             })
                           }
                         />
@@ -1931,40 +1944,71 @@ export default function ClienteDashboard() {
       )}
       {/* MODAL PERFIL DO ADVOGADO */}
       {isLawyerModalOpen && selectedLawyer && (
-        <div className={styles.modalOverlay} onClick={() => setIsLawyerModalOpen(false)}>
-          <div className={styles.lawyerProfileModal} onClick={(e) => e.stopPropagation()}>
-            <button className={styles.closeModalBtn} onClick={() => setIsLawyerModalOpen(false)}>
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setIsLawyerModalOpen(false)}
+        >
+          <div
+            className={styles.lawyerProfileModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className={styles.closeModalBtn}
+              onClick={() => setIsLawyerModalOpen(false)}
+            >
               <X size={24} />
             </button>
             <div className={styles.lpModalHeader}>
               {selectedLawyer.avatar ? (
                 <div className={styles.lpModalAvatarWrapper}>
-                  <Image src={selectedLawyer.avatar} alt={selectedLawyer.name} width={100} height={100} className={styles.lpModalAvatar} unoptimized />
+                  <Image
+                    src={selectedLawyer.avatar}
+                    alt={selectedLawyer.name}
+                    width={100}
+                    height={100}
+                    className={styles.lpModalAvatar}
+                    unoptimized
+                  />
                 </div>
               ) : (
-                <div className={styles.lpModalAvatarPlaceholder}>{selectedLawyer.name.substring(0, 2).toUpperCase()}</div>
+                <div className={styles.lpModalAvatarPlaceholder}>
+                  {selectedLawyer.name.substring(0, 2).toUpperCase()}
+                </div>
               )}
               <div className={styles.lpModalMainInfo}>
                 <h2>{selectedLawyer.name}</h2>
-                <p className={styles.lpModalOab}>OAB: {selectedLawyer.oab || "Não informada"}</p>
+                <p className={styles.lpModalOab}>
+                  OAB: {selectedLawyer.oab || "Não informada"}
+                </p>
                 {selectedLawyer.is_premium && (
-                  <span className={styles.proTagModal}><Sparkles size={12} /> Advogado PRO</span>
+                  <span className={styles.proTagModal}>
+                    <Sparkles size={12} /> Advogado PRO
+                  </span>
                 )}
               </div>
             </div>
 
             <div className={styles.lpModalBody}>
               <div className={styles.lpModalSection}>
-                <h3><User size={18} /> Apresentação</h3>
-                <p className={styles.lpBioText}>{selectedLawyer.bio || "Este advogado ainda não preencheu sua apresentação pessoal."}</p>
+                <h3>
+                  <User size={18} /> Apresentação
+                </h3>
+                <p className={styles.lpBioText}>
+                  {selectedLawyer.bio ||
+                    "Este advogado ainda não preencheu sua apresentação pessoal."}
+                </p>
               </div>
 
               {selectedLawyer.specialties && (
                 <div className={styles.lpModalSection}>
-                  <h3><Scale size={18} /> Especialidades</h3>
+                  <h3>
+                    <Scale size={18} /> Especialidades
+                  </h3>
                   <div className={styles.lpModalSpecs}>
-                    {selectedLawyer.specialties.split(',').map((spec, i) => (
-                      <span key={i} className={styles.lpSpecTag}>{spec.trim()}</span>
+                    {selectedLawyer.specialties.split(",").map((spec, i) => (
+                      <span key={i} className={styles.lpSpecTag}>
+                        {spec.trim()}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -1972,32 +2016,44 @@ export default function ClienteDashboard() {
 
               <div className={styles.lpModalStatsGrid}>
                 <div className={styles.lpStatItem}>
-                   <Star size={20} fill="var(--color-gold)" color="var(--color-gold)" />
-                   <strong>{(selectedLawyer.avg_rating || 0).toFixed(1)}</strong>
-                   <span>({selectedLawyer.total_ratings || 0} avaliações)</span>
+                  <Star
+                    size={20}
+                    fill="var(--color-gold)"
+                    color="var(--color-gold)"
+                  />
+                  <strong>{(selectedLawyer.avg_rating || 0).toFixed(1)}</strong>
+                  <span>({selectedLawyer.total_ratings || 0} avaliações)</span>
                 </div>
                 <div className={styles.lpStatItem}>
-                   <CheckCircle2 size={20} color="#10b981" />
-                   <strong>100%</strong>
-                   <span>Taxa de Sucesso</span>
+                  <CheckCircle2 size={20} color="#10b981" />
+                  <strong>100%</strong>
+                  <span>Taxa de Sucesso</span>
                 </div>
                 {selectedLawyer.valor > 0 && (
-                   <div className={styles.lpStatItem}>
-                      <strong>R$ {selectedLawyer.valor}</strong>
-                      <span>Valor da Consulta</span>
-                   </div>
+                  <div className={styles.lpStatItem}>
+                    <strong>R$ {selectedLawyer.valor}</strong>
+                    <span>Valor da Consulta</span>
+                  </div>
                 )}
               </div>
             </div>
 
             <div className={styles.lpModalFooter}>
-                {selectedLawyer.is_premium ? (
-                  <button className={styles.lpContactBtn} onClick={(e) => { setIsLawyerModalOpen(false); handleStartChatRequest(e, selectedLawyer); }}>
-                    Falar com Advogado
-                  </button>
-                ) : (
-                  <p className={styles.lpNote}>Este advogado não aceita contatos diretos no momento.</p>
-                )}
+              {selectedLawyer.is_premium ? (
+                <button
+                  className={styles.lpContactBtn}
+                  onClick={(e) => {
+                    setIsLawyerModalOpen(false);
+                    handleStartChatRequest(e, selectedLawyer);
+                  }}
+                >
+                  Falar com Advogado
+                </button>
+              ) : (
+                <p className={styles.lpNote}>
+                  Este advogado não aceita contatos diretos no momento.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -2005,24 +2061,42 @@ export default function ClienteDashboard() {
 
       {/* MODAL SELEÇÃO DE CASO PARA CHAT */}
       {isCaseSelectOpen && selectedLawyer && (
-        <div className={styles.modalOverlay} onClick={() => setIsCaseSelectOpen(false)}>
-          <div className={styles.caseSelectModal} onClick={(e) => e.stopPropagation()}>
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setIsCaseSelectOpen(false)}
+        >
+          <div
+            className={styles.caseSelectModal}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className={styles.caseSelectHeader}>
-               <h3>Sobre qual caso deseja falar?</h3>
-               <p>Selecione um dos seus casos abaixo para iniciar o atendimento com <strong>{selectedLawyer.name}</strong>.</p>
+              <h3>Sobre qual caso deseja falar?</h3>
+              <p>
+                Selecione um dos seus casos abaixo para iniciar o atendimento
+                com <strong>{selectedLawyer.name}</strong>.
+              </p>
             </div>
             <div className={styles.caseSelectList}>
-              {casos.filter(c => c.status === 'ABERTO' && !c.advogado_id).map(caso => (
-                <div key={caso.id} className={styles.caseSelectItem} onClick={() => handleConfirmStartChat(caso.id)}>
-                   <div className={styles.csItemInfo}>
+              {casos
+                .filter((c) => c.status === "ABERTO" && !c.advogado_id)
+                .map((caso) => (
+                  <div
+                    key={caso.id}
+                    className={styles.caseSelectItem}
+                    onClick={() => handleConfirmStartChat(caso.id)}
+                  >
+                    <div className={styles.csItemInfo}>
                       <strong>{caso.titulo}</strong>
                       <span>{caso.area_atuacao}</span>
-                   </div>
-                   <MessageSquare size={18} color="var(--color-gold)" />
-                </div>
-              ))}
+                    </div>
+                    <MessageSquare size={18} color="var(--color-gold)" />
+                  </div>
+                ))}
             </div>
-            <button className={styles.cancelCaseSelectBtn} onClick={() => setIsCaseSelectOpen(false)}>
+            <button
+              className={styles.cancelCaseSelectBtn}
+              onClick={() => setIsCaseSelectOpen(false)}
+            >
               Cancelar
             </button>
           </div>

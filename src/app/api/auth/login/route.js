@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabaseServer';
-import { supabaseAdmin } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
+import { createClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabase";
+import { NextResponse } from "next/server";
 
 // ── RATE LIMITING ──
 const loginAttempts = new Map();
@@ -15,7 +15,9 @@ function checkRateLimit(ip) {
     return { allowed: true };
   }
   if (entry.count >= MAX_ATTEMPTS) {
-    const retryMin = Math.ceil((WINDOW_MS - (now - entry.firstAttempt)) / 60000);
+    const retryMin = Math.ceil(
+      (WINDOW_MS - (now - entry.firstAttempt)) / 60000,
+    );
     return { allowed: false, retryMin };
   }
   entry.count++;
@@ -23,97 +25,120 @@ function checkRateLimit(ip) {
 }
 
 export async function POST(request) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '127.0.0.1';
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "127.0.0.1";
   const rateCheck = checkRateLimit(ip);
-  
+
   // Ignorar rate limit em localhost para testes
-  const isLocalhost = ip === '127.0.0.1' || ip === '::1';
+  const isLocalhost = ip === "127.0.0.1" || ip === "::1";
 
   if (!rateCheck.allowed && !isLocalhost) {
     return NextResponse.json(
-      { success: false, message: `Muitas tentativas. Aguarde ${rateCheck.retryMin} minuto(s).` },
-      { status: 429 }
+      {
+        success: false,
+        message: `Muitas tentativas. Aguarde ${rateCheck.retryMin} minuto(s).`,
+      },
+      { status: 429 },
     );
   }
 
   try {
     const { email, password } = await request.json();
     if (!email || !password) {
-      return NextResponse.json({ success: false, message: 'Email e senha são obrigatórios.' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Email e senha são obrigatórios." },
+        { status: 400 },
+      );
     }
 
     const supabase = createClient();
 
     // 1. Autenticar no Supabase Auth
-    let { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
+    let { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-    const DEFAULT_PASSWORD = 'socialjuridico1!';
+    const DEFAULT_PASSWORD = "socialjuridico1!";
 
     // Se falhar, vamos tentar o "Lazy Sync" para usuários antigos/migrados
-    if (authError && authError.status === 401 && password === DEFAULT_PASSWORD) {
-      console.log(`[LazySync] Tentando recuperar usuário antigo: ${email}`);
-      
+    if (
+      authError &&
+      authError.status === 401 &&
+      password === DEFAULT_PASSWORD
+    ) {
+      // ⚠️ SEGURANÇA: Não logar emails
+
       const db = supabaseAdmin || supabase;
       let existingProfile = null;
-      
+
       // Procurar em todas as tabelas pelo email
-      for (const table of ['advogados', 'clientes', 'admins']) {
-        const { data } = await db.from(table).select('id, name, role').eq('email', email.trim().toLowerCase()).single();
-        if (data) { 
-          existingProfile = { ...data, table }; 
-          break; 
+      for (const table of ["advogados", "clientes", "admins"]) {
+        const { data } = await db
+          .from(table)
+          .select("id, name, role")
+          .eq("email", email.trim().toLowerCase())
+          .single();
+        if (data) {
+          existingProfile = { ...data, table };
+          break;
         }
       }
 
       if (existingProfile) {
-        console.log(`[LazySync] Usuário encontrado em ${existingProfile.table}. Sincronizando com Auth...`);
-        
+        // ⚠️ SEGURANÇA: Não logar emails
+
         // Criar ou atualizar usuário no Auth com a senha padrão e flag de troca obrigatória
-        const { data: syncData, error: syncError } = await supabaseAdmin.auth.admin.createUser({
-          id: existingProfile.id,
-          email: email.trim().toLowerCase(),
-          password: DEFAULT_PASSWORD,
-          email_confirm: true,
-          user_metadata: { 
-            full_name: existingProfile.name,
-            role: existingProfile.role,
-            needs_password_update: true 
-          }
-        });
+        const { data: syncData, error: syncError } =
+          await supabaseAdmin.auth.admin.createUser({
+            id: existingProfile.id,
+            email: email.trim().toLowerCase(),
+            password: DEFAULT_PASSWORD,
+            email_confirm: true,
+            user_metadata: {
+              full_name: existingProfile.name,
+              role: existingProfile.role,
+              needs_password_update: true,
+            },
+          });
 
         if (syncError) {
           if (syncError.message.includes("already has been registered")) {
             // Se já existe no Auth mas a senha estava errada ou desatualizada, resetamos para a padrão
             // Buscamos o usuário atual para preservar metadados se necessário
-            const { data: userData } = await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
-            
+            const { data: userData } =
+              await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
+
             await supabaseAdmin.auth.admin.updateUserById(existingProfile.id, {
               password: DEFAULT_PASSWORD,
-              user_metadata: { 
+              user_metadata: {
                 ...(userData?.user?.user_metadata || {}),
                 full_name: existingProfile.name, // Garante que o nome venha do nosso banco oficial
                 role: existingProfile.role,
-                needs_password_update: true 
-              }
+                needs_password_update: true,
+              },
             });
           } else {
-            console.error("[LazySync] Erro crítico ao criar user no Auth:", syncError.message);
+            console.error(
+              "[LazySync] Erro crítico ao criar user no Auth:",
+              syncError.message,
+            );
           }
         }
 
         // Tentar logar novamente após o sync
-        const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-          email: email.trim().toLowerCase(),
-          password,
-        });
+        const { data: retryData, error: retryError } =
+          await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password,
+          });
 
         if (!retryError) {
           authData = retryData;
           authError = null;
-          console.log(`[LazySync] Sucesso! Usuário ${email} logado.`);
+          // ⚠️ SEGURANÇA: Não logar emails
         }
       }
     }
@@ -123,11 +148,14 @@ export async function POST(request) {
         email: email,
         errorCode: authError.code,
         errorMessage: authError.message,
-        status: authError.status
+        status: authError.status,
       });
       return NextResponse.json(
-        { success: false, message: `Erro de autenticação: Credenciais inválidas ou conta não encontrada.` },
-        { status: 401 }
+        {
+          success: false,
+          message: `Erro de autenticação: Credenciais inválidas ou conta não encontrada.`,
+        },
+        { status: 401 },
       );
     }
 
@@ -136,10 +164,17 @@ export async function POST(request) {
 
     // 2. Buscar perfil — select('*') para compatibilidade entre tabelas
     let profile = null;
-    const tables = ['clientes', 'advogados', 'admins'];
+    const tables = ["clientes", "advogados", "admins"];
     for (const table of tables) {
-      const { data } = await db.from(table).select('id, name, email, role, phone, avatar').eq('id', user.id).single();
-      if (data) { profile = data; break; }
+      const { data } = await db
+        .from(table)
+        .select("id, name, email, role, phone, avatar")
+        .eq("id", user.id)
+        .single();
+      if (data) {
+        profile = data;
+        break;
+      }
     }
 
     // 3. Criar perfil padrão se não existir
@@ -147,11 +182,15 @@ export async function POST(request) {
       const newProfile = {
         id: user.id,
         email: user.email,
-        name: user.user_metadata?.full_name || user.email.split('@')[0],
-        role: 'CLIENT',
+        name: user.user_metadata?.full_name || user.email.split("@")[0],
+        role: "CLIENT",
         created_at: new Date().toISOString(),
       };
-      const { data: inserted } = await db.from('clientes').insert([newProfile]).select('id, name, email, role').single();
+      const { data: inserted } = await db
+        .from("clientes")
+        .insert([newProfile])
+        .select("id, name, email, role")
+        .single();
       if (inserted) profile = inserted;
     }
 
@@ -161,26 +200,30 @@ export async function POST(request) {
       user: {
         id: user.id,
         email: user.email,
-        name: profile?.name || user.email.split('@')[0],
-        role: profile?.role || 'CLIENT',
+        name: profile?.name || user.email.split("@")[0],
+        role: profile?.role || "CLIENT",
         needsPasswordUpdate: user.user_metadata?.needs_password_update === true,
       },
     });
 
     // Cookie de controle de 4 horas
-    const loginData = Buffer.from(JSON.stringify({ loginAt: new Date().toISOString(), userId: user.id })).toString('base64');
-    res.cookies.set('sj_login_time', loginData, {
+    const loginData = Buffer.from(
+      JSON.stringify({ loginAt: new Date().toISOString(), userId: user.id }),
+    ).toString("base64");
+    res.cookies.set("sj_login_time", loginData, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
       maxAge: 4 * 60 * 60,
-      path: '/',
+      path: "/",
     });
 
     return res;
-
   } catch (error) {
-    console.error('Erro na API de Login:', error);
-    return NextResponse.json({ success: false, message: 'Erro interno no servidor.' }, { status: 500 });
+    console.error("Erro na API de Login:", error);
+    return NextResponse.json(
+      { success: false, message: "Erro interno no servidor." },
+      { status: 500 },
+    );
   }
 }

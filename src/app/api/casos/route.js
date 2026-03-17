@@ -78,7 +78,7 @@ export async function GET(request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.error("Casos API: Usuário não autenticado", authError);
+      // ⚠️ SEGURANÇA: Não logar detalhes de autenticação
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
@@ -86,9 +86,7 @@ export async function GET(request) {
     }
 
     const role = user.user_metadata?.role || "CLIENT";
-    console.log(
-      `Buscando casos para o usuário ID: ${user.id} (${user.email}), Role: ${role}`,
-    );
+    // ⚠️ SEGURANÇA: Não logar user.id ou user.email
 
     let query = supabaseAdmin.from("casos").select("*");
 
@@ -166,7 +164,7 @@ export async function PUT(request) {
       );
     }
 
-    console.log(`Atualizando caso ${id} para o usuário ${user.id}`);
+    // ⚠️ SEGURANÇA: Não logar user.id
 
     const { data, error } = await supabaseAdmin
       .from("casos")
@@ -192,7 +190,7 @@ export async function PUT(request) {
       );
     }
 
-    console.log("Caso atualizado:", data[0]);
+    // ⚠️ SEGURANÇA: Não logar dados sensíveis do caso
     return NextResponse.json({ success: true, data: data[0] });
   } catch (error) {
     console.error("Erro na API PUT /api/casos:", error);
@@ -316,7 +314,8 @@ export async function DELETE(request) {
         {
           user_id: caso.advogado_id,
           titulo: "Um caso foi cancelado",
-          mensagem: "O cliente decidiu encerrar um dos casos que você estava atendendo.",
+          mensagem:
+            "O cliente decidiu encerrar um dos casos que você estava atendendo.",
           tipo: "CASO_CANCELADO",
           meta: JSON.stringify({ case_id: casoId }),
         },

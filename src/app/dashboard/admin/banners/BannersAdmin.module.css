@@ -1,0 +1,239 @@
+.page {
+  min-height: 100vh;
+  background: #0d0f12;
+  color: #e5e7eb;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.backLink {
+  color: #d4af37;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+}
+
+.header h1 {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.3rem;
+}
+
+.topBar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.searchWrap {
+  position: relative;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.searchInput {
+  width: 100%;
+  box-sizing: border-box;
+  background: #12151b;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  color: #e5e7eb;
+  border-radius: 10px;
+  padding: 10px 12px 10px 36px;
+}
+
+.addBtn {
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  gap: 10px;
+  background: #12151b;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  border-radius: 12px;
+  padding: 10px;
+  align-items: center;
+}
+
+.previewWrap {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.preview {
+  display: block;
+  width: 100%;
+  height: 72px;
+  object-fit: cover;
+}
+
+.itemInfo h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.itemInfo p {
+  margin: 4px 0 0;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemActions {
+  display: flex;
+  gap: 8px;
+}
+
+.editBtn,
+.deleteBtn {
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editBtn {
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+}
+
+.deleteBtn {
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+.loading,
+.empty {
+  padding: 20px;
+  color: #9ca3af;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 18px;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 520px;
+  background: #171a21;
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.modalCard h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.modalCard p {
+  margin: 10px 0 0;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+
+.formGroup {
+  margin-top: 10px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 6px;
+  color: #cbd5e1;
+  font-size: 0.84rem;
+}
+
+.formGroup input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #12151b;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  color: #e5e7eb;
+  border-radius: 8px;
+  padding: 9px 10px;
+}
+
+.modalActions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.cancelBtn,
+.confirmBtn {
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.cancelBtn {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+}
+
+.confirmBtn {
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+}
+
+@media (max-width: 900px) {
+  .item {
+    grid-template-columns: 1fr;
+  }
+
+  .itemInfo p {
+    white-space: normal;
+  }
+
+  .topBar {
+    grid-template-columns: 1fr;
+  }
+}

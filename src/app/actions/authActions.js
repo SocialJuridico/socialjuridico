@@ -1,92 +1,139 @@
 "use server";
 
-import { createClient } from '@/lib/supabaseServer';
-import { supabaseAdmin } from '@/lib/supabase';
+import { createClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabase";
+import { formatStoredOAB, normalizeOAB, normalizeUF } from "@/lib/oab";
 
 export async function signUpAction(formData) {
-  const { email, password, name, phone, role, oab, estado, origem_descoberta } = formData;
+  const { email, password, name, phone, role, oab, estado, origem_descoberta } =
+    formData;
   const supabase = createClient();
+  const normalizedEmail = email.trim().toLowerCase();
 
   try {
+    const normalizedUf = normalizeUF(estado);
+    const normalizedOab =
+      role === "LAWYER" ? normalizeOAB(oab, normalizedUf) : "";
+
+    if (role === "LAWYER") {
+      if (!normalizedUf || !normalizedOab) {
+        throw new Error(
+          "Informe uma UF válida e apenas números no campo da OAB.",
+        );
+      }
+
+      const { data: existingLawyers, error: oabCheckError } =
+        await supabaseAdmin.from("advogados").select("id, oab, estado");
+
+      if (oabCheckError) throw oabCheckError;
+
+      const duplicateOab = (existingLawyers || []).find((lawyer) => {
+        const storedOab = formatStoredOAB(lawyer.oab, lawyer.estado);
+        return storedOab && storedOab === normalizedOab;
+      });
+
+      if (duplicateOab) {
+        throw new Error(
+          `Já existe um advogado cadastrado com a OAB ${normalizedOab}.`,
+        );
+      }
+    }
+
     // 1. Criar o usuário no Auth com email já confirmado
     let user;
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: email.trim().toLowerCase(),
-      password,
-      email_confirm: true,
-      user_metadata: {
-        full_name: name,
-        role: role
-      }
-    });
+    const { data: authData, error: authError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: name,
+          role: role,
+        },
+      });
 
     if (authError) {
-      if (authError.message.includes("already be registered") || authError.status === 422) {
-        console.log("Usuário já existe no Auth. Recuperando e atualizando senha...");
+      if (
+        authError.message.includes("already be registered") ||
+        authError.status === 422
+      ) {
+        console.log(
+          "Usuário já existe no Auth. Recuperando e atualizando senha...",
+        );
         // Pegar todos os usuários para encontrar o ID (devido à falta de busca por email no admin API)
         let allUsers = [];
         let page = 1;
         while (true) {
-          const { data: { users: pagedUsers } } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+          const {
+            data: { users: pagedUsers },
+          } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
           if (!pagedUsers || pagedUsers.length === 0) break;
           allUsers = allUsers.concat(pagedUsers);
           page++;
         }
-        user = allUsers.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
-        
-        if (!user) throw new Error("Usuário está registrado mas não pôde ser recuperado.");
+        user = allUsers.find((u) => u.email.toLowerCase() === normalizedEmail);
+
+        if (!user)
+          throw new Error(
+            "Usuário está registrado mas não pôde ser recuperado.",
+          );
 
         // Atualizar senha e metadados para o que foi digitado agora
-        const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
-          password: password,
-          email_confirm: true,
-          user_metadata: { full_name: name, role: role }
-        });
+        const { error: updateAuthError } =
+          await supabaseAdmin.auth.admin.updateUserById(user.id, {
+            password: password,
+            email_confirm: true,
+            user_metadata: { full_name: name, role: role },
+          });
         if (updateAuthError) throw updateAuthError;
       } else {
         throw authError;
       }
     } else {
-        user = authData.user;
+      user = authData.user;
     }
 
     if (!user) throw new Error("Erro ao identificar usuário.");
 
     // 2. Verificar se já existe um perfil com esse email (órfão)
-    const table = role === 'LAWYER' ? 'advogados' : 'clientes';
+    const table = role === "LAWYER" ? "advogados" : "clientes";
     const { data: existingProfile } = await supabaseAdmin
       .from(table)
-      .select('id')
-      .eq('email', email.trim().toLowerCase())
+      .select("id")
+      .eq("email", normalizedEmail)
       .single();
 
     if (existingProfile) {
-      console.log(`Perfil órfão encontrado para ${email}. Vinculando ao novo Auth ID: ${user.id}`);
+      console.log(
+        `Perfil órfão encontrado para ${email}. Vinculando ao novo Auth ID: ${user.id}`,
+      );
       // Atualizar o ID do perfil antigo para o novo ID do Auth
       const { error: updateError } = await supabaseAdmin
         .from(table)
         .update({ id: user.id })
-        .eq('id', existingProfile.id);
+        .eq("id", existingProfile.id);
 
       if (updateError) {
         console.error("Erro ao vincular perfil órfão:", updateError);
-        throw new Error("Erro ao vincular seu perfil existente. Contate o suporte.");
+        throw new Error(
+          "Erro ao vincular seu perfil existente. Contate o suporte.",
+        );
       }
     } else {
       // Inserir novo perfil se não existir
       const insertData = {
         id: user.id,
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         name: name,
         phone: phone,
         role: role,
-        origem_descoberta: origem_descoberta || 'Não informado',
+        origem_descoberta: origem_descoberta || "Não informado",
         created_at: new Date().toISOString(),
       };
 
-      if (role === 'LAWYER') {
-        insertData.oab = oab;
-        insertData.estado = estado;
+      if (role === "LAWYER") {
+        insertData.oab = normalizedOab;
+        insertData.estado = normalizedUf;
       }
 
       const { error: dbError } = await supabaseAdmin
@@ -95,15 +142,22 @@ export async function signUpAction(formData) {
 
       if (dbError) {
         console.error(`Erro ao inserir na tabela ${table}:`, dbError);
-        throw new Error(`Usuário criado, mas erro ao salvar perfil: ${dbError.message}`);
+        throw new Error(
+          `Usuário criado, mas erro ao salvar perfil: ${dbError.message}`,
+        );
       }
     }
 
-    return { success: true, message: "Conta preparada com sucesso! Você já pode fazer login." };
-
+    return {
+      success: true,
+      message: "Conta preparada com sucesso! Você já pode fazer login.",
+    };
   } catch (error) {
     console.error("Erro no signUpAction:", error);
-    return { success: false, message: error.message || "Erro inesperado ao cadastrar." };
+    return {
+      success: false,
+      message: error.message || "Erro inesperado ao cadastrar.",
+    };
   }
 }
 
@@ -118,22 +172,26 @@ export async function signInAction(email, password) {
     if (error) throw error;
 
     // Tenta pegar o metadado diretamente das identidades ou da sessão
-    const needsUpdate = data.user?.user_metadata?.needs_password_update === true;
+    const needsUpdate =
+      data.user?.user_metadata?.needs_password_update === true;
 
-    console.log("DEBUG LOGIN:", { 
-      email: data.user?.email, 
+    console.log("DEBUG LOGIN:", {
+      email: data.user?.email,
       metadata: data.user?.user_metadata,
-      needsUpdate 
+      needsUpdate,
     });
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       user: data.user,
-      needsPasswordUpdate: needsUpdate 
+      needsPasswordUpdate: needsUpdate,
     };
   } catch (error) {
     console.error("Erro no signInAction:", error);
-    return { success: false, message: error.message || "Credenciais inválidas." };
+    return {
+      success: false,
+      message: error.message || "Credenciais inválidas.",
+    };
   }
 }
 
@@ -142,7 +200,7 @@ export async function updatePasswordAction(newPassword) {
     const supabase = createClient();
     const { data, error } = await supabase.auth.updateUser({
       password: newPassword,
-      data: { needs_password_update: false } // Remove o marcador após sucesso
+      data: { needs_password_update: false }, // Remove o marcador após sucesso
     });
 
     if (error) throw error;
@@ -150,7 +208,10 @@ export async function updatePasswordAction(newPassword) {
     return { success: true, message: "Senha atualizada com sucesso!" };
   } catch (error) {
     console.error("Erro no updatePasswordAction:", error);
-    return { success: false, message: error.message || "Erro ao atualizar senha." };
+    return {
+      success: false,
+      message: error.message || "Erro ao atualizar senha.",
+    };
   }
 }
 
@@ -158,9 +219,11 @@ export async function getAdvogadosAction() {
   try {
     const supabase = createClient();
     const { data, error } = await supabaseAdmin
-      .from('advogados')
-      .select('id, name, avatar, oab, estado, avg_rating, verified, specialties')
-      .order('name', { ascending: true });
+      .from("advogados")
+      .select(
+        "id, name, avatar, oab, estado, avg_rating, verified, specialties",
+      )
+      .order("name", { ascending: true });
 
     if (error) {
       console.error("Erro Supabase:", error);
@@ -168,10 +231,19 @@ export async function getAdvogadosAction() {
     }
 
     console.log("Advogados recuperados do banco:", data?.length || 0);
-    return { success: true, data: data || [] };
+    return {
+      success: true,
+      data: (data || []).map((lawyer) => ({
+        ...lawyer,
+        oab: formatStoredOAB(lawyer.oab, lawyer.estado),
+      })),
+    };
   } catch (error) {
     console.error("Erro no getAdvogadosAction:", error);
-    return { success: false, message: error.message || "Erro ao buscar advogados." };
+    return {
+      success: false,
+      message: error.message || "Erro ao buscar advogados.",
+    };
   }
 }
 
@@ -181,7 +253,7 @@ export async function createCasoAction(casoData) {
     const supabase = createClient();
 
     const { data, error } = await supabase
-      .from('casos')
+      .from("casos")
       .insert([
         {
           titulo,
@@ -189,9 +261,9 @@ export async function createCasoAction(casoData) {
           area_atuacao,
           cliente_id,
           anexos, // Array de URLs do Supabase Storage
-          status: 'ABERTO',
-          created_at: new Date().toISOString()
-        }
+          status: "ABERTO",
+          created_at: new Date().toISOString(),
+        },
       ])
       .select();
 
@@ -207,19 +279,19 @@ export async function createCasoAction(casoData) {
 export async function updateCasoAction(casoId, updateData) {
   try {
     const { titulo, descricao, area_atuacao } = updateData;
-    
+
     console.log("Iniciando updateCasoAction para ID:", casoId);
     console.log("Dados de atualização:", { titulo, descricao, area_atuacao });
 
     const { data, error } = await supabaseAdmin
-      .from('casos')
+      .from("casos")
       .update({
         titulo,
         descricao,
         area_atuacao,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', casoId)
+      .eq("id", casoId)
       .select();
 
     if (error) {
@@ -228,15 +300,23 @@ export async function updateCasoAction(casoId, updateData) {
     }
 
     if (!data || data.length === 0) {
-      console.warn("Nenhum caso foi atualizado (ID não encontrado ou sem permissão).");
-      return { success: false, message: "Não foi possível encontrar o caso para atualizar." };
+      console.warn(
+        "Nenhum caso foi atualizado (ID não encontrado ou sem permissão).",
+      );
+      return {
+        success: false,
+        message: "Não foi possível encontrar o caso para atualizar.",
+      };
     }
 
     console.log("Caso atualizado com sucesso:", data[0].id);
     return { success: true, data: data[0] };
   } catch (error) {
     console.error("Erro no updateCasoAction:", error);
-    return { success: false, message: error.message || "Erro ao atualizar caso." };
+    return {
+      success: false,
+      message: error.message || "Erro ao atualizar caso.",
+    };
   }
 }
 
@@ -244,31 +324,33 @@ export async function getNotificacoesAction(userId) {
   try {
     const supabase = createClient();
     const { data, error } = await supabase
-      .from('notificacoes')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .from("notificacoes")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
     if (error) throw error;
 
     return { success: true, data: data || [] };
   } catch (error) {
     console.error("Erro no getNotificacoesAction:", error);
-    return { success: false, message: error.message || "Erro ao buscar notificações." };
+    return {
+      success: false,
+      message: error.message || "Erro ao buscar notificações.",
+    };
   }
 }
-
 
 export async function getClientProfileAction(userId) {
   try {
     const supabase = createClient();
     const clientToUse = supabaseAdmin || supabase;
-    
+
     // 1. Tenta em Clientes
     let { data, error } = await clientToUse
-      .from('clientes')
-      .select('*')
-      .eq('id', userId)
+      .from("clientes")
+      .select("*")
+      .eq("id", userId)
       .single();
 
     if (!error) return { success: true, data };
@@ -276,9 +358,9 @@ export async function getClientProfileAction(userId) {
     // 2. Tenta em Advogados
     console.warn("Não achou em clientes, tentando advogados...");
     const { data: advData, error: advError } = await clientToUse
-      .from('advogados')
-      .select('*')
-      .eq('id', userId)
+      .from("advogados")
+      .select("*")
+      .eq("id", userId)
       .single();
 
     if (!advError) return { success: true, data: advData };
@@ -286,19 +368,23 @@ export async function getClientProfileAction(userId) {
     // 3. Tenta em Admins
     console.warn("Não achou em advogados, tentando admins...");
     const { data: adminData, error: adminError } = await clientToUse
-      .from('admins')
-      .select('*')
-      .eq('id', userId)
+      .from("admins")
+      .select("*")
+      .eq("id", userId)
       .single();
 
     if (!adminError) return { success: true, data: adminData };
 
     // Se chegou aqui, não achou em lugar nenhum
-    throw new Error("Perfil não encontrado em nenhuma categoria (Cliente, Advogado ou Admin).");
-    
+    throw new Error(
+      "Perfil não encontrado em nenhuma categoria (Cliente, Advogado ou Admin).",
+    );
   } catch (error) {
     console.error("Erro no getClientProfileAction:", error);
-    return { success: false, message: error.message || "Erro ao buscar perfil." };
+    return {
+      success: false,
+      message: error.message || "Erro ao buscar perfil.",
+    };
   }
 }
 
@@ -309,21 +395,24 @@ export async function updateClientProfileAction(userId, updateData) {
 
     // 1. Atualizar na tabela clientes
     const { error: dbError } = await supabase
-      .from('clientes')
+      .from("clientes")
       .update({ name, phone })
-      .eq('id', userId);
+      .eq("id", userId);
 
     if (dbError) throw dbError;
 
     // 2. Opcional: Atualizar no Auth (full_name)
     await supabase.auth.updateUser({
-      data: { full_name: name }
+      data: { full_name: name },
     });
 
     return { success: true, message: "Perfil atualizado com sucesso!" };
   } catch (error) {
     console.error("Erro no updateClientProfileAction:", error);
-    return { success: false, message: error.message || "Erro ao atualizar perfil." };
+    return {
+      success: false,
+      message: error.message || "Erro ao atualizar perfil.",
+    };
   }
 }
 
@@ -332,23 +421,27 @@ export async function deleteAccountAction(userId) {
     const supabase = createClient();
     // 1. Deletar da tabela clientes
     const { error: dbError } = await supabase
-      .from('clientes')
+      .from("clientes")
       .delete()
-      .eq('id', userId);
+      .eq("id", userId);
 
     if (dbError) throw dbError;
 
     // 2. Deletar do Auth (Requer supabaseAdmin / Service Role)
     if (!supabaseAdmin) {
-       throw new Error("Permissão de administrador não configurada.");
+      throw new Error("Permissão de administrador não configurada.");
     }
 
-    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    const { error: authError } =
+      await supabaseAdmin.auth.admin.deleteUser(userId);
     if (authError) throw authError;
 
     return { success: true, message: "Conta excluída com sucesso." };
   } catch (error) {
     console.error("Erro no deleteAccountAction:", error);
-    return { success: false, message: error.message || "Erro ao excluir conta." };
+    return {
+      success: false,
+      message: error.message || "Erro ao excluir conta.",
+    };
   }
 }

@@ -473,6 +473,8 @@ export default function AdvogadoDashboard() {
         return renderAgenda();
       case "triagem":
         return renderTriagem();
+      case "cartao-visitas":
+        return renderCartaoVisitas();
       case "perfil":
         return renderPerfil();
       case "documentacao":
@@ -3020,6 +3022,7 @@ export default function AdvogadoDashboard() {
             <div className={styles.avatarCard}>
               <div className={styles.avatarWrapper}>
                 {profileData.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={profileData.avatar}
                     alt={profileData.name}
@@ -3310,6 +3313,180 @@ export default function AdvogadoDashboard() {
               </button>
             </form>
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCartaoVisitas = () => {
+    if (!profileData) {
+      return (
+        <div className={styles.loadingContainer}>
+          <Loader2 className={styles.spin} /> Carregando...
+        </div>
+      );
+    }
+
+    const specialties = (profileData.specialties || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+
+    const consultationLabel =
+      profileData.consulta === "Paga"
+        ? `${profileData.tempo || "Duração a combinar"} • R$ ${Number(profileData.valor || 0).toFixed(2)}`
+        : "Consulta gratuita";
+
+    const publicUrl = `${window.location.origin}/advogados`;
+    const shareMessage = [
+      `${profileData.name || "Advogado"} | SocialJurídico`,
+      profileData.oab ? `OAB: ${profileData.oab}` : null,
+      specialties.length ? `Especialidades: ${specialties.join(", ")}` : null,
+      `Atendimento: ${consultationLabel}`,
+      profileData.phone ? `Contato: ${profileData.phone}` : null,
+      profileData.bio || null,
+      `Perfil na plataforma: ${publicUrl}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const handleCopyCard = async () => {
+      try {
+        await navigator.clipboard.writeText(shareMessage);
+        toast.success("Cartão copiado para compartilhamento.");
+      } catch {
+        toast.error("Não foi possível copiar o cartão.");
+      }
+    };
+
+    return (
+      <div className={styles.toolContainer}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Cartão de Visitas Digital</h2>
+          <p className={styles.sectionDesc}>
+            Use um resumo profissional pronto para WhatsApp, e-mail e redes.
+          </p>
+        </div>
+
+        <div className={styles.businessCardLayout}>
+          <section className={styles.businessCardPreview}>
+            <div className={styles.businessCardTop}>
+              <div className={styles.businessCardAvatar}>
+                {profileData.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profileData.avatar}
+                    alt={profileData.name}
+                    className={styles.businessCardAvatarImg}
+                  />
+                ) : (
+                  <span>{profileData.name?.charAt(0) || "A"}</span>
+                )}
+              </div>
+
+              <div className={styles.businessCardIdentity}>
+                <span className={styles.businessCardEyebrow}>
+                  ADVOGADO SOCIALJURÍDICO
+                </span>
+                <h3>{profileData.name || "Advogado"}</h3>
+                <p>{profileData.oab || "OAB pendente de cadastro"}</p>
+              </div>
+            </div>
+
+            <div className={styles.businessCardBadges}>
+              {profileData.is_premium && (
+                <span className={styles.premiumTag}>
+                  <Zap size={14} /> Premium
+                </span>
+              )}
+              <span
+                className={
+                  profileData.verified
+                    ? styles.verifiedSeal
+                    : styles.businessCardPending
+                }
+              >
+                <ShieldHalf size={14} />
+                {profileData.verified
+                  ? "OAB verificada"
+                  : "Validação OAB pendente"}
+              </span>
+            </div>
+
+            <div className={styles.businessCardInfoGrid}>
+              <div className={styles.businessCardInfoItem}>
+                <Phone size={16} />
+                <span>{profileData.phone || "Telefone não informado"}</span>
+              </div>
+              <div className={styles.businessCardInfoItem}>
+                <Mail size={16} />
+                <span>{profileData.email || "E-mail indisponível"}</span>
+              </div>
+              <div className={styles.businessCardInfoItem}>
+                <Clock size={16} />
+                <span>{consultationLabel}</span>
+              </div>
+            </div>
+
+            <div className={styles.businessCardBio}>
+              <h4>Apresentação</h4>
+              <p>
+                {profileData.bio ||
+                  "Adicione uma biografia no perfil para fortalecer seu cartão de visitas."}
+              </p>
+            </div>
+
+            <div className={styles.businessCardSpecialties}>
+              <h4>Áreas de atuação</h4>
+              <div className={styles.businessCardTags}>
+                {specialties.length ? (
+                  specialties.map((spec) => (
+                    <span key={spec} className={styles.businessCardTag}>
+                      {spec}
+                    </span>
+                  ))
+                ) : (
+                  <span className={styles.businessCardTagMuted}>
+                    Nenhuma especialidade cadastrada ainda
+                  </span>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.businessCardActions}>
+            <div className={styles.businessCardPanel}>
+              <h3>Texto pronto para compartilhar</h3>
+              <p>
+                Esse conteúdo resume seu perfil e pode ser enviado para
+                potenciais clientes sem edição manual.
+              </p>
+              <textarea
+                className={styles.businessCardTextarea}
+                value={shareMessage}
+                readOnly
+              />
+              <button
+                type="button"
+                className={styles.businessCardCopyButton}
+                onClick={handleCopyCard}
+              >
+                <Copy size={16} /> Copiar cartão
+              </button>
+            </div>
+
+            <div className={styles.businessCardPanel}>
+              <h3>Checklist de conversão</h3>
+              <ul className={styles.businessCardChecklist}>
+                <li>Adicione foto profissional para aumentar confiança.</li>
+                <li>Cadastre biografia curta com foco na sua especialidade.</li>
+                <li>Defina consulta gratuita ou informe tempo e valor.</li>
+                <li>
+                  Complete áreas de atuação para aparecer melhor nas buscas.
+                </li>
+              </ul>
+            </div>
+          </section>
         </div>
       </div>
     );
@@ -5768,6 +5945,12 @@ export default function AdvogadoDashboard() {
           >
             <BookOpen size={18} /> <span>Documentação</span>
           </div>
+          <div
+            className={`${styles.navItem} ${activeTab === "cartao-visitas" ? styles.activeNavItem : ""}`}
+            onClick={() => setActiveTab("cartao-visitas")}
+          >
+            <Eye size={18} /> <span>Cartão Digital</span>
+          </div>
         </nav>
 
         <div className={styles.sidebarFooter}>
@@ -5820,6 +6003,9 @@ export default function AdvogadoDashboard() {
             {activeTab === "triagem" && (
               <Filter size={20} className={styles.breadcrumbIcon} />
             )}
+            {activeTab === "cartao-visitas" && (
+              <Eye size={20} className={styles.breadcrumbIcon} />
+            )}
             {activeTab === "perfil" && (
               <User size={20} className={styles.breadcrumbIcon} />
             )}
@@ -5845,9 +6031,11 @@ export default function AdvogadoDashboard() {
                               ? "Agenda"
                               : activeTab === "triagem"
                                 ? "Triagem"
-                                : activeTab === "perfil"
-                                  ? "Perfil"
-                                  : "Documentação"}
+                                : activeTab === "cartao-visitas"
+                                  ? "Cartão Digital"
+                                  : activeTab === "perfil"
+                                    ? "Perfil"
+                                    : "Documentação"}
             </span>
           </div>
 

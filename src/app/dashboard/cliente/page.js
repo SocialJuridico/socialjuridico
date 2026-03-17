@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -27,6 +27,8 @@ import {
   Sparkles,
   Check,
   UserX,
+  Search,
+  Globe,
 } from "lucide-react";
 import styles from "./Dashboard.module.css";
 import {
@@ -37,6 +39,46 @@ import {
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 
+const FACEBOOK_GROUP_URL = "https://www.facebook.com/groups/1667675480204134";
+
+const USEFUL_LINKS = [
+  {
+    title: "ConfirmaAdv",
+    description: "Consulta pública de dados da advocacia.",
+    href: "https://confirmaadv.oab.org.br/",
+  },
+  {
+    title: "Receita Federal",
+    description: "Portal oficial da Receita Federal do Brasil.",
+    href: "https://www.gov.br/receitafederal/pt-br",
+  },
+  {
+    title: "e-CAC",
+    description: "Centro Virtual de Atendimento ao Contribuinte.",
+    href: "https://cav.receita.fazenda.gov.br/",
+  },
+  {
+    title: "CNJ",
+    description: "Serviços e informações do Conselho Nacional de Justiça.",
+    href: "https://www.cnj.jus.br/",
+  },
+  {
+    title: "TST",
+    description: "Portal do Tribunal Superior do Trabalho.",
+    href: "https://www.tst.jus.br/",
+  },
+  {
+    title: "Central Registradores",
+    description: "Serviços digitais e certidões dos registradores.",
+    href: "https://www.registradores.org.br/",
+  },
+  {
+    title: "Consulta Geral de Processos",
+    description: "Busca pública ampla para acompanhamento processual.",
+    href: "https://www.jusbrasil.com.br/consulta-processual/",
+  },
+];
+
 export default function ClienteDashboard() {
   const [userName, setUserName] = useState("Cliente");
   const [activeTab, setActiveTab] = useState("painel");
@@ -46,6 +88,10 @@ export default function ClienteDashboard() {
   const [casos, setCasos] = useState([]);
   const [loadingCasos, setLoadingCasos] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [lawyerSearch, setLawyerSearch] = useState("");
+  const [shareCaseOnFacebook, setShareCaseOnFacebook] = useState(false);
+  const [caseActionLoadingId, setCaseActionLoadingId] = useState(null);
+  const [expandedSpecialties, setExpandedSpecialties] = useState({});
 
   // States para Interesses de Advogados
   const [interesses, setInteresses] = useState([]);
@@ -86,6 +132,43 @@ export default function ClienteDashboard() {
     phone: "",
     password: "",
   });
+
+  // Filtra advogados com especialidade preenchida
+  const advogadosComEspecialidade = useMemo(() => {
+    return advogados.filter((adv) => {
+      const specs = String(adv.specialties || "").trim();
+      return specs && specs !== "Clínico Geral" && specs.length > 0;
+    });
+  }, [advogados]);
+
+  // Agrupa advogados por especialidade
+  const groupedAdvogadosBySpecialty = useMemo(() => {
+    const searchTerm = lawyerSearch.trim().toLowerCase();
+    const grupos = {};
+
+    advogadosComEspecialidade.forEach((adv) => {
+      // Filtro de busca
+      const normalizedName = String(adv.name || "").toLowerCase();
+      const normalizedOab = String(adv.oab || "").toLowerCase();
+      
+      if (searchTerm && !normalizedName.includes(searchTerm) && !normalizedOab.includes(searchTerm)) {
+        return; // Pula este advogado se não corresponder à busca
+      }
+
+      // Processa especialidades (pode ter múltiplas separadas por vírgula)
+      const specs = String(adv.specialties || "").split(",").map(s => s.trim());
+      specs.forEach((spec) => {
+        if (spec && spec !== "Clínico Geral") {
+          if (!grupos[spec]) {
+            grupos[spec] = [];
+          }
+          grupos[spec].push(adv);
+        }
+      });
+    });
+
+    return grupos;
+  }, [advogadosComEspecialidade, lawyerSearch]);
 
   const openNotificationsTab = async () => {
     setActiveTab("notificacoes");
@@ -401,6 +484,87 @@ export default function ClienteDashboard() {
     }
   };
 
+  const handleFinalizeCaso = async () => {
+    if (!selectedCaso || caseActionLoadingId) return;
+
+    setCaseActionLoadingId(selectedCaso.id);
+    try {
+      const res = await fetch("/api/casos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: selectedCaso.id, status: "FECHADO" }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Falha ao finalizar caso.");
+        return;
+      }
+
+      toast.success("Caso finalizado com sucesso.");
+      setIsEditModalOpen(false);
+      await loadCasos();
+    } catch (error) {
+      console.error("Erro ao finalizar caso:", error);
+      toast.error("Erro ao finalizar caso.");
+    } finally {
+      setCaseActionLoadingId(null);
+    }
+  };
+
+  const handleDeleteCaso = async () => {
+    if (!selectedCaso || caseActionLoadingId) return;
+
+    setCaseActionLoadingId(selectedCaso.id);
+    try {
+      const res = await fetch(`/api/casos?id=${selectedCaso.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Falha ao excluir caso.");
+        return;
+      }
+
+      toast.success("Caso excluído com sucesso.");
+      setIsEditModalOpen(false);
+      setSelectedCaso(null);
+      await loadCasos();
+    } catch (error) {
+      console.error("Erro ao excluir caso:", error);
+      toast.error("Erro ao excluir caso.");
+    } finally {
+      setCaseActionLoadingId(null);
+    }
+  };
+
+  const shareCaseToFacebookGroup = async (casePayload) => {
+    const siteUrl =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://socialjuridico.com.br";
+    const shareText = [
+      `Novo caso publicado no SocialJuridico`,
+      `Título: ${casePayload.titulo}`,
+      `Descrição: ${casePayload.descricao}`,
+      `Link do site: ${siteUrl}`,
+    ].join("\n\n");
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+      }
+    } catch (error) {
+      console.error("Erro ao copiar texto do caso:", error);
+    }
+
+    window.open(FACEBOOK_GROUP_URL, "_blank", "noopener,noreferrer");
+    toast.success(
+      "Conteúdo do caso copiado. Cole no grupo do Facebook para publicar.",
+    );
+  };
+
   const syncNotificacoes = async (showToastsForNew = false) => {
     try {
       const res = await fetch("/api/notificacoes", { cache: "no-store" });
@@ -530,9 +694,17 @@ export default function ClienteDashboard() {
       }
 
       if (result.success) {
+        if (shareCaseOnFacebook) {
+          await shareCaseToFacebookGroup({
+            titulo: formData.titulo,
+            descricao: formData.descricao,
+          });
+        }
+
         setFormSuccess(true);
         setFormData({ titulo: "", area: "", descricao: "" });
         setSelectedFiles([]);
+        setShareCaseOnFacebook(false);
         setTimeout(() => {
           setFormSuccess(false);
           setActiveTab("painel");
@@ -604,6 +776,139 @@ export default function ClienteDashboard() {
       setFormLoading(false);
     }
   };
+
+  const renderLawyerCard = (adv) => (
+    <div
+      key={adv.id}
+      className={`${styles.lawyerCard} ${adv.is_premium ? styles.lawyerCardPro : ""}`}
+    >
+      {adv.is_premium && (
+        <div className={styles.proLawyerBadge}>
+          <Sparkles size={11} /> PRO
+        </div>
+      )}
+      <div className={styles.statusBadge}>
+        <div
+          className={
+            onlineLawyerIds.includes(adv.id)
+              ? styles.onlineDot
+              : styles.offlineDot
+          }
+        ></div>
+        {onlineLawyerIds.includes(adv.id) ? "Online" : "Offline"}
+      </div>
+
+      {adv.avatar ? (
+        <div className={styles.lawyerAvatarWrapper}>
+          <Image
+            src={adv.avatar}
+            alt={adv.name}
+            width={80}
+            height={80}
+            className={styles.lawyerAvatar}
+            unoptimized
+          />
+        </div>
+      ) : (
+        <div className={styles.lawyerAvatar}>
+          {adv.name.substring(0, 2).toUpperCase()}
+        </div>
+      )}
+
+      <div className={styles.lawyerInfo}>
+        <h3 className={styles.lawyerName}>{adv.name}</h3>
+        {/* OAB - Comentado pois ainda não há verificação oficial no site */}
+        {/* <div
+          className={`${styles.oabStatusBadge} ${adv.verified ? styles.oabStatusVerified : styles.oabStatusPending}`}
+        >
+          {adv.verified ? (
+            <ShieldCheck
+              size={14}
+              className={styles.verifiedIcon}
+            />
+          ) : null}
+          {adv.verified
+            ? "OAB verificada"
+            : "OAB não verificada"}
+        </div> */}
+        <p className={styles.lawyerOab}>
+          {adv.oab ? `OAB ${adv.oab}` : "OAB não informada"}
+        </p>
+        <p className={styles.lawyerSpecs}>
+          {adv.specialties || "Clínico Geral"}
+        </p>
+        <div className={styles.consultaInfo}>
+          {adv.consulta === "Paga" ? (
+            <>
+              <strong>Consulta paga</strong>
+              <span>
+                {adv.tempo
+                  ? adv.tempo
+                  : "Duração não informada"}
+                {adv.valor
+                  ? ` • R$ ${Number(adv.valor).toFixed(2)}`
+                  : " • Valor sob consulta"}
+              </span>
+            </>
+          ) : (
+            <>
+              <strong>Consulta gratuita</strong>
+              <span>
+                Primeiro contato sem custo informado.
+              </span>
+            </>
+          )}
+        </div>
+
+        {adv.avg_rating > 0 && (
+          <div className={styles.ratingRow}>
+            <Star
+              size={16}
+              fill="var(--color-gold)"
+              className={styles.starIcon}
+            />
+            <span className={styles.ratingValue}>
+              {adv.avg_rating.toFixed(1)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className={styles.statsRow}>
+        <div className={styles.statItem}>
+          <span className={styles.statValue}>
+            {adv.total_ratings || 0}
+          </span>
+          <span className={styles.statLabel}>Avaliações</span>
+        </div>
+        <div className={styles.statItem}>
+          <span className={styles.statValue}>100%</span>
+          <span className={styles.statLabel}>Sucesso</span>
+        </div>
+      </div>
+
+      {adv.is_premium ? (
+        <button
+          className={styles.contactBtn}
+          onClick={() =>
+            toast(
+              "Em breve: envio de mensagem direta para advogados PRO.",
+            )
+          }
+        >
+          Falar com Advogado
+        </button>
+      ) : (
+        <button
+          className={`${styles.contactBtn} ${styles.contactBtnDisabled}`}
+          disabled
+          title="Apenas advogados PRO aceitam mensagens"
+        >
+          <Lock size={12} /> PRO necessário
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div
@@ -692,6 +997,15 @@ export default function ClienteDashboard() {
             <MessageSquare size={22} />
             {!isSidebarCollapsed && <span>Minhas Conversas</span>}
           </Link>
+          <Link
+            href="#"
+            className={`${styles.navItem} ${activeTab === "links-uteis" ? styles.activeNavItem : ""}`}
+            onClick={() => setActiveTab("links-uteis")}
+            title="Links Úteis"
+          >
+            <Globe size={22} />
+            {!isSidebarCollapsed && <span>Links Úteis</span>}
+          </Link>
           <button
             className={`${styles.navItem} ${styles.logoutBtn}`}
             title="Sair"
@@ -719,9 +1033,11 @@ export default function ClienteDashboard() {
                     ? "Notificações"
                     : activeTab === "meus-casos"
                       ? "Meus Casos"
-                      : activeTab === "conversas"
-                        ? "Minhas Conversas"
-                        : "Meu Perfil"}
+                      : activeTab === "links-uteis"
+                        ? "Links Úteis"
+                        : activeTab === "conversas"
+                          ? "Minhas Conversas"
+                          : "Meu Perfil"}
             </h1>
             <p>Bem-vindo, {userName}</p>
             {profileData && (
@@ -809,6 +1125,17 @@ export default function ClienteDashboard() {
                   <h2 className={styles.sectionTitle}>Advogados Disponíveis</h2>
                 </div>
 
+                <div className={styles.lawyerSearchWrap}>
+                  <Search size={16} className={styles.lawyerSearchIcon} />
+                  <input
+                    type="text"
+                    className={styles.lawyerSearchInput}
+                    placeholder="Buscar advogado por nome ou OAB..."
+                    value={lawyerSearch}
+                    onChange={(e) => setLawyerSearch(e.target.value)}
+                  />
+                </div>
+
                 {/* INTERESSES PENDENTES */}
                 {interesses.length > 0 && (
                   <div className={styles.interessesSection}>
@@ -871,120 +1198,54 @@ export default function ClienteDashboard() {
                   </div>
                 )}
 
-                <div className={styles.lawyersGrid}>
-                  {loadingAdvogados ? (
-                    <p>Carregando advogados...</p>
-                  ) : advogados.length > 0 ? (
-                    advogados.map((adv) => (
-                      <div
-                        key={adv.id}
-                        className={`${styles.lawyerCard} ${adv.is_premium ? styles.lawyerCardPro : ""}`}
-                      >
-                        {adv.is_premium && (
-                          <div className={styles.proLawyerBadge}>
-                            <Sparkles size={11} /> PRO
-                          </div>
-                        )}
-                        <div className={styles.statusBadge}>
-                          <div
-                            className={
-                              onlineLawyerIds.includes(adv.id)
-                                ? styles.onlineDot
-                                : styles.offlineDot
-                            }
-                          ></div>
-                          {onlineLawyerIds.includes(adv.id)
-                            ? "Online"
-                            : "Offline"}
-                        </div>
+                {/* Seções de Especialidades */}
+                {loadingAdvogados ? (
+                  <p>Carregando advogados...</p>
+                ) : Object.keys(groupedAdvogadosBySpecialty).length > 0 ? (
+                  Object.keys(groupedAdvogadosBySpecialty).map((specialty) => {
+                    const advsInSpecialty = groupedAdvogadosBySpecialty[specialty];
+                    const isExpanded = expandedSpecialties[specialty] || false;
+                    const displayedAdvs = isExpanded ? advsInSpecialty : advsInSpecialty.slice(0, 5);
+                    const hasMoreAdvs = advsInSpecialty.length > 5;
 
-                        {adv.avatar ? (
-                          <div className={styles.lawyerAvatarWrapper}>
-                            <Image
-                              src={adv.avatar}
-                              alt={adv.name}
-                              width={80}
-                              height={80}
-                              className={styles.lawyerAvatar}
-                              unoptimized
-                            />
-                          </div>
-                        ) : (
-                          <div className={styles.lawyerAvatar}>
-                            {adv.name.substring(0, 2).toUpperCase()}
-                          </div>
-                        )}
-
-                        <div className={styles.lawyerInfo}>
-                          <h3 className={styles.lawyerName}>
-                            {adv.name}
-                            {adv.verified && (
-                              <ShieldCheck
-                                size={16}
-                                className={styles.verifiedIcon}
-                              />
-                            )}
-                          </h3>
-                          <p className={styles.lawyerOab}>
-                            OAB {adv.oab || "N/A"}
-                          </p>
-                          <p className={styles.lawyerSpecs}>
-                            {adv.specialties || "Clínico Geral"}
-                          </p>
-
-                          {adv.avg_rating > 0 && (
-                            <div className={styles.ratingRow}>
-                              <Star
-                                size={16}
-                                fill="var(--color-gold)"
-                                className={styles.starIcon}
-                              />
-                              <span className={styles.ratingValue}>
-                                {adv.avg_rating.toFixed(1)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className={styles.statsRow}>
-                          <div className={styles.statItem}>
-                            <span className={styles.statValue}>
-                              {adv.total_ratings || 0}
+                    return (
+                      <div key={specialty} className={styles.specialtySection}>
+                        <div className={styles.specialtyHeader}>
+                          <h3 className={styles.specialtyTitle}>
+                            {specialty}
+                            <span className={styles.specialtyCount}>
+                              ({advsInSpecialty.length})
                             </span>
-                            <span className={styles.statLabel}>Avaliações</span>
-                          </div>
-                          <div className={styles.statItem}>
-                            <span className={styles.statValue}>100%</span>
-                            <span className={styles.statLabel}>Sucesso</span>
-                          </div>
+                          </h3>
                         </div>
 
-                        {adv.is_premium ? (
-                          <button
-                            className={styles.contactBtn}
-                            onClick={() =>
-                              toast(
-                                "Em breve: envio de mensagem direta para advogados PRO.",
-                              )
-                            }
-                          >
-                            Falar com Advogado
-                          </button>
-                        ) : (
-                          <button
-                            className={`${styles.contactBtn} ${styles.contactBtnDisabled}`}
-                            disabled
-                            title="Apenas advogados PRO aceitam mensagens"
-                          >
-                            <Lock size={12} /> PRO necessário
-                          </button>
+                        <div className={styles.lawyersGrid}>
+                          {displayedAdvs.map((adv) => renderLawyerCard(adv))}
+                        </div>
+
+                        {hasMoreAdvs && (
+                          <div className={styles.viewMoreContainer}>
+                            <button
+                              className={styles.viewMoreBtn}
+                              onClick={() =>
+                                setExpandedSpecialties((prev) => ({
+                                  ...prev,
+                                  [specialty]: !isExpanded,
+                                }))
+                              }
+                            >
+                              {isExpanded
+                                ? "Ver menos"
+                                : `Ver mais (${advsInSpecialty.length - 5})`}
+                            </button>
+                          </div>
                         )}
                       </div>
-                    ))
-                  ) : (
-                    <p>Nenhum advogado encontrado.</p>
-                  )}
-                </div>
+                    );
+                  })
+                ) : (
+                  <p>Nenhum advogado com especialidade preenchida encontrado.</p>
+                )}
               </div>
             </div>
           )}
@@ -1052,6 +1313,18 @@ export default function ClienteDashboard() {
                       }
                     ></textarea>
                   </div>
+
+                  <label className={styles.shareCheckboxRow}>
+                    <input
+                      type="checkbox"
+                      checked={shareCaseOnFacebook}
+                      onChange={(e) => setShareCaseOnFacebook(e.target.checked)}
+                    />
+                    <span>
+                      Abrir o grupo do Facebook ao publicar e copiar o título, a
+                      descrição e o link do site para compartilhamento.
+                    </span>
+                  </label>
 
                   <div className={styles.formGroup}>
                     <label>Anexos (Opcional - Máx 5)</label>
@@ -1449,6 +1722,36 @@ export default function ClienteDashboard() {
               )}
             </div>
           )}
+
+          {activeTab === "links-uteis" && (
+            <div className={styles.linksPage}>
+              <div
+                className={styles.sectionHeader}
+                style={{ marginBottom: "24px" }}
+              >
+                <h2 className={styles.sectionTitle}>Links Úteis</h2>
+              </div>
+
+              <div className={styles.usefulLinksGrid}>
+                {USEFUL_LINKS.map((item) => (
+                  <a
+                    key={item.title}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.usefulLinkCard}
+                  >
+                    <div className={styles.usefulLinkHeader}>
+                      <Globe size={18} />
+                      <strong>{item.title}</strong>
+                    </div>
+                    <p>{item.description}</p>
+                    <span>Abrir link</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       </main>
 
@@ -1554,6 +1857,33 @@ export default function ClienteDashboard() {
                     Aguardando advogado...
                   </button>
                 )}
+              </div>
+
+              <div className={styles.modalSecondaryActions}>
+                {selectedCaso.status !== "FECHADO" && (
+                  <button
+                    type="button"
+                    className={styles.finalizeBtn}
+                    onClick={handleFinalizeCaso}
+                    disabled={caseActionLoadingId === selectedCaso.id}
+                  >
+                    <CheckCircle2 size={18} style={{ marginRight: 8 }} />
+                    {caseActionLoadingId === selectedCaso.id
+                      ? "Processando..."
+                      : "Finalizar caso"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.deleteCaseBtn}
+                  onClick={handleDeleteCaso}
+                  disabled={caseActionLoadingId === selectedCaso.id}
+                >
+                  <Trash2 size={18} style={{ marginRight: 8 }} />
+                  {caseActionLoadingId === selectedCaso.id
+                    ? "Processando..."
+                    : "Apagar caso"}
+                </button>
               </div>
             </form>
           </div>

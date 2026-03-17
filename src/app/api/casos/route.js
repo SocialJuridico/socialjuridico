@@ -202,3 +202,122 @@ export async function PUT(request) {
     );
   }
 }
+
+export async function PATCH(request) {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
+    }
+
+    const body = await request.json();
+    const { id, status } = body || {};
+
+    if (!id || !status) {
+      return NextResponse.json(
+        { success: false, message: "ID e status são obrigatórios" },
+        { status: 400 },
+      );
+    }
+
+    const normalizedStatus = String(status).trim().toUpperCase();
+    if (!["ABERTO", "FECHADO"].includes(normalizedStatus)) {
+      return NextResponse.json(
+        { success: false, message: "Status inválido" },
+        { status: 400 },
+      );
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("casos")
+      .update({
+        status: normalizedStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .eq("cliente_id", user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    console.error("Erro na API PATCH /api/casos:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Erro interno no servidor" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const casoId = searchParams.get("id");
+
+    if (!casoId) {
+      return NextResponse.json(
+        { success: false, message: "ID do caso é obrigatório" },
+        { status: 400 },
+      );
+    }
+
+    const { data: caso, error: casoError } = await supabaseAdmin
+      .from("casos")
+      .select("id, cliente_id")
+      .eq("id", casoId)
+      .eq("cliente_id", user.id)
+      .single();
+
+    if (casoError || !caso) {
+      return NextResponse.json(
+        { success: false, message: "Caso não encontrado ou sem permissão" },
+        { status: 404 },
+      );
+    }
+
+    await supabaseAdmin.from("mensagens").delete().eq("caso_id", casoId);
+    await supabaseAdmin.from("case_interests").delete().eq("case_id", casoId);
+
+    const { error: deleteError } = await supabaseAdmin
+      .from("casos")
+      .delete()
+      .eq("id", casoId)
+      .eq("cliente_id", user.id);
+
+    if (deleteError) throw deleteError;
+
+    return NextResponse.json({
+      success: true,
+      message: "Caso removido com sucesso",
+    });
+  } catch (error) {
+    console.error("Erro na API DELETE /api/casos:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Erro interno no servidor" },
+      { status: 500 },
+    );
+  }
+}

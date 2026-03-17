@@ -464,6 +464,29 @@
   color: var(--color-gold);
 }
 
+.oabStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.oabStatusVerified {
+  background: rgba(16, 185, 129, 0.14);
+  color: #86efac;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.oabStatusPending {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.24);
+}
+
 .lawyerOab {
   font-size: 0.8rem;
   color: var(--color-gold);
@@ -490,6 +513,53 @@
   align-items: center;
   width: 100%;
   min-height: 120px; /* Garante espaço consistente para nome e especialidades */
+}
+
+.consultaInfo {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 4px;
+  text-align: left;
+}
+
+.consultaInfo strong {
+  display: block;
+  color: var(--color-gold);
+  font-size: 0.82rem;
+}
+
+.consultaInfo span {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-silver);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.lawyerSearchWrap {
+  position: relative;
+  margin-bottom: 18px;
+}
+
+.lawyerSearchIcon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-silver-dark);
+}
+
+.lawyerSearchInput {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  color: var(--color-white);
+  border-radius: 12px;
+  padding: 12px 14px 12px 42px;
 }
 
 .ratingRow {
@@ -574,6 +644,64 @@
   justify-content: center;
 }
 
+/* Seções de Especialidades */
+.specialtySection {
+  margin-bottom: 40px;
+}
+
+.specialtyHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+.specialtyTitle {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-white);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.specialtyCount {
+  font-size: 0.9rem;
+  color: var(--color-silver-dark);
+  font-weight: 600;
+}
+
+.viewMoreContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.viewMoreBtn {
+  background: linear-gradient(135deg, var(--color-gold), #b8860b);
+  color: var(--color-black);
+  border: none;
+  padding: 12px 32px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.viewMoreBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+}
+
+.viewMoreBtn:active {
+  transform: translateY(0);
+}
+
 @media (max-width: 1024px) {
   .contentGrid {
     flex-direction: column;
@@ -627,6 +755,29 @@
     gap: 12px;
   }
 
+  .specialtyTitle {
+    font-size: 1.1rem;
+  }
+
+  .specialtySection {
+    margin-bottom: 32px;
+  }
+
+  .lawyersGrid {
+    grid-template-columns: 1fr; /* Força uma coluna única */
+    justify-items: center;
+  }
+
+  .lawyerCard {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .viewMoreBtn {
+    padding: 10px 24px;
+    font-size: 0.85rem;
+  }
+
   .bottomPowered {
     padding: 32px 0;
     width: 100%;
@@ -668,6 +819,20 @@
   font-weight: 700;
   color: var(--color-gold);
   margin-bottom: 8px;
+}
+
+.shareCheckboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: -4px;
+  margin-bottom: 20px;
+  color: var(--color-silver);
+  font-size: 0.88rem;
+}
+
+.shareCheckboxRow input {
+  margin-top: 3px;
 }
 
 .formInput,
@@ -1078,6 +1243,52 @@
   margin-top: 40px;
 }
 
+.linksPage {
+  width: 100%;
+}
+
+.usefulLinksGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.usefulLinkCard {
+  background: var(--color-black-light);
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  border-radius: 18px;
+  padding: 20px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+}
+
+.usefulLinkCard:hover {
+  border-color: var(--color-gold);
+  transform: translateY(-3px);
+}
+
+.usefulLinkHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-gold);
+  margin-bottom: 10px;
+}
+
+.usefulLinkCard p {
+  color: var(--color-silver);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.usefulLinkCard span {
+  color: var(--color-white);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .saveProfileBtn {
   background: var(--color-gold);
   color: var(--color-black);
@@ -1267,6 +1478,13 @@
   margin-top: 40px;
 }
 
+.modalSecondaryActions {
+  margin-top: 12px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .saveChangesBtn {
   width: 100%;
   background: linear-gradient(
@@ -1316,6 +1534,27 @@
   cursor: not-allowed;
   border-color: var(--color-silver-dark);
   color: var(--color-silver-dark);
+}
+
+.finalizeBtn,
+.deleteCaseBtn {
+  flex: 1;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.finalizeBtn {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: #86efac;
+}
+
+.deleteCaseBtn {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #fca5a5;
 }
 
 @media (max-width: 600px) {
@@ -1406,8 +1645,8 @@
   line-height: 1.6;
   margin: 0;
   display: -webkit-box;
-  line-clamp: 3;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

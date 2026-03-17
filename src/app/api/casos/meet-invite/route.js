@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isLawyer } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
 
 function normalizeMeetLink(rawUrl) {
@@ -37,7 +38,8 @@ export async function POST(request) {
       );
     }
 
-    if (user.user_metadata?.role !== "LAWYER") {
+    const db = supabaseAdmin || supabase;
+    if (!(await isLawyer(db, user.id))) {
       return NextResponse.json(
         {
           success: false,
@@ -68,7 +70,7 @@ export async function POST(request) {
       );
     }
 
-    const { data: caso, error: casoError } = await supabaseAdmin
+    const { data: caso, error: casoError } = await db
       .from("casos")
       .select("id, titulo, cliente_id, advogado_id")
       .eq("id", casoId)
@@ -95,7 +97,7 @@ export async function POST(request) {
 
     const now = new Date().toISOString();
     const [{ error: msgError }, { error: notifError }] = await Promise.all([
-      supabaseAdmin.from("mensagens").insert([
+      db.from("mensagens").insert([
         {
           caso_id: casoId,
           sender_id: user.id,
@@ -104,7 +106,7 @@ export async function POST(request) {
           created_at: now,
         },
       ]),
-      supabaseAdmin.from("notificacoes").insert([
+      db.from("notificacoes").insert([
         {
           user_id: caso.cliente_id,
           titulo: "Convite para videochamada",

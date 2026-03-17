@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isLawyer } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
 
 // POST /api/casos/chat-start
@@ -20,8 +21,8 @@ export async function POST(request) {
       );
     }
 
-    const role = user.user_metadata?.role;
-    if (role !== "LAWYER") {
+    const db = supabaseAdmin || supabase;
+    if (!(await isLawyer(db, user.id))) {
       return NextResponse.json(
         { success: false, message: "Apenas advogados utilizam esta rota" },
         { status: 403 },
@@ -38,7 +39,7 @@ export async function POST(request) {
     }
 
     // 1. Verificar se o caso pertence ao advogado logado
-    const { data: caso, error: cError } = await supabaseAdmin
+    const { data: caso, error: cError } = await db
       .from("casos")
       .select("id, advogado_id, chat_started, titulo, cliente_id")
       .eq("id", casoId)
@@ -71,7 +72,7 @@ export async function POST(request) {
     }
 
     // 3. Verificar saldo do advogado (precisa de 4 Juris)
-    const { data: advogado, error: advError } = await supabaseAdmin
+    const { data: advogado, error: advError } = await db
       .from("advogados")
       .select("balance")
       .eq("id", user.id)
@@ -99,14 +100,8 @@ export async function POST(request) {
     const newBalance = advogado.balance - 4;
 
     await Promise.all([
-      supabaseAdmin
-        .from("advogados")
-        .update({ balance: newBalance })
-        .eq("id", user.id),
-      supabaseAdmin
-        .from("casos")
-        .update({ chat_started: true })
-        .eq("id", casoId),
+      db.from("advogados").update({ balance: newBalance }).eq("id", user.id),
+      db.from("casos").update({ chat_started: true }).eq("id", casoId),
     ]);
 
     return NextResponse.json({

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
+import { getRoleFromDatabase } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
 
 export async function POST(request) {
@@ -17,7 +18,8 @@ export async function POST(request) {
       );
     }
 
-    const role = user.user_metadata?.role || "CLIENT";
+    const db = supabaseAdmin || supabase;
+    const role = (await getRoleFromDatabase(db, user.id)) || "CLIENT";
     if (role !== "CLIENT") {
       return NextResponse.json(
         { success: false, message: "Apenas clientes podem publicar casos" },
@@ -38,7 +40,7 @@ export async function POST(request) {
       );
     }
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await db
       .from("casos")
       .insert([
         {
@@ -85,14 +87,15 @@ export async function GET(request) {
       );
     }
 
-    const role = user.user_metadata?.role || "CLIENT";
+    const db = supabaseAdmin || supabase;
+    const role = (await getRoleFromDatabase(db, user.id)) || "CLIENT";
     // ⚠️ SEGURANÇA: Não logar user.id ou user.email
 
-    let query = supabaseAdmin.from("casos").select("*");
+    let query = db.from("casos").select("*");
 
     if (role === "LAWYER") {
       // Advogado vê casos vinculados a ele OU casos abertos sem advogado
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await db
         .from("casos")
         .select("*")
         .or(
@@ -104,7 +107,7 @@ export async function GET(request) {
       return NextResponse.json({ success: true, data: data || [] });
     } else {
       // Cliente vê apenas os próprios casos
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await db
         .from("casos")
         .select("*")
         .eq("cliente_id", user.id)
@@ -114,13 +117,13 @@ export async function GET(request) {
 
       // Se não achou nada, verificamos por email (debug)
       if (data.length === 0) {
-        const { data: profile } = await supabaseAdmin
+        const { data: profile } = await db
           .from("clientes")
           .select("id")
           .eq("email", user.email)
           .single();
         if (profile && profile.id !== user.id) {
-          const { data: emailData } = await supabaseAdmin
+          const { data: emailData } = await db
             .from("casos")
             .select("*")
             .eq("cliente_id", profile.id);

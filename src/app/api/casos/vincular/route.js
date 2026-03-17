@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isLawyer } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
 
 export async function POST(request) {
@@ -27,8 +28,8 @@ export async function POST(request) {
     }
 
     // 1. Verificar se o usuário é um advogado PRO
-    const role = user.user_metadata?.role;
-    if (role !== "LAWYER") {
+    const db = supabaseAdmin || supabase;
+    if (!(await isLawyer(db, user.id))) {
       return NextResponse.json(
         {
           success: false,
@@ -39,7 +40,7 @@ export async function POST(request) {
     }
 
     // 2. Buscar perfil do advogado (is_premium + balance + name)
-    const { data: advogado, error: advError } = await supabaseAdmin
+    const { data: advogado, error: advError } = await db
       .from("advogados")
       .select("id, name, is_premium, balance")
       .eq("id", user.id)
@@ -74,7 +75,7 @@ export async function POST(request) {
     }
 
     // 3. Verificar se o caso ainda está disponível
-    const { data: caso, error: fetchError } = await supabaseAdmin
+    const { data: caso, error: fetchError } = await db
       .from("casos")
       .select("id, status, advogado_id, cliente_id, titulo")
       .eq("id", casoId)
@@ -105,7 +106,7 @@ export async function POST(request) {
     }
 
     // 4. Verificar se já manifestou interesse neste caso
-    const { data: existingInterest } = await supabaseAdmin
+    const { data: existingInterest } = await db
       .from("case_interests")
       .select("id")
       .eq("case_id", casoId)
@@ -123,17 +124,15 @@ export async function POST(request) {
     const now = new Date().toISOString();
     const interestId = crypto.randomUUID();
 
-    const { error: interestError } = await supabaseAdmin
-      .from("case_interests")
-      .insert([
-        {
-          id: interestId,
-          case_id: casoId,
-          lawyer_id: user.id,
-          status: "PENDING",
-          created_at: now,
-        },
-      ]);
+    const { error: interestError } = await db.from("case_interests").insert([
+      {
+        id: interestId,
+        case_id: casoId,
+        lawyer_id: user.id,
+        status: "PENDING",
+        created_at: now,
+      },
+    ]);
 
     if (interestError) {
       // Se a coluna 'status' ainda não existe no banco, insere sem ela
@@ -141,7 +140,7 @@ export async function POST(request) {
         interestError.code === "PGRST204" &&
         interestError.message?.includes("status")
       ) {
-        const { error: fallbackError } = await supabaseAdmin
+        const { error: fallbackError } = await db
           .from("case_interests")
           .insert([
             {
@@ -158,7 +157,7 @@ export async function POST(request) {
     }
 
     // 6. Debitar 1 Juri do saldo do advogado
-    const { error: balanceError } = await supabaseAdmin
+    const { error: balanceError } = await db
       .from("advogados")
       .update({ balance: advogado.balance - 1 })
       .eq("id", user.id);
@@ -174,19 +173,17 @@ export async function POST(request) {
       created_at: now,
     };
 
-    const { error: notifError } = await supabaseAdmin
-      .from("notificacoes")
-      .insert([
-        {
-          ...notifBase,
-          tipo: "INTERESSE",
-          meta: JSON.stringify({ case_id: casoId, lawyer_id: user.id }),
-        },
-      ]);
+    const { error: notifError } = await db.from("notificacoes").insert([
+      {
+        ...notifBase,
+        tipo: "INTERESSE",
+        meta: JSON.stringify({ case_id: casoId, lawyer_id: user.id }),
+      },
+    ]);
 
     if (notifError?.code === "PGRST204") {
       // Colunas tipo/meta não existem ainda — insere sem elas
-      await supabaseAdmin.from("notificacoes").insert([notifBase]);
+      await db.from("notificacoes").insert([notifBase]);
     }
 
     return NextResponse.json({

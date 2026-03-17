@@ -145,9 +145,8 @@ export async function POST(request) {
 
     if (authError) {
       console.error("ERRO LOGIN AUTH:", {
-        email: email,
         errorCode: authError.code,
-        errorMessage: authError.message,
+        errorMessage: "Credenciais inválidas ou conta não encontrada",
         status: authError.status,
       });
       return NextResponse.json(

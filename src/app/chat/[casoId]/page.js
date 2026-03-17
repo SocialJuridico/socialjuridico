@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -33,6 +33,18 @@ export default function ChatPage() {
   const [showMeetModal, setShowMeetModal] = useState(false);
   const [meetLinkInput, setMeetLinkInput] = useState("");
   const [newMessage, setNewMessage] = useState("");
+
+  const loadMensagens = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/mensagens?caso_id=${casoId}`);
+      const data = await res.json();
+      if (data.success) {
+        setMensagens(data.data);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar mensagens:", err);
+    }
+  }, [casoId]);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -81,7 +93,7 @@ export default function ChatPage() {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [casoId]);
+  }, [casoId, loadMensagens, router]);
 
   useEffect(() => {
     if (currentUser?.role !== "LAWYER" || !currentUser?.id) return;
@@ -136,18 +148,6 @@ export default function ChatPage() {
     // Considera "no final" se estiver a menos de 80px do fim
     isAtBottomRef.current =
       area.scrollHeight - area.scrollTop - area.clientHeight < 80;
-  };
-
-  const loadMensagens = async () => {
-    try {
-      const res = await fetch(`/api/mensagens?caso_id=${casoId}`);
-      const data = await res.json();
-      if (data.success) {
-        setMensagens(data.data);
-      }
-    } catch (err) {
-      console.error("Erro ao carregar mensagens:", err);
-    }
   };
 
   const handleSubmit = async (e) => {

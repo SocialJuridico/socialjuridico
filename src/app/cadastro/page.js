@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Scale, Loader2 } from "lucide-react";
+import { ArrowLeft, Scale, Loader2, CheckCircle2 } from "lucide-react";
 import styles from "./Cadastro.module.css";
 import { verifyOAB } from "@/app/actions/verifyOAB";
 import { signUpAction } from "@/app/actions/authActions";
@@ -366,18 +366,22 @@ export default function Cadastro() {
             )}
 
             {successMsg && (
-              <div
-                style={{
-                  backgroundColor: "rgba(16, 185, 129, 0.1)",
-                  color: "#10B981",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  marginBottom: "20px",
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                }}
-              >
-                ✅ {successMsg}
+              <div style={{ textAlign: 'center', padding: '16px' }}>
+                <div style={{ color: 'var(--color-gold)', fontSize: '48px', marginBottom: '16px' }}>
+                  <CheckCircle2 size={64} style={{ margin: '0 auto' }} />
+                </div>
+                <h3 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '8px' }}>Verifique seu email!</h3>
+                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '24px' }}>
+                  Enviamos um link de confirmação para <strong>{formData.email}</strong>. Por favor, clique no link para ativar sua conta antes de fazer o login.
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                   <Link href="/login" className={styles.submitBtn} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    Ir para Login
+                   </Link>
+                   <button onClick={() => setSuccessMsg("")} className={styles.submitBtn} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    Fazer novo cadastro
+                   </button>
+                </div>
               </div>
             )}
 

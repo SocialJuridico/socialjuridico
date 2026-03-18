@@ -190,7 +190,7 @@ function LoginContent() {
                 </label>
               </div>
 
-              <Link href="#" className={styles.forgotPassword}>
+              <Link href="/login/esqueci-senha" className={styles.forgotPassword}>
                 Esqueceu sua senha?
               </Link>
             </div>

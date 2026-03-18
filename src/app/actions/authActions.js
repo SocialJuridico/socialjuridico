@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
+import { resend } from "@/lib/resend";
 import { formatStoredOAB, normalizeOAB, normalizeUF } from "@/lib/oab";
 
 export async function signUpAction(formData) {
@@ -39,13 +40,13 @@ export async function signUpAction(formData) {
       }
     }
 
-    // 1. Criar o usuário no Auth com email já confirmado
+    // 1. Criar o usuário no Auth (sem confirmar automaticamente)
     let user;
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email: normalizedEmail,
         password,
-        email_confirm: true,
+        email_confirm: false, // Requer verificação
         user_metadata: {
           full_name: name,
           role: role,
@@ -78,11 +79,11 @@ export async function signUpAction(formData) {
             "Usuário está registrado mas não pôde ser recuperado.",
           );
 
-        // Atualizar senha e metadados para o que foi digitado agora
+        // Atualizar senha e metadados
         const { error: updateAuthError } =
           await supabaseAdmin.auth.admin.updateUserById(user.id, {
             password: password,
-            email_confirm: true,
+            email_confirm: false, // Agora requeremos verificação sempre
             user_metadata: { full_name: name, role: role },
           });
         if (updateAuthError) throw updateAuthError;
@@ -148,9 +149,54 @@ export async function signUpAction(formData) {
       }
     }
 
+    // 3. Gerar link de verificação para enviar via Resend
+    try {
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: "signup",
+        email: normalizedEmail,
+        options: {
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login`
+        }
+      });
+
+      if (!linkError && linkData?.properties?.action_link) {
+        const verifyLink = linkData.properties.action_link;
+        
+        // --- Enviar Email via Resend com HTML Estilizado ---
+        await resend.emails.send({
+          from: 'Social Juridico <contato@socialjuridico.com.br>',
+          to: normalizedEmail,
+          subject: 'Bem-vindo ao Social Jurídico - Confirme sua conta',
+          html: `
+            <div style="font-family: sans-serif; background-color: #0d0f12; color: #ffffff; padding: 40px; border-radius: 12px; max-width: 600px; margin: auto; border: 1px solid #d4af37;">
+              <h1 style="color: #d4af37; text-align: center;">Bem-vindo ao Social Jurídico!</h1>
+              <p style="font-size: 16px; line-height: 1.6;">Olá, <strong>${name}</strong>!</p>
+              <p style="font-size: 16px; line-height: 1.6;">Obrigado por se juntar à nossa plataforma dedicada a conectar talentos jurídicos e soluções práticas.</p>
+              <p style="font-size: 16px; line-height: 1.6; text-align: center; margin: 30px 0;">
+                Para começar, por favor confirme seu endereço de email clicando no botão abaixo:
+              </p>
+              <div style="text-align: center;">
+                <a href="${verifyLink}" style="background-color: #d4af37; color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Confirmar minha conta</a>
+              </div>
+              <p style="font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 30px; text-align: center;">
+                Este link expira em 24 horas. Se você não solicitou esta conta, ignore este email.
+              </p>
+              <hr style="border: 0; border-top: 1px solid rgba(212,175,55,0.2); margin: 30px 0;">
+              <p style="font-size: 12px; color: rgba(255,255,255,0.4); text-align: center;">
+                Social Jurídico - Conectando o direito ao futuro.
+              </p>
+            </div>
+          `
+        });
+      }
+    } catch (emailErr) {
+      console.error("Erro ao enviar email de boas-vindas via Resend:", emailErr);
+      // Não trava o cadastro se o email falhar, o usuário ainda existe e pode pedir reenvio
+    }
+
     return {
       success: true,
-      message: "Conta preparada com sucesso! Você já pode fazer login.",
+      message: "Conta criada! Por favor, verifique sua caixa de entrada para confirmar seu email antes de fazer login.",
     };
   } catch (error) {
     console.error("Erro no signUpAction:", error);
@@ -158,6 +204,66 @@ export async function signUpAction(formData) {
       success: false,
       message: error.message || "Erro inesperado ao cadastrar.",
     };
+  }
+}
+
+/**
+ * Solicitação de recuperação de senha via Resend
+ */
+export async function forgotPasswordAction(email) {
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    // 1. Gerar link de recuperação via Supabase Admin
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+       type: "recovery",
+       email: normalizedEmail,
+       options: {
+         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/atualizar-senha?type=recovery`
+       }
+    });
+
+    if (linkError) {
+      // Por segurança, não confirmamos se o email existe ou não (prevenção de enumeração)
+      console.warn("Erro ao gerar link de recuperação:", linkError.message);
+      return { success: true, message: "Se o email estiver cadastrado, você receberá um link de recuperação em breve." };
+    }
+
+    const recoveryLink = linkData.properties.action_link;
+
+    // 2. Enviar email customizado via Resend
+    await resend.emails.send({
+      from: 'Social Juridico <contato@socialjuridico.com.br>',
+      to: normalizedEmail,
+      subject: 'Recuperação de Senha - Social Jurídico',
+      html: `
+        <div style="font-family: sans-serif; background-color: #0d0f12; color: #ffffff; padding: 40px; border-radius: 12px; max-width: 600px; margin: auto; border: 1px solid #d4af37;">
+          <h1 style="color: #d4af37; text-align: center;">Redefinição de Senha</h1>
+          <p style="font-size: 16px; line-height: 1.6;">Você solicitou a recuperação da sua senha no <strong>Social Jurídico</strong>.</p>
+          <p style="font-size: 16px; line-height: 1.6; text-align: center; margin: 30px 0;">
+            Clique no botão abaixo para criar uma nova senha:
+          </p>
+          <div style="text-align: center;">
+            <a href="${recoveryLink}" style="background-color: #d4af37; color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Redefinir Senha</a>
+          </div>
+          <p style="font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 30px;">
+            Este link é válido por tempo limitado. Se você não solicitou isso, pode ignorar este email com segurança.
+          </p>
+          <hr style="border: 0; border-top: 1px solid rgba(212,175,55,0.2); margin: 30px 0;">
+          <p style="font-size: 12px; color: rgba(255,255,255,0.4); text-align: center;">
+            Social Jurídico - Segurança e Praticidade para sua Advocacia.
+          </p>
+        </div>
+      `
+    });
+
+    return { 
+      success: true, 
+      message: "Se o email estiver cadastrado, você receberá um link de recuperação em breve." 
+    };
+  } catch (error) {
+    console.error("Erro no forgotPasswordAction:", error);
+    return { success: false, message: "Ocorreu um erro ao processar sua solicitação." };
   }
 }
 

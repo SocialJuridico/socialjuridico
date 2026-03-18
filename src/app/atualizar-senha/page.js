@@ -1,18 +1,20 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { updatePasswordAction } from '@/app/actions/authActions';
 import styles from '../login/Login.module.css';
 import { Loader2, ShieldCheck } from 'lucide-react';
 
-export default function AtualizarSenha() {
+function AtualizarSenhaContent() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isRecovery = searchParams.get('type') === 'recovery';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,12 +35,12 @@ export default function AtualizarSenha() {
     const response = await updatePasswordAction(password);
 
     if (response.success) {
-      setSuccessMsg('Sua senha foi atualizada! Redirecionando para a área logada...');
+      setSuccessMsg(`Sua senha foi ${isRecovery ? 'redefinida' : 'atualizada'}! Redirecionando...`);
       setTimeout(() => {
-        router.push('/');
+        router.push('/login');
       }, 2000);
     } else {
-      setErrorMsg(response.message);
+      setErrorMsg(response.message || "Erro ao atualizar senha.");
       setLoading(false);
     }
   };
@@ -51,9 +53,11 @@ export default function AtualizarSenha() {
           <div style={{ color: 'var(--color-gold)', marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
             <ShieldCheck size={48} />
           </div>
-          <h2 className={styles.formTitle}>Atualizar Senha</h2>
+          <h2 className={styles.formTitle}>{isRecovery ? 'Redefinir Senha' : 'Atualizar Senha'}</h2>
           <p className={styles.formSubtitle}>
-            Por segurança, você precisa definir uma senha pessoal antes de continuar.
+            {isRecovery 
+              ? 'Crie uma nova senha forte para acessar sua conta com segurança.' 
+              : 'Por segurança, você precisa definir uma senha pessoal antes de continuar.'}
           </p>
         </div>
 
@@ -95,10 +99,29 @@ export default function AtualizarSenha() {
           )}
 
           <button type="submit" className={styles.submitBtn} disabled={loading}>
-            {loading ? <Loader2 className="animate-spin" /> : 'Salvar e Continuar'}
+            {loading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <Loader2 className="animate-spin" size={20} />
+                Salvando...
+              </div>
+            ) : (
+              isRecovery ? 'Redefinir Senha' : 'Salvar e Continuar'
+            )}
           </button>
         </form>
       </div>
     </div>
+  );
+}
+
+export default function AtualizarSenha() {
+  return (
+    <Suspense fallback={
+      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#000', color: '#D4AF37' }}>
+        <Loader2 className="animate-spin" size={48} />
+      </div>
+    }>
+      <AtualizarSenhaContent />
+    </Suspense>
   );
 }

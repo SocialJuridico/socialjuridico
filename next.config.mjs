@@ -1,17 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  output: "standalone",
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'ui-avatars.com',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "ui-avatars.com",
+        pathname: "/**",
       },
       {
-        protocol: 'https',
-        hostname: '**.supabase.co',
-        pathname: '/**',
+        protocol: "https",
+        hostname: "**.supabase.co",
+        pathname: "/**",
       },
     ],
   },

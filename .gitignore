@@ -10,6 +10,7 @@
 !.yarn/releases
 !.yarn/versions
 /supabaseteste
+/scripts
 
 # testing
 /coverage
@@ -36,9 +37,6 @@ yarn-error.log*
 
 # vercel
 .vercel
-
-# scripts
-/scripts
 
 # typescript
 *.tsbuildinfo

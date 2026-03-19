@@ -1,9 +1,0 @@
-﻿[dotenv@17.3.1] injecting env (6) from .env -- tip: ÔÜÖ´©Å  write to custom object with { processEnv: myObject }
-Starting mass profile revival...
-Found 104 total Auth users.
-
-Checking table: advogados
-
-Checking table: clientes
-
-Revival process finished.

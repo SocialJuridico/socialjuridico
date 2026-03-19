@@ -1,8 +1,0 @@
-﻿[dotenv@17.3.1] injecting env (6) from .env -- tip: ÔÜÖ´©Å  suppress all logs with { quiet: true }
-Fetching users...
-
-Processing table: advogados
-Mismatch found for marysaujps@gmail.com: DB ID=51d2e315-d8a7-41b9-a93d-5cef7268a65c, Auth ID=beacdb5e-291c-4231-a024-952805edfd14. Repairing...
-Successfully updated ID for marysaujps@gmail.com
-
-Processing table: clientes

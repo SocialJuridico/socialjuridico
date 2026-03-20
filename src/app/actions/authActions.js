@@ -155,7 +155,7 @@ export async function signUpAction(formData) {
         type: "signup",
         email: normalizedEmail,
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/login`
+          redirectTo: "https://socialjuridico.com.br/login"
         }
       });
 
@@ -164,7 +164,7 @@ export async function signUpAction(formData) {
         
         // --- Enviar Email via Resend com HTML Estilizado ---
         await resend.emails.send({
-          from: 'Social Juridico <contato@socialjuridico.com.br>',
+          from: 'Social Jurídico <contato@socialjuridico.com.br>',
           to: normalizedEmail,
           subject: 'Bem-vindo ao Social Jurídico - Confirme sua conta',
           html: `
@@ -215,11 +215,13 @@ export async function forgotPasswordAction(email) {
     const normalizedEmail = email.trim().toLowerCase();
     
     // 1. Gerar link de recuperação via Supabase Admin
+    const redirectUrl = "https://socialjuridico.com.br/atualizar-senha";
+
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
        type: "recovery",
        email: normalizedEmail,
        options: {
-         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/atualizar-senha?type=recovery`
+         redirectTo: redirectUrl
        }
     });
 
@@ -233,7 +235,7 @@ export async function forgotPasswordAction(email) {
 
     // 2. Enviar email customizado via Resend
     await resend.emails.send({
-      from: 'Social Juridico <contato@socialjuridico.com.br>',
+      from: 'Social Jurídico <contato@socialjuridico.com.br>',
       to: normalizedEmail,
       subject: 'Recuperação de Senha - Social Jurídico',
       html: `

@@ -27,7 +27,7 @@ export async function POST(request) {
       );
     }
 
-    // 1. Verificar se o usuário é um advogado PRO
+    // 1. Verificar se o usuário é um advogado
     const db = supabaseAdmin || supabase;
     if (!(await isLawyer(db, user.id))) {
       return NextResponse.json(
@@ -42,7 +42,7 @@ export async function POST(request) {
     // 2. Buscar perfil do advogado (is_premium + balance + name)
     const { data: advogado, error: advError } = await db
       .from("advogados")
-      .select("id, name, is_premium, balance")
+      .select("id, name, avatar, is_premium, balance")
       .eq("id", user.id)
       .single();
 
@@ -74,10 +74,10 @@ export async function POST(request) {
       );
     }
 
-    // 3. Verificar se o caso ainda está disponível
+    // 3. Verificar se o caso está disponível (ABERTO ou NEGOCIANDO)
     const { data: caso, error: fetchError } = await db
       .from("casos")
-      .select("id, status, advogado_id, cliente_id, titulo")
+      .select("id, status, advogado_id, cliente_id, titulo, negotiating_lawyers")
       .eq("id", casoId)
       .single();
 
@@ -88,17 +88,19 @@ export async function POST(request) {
       );
     }
 
+    // Caso CONTRATADO ou com advogado já definido não aceita mais interesses
     if (caso.advogado_id) {
       return NextResponse.json(
         {
           success: false,
-          message: "Este caso já possui um advogado vinculado",
+          message: "Este caso já possui um advogado contratado",
         },
         { status: 400 },
       );
     }
 
-    if (caso.status !== "ABERTO") {
+    // Agora aceita ABERTO e NEGOCIANDO
+    if (!["ABERTO", "NEGOCIANDO"].includes(caso.status)) {
       return NextResponse.json(
         { success: false, message: "Este caso não está mais disponível" },
         { status: 400 },
@@ -120,7 +122,7 @@ export async function POST(request) {
       );
     }
 
-    // 5. Registrar o interesse — tenta com 'status', faz fallback se coluna não existir
+    // 5. Registrar o interesse
     const now = new Date().toISOString();
     const interestId = crypto.randomUUID();
 
@@ -134,27 +136,7 @@ export async function POST(request) {
       },
     ]);
 
-    if (interestError) {
-      // Se a coluna 'status' ainda não existe no banco, insere sem ela
-      if (
-        interestError.code === "PGRST204" &&
-        interestError.message?.includes("status")
-      ) {
-        const { error: fallbackError } = await db
-          .from("case_interests")
-          .insert([
-            {
-              id: interestId,
-              case_id: casoId,
-              lawyer_id: user.id,
-              created_at: now,
-            },
-          ]);
-        if (fallbackError) throw fallbackError;
-      } else {
-        throw interestError;
-      }
-    }
+    if (interestError) throw interestError;
 
     // 6. Debitar 1 Juri do saldo do advogado
     const { error: balanceError } = await db
@@ -164,27 +146,18 @@ export async function POST(request) {
 
     if (balanceError) throw balanceError;
 
-    // 7. Notificar o cliente — fallback se colunas tipo/meta não existirem
+    // 7. Notificar o cliente
     const notifBase = {
       user_id: caso.cliente_id,
       titulo: "Advogado interessado no seu caso!",
       mensagem: `O advogado ${advogado.name} manifestou interesse no seu caso "${caso.titulo}". Acesse o Painel para aceitar ou recusar.`,
       lida: false,
       created_at: now,
+      tipo: "INTERESSE",
+      meta: JSON.stringify({ case_id: casoId, lawyer_id: user.id }),
     };
 
-    const { error: notifError } = await db.from("notificacoes").insert([
-      {
-        ...notifBase,
-        tipo: "INTERESSE",
-        meta: JSON.stringify({ case_id: casoId, lawyer_id: user.id }),
-      },
-    ]);
-
-    if (notifError?.code === "PGRST204") {
-      // Colunas tipo/meta não existem ainda — insere sem elas
-      await db.from("notificacoes").insert([notifBase]);
-    }
+    await db.from("notificacoes").insert([notifBase]);
 
     return NextResponse.json({
       success: true,

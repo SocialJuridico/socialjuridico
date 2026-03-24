@@ -83,6 +83,8 @@ export default function AdvogadoDashboard() {
   const [activeTab, setActiveTab] = useState("oportunidades");
   const [casos, setCasos] = useState([]);
   const [loadingCasos, setLoadingCasos] = useState(true);
+  const [myInterests, setMyInterests] = useState([]);
+  const [loadingMyInterests, setLoadingMyInterests] = useState(false);
   const [notificacoes, setNotificacoes] = useState([]);
   const [loadingNotificacoes, setLoadingNotificacoes] = useState(false);
   const [profileData, setProfileData] = useState(null);
@@ -161,6 +163,9 @@ export default function AdvogadoDashboard() {
   const [triagemDiagnosis, setTriagemDiagnosis] = useState(null);
   const [triagemCaseValue, setTriagemCaseValue] = useState(null);
   const [isExportingCard, setIsExportingCard] = useState(false);
+
+  // MODAL DETALHES DO CASO
+  const [selectedCasoModal, setSelectedCasoModal] = useState(null);
 
   // REFS
   const businessCardRef = useRef(null);
@@ -282,6 +287,23 @@ export default function AdvogadoDashboard() {
     [profileData?.id],
   );
 
+  const fetchMyInterests = useCallback(
+    async (explicitId) => {
+      if (!explicitId && !profileData?.id) return;
+      setLoadingMyInterests(true);
+      try {
+        const res = await fetch("/api/advogado/interesses");
+        const data = await res.json();
+        if (data.success) setMyInterests(data.data);
+      } catch (err) {
+        console.error("Erro fetchMyInterests:", err);
+      } finally {
+        setLoadingMyInterests(false);
+      }
+    },
+    [profileData?.id],
+  );
+
   const fetchCasos = useCallback(
     async (explicitId) => {
       if (!explicitId && !profileData?.id) return;
@@ -366,6 +388,7 @@ export default function AdvogadoDashboard() {
         setShowProfileReminder(isIncomplete);
 
         // Chamada sequencial passando o profile.id explicitamente para evitar closures obsoletas
+        await fetchMyInterests(profile.id);
         await fetchCasos(profile.id);
         await fetchCrmClients(profile.id);
         await fetchAgenda(profile.id);
@@ -378,6 +401,7 @@ export default function AdvogadoDashboard() {
       setLoadingProfile(false);
     }
   }, [
+    fetchMyInterests,
     fetchCasos,
     fetchCrmClients,
     fetchAgenda,
@@ -539,15 +563,36 @@ export default function AdvogadoDashboard() {
   }, []);
 
   // Filtros estritos para garantir a separação correta
-  // Oportunidades: Somente casos SEM advogado e com status ABERTO
+  // Oportunidades: Casos SEM advogado vinculado, status ABERTO ou NEGOCIANDO (e que eu AINDA não manifestei interesse)
   const openCases = casos.filter(
-    (c) => (!c.advogado_id || c.advogado_id === null) && c.status === "ABERTO",
+    (c) => 
+      (!c.advogado_id || c.advogado_id === null) && 
+      ["ABERTO", "NEGOCIANDO"].includes(c.status) &&
+      !myInterests.some((i) => i.case_id === c.id)
   );
 
   // Meus Casos: Somente casos vinculados ao MEU ID
   const myCases = casos.filter(
     (c) => profileData?.id && c.advogado_id === profileData.id,
   );
+
+  // Declarei Interesse: Casos em que o advogado manifestou interesse (aguardando ou negociando)
+  const myNegotiations = myInterests
+    .filter((i) => i.status === "NEGOTIATING" || i.status === "PENDING")
+    .map((interest) => {
+      const casoDoc = casos.find((c) => c.id === interest.case_id);
+      if (casoDoc) {
+        return { 
+          ...casoDoc, 
+          interest_id: interest.id, 
+          interest_status: interest.status,
+          is_negotiation: interest.status === "NEGOTIATING" 
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+
 
   // Tabs que exigem plano PRO
   const PRO_TABS = [
@@ -574,6 +619,8 @@ export default function AdvogadoDashboard() {
         return renderOportunidades();
       case "meus-casos":
         return renderMeusCasos();
+      case "declarei-interesse":
+        return renderDeclareiInteresse();
       case "minhas-mensagens":
         return renderMinhasMensagens();
       case "crm":
@@ -634,40 +681,80 @@ export default function AdvogadoDashboard() {
           ) : openCases.length > 0 ? (
             openCases
               .filter((c) =>
-                c.titulo.toLowerCase().includes(searchQuery.toLowerCase()),
+                (c.titulo || "").toLowerCase().includes(searchQuery.toLowerCase()),
               )
-              .map((caso) => (
-                <div key={caso.id} className={styles.opCard}>
-                  <div className={styles.opHeader}>
-                    <div className={styles.opArea}>
-                      <div className={styles.opIcon}>
-                        {caso.area_atuacao?.charAt(0) || "J"}
+              .map((caso) => {
+                const isNegociando = caso.status === "NEGOCIANDO";
+                const negotiatingLawyers = caso.negotiating_lawyers || [];
+                return (
+                  <div key={caso.id} className={styles.opCard} onClick={() => setSelectedCasoModal(caso)} style={{ cursor: 'pointer' }}>
+                    <div className={styles.opHeader}>
+                      <div className={styles.opArea}>
+                        <div className={styles.opIcon}>
+                          {caso.area_atuacao?.charAt(0) || "J"}
+                        </div>
+                        <div className={styles.opTitleGroup}>
+                          <h3>{caso.titulo || "Caso Jurídico"}</h3>
+                          <span className={styles.opLocation}>
+                            {caso.area_atuacao || "Direito Geral"}
+                          </span>
+                        </div>
                       </div>
-                      <div className={styles.opTitleGroup}>
-                        <h3>{caso.titulo || "Caso Jurídico"}</h3>
-                        <span className={styles.opLocation}>
-                          {caso.area_atuacao || "Direito Geral"}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                        <span className={styles.opDate}>
+                          {new Date(caso.created_at).toLocaleDateString()}
                         </span>
+                        {isNegociando && (
+                          <span style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', padding: '3px 10px', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', animation: 'pulse 2s ease-in-out infinite' }}>
+                            🔥 Negociando
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <span className={styles.opDate}>
-                      {new Date(caso.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className={styles.opDesc}>{caso.descricao}</p>
-                  <div className={styles.opFooter}>
-                    <div className={styles.opPrice}>
-                      <Coins size={14} /> 1 Juri
+                    <p className={styles.opDesc}>{caso.descricao && caso.descricao.length > 120 ? caso.descricao.substring(0, 120) + '...' : caso.descricao}</p>
+
+                    {/* Avatares dos advogados negociando */}
+                    {isNegociando && negotiatingLawyers.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px', paddingLeft: '4px' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginRight: '6px' }}>Em negociação:</span>
+                        <div style={{ display: 'flex' }}>
+                          {negotiatingLawyers.slice(0, 5).map((lawyer, idx) => (
+                            <div key={lawyer.id || idx} title={lawyer.name} style={{
+                              width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #d4af37, #b8860b)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700,
+                              color: '#000', border: '2px solid #1a1a2e', marginLeft: idx > 0 ? '-8px' : '0', zIndex: 10 - idx,
+                              position: 'relative'
+                            }}>
+                              {lawyer.initials || "AD"}
+                            </div>
+                          ))}
+                          {negotiatingLawyers.length > 5 && (
+                            <div style={{
+                              width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem',
+                              color: '#fff', border: '2px solid #1a1a2e', marginLeft: '-8px', zIndex: 1
+                            }}>
+                              +{negotiatingLawyers.length - 5}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className={styles.opFooter}>
+                      <div className={styles.opPrice}>
+                        <Coins size={14} /> 1 Juri
+                      </div>
+                      <button
+                        className={styles.applyBtn}
+                        onClick={(e) => { e.stopPropagation(); vincularCaso(caso.id); }}
+                      >
+                        Manifestar Interesse
+                      </button>
                     </div>
-                    <button
-                      className={styles.applyBtn}
-                      onClick={() => vincularCaso(caso.id)}
-                    >
-                      Manifestar Interesse
-                    </button>
                   </div>
-                </div>
-              ))
+                );
+              })
           ) : (
             <div className={styles.emptyState}>
               Nenhuma oportunidade aberta no momento.
@@ -687,6 +774,98 @@ export default function AdvogadoDashboard() {
           </div>
         </aside>
       </div>
+
+      {/* MODAL DETALHES DO CASO */}
+      {selectedCasoModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}
+          onClick={() => setSelectedCasoModal(null)}>
+          <div style={{ background: '#1a1a2e', borderRadius: '24px', border: '1px solid rgba(212,175,55,0.2)', maxWidth: '640px', width: '100%', maxHeight: '80vh', overflowY: 'auto', padding: '36px' }}
+            onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+              <div>
+                <h2 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700, marginBottom: '6px' }}>{selectedCasoModal.titulo}</h2>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ background: 'rgba(212,175,55,0.15)', color: '#d4af37', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>
+                    {selectedCasoModal.area_atuacao || 'Direito Geral'}
+                  </span>
+                  <span style={{ 
+                    background: selectedCasoModal.status === 'NEGOCIANDO' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(16,185,129,0.15)', 
+                    color: selectedCasoModal.status === 'NEGOCIANDO' ? '#000' : '#10b981',
+                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 
+                  }}>
+                    {selectedCasoModal.status}
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedCasoModal(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '12px', padding: '8px 12px', color: '#fff', cursor: 'pointer', fontSize: '1.2rem' }}>
+                ✕
+              </button>
+            </div>
+
+            {/* Data */}
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginBottom: '20px' }}>
+              Publicado em: {new Date(selectedCasoModal.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </div>
+
+            {/* Descrição */}
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ color: '#d4af37', fontSize: '0.9rem', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Relato do Cliente</h3>
+              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.95rem', lineHeight: '1.7', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', whiteSpace: 'pre-wrap' }}>
+                {selectedCasoModal.descricao || 'Sem descrição fornecida.'}
+              </p>
+            </div>
+
+            {/* Anexos */}
+            {selectedCasoModal.anexos && selectedCasoModal.anexos.length > 0 && (
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ color: '#d4af37', fontSize: '0.9rem', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Documentos Anexados</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {selectedCasoModal.anexos.map((anexo, idx) => (
+                    <a key={idx} href={anexo} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.85rem', textDecoration: 'underline' }}>
+                      📎 Anexo {idx + 1}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Advogados em negociação */}
+            {selectedCasoModal.status === 'NEGOCIANDO' && (selectedCasoModal.negotiating_lawyers || []).length > 0 && (
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{ color: '#d4af37', fontSize: '0.9rem', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Advogados em Negociação</h3>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {selectedCasoModal.negotiating_lawyers.map((lawyer, idx) => (
+                    <div key={lawyer.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px' }}>
+                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, #d4af37, #b8860b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, color: '#000' }}>
+                        {lawyer.initials || "AD"}
+                      </div>
+                      <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>{lawyer.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Botão de interesse */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+              <button
+                className={styles.applyBtn}
+                style={{ flex: 1, padding: '14px' }}
+                onClick={() => { setSelectedCasoModal(null); vincularCaso(selectedCasoModal.id); }}
+              >
+                <Coins size={16} /> Manifestar Interesse (1 Juri)
+              </button>
+              <button
+                onClick={() => setSelectedCasoModal(null)}
+                style={{ flex: 0.4, padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -716,6 +895,9 @@ export default function AdvogadoDashboard() {
         setProfileData((prev) =>
           prev ? { ...prev, balance: data.newBalance } : prev,
         );
+        // Recarregar feed para atualizar status e interesses declarados
+        fetchMyInterests(profileData.id);
+        fetchCasos(profileData.id);
       } else if (res.status === 402) {
         toast.error(data.message);
         setShowBuyModal(true);
@@ -856,6 +1038,80 @@ export default function AdvogadoDashboard() {
       </div>
     </div>
   );
+
+  const renderDeclareiInteresse = () => (
+    <div className={styles.toolContainer}>
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionTitle}>Declarei Interesse</h2>
+      </div>
+      <div className={styles.opportunityGrid}>
+        {myNegotiations.map((caso) => {
+          const isNegotiating = caso.interest_status === "NEGOTIATING";
+
+          return (
+            <div key={`int-${caso.interest_id}`} className={styles.opCard}>
+              <div className={styles.opHeader}>
+                <div className={styles.opArea}>
+                  <div
+                    className={styles.opIcon}
+                    style={{ background: isNegotiating ? "#f59e0b" : "var(--color-gold)" }}
+                  >
+                    {isNegotiating ? <MessageSquare size={16} /> : <Clock size={16} />}
+                  </div>
+                  <div className={styles.opTitleGroup}>
+                    <h3>{caso.titulo}</h3>
+                    <span className={styles.opLocation}>{caso.area_atuacao}</span>
+                  </div>
+                </div>
+                <span className={styles.opDate}>
+                  {new Date(caso.created_at).toLocaleDateString()}
+                </span>
+              </div>
+              <p className={styles.opDesc}>{caso.descricao}</p>
+              <div className={styles.opFooter}>
+                <span
+                  className={styles.badge}
+                  style={{
+                    background: isNegotiating ? "rgba(245, 158, 11, 0.1)" : "rgba(212, 175, 55, 0.1)",
+                    color: isNegotiating ? "#f59e0b" : "var(--color-gold)",
+                    border: "none",
+                  }}
+                >
+                  {isNegotiating ? "EM NEGOCIAÇÃO" : "AGUARDANDO CLIENTE"}
+                </span>
+
+                {isNegotiating ? (
+                  <button
+                    className={styles.applyBtn}
+                    style={{ background: "#f59e0b", color: "#000", fontWeight: 700 }}
+                    onClick={() => {
+                      window.location.href = `/chat/${caso.id}?interest=${caso.interest_id}`;
+                    }}
+                  >
+                    Conversar com Cliente
+                  </button>
+                ) : (
+                  <button
+                    className={styles.applyBtn}
+                    style={{ background: "transparent", color: "#888", border: "1px solid #444", cursor: "not-allowed" }}
+                    disabled
+                  >
+                    Aguardando...
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {myNegotiations.length === 0 && (
+          <div className={styles.emptyState}>
+            Você ainda não manifestou interesse em nenhum caso recentemente.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
 
   const renderMinhasMensagens = () => (
     <div className={styles.toolContainer}>
@@ -2973,30 +3229,34 @@ export default function AdvogadoDashboard() {
     if (!triagemAnswers.trim()) return;
     setIsTriagemLoading(true);
 
+    const triagemPrompt = `Aja como um assistente especialista em triagem jurídica. Analise o seguinte relato e retorne um JSON estrito com as seguintes chaves:
+    - area (Área jurídica principal)
+    - urgency (Baixa, Média ou Alta)
+    - estimatedComplexity (Baixa, Média ou Complexa)
+    - riskLevel (Baixo, Médio ou Alto)
+    - suggestedAction (Texto curto com a melhor ação imediata)
+    - nextSteps (Array de strings com passos a seguir)
+    - requiredDocuments (Array de strings com documentos necessários)
+    - estimatedValue (Objeto com keys 'range' [ex: R$ 5.000 - R$ 10.000] e 'potential' [texto descritivo])
+    - viability (Objeto com keys 'level' [Baixa, Média ou Alta], 'reasoning' [justificativa], 'risks' [array de strings] e 'opportunities' [array de strings])
+    Retorne SOMENTE o JSON, sem texto adicional, sem markdown, sem crases.
+    Relato: ${triagemAnswers}`;
+
     try {
       const response = await fetch("/api/crm/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: triagemAnswers,
-          prompt: `Aja como um assistente especialista em triagem jurídica. Analise o seguinte relato e retorne um JSON estrito com as seguintes chaves:
-          - area (Área jurídica principal)
-          - urgency (Baixa, Média ou Alta)
-          - estimatedComplexity (Baixa, Média ou Complexa)
-          - riskLevel (Baixo, Médio ou Alto)
-          - suggestedAction (Texto curto com a melhor ação imediata)
-          - nextSteps (Array de strings com passos a seguir)
-          - requiredDocuments (Array de strings com documentos necessários)
-          - estimatedValue (Objeto com keys 'range' [ex: R$ 5.000 - R$ 10.000] e 'potential' [texto descritivo])
-          - viability (Objeto com keys 'level' [Baixa, Média ou Alta], 'reasoning' [justificativa], 'risks' [array de strings] e 'opportunities' [array de strings])
-          Relato: ${triagemAnswers}`,
+          message: triagemPrompt,
+          clientData: { name: "Triagem Rápida" },
+          history: [],
         }),
       });
 
       const data = await response.json();
       if (data.success) {
         // Tenta extrair o JSON da resposta da IA
-        const jsonContent = data.reply.match(/\{[\s\S]*\}/);
+        const jsonContent = data.response.match(/\{[\s\S]*\}/);
         if (jsonContent) {
           const result = JSON.parse(jsonContent[0]);
           setTriagemDiagnosis(result);
@@ -3007,9 +3267,10 @@ export default function AdvogadoDashboard() {
           toast.error("Erro ao formatar diagnóstico da IA");
         }
       } else {
-        toast.error("Erro ao processar triagem");
+        toast.error(data.message || "Erro ao processar triagem");
       }
     } catch (e) {
+      console.error("Erro triagem:", e);
       toast.error("Erro de conexão");
     } finally {
       setIsTriagemLoading(false);
@@ -6289,6 +6550,12 @@ export default function AdvogadoDashboard() {
             <Briefcase size={18} /> <span>Meus Casos</span>
           </div>
           <div
+            className={`${styles.navItem} ${activeTab === "declarei-interesse" ? styles.activeNavItem : ""}`}
+            onClick={() => setActiveTab("declarei-interesse")}
+          >
+            <Check size={18} /> <span>Declarei Interesse</span>
+          </div>
+          <div
             className={`${styles.navItem} ${activeTab === "minhas-mensagens" ? styles.activeNavItem : ""}`}
             onClick={() => setActiveTab("minhas-mensagens")}
           >
@@ -6439,6 +6706,9 @@ export default function AdvogadoDashboard() {
             {activeTab === "meus-casos" && (
               <Briefcase size={20} className={styles.breadcrumbIcon} />
             )}
+            {activeTab === "declarei-interesse" && (
+              <Check size={20} className={styles.breadcrumbIcon} />
+            )}
             {activeTab === "minhas-mensagens" && (
               <Bell size={20} className={styles.breadcrumbIcon} />
             )}
@@ -6477,8 +6747,10 @@ export default function AdvogadoDashboard() {
                 ? "Oportunidades em Aberto"
                 : activeTab === "meus-casos"
                   ? "Meus Casos"
-                  : activeTab === "minhas-mensagens"
-                    ? "Minhas Mensagens"
+                  : activeTab === "declarei-interesse"
+                    ? "Declarei Interesse"
+                    : activeTab === "minhas-mensagens"
+                      ? "Minhas Mensagens"
                     : activeTab === "crm"
                       ? "CRM & KYC"
                       : activeTab === "docs"

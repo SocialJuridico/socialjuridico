@@ -451,15 +451,30 @@ export default function ClienteDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(
-          action === "ACCEPT"
-            ? "Advogado aceito! O chat está disponível."
-            : "Interesse recusado.",
-        );
-        // Remover o interesse da lista
-        setInteresses((prev) => prev.filter((i) => i.id !== interestId));
-        // Recarregar casos para refletir advogado vinculado
-        if (action === "ACCEPT") loadCasos();
+        if (action === "ACCEPT") {
+          toast.success("Negociação iniciada! Agora vocês podem negociar.");
+          // Atualizar interesse para status NEGOTIATING na lista local
+          setInteresses((prev) =>
+            prev.map((i) =>
+              i.id === interestId ? { ...i, status: "NEGOTIATING" } : i,
+            ),
+          );
+          loadCasos();
+        } else if (action === "HIRE") {
+          toast.success("Advogado contratado com sucesso! 🎉");
+          // Encontrar o case_id do interesse contratado
+          const hiredInterest = interesses.find((i) => i.id === interestId);
+          if (hiredInterest) {
+            // Remover todos os interesses deste caso
+            setInteresses((prev) =>
+              prev.filter((i) => i.case_id !== hiredInterest.case_id),
+            );
+          }
+          loadCasos();
+        } else {
+          toast.success("Interesse recusado.");
+          setInteresses((prev) => prev.filter((i) => i.id !== interestId));
+        }
       } else {
         toast.error(data.message);
       }
@@ -1180,7 +1195,7 @@ export default function ClienteDashboard() {
                   />
                 </div>
 
-                {/* INTERESSES PENDENTES */}
+                {/* INTERESSES PENDENTES E EM NEGOCIAÇÃO */}
                 {interesses.length > 0 && (
                   <div className={styles.interessesSection}>
                     <div className={styles.interessesHeader}>
@@ -1190,10 +1205,12 @@ export default function ClienteDashboard() {
                         {interesses.length})
                       </h3>
                     </div>
-                    {interesses.map((interesse) => (
-                      <div key={interesse.id} className={styles.interesseCard}>
+                    {interesses.map((interesse) => {
+                      const isNegotiating = interesse.status === "NEGOTIATING";
+                      return (
+                      <div key={interesse.id} className={styles.interesseCard} style={isNegotiating ? { borderLeft: '3px solid #f59e0b' } : {}}>
                         <div className={styles.interesseInfo}>
-                          <div className={styles.interesseAvatar}>
+                          <div className={styles.interesseAvatar} style={isNegotiating ? { background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000' } : {}}>
                             {(interesse.lawyer_name || "A")
                               .substring(0, 2)
                               .toUpperCase()}
@@ -1205,6 +1222,11 @@ export default function ClienteDashboard() {
                                 className={styles.proIconSmall}
                               />
                               {interesse.lawyer_name || "Advogado"}
+                              {isNegotiating && (
+                                <span style={{ marginLeft: '8px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 700 }}>
+                                  EM NEGOCIAÇÃO
+                                </span>
+                              )}
                             </p>
                             <p className={styles.interesseCasoName}>
                               Caso: {interesse.caso_titulo}
@@ -1215,30 +1237,68 @@ export default function ClienteDashboard() {
                           </div>
                         </div>
                         <div className={styles.interesseActions}>
-                          <button
-                            className={styles.acceptBtn}
-                            onClick={() =>
-                              handleResponderInteresse(interesse.id, "ACCEPT")
-                            }
-                            disabled={processandoInteresse === interesse.id}
-                          >
-                            <Check size={14} />
-                            {processandoInteresse === interesse.id
-                              ? "Processando..."
-                              : "Aceitar"}
-                          </button>
-                          <button
-                            className={styles.declineBtn}
-                            onClick={() =>
-                              handleResponderInteresse(interesse.id, "DECLINE")
-                            }
-                            disabled={processandoInteresse === interesse.id}
-                          >
-                            <UserX size={14} /> Recusar
-                          </button>
+                          {isNegotiating ? (
+                            <>
+                              <button
+                                style={{ background: 'rgba(99,102,241,0.9)', color: '#fff', border: 'none', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}
+                                onClick={() => {
+                                  window.location.href = `/chat/${interesse.case_id}?interest=${interesse.id}`;
+                                }}
+                              >
+                                <MessageSquare size={14} /> Conversar
+                              </button>
+                              <button
+                                className={styles.acceptBtn}
+                                style={{ background: 'linear-gradient(135deg, #d4af37, #b8860b)', color: '#000', fontWeight: 700, border: 'none' }}
+                                onClick={() =>
+                                  handleResponderInteresse(interesse.id, "HIRE")
+                                }
+                                disabled={processandoInteresse === interesse.id}
+                              >
+                                <Check size={14} />
+                                {processandoInteresse === interesse.id
+                                  ? "Processando..."
+                                  : "✨ Contratar"}
+                              </button>
+                              <button
+                                className={styles.declineBtn}
+                                onClick={() =>
+                                  handleResponderInteresse(interesse.id, "DECLINE")
+                                }
+                                disabled={processandoInteresse === interesse.id}
+                              >
+                                <UserX size={14} /> Recusar
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                className={styles.acceptBtn}
+                                onClick={() =>
+                                  handleResponderInteresse(interesse.id, "ACCEPT")
+                                }
+                                disabled={processandoInteresse === interesse.id}
+                              >
+                                <Check size={14} />
+                                {processandoInteresse === interesse.id
+                                  ? "Processando..."
+                                  : "Negociar"}
+                              </button>
+                              <button
+                                className={styles.declineBtn}
+                                onClick={() =>
+                                  handleResponderInteresse(interesse.id, "DECLINE")
+                                }
+                                disabled={processandoInteresse === interesse.id}
+                              >
+                                <UserX size={14} /> Recusar
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

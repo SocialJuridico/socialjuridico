@@ -40,13 +40,13 @@ export async function signUpAction(formData) {
       }
     }
 
-    // 1. Criar o usuário no Auth (sem confirmar automaticamente)
+    // 1. Criar o usuário no Auth (confirmar imediatamente para permitir login)
     let user;
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email: normalizedEmail,
         password,
-        email_confirm: false, // Requer verificação
+        email_confirm: true, // Confirma automaticamente para permitir login
         user_metadata: {
           full_name: name,
           role: role,

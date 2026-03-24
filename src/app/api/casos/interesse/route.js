@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 // POST /api/casos/interesse
-// Body: { interestId, action: 'ACCEPT' | 'DECLINE' }
+// Body: { interestId, action: 'ACCEPT' | 'DECLINE' | 'HIRE' }
 export async function POST(request) {
   try {
     const supabase = createClient();
@@ -21,17 +21,19 @@ export async function POST(request) {
 
     const { interestId, action } = await request.json();
 
-    if (!interestId || !["ACCEPT", "DECLINE"].includes(action)) {
+    if (!interestId || !["ACCEPT", "DECLINE", "HIRE"].includes(action)) {
       return NextResponse.json(
         { success: false, message: "Parâmetros inválidos" },
         { status: 400 },
       );
     }
 
-    // 1. Buscar o interesse com dados do caso
-    const { data: interest, error: iError } = await supabaseAdmin
+    const db = supabaseAdmin;
+
+    // 1. Buscar o interesse
+    const { data: interest, error: iError } = await db
       .from("case_interests")
-      .select("id, case_id, lawyer_id")
+      .select("id, case_id, lawyer_id, status")
       .eq("id", interestId)
       .single();
 
@@ -43,9 +45,9 @@ export async function POST(request) {
     }
 
     // 2. Verificar que o usuário logado é o cliente dono do caso
-    const { data: caso, error: cError } = await supabaseAdmin
+    const { data: caso, error: cError } = await db
       .from("casos")
-      .select("id, cliente_id, titulo, advogado_id")
+      .select("id, cliente_id, titulo, advogado_id, status")
       .eq("id", interest.case_id)
       .single();
 
@@ -66,14 +68,26 @@ export async function POST(request) {
       );
     }
 
+    // ========== DECLINE ==========
     if (action === "DECLINE") {
-      // 3a. Recusar: tenta atualizar status, ignora se coluna não existir
-      const { error: declineError } = await supabaseAdmin
+      await db
         .from("case_interests")
         .update({ status: "DECLINED" })
         .eq("id", interestId);
 
-      if (declineError && declineError.code !== "PGRST204") throw declineError;
+      // Notificar advogado
+      await db.from("notificacoes").insert([{
+        user_id: interest.lawyer_id,
+        titulo: "Proposta não aceita",
+        mensagem: `O cliente decidiu não prosseguir com a negociação no caso "${caso.titulo}".`,
+        lida: false,
+        created_at: new Date().toISOString(),
+        tipo: "RECUSA",
+        meta: JSON.stringify({ case_id: interest.case_id }),
+      }]);
+
+      // Atualizar cache de negotiating_lawyers no caso
+      await updateNegotiatingLawyers(db, interest.case_id);
 
       return NextResponse.json({
         success: true,
@@ -81,75 +95,133 @@ export async function POST(request) {
       });
     }
 
-    // 3b. Aceitar: vincular advogado ao caso
-    if (caso.advogado_id) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Este caso já possui um advogado vinculado",
-        },
-        { status: 400 },
-      );
+    // ========== ACCEPT (Iniciar Negociação) ==========
+    if (action === "ACCEPT") {
+      // Muda status do interesse para NEGOTIATING
+      await db
+        .from("case_interests")
+        .update({ status: "NEGOTIATING" })
+        .eq("id", interestId);
+
+      // Muda status do caso para NEGOCIANDO (se ainda não estiver)
+      if (caso.status !== "NEGOCIANDO") {
+        await db
+          .from("casos")
+          .update({
+            status: "NEGOCIANDO",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", interest.case_id);
+      }
+
+      // Atualizar cache de negotiating_lawyers no caso
+      await updateNegotiatingLawyers(db, interest.case_id);
+
+      // Notificar advogado que entrou em negociação
+      await db.from("notificacoes").insert([{
+        user_id: interest.lawyer_id,
+        titulo: "Você entrou em negociação!",
+        mensagem: `O cliente aceitou sua proposta no caso "${caso.titulo}". Vocês estão agora em fase de negociação.`,
+        lida: false,
+        created_at: new Date().toISOString(),
+        tipo: "NEGOCIACAO",
+        meta: JSON.stringify({ case_id: interest.case_id }),
+      }]);
+
+      return NextResponse.json({
+        success: true,
+        message: "Negociação iniciada! O advogado foi notificado.",
+      });
     }
 
-    // Atualizar case_interests — ignora PGRST204 se coluna status não existir
-    const { error: acceptError } = await supabaseAdmin
-      .from("case_interests")
-      .update({ status: "ACCEPTED" })
-      .eq("id", interestId);
+    // ========== HIRE (Contratar Advogado) ==========
+    if (action === "HIRE") {
+      // Verificar se já não tem advogado contratado
+      if (caso.advogado_id) {
+        return NextResponse.json(
+          { success: false, message: "Já existe um advogado contratado para este caso." },
+          { status: 400 },
+        );
+      }
 
-    if (acceptError && acceptError.code !== "PGRST204") throw acceptError;
+      // Mudar interest status para HIRED
+      await db
+        .from("case_interests")
+        .update({ status: "HIRED" })
+        .eq("id", interestId);
 
-    // Recusar automaticamente outros interesses pendentes — só se coluna status existir
-    if (!acceptError) {
-      await supabaseAdmin
+      // Recusar todos os outros interesses (PENDING e NEGOTIATING)
+      await db
         .from("case_interests")
         .update({ status: "DECLINED" })
         .eq("case_id", interest.case_id)
-        .eq("status", "PENDING")
-        .neq("id", interestId);
-    }
+        .neq("id", interestId)
+        .in("status", ["PENDING", "NEGOTIATING"]);
 
-    // Vincular advogado ao caso
-    const { error: updateError } = await supabaseAdmin
-      .from("casos")
-      .update({
-        advogado_id: interest.lawyer_id,
-        status: "EM_ANDAMENTO",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", interest.case_id);
+      // Vincular advogado ao caso e mudar status para CONTRATADO
+      await db
+        .from("casos")
+        .update({
+          advogado_id: interest.lawyer_id,
+          status: "CONTRATADO",
+          negotiating_lawyers: null,
+          chat_started: true, // Já inicia o chat principal
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", interest.case_id);
 
-    if (updateError) throw updateError;
+      // Migrar as mensagens do chat de negociação para o chat principal (interest_id = null)
+      await db
+        .from("mensagens")
+        .update({ interest_id: null })
+        .eq("interest_id", interestId);
 
-    // Notificar o advogado que foi aceito — fallback se colunas tipo/meta não existirem
-    const aceitNotifBase = {
-      user_id: interest.lawyer_id,
-      titulo: "Proposta aceita!",
-      mensagem: `O cliente aceitou o seu interesse no caso "${caso.titulo}". Você já pode iniciar o atendimento via chat.`,
-      lida: false,
-      created_at: new Date().toISOString(),
-    };
+      // Excluir ou ocultar as mensagens de outras negociações perdidas para este caso
+      await db
+        .from("mensagens")
+        .delete()
+        .eq("caso_id", interest.case_id)
+        .not("interest_id", "is", null);
 
-    const { error: aceitNotifError } = await supabaseAdmin
-      .from("notificacoes")
-      .insert([
-        {
-          ...aceitNotifBase,
-          tipo: "ACEITE",
+      // Notificar o advogado contratado
+      await db.from("notificacoes").insert([{
+        user_id: interest.lawyer_id,
+        titulo: "Você foi contratado! 🎉",
+        mensagem: `Parabéns! O cliente contratou seus serviços no caso "${caso.titulo}". Você já pode iniciar o atendimento via chat.`,
+        lida: false,
+        created_at: new Date().toISOString(),
+        tipo: "CONTRATACAO",
+        meta: JSON.stringify({ case_id: interest.case_id }),
+      }]);
+
+      // Notificar advogados que perderam
+      const { data: declinedInterests } = await db
+        .from("case_interests")
+        .select("lawyer_id")
+        .eq("case_id", interest.case_id)
+        .eq("status", "DECLINED")
+        .neq("lawyer_id", interest.lawyer_id);
+
+      if (declinedInterests && declinedInterests.length > 0) {
+        const declineNotifs = declinedInterests.map((di) => ({
+          user_id: di.lawyer_id,
+          titulo: "Caso encerrado para negociação",
+          mensagem: `O cliente escolheu outro profissional para o caso "${caso.titulo}". Continue buscando novas oportunidades!`,
+          lida: false,
+          created_at: new Date().toISOString(),
+          tipo: "CASO_ENCERRADO",
           meta: JSON.stringify({ case_id: interest.case_id }),
-        },
-      ]);
+        }));
+        await db.from("notificacoes").insert(declineNotifs);
+      }
 
-    if (aceitNotifError?.code === "PGRST204") {
-      await supabaseAdmin.from("notificacoes").insert([aceitNotifBase]);
+      return NextResponse.json({
+        success: true,
+        message: "Advogado contratado com sucesso! O chat está disponível.",
+        casoId: interest.case_id,
+      });
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Advogado aceito com sucesso! O chat está disponível.",
-      casoId: interest.case_id,
-    });
   } catch (error) {
     console.error("Erro ao processar interesse:", error);
     return NextResponse.json(
@@ -159,8 +231,44 @@ export async function POST(request) {
   }
 }
 
-// GET /api/casos/interesse?clienteId=xxx
-// Retorna todos os interesses pendentes dos casos do cliente logado
+// Função auxiliar: Atualiza o cache de advogados negociando no caso
+async function updateNegotiatingLawyers(db, caseId) {
+  try {
+    // Buscar todos os interesses NEGOTIATING deste caso
+    const { data: negotiatingInterests } = await db
+      .from("case_interests")
+      .select("lawyer_id")
+      .eq("case_id", caseId)
+      .eq("status", "NEGOTIATING");
+
+    if (!negotiatingInterests || negotiatingInterests.length === 0) {
+      await db.from("casos").update({ negotiating_lawyers: [] }).eq("id", caseId);
+      return;
+    }
+
+    const lawyerIds = negotiatingInterests.map((ni) => ni.lawyer_id);
+
+    // Buscar dados dos advogados
+    const { data: lawyers } = await db
+      .from("advogados")
+      .select("id, name, avatar")
+      .in("id", lawyerIds);
+
+    const lawyerData = (lawyers || []).map((l) => ({
+      id: l.id,
+      name: l.name,
+      avatar: l.avatar,
+      initials: (l.name || "AD").substring(0, 2).toUpperCase(),
+    }));
+
+    await db.from("casos").update({ negotiating_lawyers: lawyerData }).eq("id", caseId);
+  } catch (err) {
+    console.error("Erro ao atualizar negotiating_lawyers:", err);
+  }
+}
+
+// GET /api/casos/interesse?type=all
+// Retorna interesses PENDING e NEGOTIATING dos casos do cliente logado
 export async function GET(request) {
   try {
     const supabase = createClient();
@@ -176,12 +284,14 @@ export async function GET(request) {
       );
     }
 
-    // Buscar todos os casos do cliente
-    const { data: casos, error: casosError } = await supabaseAdmin
+    const db = supabaseAdmin;
+
+    // Buscar todos os casos do cliente (com ou sem advogado, status ABERTO ou NEGOCIANDO)
+    const { data: casos, error: casosError } = await db
       .from("casos")
-      .select("id, titulo, area_atuacao")
+      .select("id, titulo, area_atuacao, status")
       .eq("cliente_id", user.id)
-      .is("advogado_id", null);
+      .in("status", ["ABERTO", "NEGOCIANDO"]);
 
     if (casosError) throw casosError;
 
@@ -191,31 +301,15 @@ export async function GET(request) {
 
     const caseIds = casos.map((c) => c.id);
 
-    // Buscar interesses — tenta filtrar por status PENDING, fallback sem filtro se coluna não existir
-    let interests = [];
-    const { data: interestsWithStatus, error: intError } = await supabaseAdmin
+    // Buscar interesses PENDING e NEGOTIATING
+    const { data: interests, error: intError } = await db
       .from("case_interests")
       .select("id, case_id, lawyer_id, status, created_at")
       .in("case_id", caseIds)
-      .eq("status", "PENDING")
+      .in("status", ["PENDING", "NEGOTIATING"])
       .order("created_at", { ascending: false });
 
-    if (intError?.code === "PGRST204") {
-      // Coluna status não existe ainda — busca todos e assume todos como PENDING
-      const { data: allInterests, error: fallbackError } = await supabaseAdmin
-        .from("case_interests")
-        .select("id, case_id, lawyer_id, created_at")
-        .in("case_id", caseIds)
-        .order("created_at", { ascending: false });
-      if (fallbackError) throw fallbackError;
-      interests = (allInterests || []).map((i) => ({
-        ...i,
-        status: "PENDING",
-      }));
-    } else {
-      if (intError) throw intError;
-      interests = interestsWithStatus || [];
-    }
+    if (intError) throw intError;
 
     const lawyerIds = [
       ...new Set((interests || []).map((i) => i.lawyer_id).filter(Boolean)),
@@ -223,13 +317,13 @@ export async function GET(request) {
     let lawyerNamesById = {};
 
     if (lawyerIds.length > 0) {
-      const { data: lawyers } = await supabaseAdmin
+      const { data: lawyers } = await db
         .from("advogados")
-        .select("id, name")
+        .select("id, name, avatar")
         .in("id", lawyerIds);
 
       lawyerNamesById = Object.fromEntries(
-        (lawyers || []).map((l) => [l.id, l.name]),
+        (lawyers || []).map((l) => [l.id, { name: l.name, avatar: l.avatar }]),
       );
     }
 
@@ -237,9 +331,11 @@ export async function GET(request) {
     const casosMap = Object.fromEntries(casos.map((c) => [c.id, c]));
     const enriched = (interests || []).map((i) => ({
       ...i,
-      lawyer_name: lawyerNamesById[i.lawyer_id] || "Advogado",
+      lawyer_name: lawyerNamesById[i.lawyer_id]?.name || "Advogado",
+      lawyer_avatar: lawyerNamesById[i.lawyer_id]?.avatar || null,
       caso_titulo: casosMap[i.case_id]?.titulo || "Caso desconhecido",
       caso_area: casosMap[i.case_id]?.area_atuacao || "",
+      caso_status: casosMap[i.case_id]?.status || "ABERTO",
     }));
 
     return NextResponse.json({ success: true, data: enriched });

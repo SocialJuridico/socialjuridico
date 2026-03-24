@@ -94,12 +94,15 @@ export async function GET(request) {
     let query = db.from("casos").select("*");
 
     if (role === "LAWYER") {
-      // Advogado vê casos vinculados a ele OU casos abertos sem advogado
+      // Advogado vê:
+      // - Casos vinculados a ele (contratados)
+      // - Casos ABERTOS sem advogado (oportunidades)
+      // - Casos NEGOCIANDO sem advogado definido (em negociação)
       const { data, error } = await db
         .from("casos")
         .select("*")
         .or(
-          `advogado_id.eq.${user.id},and(status.eq.ABERTO,advogado_id.is.null)`,
+          `advogado_id.eq.${user.id},and(status.eq.ABERTO,advogado_id.is.null),and(status.eq.NEGOCIANDO,advogado_id.is.null)`,
         )
         .order("created_at", { ascending: false });
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Send,
@@ -15,9 +15,11 @@ import styles from "./Chat.module.css";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 
-export default function ChatPage() {
+function ChatContent() {
   const { casoId } = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const interestId = searchParams.get("interest");
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const pollingRef = useRef(null);
@@ -27,6 +29,7 @@ export default function ChatPage() {
   const [mensagens, setMensagens] = useState([]);
   const [caso, setCaso] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [partnerName, setPartnerName] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sendingMeetInvite, setSendingMeetInvite] = useState(false);
@@ -36,7 +39,9 @@ export default function ChatPage() {
 
   const loadMensagens = useCallback(async () => {
     try {
-      const res = await fetch(`/api/mensagens?caso_id=${casoId}`);
+      let url = `/api/mensagens?caso_id=${casoId}`;
+      if (interestId) url += `&interest_id=${interestId}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
         setMensagens(data.data);
@@ -44,7 +49,7 @@ export default function ChatPage() {
     } catch (err) {
       console.error("Erro ao carregar mensagens:", err);
     }
-  }, [casoId]);
+  }, [casoId, interestId]);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -69,13 +74,28 @@ export default function ChatPage() {
           if (casoAtual) {
             setCaso(casoAtual);
           } else {
-            toast.error("Caso não encontrado.");
-            router.push("/dashboard/cliente");
-            return;
+            // Se for negociação, o advogado pode não ter o caso nos "seus casos"
+            // Buscar pelo caso via API específica
+            if (!interestId) {
+              toast.error("Caso não encontrado.");
+              router.push("/dashboard/cliente");
+              return;
+            }
           }
         }
 
-        // 3. Carregar mensagens
+        // 3. Se é chat de negociação, buscar nome do parceiro
+        if (interestId) {
+          try {
+            const intRes = await fetch(`/api/casos/interesse?interestId=${interestId}`);
+            const intData = await intRes.json();
+            // O nome do parceiro será exibido no header
+          } catch (e) {
+            // fallback silencioso
+          }
+        }
+
+        // 4. Carregar mensagens
         await loadMensagens();
       } catch (err) {
         console.error("Erro ao carregar chat:", err);
@@ -93,7 +113,7 @@ export default function ChatPage() {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [casoId, loadMensagens, router]);
+  }, [casoId, loadMensagens, router, interestId]);
 
   useEffect(() => {
     if (currentUser?.role !== "LAWYER" || !currentUser?.id) return;
@@ -145,7 +165,6 @@ export default function ChatPage() {
   const handleMessagesScroll = () => {
     const area = messagesAreaRef.current;
     if (!area) return;
-    // Considera "no final" se estiver a menos de 80px do fim
     isAtBottomRef.current =
       area.scrollHeight - area.scrollTop - area.clientHeight < 80;
   };
@@ -158,8 +177,8 @@ export default function ChatPage() {
     const msgText = newMessage.trim();
     setNewMessage("");
 
-    // Otimistic UI: adicionar mensagem localmente antes de confirmar
-    isAtBottomRef.current = true; // ao enviar, sempre vai para o final
+    // Otimistic UI
+    isAtBottomRef.current = true;
     const tempMsg = {
       id: "temp-" + Date.now(),
       sender_id: currentUser?.id,
@@ -167,24 +186,26 @@ export default function ChatPage() {
       created_at: new Date().toISOString(),
       is_read: false,
       caso_id: casoId,
+      interest_id: interestId || null,
       isTemp: true,
     };
     setMensagens((prev) => [...prev, tempMsg]);
 
     try {
+      const bodyData = { caso_id: casoId, content: msgText };
+      if (interestId) bodyData.interest_id = interestId;
+
       const res = await fetch("/api/mensagens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caso_id: casoId, content: msgText }),
+        body: JSON.stringify(bodyData),
       });
 
       const data = await res.json();
       if (data.success) {
-        // Recarregar do servidor para ter dados reais
         await loadMensagens();
       } else {
         toast.error(data.message || "Erro ao enviar mensagem.");
-        // Remover mensagem temporária
         setMensagens((prev) => prev.filter((m) => m.id !== tempMsg.id));
         setNewMessage(msgText);
       }
@@ -207,6 +228,7 @@ export default function ChatPage() {
 
   const isLawyer = currentUser?.role === "LAWYER";
   const dashboardHref = isLawyer ? "/dashboard/advogado" : "/dashboard/cliente";
+  const isNegotiationChat = !!interestId;
 
   const renderMessageContent = (content) => {
     const meetRegex = /(https:\/\/meet\.google\.com\/[^\s]+)/i;
@@ -332,19 +354,19 @@ export default function ChatPage() {
             <ArrowLeft size={20} />
           </Link>
           <div className={styles.lawyerInfo}>
-            <div className={styles.lawyerAvatar}>
+            <div className={styles.lawyerAvatar} style={isNegotiationChat ? { background: 'linear-gradient(135deg, #f59e0b, #d97706)' } : {}}>
               <Scale size={18} />
             </div>
             <div>
               <h2 className={styles.lawyerName}>
-                {caso?.advogado_id ? "Advogado do Caso" : "Chat do Caso"}
+                {isNegotiationChat ? "Chat de Negociação" : caso?.advogado_id ? "Advogado do Caso" : "Chat do Caso"}
               </h2>
               <p className={styles.caseName}>{caso?.titulo || "Sem título"}</p>
             </div>
           </div>
         </div>
         <div className={styles.headerRight}>
-          {isLawyer && (
+          {isLawyer && !isNegotiationChat && (
             <button
               type="button"
               className={styles.meetBtn}
@@ -355,9 +377,19 @@ export default function ChatPage() {
               {sendingMeetInvite ? "Enviando..." : "Enviar Meet"}
             </button>
           )}
-          <span className={styles.statusChip}>{caso?.status || "ABERTO"}</span>
+          <span className={styles.statusChip} style={isNegotiationChat ? { background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000' } : {}}>
+            {isNegotiationChat ? "NEGOCIANDO" : caso?.status || "ABERTO"}
+          </span>
         </div>
       </header>
+
+      {/* BANNER DE NEGOCIAÇÃO */}
+      {isNegotiationChat && (
+        <div style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,119,6,0.05))', borderBottom: '1px solid rgba(245,158,11,0.2)', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#f59e0b' }}>
+          <span>🔥</span>
+          <span>Chat de negociação — Converse com o advogado antes de contratar.</span>
+        </div>
+      )}
 
       {/* MODAL GOOGLE MEET */}
       {showMeetModal && (
@@ -427,18 +459,17 @@ export default function ChatPage() {
             <MessageSquare size={56} className={styles.emptyIcon} />
             <p className={styles.emptyTitle}>Nenhuma mensagem ainda</p>
             <p className={styles.emptySubtitle}>
-              Envie uma mensagem para começar a conversa com seu advogado.
+              {isNegotiationChat
+                ? "Envie uma mensagem para iniciar a negociação."
+                : "Envie uma mensagem para começar a conversa com seu advogado."}
             </p>
           </div>
         ) : (
           Object.entries(mensagensAgrupadas).map(([date, msgs]) => (
             <div key={date}>
-              {/* Separador de data */}
               <div className={styles.dateSeparator}>
                 <span>{date}</span>
               </div>
-
-              {/* Mensagens do dia */}
               {msgs.map((msg) => {
                 const isOwn = msg.sender_id === currentUser?.id;
                 return (
@@ -496,5 +527,17 @@ export default function ChatPage() {
         <p className={styles.inputHint}>Shift+Enter para nova linha</p>
       </footer>
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0d0d1a', color: '#fff' }}>
+        <Loader2 size={40} style={{ animation: 'spin 1s linear infinite' }} />
+      </div>
+    }>
+      <ChatContent />
+    </Suspense>
   );
 }

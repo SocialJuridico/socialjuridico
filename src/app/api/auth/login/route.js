@@ -61,7 +61,55 @@ export async function POST(request) {
         password,
       });
 
+    // LOG DIAGNOSTIC — para identificar a causa raiz
+    if (authError) {
+      console.log("[LOGIN DIAGNOSTIC]", {
+        code: authError.code,
+        message: authError.message,
+        status: authError.status,
+        name: authError.name,
+        fullError: JSON.stringify(authError),
+      });
+    }
+
     const DEFAULT_PASSWORD = "socialjuridico1!";
+
+    // Se o erro for "Email not confirmed", auto-confirmar e re-tentar
+    if (authError && (
+      authError.message?.toLowerCase().includes("email not confirmed") ||
+      authError.message?.toLowerCase().includes("email_not_confirmed") ||
+      authError.code === "email_not_confirmed"
+    )) {
+      console.log("[LOGIN] Email não confirmado, auto-confirmando...");
+      
+      // Buscar o user pelo email
+      const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+      const targetUser = userList?.users?.find(
+        (u) => u.email === email.trim().toLowerCase()
+      );
+      
+      if (targetUser) {
+        // Confirmar o email
+        await supabaseAdmin.auth.admin.updateUserById(targetUser.id, {
+          email_confirm: true,
+        });
+        
+        // Tentar login novamente
+        const { data: retryData, error: retryError } =
+          await supabase.auth.signInWithPassword({
+            email: email.trim().toLowerCase(),
+            password,
+          });
+          
+        if (!retryError) {
+          authData = retryData;
+          authError = null;
+          console.log("[LOGIN] Auto-confirmação bem sucedida, login OK");
+        } else {
+          authError = retryError;
+        }
+      }
+    }
 
     // Se falhar, vamos tentar o "Lazy Sync" para usuários antigos/migrados
     if (
@@ -69,7 +117,6 @@ export async function POST(request) {
       authError.status === 401 &&
       password === DEFAULT_PASSWORD
     ) {
-      // ⚠️ SEGURANÇA: Não logar emails
 
       const db = supabaseAdmin || supabase;
       let existingProfile = null;
@@ -88,7 +135,6 @@ export async function POST(request) {
       }
 
       if (existingProfile) {
-        // ⚠️ SEGURANÇA: Não logar emails
 
         // Criar ou atualizar usuário no Auth com a senha padrão e flag de troca obrigatória
         const { data: syncData, error: syncError } =
@@ -106,16 +152,15 @@ export async function POST(request) {
 
         if (syncError) {
           if (syncError.message.includes("already has been registered")) {
-            // Se já existe no Auth mas a senha estava errada ou desatualizada, resetamos para a padrão
-            // Buscamos o usuário atual para preservar metadados se necessário
             const { data: userData } =
               await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
 
             await supabaseAdmin.auth.admin.updateUserById(existingProfile.id, {
               password: DEFAULT_PASSWORD,
+              email_confirm: true,
               user_metadata: {
                 ...(userData?.user?.user_metadata || {}),
-                full_name: existingProfile.name, // Garante que o nome venha do nosso banco oficial
+                full_name: existingProfile.name,
                 role: existingProfile.role,
                 needs_password_update: true,
               },
@@ -138,7 +183,6 @@ export async function POST(request) {
         if (!retryError) {
           authData = retryData;
           authError = null;
-          // ⚠️ SEGURANÇA: Não logar emails
         }
       }
     }
@@ -146,7 +190,7 @@ export async function POST(request) {
     if (authError) {
       console.error("ERRO LOGIN AUTH:", {
         errorCode: authError.code,
-        errorMessage: "Credenciais inválidas ou conta não encontrada",
+        errorMessage: authError.message,
         status: authError.status,
       });
       return NextResponse.json(

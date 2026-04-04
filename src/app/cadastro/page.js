@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Scale, Loader2, CheckCircle2 } from "lucide-react";
@@ -9,7 +9,7 @@ import { verifyOAB } from "@/app/actions/verifyOAB";
 import { signUpAction } from "@/app/actions/authActions";
 import { normalizeOABNumber, normalizeUF } from "@/lib/oab";
 
-export default function Cadastro() {
+function CadastroContent() {
   const [activeTab, setActiveTab] = useState("client");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -479,5 +479,17 @@ export default function Cadastro() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Cadastro() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0f12', color: '#d4af37' }}>
+        Carregando formulário...
+      </div>
+    }>
+      <CadastroContent />
+    </Suspense>
   );
 }

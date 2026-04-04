@@ -4376,3 +4376,222 @@
   color: white;
   border-color: #ef4444;
 }
+
+/* INDIQUE E GANHE Styles */
+.indicacoesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.rulesCard {
+  background: var(--color-black-light);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 20px;
+  padding: 30px;
+}
+
+.rulesHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.rulesHeader h3 {
+  font-size: 1.25rem;
+  color: var(--color-white);
+  font-weight: 800;
+}
+
+.rulesList {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.rulesList li {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.ruleIcon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--color-gold);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.rulesList li strong {
+  color: var(--color-gold);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.rulesList li div {
+  font-size: 0.9rem;
+  color: var(--color-silver);
+  line-height: 1.5;
+}
+
+.referralActionCard {
+  background: var(--color-black-light);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.linkShareArea label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--color-silver-dark);
+  font-weight: 800;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.copyLinkRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.referralInput {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: var(--color-silver);
+  font-size: 0.85rem;
+  font-family: monospace;
+  outline: none;
+}
+
+.copyBtn {
+  background: var(--color-gold);
+  color: var(--color-black);
+  border: none;
+  padding: 0 20px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.copyBtn:hover {
+  background: #eab308;
+  transform: scale(1.02);
+}
+
+.linkHint {
+  font-size: 0.75rem;
+  color: var(--color-silver-dark);
+}
+
+.miniStatsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.miniStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.statVal {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 4px;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--color-silver-dark);
+  font-weight: 700;
+}
+
+.transparencySection {
+  background: var(--color-black-light);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 30px;
+}
+
+.transparencyHeader {
+  margin-bottom: 30px;
+}
+
+.transparencyHeader h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 6px;
+}
+
+.transparencyHeader p {
+  color: var(--color-silver-dark);
+  font-size: 0.9rem;
+}
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.referralTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.referralTable th {
+  padding: 16px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+  color: var(--color-silver-dark);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.referralTable td {
+  padding: 20px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  font-size: 0.9rem;
+  color: var(--color-silver);
+}
+
+@media (max-width: 992px) {
+  .indicacoesGrid {
+    grid-template-columns: 1fr;
+  }
+}

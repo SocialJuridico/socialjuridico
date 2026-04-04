@@ -149,6 +149,14 @@ export default function AdminDashboardPage() {
               <strong>Gerenciar</strong>
             </article>
           </Link>
+          <Link href="/dashboard/admin/afiliados" className={styles.cardLink}>
+            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid var(--color-gold)" }}>
+              <div className={styles.cardTop}>
+                <Scale size={16} color="var(--color-gold)" /> Gestão de Afiliados
+              </div>
+              <strong>Ver Indicações</strong>
+            </article>
+          </Link>
           <Link href="/dashboard/admin/admins" className={styles.cardLink}>
             <article className={`${styles.card} ${styles.cardClickable}`}>
               <div className={styles.cardTop}>

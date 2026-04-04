@@ -208,6 +208,8 @@ export default function AdvogadoDashboard() {
   });
 
   // Smart Docs states
+  const [indicacoes, setIndicacoes] = useState([]);
+  const [loadingIndicacoes, setLoadingIndicacoes] = useState(false);
   const [allDocuments, setAllDocuments] = useState([]);
   const [loadingAllDocs, setLoadingAllDocs] = useState(false);
   const [selectedClientForSmartUpload, setSelectedClientForSmartUpload] =
@@ -299,6 +301,25 @@ export default function AdvogadoDashboard() {
         console.error("Erro fetchMyInterests:", err);
       } finally {
         setLoadingMyInterests(false);
+      }
+    },
+    [profileData?.id],
+  );
+
+  const fetchIndicacoes = useCallback(
+    async (explicitId) => {
+      if (!explicitId && !profileData?.id) return;
+      setLoadingIndicacoes(true);
+      try {
+        const res = await fetch("/api/advogado/indicacoes");
+        const data = await res.json();
+        if (data.success) {
+          setIndicacoes(data.data);
+        }
+      } catch (err) {
+        console.error("Erro fetchIndicacoes:", err);
+      } finally {
+        setLoadingIndicacoes(false);
       }
     },
     [profileData?.id],
@@ -606,11 +627,151 @@ export default function AdvogadoDashboard() {
   ];
 
   const handleTabChange = (tab) => {
+    if (tab === "indicacoes") {
+      fetchIndicacoes();
+    }
     if (PRO_TABS.includes(tab) && !profileData?.is_premium) {
       setShowProModal(true);
       return;
     }
     setActiveTab(tab);
+  };
+
+  const renderIndicacoes = () => {
+    const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/cadastro?ref=${profileData?.id}` : "";
+    
+    const stats = {
+      totalIndicados: indicacoes.length,
+      assinantesPro: indicacoes.filter(i => i.status === 'ASSINOU_PRO' || i.status === 'COMISSIONADO').length,
+      jurisGanhos: indicacoes.reduce((acc, i) => acc + (Number(i.valor_comissao) || 0), 0)
+    };
+
+    return (
+      <div className={styles.toolContainer}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Indique e Ganhe</h2>
+          <p className={styles.sectionDesc}>
+            Fortaleça a comunidade e ganhe créditos em Juris por cada assinatura PRO indicada.
+          </p>
+        </div>
+
+        <div className={styles.indicacoesGrid}>
+          {/* Card de Regras */}
+          <div className={styles.rulesCard}>
+            <div className={styles.rulesHeader}>
+              <TrendingUp size={24} color="var(--color-gold)" />
+              <h3>Como funciona?</h3>
+            </div>
+            <ul className={styles.rulesList}>
+              <li>
+                <span className={styles.ruleIcon}>1</span>
+                <div>
+                  <strong>Compartilhe seu link:</strong> Envie seu link único para colegas advogados ou clientes.
+                </div>
+              </li>
+              <li>
+                <span className={styles.ruleIcon}>2</span>
+                <div>
+                  <strong>Assinatura PRO:</strong> Quando seu indicado assinar o plano <strong>SocialJurídico PRO</strong>...
+                </div>
+              </li>
+              <li>
+                <span className={styles.ruleIcon}>3</span>
+                <div>
+                  <strong>Ganhe 50%:</strong> Você recebe <strong>50% do valor pago</strong> revertido em créditos de <strong>Juri</strong>.
+                </div>
+              </li>
+              <li>
+                <span className={styles.ruleIcon}>4</span>
+                <div>
+                  <strong>Crédito em 48h:</strong> O valor será validado e creditado pela administração em até 48 horas úteis.
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          {/* Card de Link e Stats */}
+          <div className={styles.referralActionCard}>
+            <div className={styles.linkShareArea}>
+              <label>Seu Link de Indicação Único</label>
+              <div className={styles.copyLinkRow}>
+                <input type="text" readOnly value={referralLink} className={styles.referralInput} />
+                <button 
+                  className={styles.copyBtn}
+                  onClick={() => {
+                    navigator.clipboard.writeText(referralLink);
+                    toast.success("Link copiado com sucesso!");
+                  }}
+                >
+                  <Copy size={18} /> Copiar
+                </button>
+              </div>
+              <p className={styles.linkHint}>Divulgue em grupos de WhatsApp, LinkedIn ou Instagram.</p>
+            </div>
+
+            <div className={styles.miniStatsRow}>
+              <div className={styles.miniStat}>
+                <span className={styles.statVal}>{stats.totalIndicados}</span>
+                <span className={styles.statLabel}>Indicados</span>
+              </div>
+              <div className={styles.miniStat}>
+                <span className={styles.statVal}>{stats.assinantesPro}</span>
+                <span className={styles.statLabel}>Assinantes PRO</span>
+              </div>
+              <div className={styles.miniStat} style={{ border: 'none' }}>
+                <span className={styles.statVal} style={{ color: 'var(--color-gold)' }}>{stats.jurisGanhos}</span>
+                <span className={styles.statLabel}>Juris Ganhos</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabela de Transparência */}
+        <div className={styles.transparencySection}>
+          <div className={styles.transparencyHeader}>
+            <h3><Users size={20} /> Histórico de Indicações</h3>
+            <p>Acompanhe em tempo real quem utilizou seu link.</p>
+          </div>
+          
+          <div className={styles.tableWrapper}>
+            <table className={styles.referralTable}>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Nome do Indicado</th>
+                  <th>Status</th>
+                  <th>Ganhos</th>
+                </tr>
+              </thead>
+              <tbody>
+                 {indicacoes.length > 0 ? (
+                    indicacoes.map((ind) => (
+                      <tr key={ind.id}>
+                        <td>{new Date(ind.created_at).toLocaleDateString()}</td>
+                        <td>{ind.nome_indicado}</td>
+                        <td>
+                          <span className={`${styles.badge} ${ind.status === 'COMISSIONADO' ? styles.badgeHigh : ind.status === 'ASSINOU_PRO' ? styles.badgeMed : styles.badgeLow}`}>
+                            {ind.status}
+                          </span>
+                        </td>
+                        <td style={{ color: ind.valor_comissao > 0 ? 'var(--color-gold)' : 'inherit', fontWeight: 800 }}>
+                          {ind.valor_comissao > 0 ? `+${ind.valor_comissao} Juris` : '-'}
+                        </td>
+                      </tr>
+                    ))
+                 ) : (
+                    <tr>
+                       <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.3)' }}>
+                          {loadingIndicacoes ? "Carregando..." : "Nenhuma indicação registrada até o momento. Comece a compartilhar seu link!"}
+                       </td>
+                    </tr>
+                 )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderActiveContent = () => {
@@ -641,6 +802,8 @@ export default function AdvogadoDashboard() {
         return renderCartaoVisitas();
       case "perfil":
         return renderPerfil();
+      case "indicacoes":
+        return renderIndicacoes();
       case "documentacao":
         return renderDocumentacao();
       default:
@@ -6565,27 +6728,33 @@ export default function AdvogadoDashboard() {
           <div className={styles.navGroupLabel}>Navegação</div>
           <div
             className={`${styles.navItem} ${activeTab === "oportunidades" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("oportunidades")}
+            onClick={() => handleTabChange("oportunidades")}
           >
             <Globe size={18} /> <span>Oportunidades</span>
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "meus-casos" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("meus-casos")}
+            onClick={() => handleTabChange("meus-casos")}
           >
             <Briefcase size={18} /> <span>Meus Casos</span>
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "declarei-interesse" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("declarei-interesse")}
+            onClick={() => handleTabChange("declarei-interesse")}
           >
             <Check size={18} /> <span>Declarei Interesse</span>
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "minhas-mensagens" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("minhas-mensagens")}
+            onClick={() => handleTabChange("minhas-mensagens")}
           >
             <Bell size={18} /> <span>Minhas Mensagens</span>
+          </div>
+          <div
+            className={`${styles.navItem} ${activeTab === "indicacoes" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("indicacoes")}
+          >
+            <UserPlus size={18} /> <span>Indique e Ganhe</span>
           </div>
 
           <div className={styles.navGroupLabel}>Ferramentas PRO</div>

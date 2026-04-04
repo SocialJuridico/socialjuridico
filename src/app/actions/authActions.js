@@ -6,7 +6,7 @@ import { resend } from "@/lib/resend";
 import { formatStoredOAB, normalizeOAB, normalizeUF } from "@/lib/oab";
 
 export async function signUpAction(formData) {
-  const { email, password, name, phone, role, oab, estado, origem_descoberta } =
+  const { email, password, name, phone, role, oab, estado, origem_descoberta, referral_code } =
     formData;
   const supabase = createClient();
   const normalizedEmail = email.trim().toLowerCase();
@@ -122,6 +122,39 @@ export async function signUpAction(formData) {
         throw new Error(
           `Usuário criado, mas erro ao salvar perfil: ${dbError.message}`,
         );
+      }
+    }
+
+    // 2.1 Registrar indicação (Referral)
+    if (referral_code) {
+      try {
+        // Verificar se o indicador existe e pegar o nome dele (apenas para log interno ou validação)
+        const { data: referrer, error: refError } = await supabaseAdmin
+          .from("advogados")
+          .select("name")
+          .eq("id", referral_code)
+          .single();
+
+        if (referrer) {
+           console.log(`Usuário ${name} indicado por ${referrer.name} (${referral_code})`);
+           
+           // Inserir registro na tabela de indicações para transparência
+           await supabaseAdmin.from("indicacoes").insert([{
+              indicador_id: referral_code, 
+              nome_indicado: name,
+              email_indicado: normalizedEmail,
+              status: 'CADASTRADO'
+           }]);
+           
+           // Atualizar o 'indicado_por' no perfil recém criado (para histórico no perfil)
+           await supabaseAdmin
+            .from(table)
+            .update({ indicado_por: referral_code })
+            .eq("id", user.id);
+        }
+      } catch (err) {
+        console.error("Erro silencioso ao registrar indicação:", err);
+        // Não interrompemos o cadastro principal se a indicação falhar
       }
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Scale, Loader2, CheckCircle2 } from "lucide-react";
 import styles from "./Cadastro.module.css";
@@ -13,6 +14,9 @@ export default function Cadastro() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref");
 
   // Form State
   const [formData, setFormData] = useState({
@@ -86,6 +90,7 @@ export default function Cadastro() {
       oab: formData.oab,
       estado: formData.estado,
       origem_descoberta: formData.origem_descoberta,
+      referral_code: referralCode,
     };
 
     const response = await signUpAction(authPayload);

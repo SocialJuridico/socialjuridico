@@ -104,7 +104,15 @@ export default function Cadastro() {
         origem_descoberta: "",
       });
     } else {
-      setErrorMsg(response.message);
+      // Capturamos o código do erro para exibir links especiais
+      if (response.code === "USER_ALREADY_EXISTS") {
+        setErrorMsg({
+          type: "USER_ALREADY_EXISTS",
+          text: response.message
+        });
+      } else {
+        setErrorMsg(response.message);
+      }
     }
 
     setLoading(false);
@@ -371,14 +379,44 @@ export default function Cadastro() {
                 style={{
                   backgroundColor: "rgba(239, 68, 68, 0.1)",
                   color: "#EF4444",
-                  padding: "12px",
-                  borderRadius: "8px",
+                  padding: "16px",
+                  borderRadius: "10px",
                   marginBottom: "20px",
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
+                  fontSize: "0.92rem",
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                  lineHeight: "1.5"
                 }}
               >
-                🚨 {errorMsg}
+                <div style={{ fontWeight: "bold", marginBottom: typeof errorMsg === 'object' ? "8px" : "0" }}>
+                  🚨 {typeof errorMsg === 'object' ? errorMsg.text : errorMsg}
+                </div>
+                
+                {typeof errorMsg === 'object' && errorMsg.type === "USER_ALREADY_EXISTS" && (
+                  <div style={{ display: "flex", gap: "12px", marginTop: "10px", flexWrap: "wrap" }}>
+                    <Link 
+                      href="/login/esqueci-senha" 
+                      style={{ 
+                        color: "var(--color-gold)", 
+                        textDecoration: "underline", 
+                        fontWeight: "600",
+                        fontSize: "0.85rem"
+                      }}
+                    >
+                      Esqueci minha senha
+                    </Link>
+                    <Link 
+                      href="/contato" 
+                      style={{ 
+                        color: "var(--color-gold)", 
+                        textDecoration: "underline", 
+                        fontWeight: "600",
+                        fontSize: "0.85rem"
+                      }}
+                    >
+                      Falar com suporte
+                    </Link>
+                  </div>
+                )}
               </div>
             )}
 

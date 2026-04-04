@@ -58,38 +58,14 @@ export async function signUpAction(formData) {
         authError.message.includes("already be registered") ||
         authError.status === 422
       ) {
-        console.log(
-          "Usuário já existe no Auth. Recuperando e atualizando senha...",
-        );
-        // Pegar todos os usuários para encontrar o ID (devido à falta de busca por email no admin API)
-        let allUsers = [];
-        let page = 1;
-        while (true) {
-          const {
-            data: { users: pagedUsers },
-          } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
-          if (!pagedUsers || pagedUsers.length === 0) break;
-          allUsers = allUsers.concat(pagedUsers);
-          page++;
-        }
-        user = allUsers.find((u) => u.email.toLowerCase() === normalizedEmail);
-
-        if (!user)
-          throw new Error(
-            "Usuário está registrado mas não pôde ser recuperado.",
-          );
-
-        // Atualizar senha e metadados
-        const { error: updateAuthError } =
-          await supabaseAdmin.auth.admin.updateUserById(user.id, {
-            password: password,
-            email_confirm: false, // Agora requeremos verificação sempre
-            user_metadata: { full_name: name, role: role },
-          });
-        if (updateAuthError) throw updateAuthError;
-      } else {
-        throw authError;
+        return {
+          success: false,
+          message:
+            "Este e-mail já está cadastrado em nossa plataforma. Se você esqueceu sua senha, use a opção 'Esqueci minha senha' ou entre em contato com o suporte.",
+          code: "USER_ALREADY_EXISTS",
+        };
       }
+      throw authError;
     } else {
       user = authData.user;
     }

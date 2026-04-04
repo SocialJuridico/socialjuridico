@@ -6737,7 +6737,7 @@ export default function AdvogadoDashboard() {
             className={`${styles.navItem} ${activeTab === "oportunidades" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("oportunidades")}
           >
-            <Globe size={18} /> <span>Oportunidades</span>
+            <Globe size={18} /> <span>OPORTUNIDADES_TESTE</span>
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "meus-casos" ? styles.activeNavItem : ""}`}

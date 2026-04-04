@@ -6728,6 +6728,12 @@ export default function AdvogadoDashboard() {
         <nav className={styles.nav}>
           <div className={styles.navGroupLabel}>Navegação</div>
           <div
+            className={`${styles.navItem} ${activeTab === "indicacoes" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("indicacoes")}
+          >
+            <UserPlus size={18} /> <span>Indique e Ganhe</span>
+          </div>
+          <div
             className={`${styles.navItem} ${activeTab === "oportunidades" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("oportunidades")}
           >
@@ -6750,12 +6756,6 @@ export default function AdvogadoDashboard() {
             onClick={() => handleTabChange("minhas-mensagens")}
           >
             <Bell size={18} /> <span>Minhas Mensagens</span>
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "indicacoes" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("indicacoes")}
-          >
-            <UserPlus size={18} /> <span>Indique e Ganhe</span>
           </div>
 
           <div className={styles.navGroupLabel}>Ferramentas PRO</div>

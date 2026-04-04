@@ -144,6 +144,35 @@ export async function POST(request) {
         );
       }
 
+      // Verificar saldo do advogado (precisa de 3 Juris)
+      const { data: advogado, error: advError } = await db
+        .from("advogados")
+        .select("balance")
+        .eq("id", interest.lawyer_id)
+        .single();
+      
+      if (advError || !advogado) {
+        return NextResponse.json(
+          { success: false, message: "Perfil de advogado não encontrado" },
+          { status: 404 }
+        );
+      }
+
+      if ((advogado.balance || 0) < 3) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "O advogado selecionado não possui saldo de Juri suficiente (3 Juris) para fechar o contrato.",
+          },
+          { status: 402 }
+        );
+      }
+
+      // Debitar 3 Juris do advogado
+      const newBalance = advogado.balance - 3;
+      await db.from("advogados").update({ balance: newBalance }).eq("id", interest.lawyer_id);
+
+
       // Mudar interest status para HIRED
       await db
         .from("case_interests")

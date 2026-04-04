@@ -29,7 +29,7 @@ export async function POST(request) {
       );
     }
 
-    const { casoId } = await request.json();
+    const { casoId, interestId } = await request.json();
 
     if (!casoId) {
       return NextResponse.json(
@@ -38,7 +38,52 @@ export async function POST(request) {
       );
     }
 
-    // 1. Verificar se o caso pertence ao advogado logado
+    // Se houver interestId, é um chat de NEGOCIAÇÃO
+    if (interestId) {
+      const { data: interest, error: iError } = await db
+        .from("case_interests")
+        .select("id, lawyer_id, chat_started")
+        .eq("id", interestId)
+        .single();
+        
+      if (iError || !interest || interest.lawyer_id !== user.id) {
+        return NextResponse.json(
+          { success: false, message: "Interesse inválido ou não autorizado" },
+          { status: 403 },
+        );
+      }
+
+      if (interest.chat_started) {
+        return NextResponse.json({
+          success: true,
+          alreadyStarted: true,
+          message: "Chat de negociação já iniciado anteriormente.",
+        });
+      }
+
+      const { data: advogado, error: advError } = await db.from("advogados").select("balance").eq("id", user.id).single();
+      if ((advogado?.balance || 0) < 1) {
+        return NextResponse.json(
+          { success: false, message: `Saldo insuficiente. Necessário 1 Juri. Saldo atual: ${advogado.balance || 0}` },
+          { status: 402 },
+        );
+      }
+
+      const newBalance = advogado.balance - 1;
+      await Promise.all([
+        db.from("advogados").update({ balance: newBalance }).eq("id", user.id),
+        db.from("case_interests").update({ chat_started: true }).eq("id", interestId),
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        alreadyStarted: false,
+        message: "Chat de negociação iniciado! 1 Juri debitado.",
+        newBalance,
+      });
+    }
+
+    // 1. Verificar se o caso pertence ao advogado logado (fluxo contratado tradicional)
     const { data: caso, error: cError } = await db
       .from("casos")
       .select("id, advogado_id, chat_started, titulo, cliente_id")

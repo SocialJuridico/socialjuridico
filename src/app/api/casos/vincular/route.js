@@ -53,15 +53,7 @@ export async function POST(request) {
       );
     }
 
-    if (!advogado.is_premium) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Apenas advogados PRO podem manifestar interesse em casos",
-        },
-        { status: 403 },
-      );
-    }
+
 
     if ((advogado.balance || 0) < 1) {
       return NextResponse.json(

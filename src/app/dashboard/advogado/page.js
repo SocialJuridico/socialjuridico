@@ -912,6 +912,34 @@ export default function AdvogadoDashboard() {
     }
   };
 
+  const handleAbrirConversaNegociacao = async (caso) => {
+    try {
+      const res = await fetch("/api/casos/chat-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ casoId: caso.id, interestId: caso.interest_id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (!data.alreadyStarted) {
+          toast.success("Chat de negociação iniciado! 1 Juri debitado.");
+          setProfileData((prev) =>
+            prev ? { ...prev, balance: data.newBalance } : prev,
+          );
+        }
+        window.location.href = `/chat/${caso.id}?interest=${caso.interest_id}`;
+      } else if (res.status === 402) {
+        toast.error(data.message);
+        setShowBuyModal(true);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error("Erro ao abrir chat de negociação.");
+    }
+  };
+
+
   const handleAbrirConversa = async (caso) => {
     // Se o chat já foi iniciado, vai direto
     if (caso.chat_started) {
@@ -1084,9 +1112,7 @@ export default function AdvogadoDashboard() {
                   <button
                     className={styles.applyBtn}
                     style={{ background: "#f59e0b", color: "#000", fontWeight: 700 }}
-                    onClick={() => {
-                      window.location.href = `/chat/${caso.id}?interest=${caso.interest_id}`;
-                    }}
+                    onClick={() => handleAbrirConversaNegociacao(caso)}
                   >
                     Conversar com Cliente
                   </button>

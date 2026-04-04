@@ -1,4 +1,5 @@
 "use client";
+// DUMMY COMMENT FOR GIT SYNC TEST
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as htmlToImage from "html-to-image";

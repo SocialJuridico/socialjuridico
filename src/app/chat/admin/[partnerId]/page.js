@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Send, MessageSquare } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./AdminChat.module.css";
 
@@ -17,6 +17,9 @@ export default function AdminChatPage() {
   const [messages, setMessages] = useState([]);
   const [partner, setPartner] = useState(null);
   const [newMessage, setNewMessage] = useState("");
+  const [msgToDelete, setMsgToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const backHref = useMemo(() => {
     if (partner?.role === "ADMIN") return "/dashboard/advogado";
@@ -112,6 +115,28 @@ export default function AdminChatPage() {
     }
   };
 
+  const executeDelete = async () => {
+    if (!msgToDelete || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/notificacoes?id=${msgToDelete}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Mensagem excluída!");
+        setMessages(prev => prev.filter(m => m.id !== msgToDelete));
+        setShowDeleteModal(false);
+        setMsgToDelete(null);
+      } else {
+        toast.error(data.message || "Erro ao excluir.");
+      }
+    } catch (err) {
+      console.error("Erro deletar msg:", err);
+      toast.error("Falha na conexão ao excluir.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (loading) {
     return <div className={styles.loading}>Carregando chat...</div>;
   }
@@ -139,6 +164,15 @@ export default function AdminChatPage() {
               className={`${styles.messageRow} ${msg.isOwn ? styles.own : styles.other}`}
             >
               <div className={styles.messageBubble}>
+                {msg.isOwn && (
+                  <button 
+                    className={styles.deletePoint}
+                    onClick={() => { setMsgToDelete(msg.id); setShowDeleteModal(true); }}
+                    title="Excluir mensagem"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
                 <p>{msg.content}</p>
                 <span>
                   {msg.created_at
@@ -163,6 +197,21 @@ export default function AdminChatPage() {
           <Send size={16} /> {sending ? "Enviando..." : "Enviar"}
         </button>
       </form>
+
+      {showDeleteModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.confirmModal}>
+            <h3>Excluir Mensagem?</h3>
+            <p>Deseja realmente apagar esta mensagem do histórico?</p>
+            <div className={styles.modalActions}>
+              <button onClick={() => setShowDeleteModal(false)} className={styles.cancelBtn}>Cancelar</button>
+              <button onClick={executeDelete} disabled={isDeleting} className={styles.deleteBtn}>
+                {isDeleting ? "Excluindo..." : "Excluir"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -300,3 +300,58 @@ export async function POST(request) {
     );
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const supabase = createClient();
+    const db = supabaseAdmin || supabase;
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
+    }
+
+    const role = await resolveRole(db, user.id);
+    if (!role || (role !== "ADMIN" && role !== "LAWYER")) {
+      return NextResponse.json(
+        { success: false, message: "Acesso restrito" },
+        { status: 403 },
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const partnerId = String(searchParams.get("partnerId") || "").trim();
+
+    if (!partnerId) {
+      return NextResponse.json(
+        { success: false, message: "partnerId é obrigatório" },
+        { status: 400 },
+      );
+    }
+
+    // Deleta mirrors do admin E mensagens do destinatário originadas deste admin
+    // OU simplesmente deleta tudo que liga esse admin a esse partnerId no contexto chat
+    const { error } = await db
+      .from("notificacoes")
+      .delete()
+      .or(`and(user_id.eq.${user.id},meta->>chat_with.eq.${partnerId}),and(user_id.eq.${partnerId},meta->>sender_id.eq.${user.id})`)
+      .eq("tipo", "ADMIN_CHAT");
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, message: "Conversa excluída" });
+  } catch (error) {
+    console.error("Erro na API DELETE /api/admin-chat:", error);
+    return NextResponse.json(
+      { success: false, message: "Erro ao excluir conversa" },
+      { status: 500 },
+    );
+  }
+}

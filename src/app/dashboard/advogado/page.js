@@ -67,6 +67,7 @@ import {
   Edit2,
   Plus,
   Menu,
+  Star,
 } from "lucide-react";
 
 import * as CalcUtils from "@/lib/calculators";
@@ -184,6 +185,7 @@ export default function AdvogadoDashboard() {
 
   // PERFIL STATE
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [avgRating, setAvgRating] = useState(null); // { media, total }
   const [profileForm, setProfileForm] = useState({
     name: "",
     phone: "",
@@ -447,6 +449,15 @@ export default function AdvogadoDashboard() {
         await fetchAgenda(profile.id);
         await fetchAllDocuments(profile.id);
         await syncNotificacoes(profile.id);
+
+        // Buscar média de avaliações do próprio advogado
+        try {
+          const ratingRes = await fetch(`/api/avaliacoes/media/${profile.id}`);
+          const ratingData = await ratingRes.json();
+          if (ratingData.success) setAvgRating(ratingData.data);
+        } catch (e) {
+          console.warn("Erro ao buscar média de avaliações:", e);
+        }
       }
     } catch (e) {
       console.error("Erro loadDataFull:", e);
@@ -3870,6 +3881,36 @@ export default function AdvogadoDashboard() {
                   <span className={styles.verifiedSeal}>
                     <UserCheck size={14} /> Verificado
                   </span>
+                )}
+              </div>
+
+              {/* Card de Avaliação */}
+              <div style={{
+                background: "rgba(212,175,55,0.06)",
+                border: "1px solid rgba(212,175,55,0.2)",
+                borderRadius: "12px",
+                padding: "14px 16px",
+                marginTop: "12px",
+                textAlign: "center",
+              }}>
+                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
+                  Minha Avaliação
+                </p>
+                {avgRating && avgRating.total > 0 ? (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                      <Star size={20} fill="#d4af37" color="#d4af37" />
+                      <span style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--color-gold)" }}>{avgRating.media}</span>
+                      <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem" }}>/5</span>
+                    </div>
+                    <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.78rem", margin: 0 }}>
+                      {avgRating.total} avaliação{avgRating.total !== 1 ? "es" : ""}
+                    </p>
+                  </>
+                ) : (
+                  <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.82rem", margin: 0 }}>
+                    Ainda sem avaliações
+                  </p>
                 )}
               </div>
             </div>

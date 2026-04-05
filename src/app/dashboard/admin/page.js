@@ -15,6 +15,7 @@ import {
   UserCog,
   Trash2,
   Ticket,
+  Star,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./AdminDashboard.module.css";
@@ -181,6 +182,14 @@ export default function AdminDashboardPage() {
                 <Ticket size={16} color="#10b981" /> Gestão de Cupons
               </div>
               <strong>Gerenciar</strong>
+            </article>
+          </Link>
+          <Link href="/dashboard/admin/avaliacoes" className={styles.cardLink}>
+            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: `4px solid #d4af37` }}>
+              <div className={styles.cardTop}>
+                <Star size={16} fill="#d4af37" color="#d4af37" /> Avaliações
+              </div>
+              <strong>Ver Notas</strong>
             </article>
           </Link>
         </section>

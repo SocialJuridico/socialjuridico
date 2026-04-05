@@ -99,6 +99,14 @@ export default function ClienteDashboard() {
   const [loadingInteresses, setLoadingInteresses] = useState(false);
   const [processandoInteresse, setProcessandoInteresse] = useState(null);
 
+  // States para Modal de Avaliação
+  const [showAvaliacaoModal, setShowAvaliacaoModal] = useState(false);
+  const [avaliacaoPendente, setAvaliacaoPendente] = useState(null); // { advogado_id, advogado_nome, caso_id, caso_titulo }
+  const [avaliacaoNota, setAvaliacaoNota] = useState(0);
+  const [avaliacaoHover, setAvaliacaoHover] = useState(0);
+  const [avaliacaoJustificativa, setAvaliacaoJustificativa] = useState("");
+  const [avaliacaoLoading, setAvaliacaoLoading] = useState(false);
+
   // States para Edição de Caso
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedCaso, setSelectedCaso] = useState(null);
@@ -282,17 +290,14 @@ export default function ClienteDashboard() {
   }, []);
 
   const loadCasos = useCallback(async () => {
-    console.log("Chamando loadCasos...");
     setLoadingCasos(true);
     try {
-      const response = await fetch("/api/casos");
-      console.log("Resposta loadCasos:", response.status);
+      const response = await fetch("/api/casos", { cache: "no-store" });
       const data = await response.json();
       if (data.success) {
-        console.log("Casos carregados:", data.data.length);
-        setCasos(data.data);
-      } else {
-        console.warn("Falha ao carregar casos:", data.message);
+        // Ocultar casos CANCELADO da visão do cliente
+        const visiveis = data.data.filter((c) => c.status !== "CANCELADO");
+        setCasos(visiveis);
       }
     } catch (err) {
       console.error("Erro ao carregar casos:", err);
@@ -453,7 +458,6 @@ export default function ClienteDashboard() {
       if (data.success) {
         if (action === "ACCEPT") {
           toast.success("Negociação iniciada! Agora vocês podem negociar.");
-          // Atualizar interesse para status NEGOTIATING na lista local
           setInteresses((prev) =>
             prev.map((i) =>
               i.id === interestId ? { ...i, status: "NEGOTIATING" } : i,
@@ -462,17 +466,38 @@ export default function ClienteDashboard() {
           loadCasos();
         } else if (action === "HIRE") {
           toast.success("Advogado contratado com sucesso! 🎉");
-          // Encontrar o case_id do interesse contratado
           const hiredInterest = interesses.find((i) => i.id === interestId);
           if (hiredInterest) {
-            // Remover todos os interesses deste caso
+            // Abrir modal de avaliação após contratar
+            setAvaliacaoPendente({
+              advogado_id: hiredInterest.lawyer_id,
+              advogado_nome: hiredInterest.lawyer_name || "Advogado",
+              caso_id: hiredInterest.case_id,
+              caso_titulo: hiredInterest.caso_titulo || "Caso",
+            });
+            setAvaliacaoNota(0);
+            setAvaliacaoJustificativa("");
+            setShowAvaliacaoModal(true);
             setInteresses((prev) =>
               prev.filter((i) => i.case_id !== hiredInterest.case_id),
             );
           }
           loadCasos();
         } else {
-          toast.success("Interesse recusado.");
+          // DECLINE de negociação — também pede avaliação
+          const declinedInterest = interesses.find((i) => i.id === interestId);
+          if (declinedInterest && declinedInterest.status === "NEGOTIATING") {
+            setAvaliacaoPendente({
+              advogado_id: declinedInterest.lawyer_id,
+              advogado_nome: declinedInterest.lawyer_name || "Advogado",
+              caso_id: declinedInterest.case_id,
+              caso_titulo: declinedInterest.caso_titulo || "Caso",
+            });
+            setAvaliacaoNota(0);
+            setAvaliacaoJustificativa("");
+            setShowAvaliacaoModal(true);
+          }
+          toast.success("Negociação encerrada.");
           setInteresses((prev) => prev.filter((i) => i.id !== interestId));
         }
       } else {
@@ -482,6 +507,38 @@ export default function ClienteDashboard() {
       toast.error("Erro ao processar resposta.");
     } finally {
       setProcessandoInteresse(null);
+    }
+  };
+
+  const handleSubmitAvaliacao = async () => {
+    if (!avaliacaoPendente || avaliacaoNota === 0) {
+      toast.error("Selecione uma nota antes de enviar.");
+      return;
+    }
+    setAvaliacaoLoading(true);
+    try {
+      const res = await fetch("/api/avaliacoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          advogado_id: avaliacaoPendente.advogado_id,
+          caso_id: avaliacaoPendente.caso_id,
+          nota: avaliacaoNota,
+          justificativa: avaliacaoJustificativa,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Avaliação enviada! Obrigado pelo feedback.");
+        setShowAvaliacaoModal(false);
+        setAvaliacaoPendente(null);
+      } else {
+        toast.error(data.message || "Erro ao enviar avaliação.");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão ao enviar avaliação.");
+    } finally {
+      setAvaliacaoLoading(false);
     }
   };
 
@@ -558,9 +615,10 @@ export default function ClienteDashboard() {
   const handleDeleteCaso = async () => {
     if (!selectedCaso || caseActionLoadingId) return;
 
-    setCaseActionLoadingId(selectedCaso.id);
+    const casoId = selectedCaso.id;
+    setCaseActionLoadingId(casoId);
     try {
-      const res = await fetch(`/api/casos?id=${selectedCaso.id}`, {
+      const res = await fetch(`/api/casos?id=${casoId}`, {
         method: "DELETE",
       });
 
@@ -573,7 +631,10 @@ export default function ClienteDashboard() {
       toast.success("Caso excluído com sucesso.");
       setIsEditModalOpen(false);
       setSelectedCaso(null);
-      await loadCasos();
+      // Remover imediatamente do state local (evita reaparecer por cache)
+      setCasos((prev) => prev.filter((c) => c.id !== casoId));
+      // Recarregar em segundo plano para garantir sincronia
+      loadCasos();
     } catch (error) {
       console.error("Erro ao excluir caso:", error);
       toast.error("Erro ao excluir caso.");
@@ -2162,6 +2223,154 @@ export default function ClienteDashboard() {
           </div>
         </div>
       )}
+
+      {/* MODAL AVALIAÇÃO DO ADVOGADO */}
+      {showAvaliacaoModal && avaliacaoPendente && (
+        <div
+          style={{
+            position: "fixed", inset: 0,
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(12px)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 99999, padding: "20px",
+          }}
+        >
+          <div
+            style={{
+              background: "linear-gradient(135deg, #0f172a 0%, #1a1a2e 100%)",
+              borderRadius: "24px",
+              border: "1px solid rgba(212,175,55,0.3)",
+              padding: "40px",
+              maxWidth: "480px",
+              width: "100%",
+              boxShadow: "0 0 60px rgba(212,175,55,0.15), 0 25px 50px rgba(0,0,0,0.5)",
+              animation: "fadeIn 0.3s ease",
+            }}
+          >
+            {/* Header */}
+            <div style={{ textAlign: "center", marginBottom: "28px" }}>
+              <div style={{
+                width: "56px", height: "56px",
+                background: "rgba(212,175,55,0.15)",
+                borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 16px",
+                border: "1px solid rgba(212,175,55,0.3)",
+              }}>
+                <Star size={28} fill="var(--color-gold)" color="var(--color-gold)" />
+              </div>
+              <h2 style={{ color: "#fff", fontSize: "1.4rem", fontWeight: 800, margin: "0 0 8px" }}>
+                Avalie o Atendimento
+              </h2>
+              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", margin: 0 }}>
+                Como foi sua experiência com <strong style={{ color: "var(--color-gold)" }}>{avaliacaoPendente.advogado_nome}</strong>?
+              </p>
+              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.78rem", marginTop: "4px" }}>
+                Caso: {avaliacaoPendente.caso_titulo}
+              </p>
+            </div>
+
+            {/* Estrelas */}
+            <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "28px" }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setAvaliacaoNota(star)}
+                  onMouseEnter={() => setAvaliacaoHover(star)}
+                  onMouseLeave={() => setAvaliacaoHover(0)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    padding: "4px", transition: "transform 0.15s",
+                    transform: (avaliacaoHover || avaliacaoNota) >= star ? "scale(1.2)" : "scale(1)",
+                  }}
+                >
+                  <Star
+                    size={40}
+                    fill={(avaliacaoHover || avaliacaoNota) >= star ? "#d4af37" : "transparent"}
+                    color={(avaliacaoHover || avaliacaoNota) >= star ? "#d4af37" : "rgba(255,255,255,0.25)"}
+                  />
+                </button>
+              ))}
+            </div>
+
+            {/* Label da nota */}
+            {avaliacaoNota > 0 && (
+              <p style={{ textAlign: "center", color: "var(--color-gold)", fontWeight: 700, marginBottom: "20px", fontSize: "0.9rem" }}>
+                {avaliacaoNota === 1 ? "😞 Muito ruim" :
+                 avaliacaoNota === 2 ? "😐 Ruim" :
+                 avaliacaoNota === 3 ? "😊 Regular" :
+                 avaliacaoNota === 4 ? "😃 Bom" :
+                 "🌟 Excelente!"}
+              </p>
+            )}
+
+            {/* Justificativa (opcional) */}
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{ display: "block", color: "rgba(255,255,255,0.7)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>
+                Justificativa <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>(opcional)</span>
+              </label>
+              <textarea
+                value={avaliacaoJustificativa}
+                onChange={(e) => setAvaliacaoJustificativa(e.target.value)}
+                placeholder="Conte um pouco sobre sua experiência..."
+                rows={3}
+                style={{
+                  width: "100%", boxSizing: "border-box",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(212,175,55,0.2)",
+                  borderRadius: "12px",
+                  padding: "12px 14px",
+                  color: "#fff",
+                  fontSize: "0.9rem",
+                  resize: "vertical",
+                  outline: "none",
+                  fontFamily: "inherit",
+                }}
+              />
+            </div>
+
+            {/* Botões */}
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={handleSubmitAvaliacao}
+                disabled={avaliacaoLoading || avaliacaoNota === 0}
+                style={{
+                  flex: 1,
+                  background: avaliacaoNota === 0 ? "rgba(212,175,55,0.3)" : "var(--color-gold)",
+                  color: "#000",
+                  border: "none",
+                  borderRadius: "12px",
+                  padding: "14px",
+                  fontWeight: 800,
+                  fontSize: "0.95rem",
+                  cursor: avaliacaoNota === 0 ? "not-allowed" : "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                {avaliacaoLoading ? "Enviando..." : "Enviar Avaliação"}
+              </button>
+              <button
+                onClick={() => { setShowAvaliacaoModal(false); setAvaliacaoPendente(null); }}
+                style={{
+                  flex: 0.4,
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "12px",
+                  padding: "14px",
+                  color: "rgba(255,255,255,0.6)",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "0.85rem",
+                }}
+              >
+                Pular
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 }

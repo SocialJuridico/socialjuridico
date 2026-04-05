@@ -63,24 +63,26 @@ export async function DELETE(req) {
     // 1. Pega usuário logado
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      console.error("[DELETE Notif] No user session");
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
       );
     }
 
-    // 2. Verifica se o usuário é ADMIN
-    const { data: profile } = await supabaseAdmin
-      .from("perfil")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    const db = supabaseAdmin || supabase;
 
-    const isAdmin = profile?.role === "ADMIN";
+    // 2. Verifica se o usuário é ADMIN (Checa perfil e tb tabela admins)
+    const [profileRes, adminRes] = await Promise.all([
+      db.from("perfil").select("role").eq("id", user.id).maybeSingle(),
+      db.from("admins").select("id").eq("id", user.id).maybeSingle()
+    ]);
+
+    const isAdmin = profileRes.data?.role === "ADMIN" || !!adminRes.data;
+    
+    console.log(`[DELETE Notif] User: ${user.email}, isAdmin: ${isAdmin}, ID: ${notificationId}`);
 
     // 3. Executa a exclusão
-    const db = supabaseAdmin || supabase;
-    
     let query = db.from("notificacoes").delete().eq("id", notificationId);
 
     // Se não for admin, só pode excluir se for dono da notificação
@@ -88,16 +90,19 @@ export async function DELETE(req) {
       query = query.eq("user_id", user.id);
     }
 
-    const { error, count, status } = await query;
+    const { error, count, status } = await query.select(); // Adicionando .select() para confirmar o que foi deletado
 
-    if (error) throw error;
+    if (error) {
+      console.error("[DELETE Notif] DB Error:", error);
+      throw error;
+    }
 
-    // Se no status do delete não veio erro, mas nada foi deletado (count pode não vir sempre dependendo do supabase config, mas status sim)
-    // No entanto, se o user_id não coincidir e não for admin, o result será 0 rows deleted.
+    console.log(`[DELETE Notif] Success. Deleted: ${Array.isArray(status) ? status.length : 'ok'}`);
 
     return NextResponse.json({ 
       success: true, 
-      message: "Mensagem excluída com sucesso" 
+      message: "Mensagem excluída com sucesso",
+      deletedCount: Array.isArray(status) ? status.length : undefined
     });
 
   } catch (error) {

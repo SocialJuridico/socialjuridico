@@ -151,25 +151,23 @@ export async function GET(request) {
       }
 
       if (role === "ADMIN") {
+        // Para admin, mostramos apenas o SEU fluxo (mensagens que ele recebeu ou seus mirrors de enviadas)
+        if (row.user_id !== user.id) return false;
+
+        const meta = parseMeta(row.meta);
+
         if (row.tipo === "ADMIN_BROADCAST") {
-          return (
-            row.user_id === partnerId && String(meta.sent_by || "") === user.id
-          );
+          // Broadcast enviado por ele ou por outro admin que ele deva ver
+          return String(meta.sent_by || "") === user.id || String(meta.sent_by || "") === partnerId;
         }
 
         if (row.tipo === "ADMIN_CHAT") {
-          const isAdminSentToPartner =
-            row.user_id === partnerId &&
-            String(meta.sender_id || "") === user.id;
-          const isPartnerSentToAdmin =
-            row.user_id === user.id &&
-            String(meta.sender_id || "") === partnerId;
-          const isAdminMirror =
-            row.user_id === user.id &&
-            String(meta.sender_id || "") === user.id &&
-            String(meta.chat_with || "") === partnerId;
-
-          return isAdminSentToPartner || isPartnerSentToAdmin || isAdminMirror;
+          // Chat dele com este parceiro específico
+          return (
+            String(meta.sender_id || "") === partnerId || // Recebida do parceiro
+            String(meta.chat_with || "") === partnerId || // Mirror de enviada para parceiro
+            String(meta.sender_id || "") === user.id      // Verificação extra de posse
+          );
         }
 
         return false;
@@ -336,21 +334,60 @@ export async function DELETE(request) {
       );
     }
 
-    // Deleta mirrors do admin E mensagens do destinatário originadas deste admin
-    // OU simplesmente deleta tudo que liga esse admin a esse partnerId no contexto chat
-    const { error } = await db
+    console.log(`[DELETE AdminChat] Admin ${user.email} deleting conversation with partner ${partnerId}`);
+
+    // 1. Busca todas as possíveis notificações que ligam esse Admin ao Parceiro
+    // Pegamos um range amplo para processar no JS (mais confiável que filtros JSON complexos em algumas versões)
+    const { data: allNotifs, error: fetchError } = await db
       .from("notificacoes")
-      .delete()
-      .or(`and(user_id.eq.${user.id},meta->>chat_with.eq.${partnerId}),and(user_id.eq.${partnerId},meta->>sender_id.eq.${user.id})`)
-      .eq("tipo", "ADMIN_CHAT");
+      .select("id, user_id, tipo, meta")
+      .or(`user_id.eq.${user.id},user_id.eq.${partnerId}`)
+      .in("tipo", ["ADMIN_CHAT", "ADMIN_BROADCAST"]);
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
 
-    return NextResponse.json({ success: true, message: "Conversa excluída" });
+    // 2. Filtra no JS as mensagens que pertencem a esta conversa específica
+    const idsToDelete = (allNotifs || []).filter(row => {
+      const meta = parseMeta(row.meta);
+
+      // Verificações para ADMIN_CHAT
+      if (row.tipo === "ADMIN_CHAT") {
+        const isAdminMirror = row.user_id === user.id && String(meta.chat_with || "") === partnerId;
+        const isPartnerReceived = row.user_id === partnerId && String(meta.sender_id || "") === user.id;
+        const isReceivedFromPartner = row.user_id === user.id && String(meta.sender_id || "") === partnerId;
+        return isAdminMirror || isPartnerReceived || isReceivedFromPartner;
+      }
+
+      // Verificações para ADMIN_BROADCAST
+      if (row.tipo === "ADMIN_BROADCAST") {
+        const isBroadcastToPartner = row.user_id === partnerId && (String(meta.sent_by || "") === user.id);
+        return isBroadcastToPartner;
+      }
+
+      return false;
+    }).map(r => r.id);
+
+    console.log(`[DELETE AdminChat] Found ${idsToDelete.length} messages to delete.`);
+
+    if (idsToDelete.length > 0) {
+      const { error: deleteError } = await db
+        .from("notificacoes")
+        .delete()
+        .in("id", idsToDelete);
+      
+      if (deleteError) throw deleteError;
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `${idsToDelete.length} mensagens excluídas com sucesso.`,
+      count: idsToDelete.length
+    });
+
   } catch (error) {
     console.error("Erro na API DELETE /api/admin-chat:", error);
     return NextResponse.json(
-      { success: false, message: "Erro ao excluir conversa" },
+      { success: false, message: "Erro interno no servidor" },
       { status: 500 },
     );
   }

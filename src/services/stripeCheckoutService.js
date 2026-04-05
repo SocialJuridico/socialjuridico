@@ -2,7 +2,7 @@
  * Serviço frontend para integração com Stripe Checkout no SocialJurídico
  */
 
-export async function createJurisCheckout(jurisAmount) {
+export async function createJurisCheckout(jurisAmount, couponData = null) {
   try {
     // Mapear quantidade de Juris para price ID usando as variáveis do .env (via NEXT_PUBLIC)
     const priceMap = {
@@ -21,6 +21,8 @@ export async function createJurisCheckout(jurisAmount) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         priceId,
+        stripeCouponId: couponData?.stripe_coupon_id,
+        internalCouponId: couponData?.id,
         successUrl: window.location.origin + '/dashboard/advogado?payment=success',
         cancelUrl: window.location.origin + '/dashboard/advogado?payment=canceled',
       }),
@@ -41,7 +43,7 @@ export async function createJurisCheckout(jurisAmount) {
   }
 }
 
-export async function createProSubscription() {
+export async function createProSubscription(couponData = null) {
   try {
     const priceId = process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY;
 
@@ -54,6 +56,8 @@ export async function createProSubscription() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         priceId,
+        stripeCouponId: couponData?.stripe_coupon_id,
+        internalCouponId: couponData?.id,
         successUrl: window.location.origin + '/dashboard/advogado?payment=success',
         cancelUrl: window.location.origin + '/dashboard/advogado?payment=canceled',
       }),

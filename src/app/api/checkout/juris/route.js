@@ -11,14 +11,14 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const { priceId, successUrl, cancelUrl } = await request.json();
+    const { priceId, successUrl, cancelUrl, stripeCouponId, internalCouponId } = await request.json();
 
     if (!priceId) {
       return NextResponse.json({ success: false, message: "Price ID é obrigatório" }, { status: 400 });
     }
 
-    // Criar Sessão de Checkout do Stripe
-    const session = await stripe.checkout.sessions.create({
+    // Preparar as configurações da sessão do Stripe
+    const sessionConfig = {
       payment_method_types: ['card'],
       line_items: [
         {
@@ -33,9 +33,18 @@ export async function POST(request) {
         userId: user.id,
         type: 'JURIS_PURCHASE',
         priceId: priceId,
+        cupomId: internalCouponId || null // Para tracking no webhook depois
       },
       customer_email: user.email,
-    });
+    };
+
+    // Aplicar desconto se houver um cupom válido (Stripe ID)
+    if (stripeCouponId) {
+      sessionConfig.discounts = [{ coupon: stripeCouponId }];
+    }
+
+    // Criar Sessão de Checkout do Stripe
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     return NextResponse.json({ success: true, url: session.url, sessionId: session.id });
 

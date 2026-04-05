@@ -42,6 +42,19 @@ export async function POST(request) {
 async function handleCheckoutCompleted(session) {
   const userId = session.metadata.userId;
   const type = session.metadata.type;
+  const cupomId = session.metadata.cupomId;
+
+  // Registrar uso do cupom se existir
+  if (cupomId) {
+    console.log(`🎟️ Registrando uso do cupom ${cupomId} para o usuário ${userId}`);
+    await supabaseAdmin
+      .from('cupom_usos')
+      .insert([{
+        cupom_id: cupomId,
+        advogado_id: userId,
+        checkout_session_id: session.id
+      }]);
+  }
 
   if (type === "JURIS_PURCHASE") {
     // Definir quantidade de Juris baseada no Price ID

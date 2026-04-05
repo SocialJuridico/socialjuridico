@@ -56,9 +56,32 @@ export default function AdminChatPage() {
     };
   }, [loadChat]);
 
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [prevMsgCount, setPrevMsgCount] = useState(0);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const container = document.querySelector(`.${styles.messagesBox}`);
+    if (!container || messages.length === 0) return;
+
+    if (isInitialLoad) {
+      container.scrollTop = container.scrollHeight;
+      setIsInitialLoad(false);
+      setPrevMsgCount(messages.length);
+      return;
+    }
+
+    // Only scroll if message count increased and user is near bottom
+    if (messages.length > prevMsgCount) {
+      const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 150;
+      if (isAtBottom) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth"
+        });
+      }
+      setPrevMsgCount(messages.length);
+    }
+  }, [messages, isInitialLoad, prevMsgCount]);
 
   const handleSend = async (e) => {
     e.preventDefault();

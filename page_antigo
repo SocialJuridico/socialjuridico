@@ -120,9 +120,6 @@ export default function AdvogadoDashboard() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [isTypingAI, setIsTypingAI] = useState(false);
-  const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState(null);
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   // CALCULADORA STATE
   const [activeCalculator, setActiveCalculator] = useState("rescisao");
@@ -253,34 +250,6 @@ export default function AdvogadoDashboard() {
   const smartFileInputRef = useRef(null);
   const avatarInputRef = useRef(null);
   const chatEndRef = useRef(null);
-
-  const handleApplyCoupon = async (tipo) => {
-    if (!couponCode.trim()) return;
-    setIsValidatingCoupon(true);
-    try {
-      const res = await fetch('/api/checkout/validate-coupon', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          codigo: couponCode,
-          tipo,
-          advogado_id: profileData?.id
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAppliedCoupon(data);
-        toast.success("Cupom aplicado com sucesso!");
-      } else {
-        toast.error(data.error);
-        setAppliedCoupon(null);
-      }
-    } catch (err) {
-      toast.error("Erro ao validar cupom.");
-    } finally {
-      setIsValidatingCoupon(false);
-    }
-  };
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -4596,7 +4565,8 @@ export default function AdvogadoDashboard() {
                       <h4>Redator IA Jurídico</h4>
                     </div>
                     <p style={{ fontSize: "0.85rem", marginBottom: 15 }}>
-                      Gera peças jurídicas profissionais com múltiplos tons:                      formal, técnico ou persuasivo. Inclui fundamentação legal,
+                      Gera peças jurídicas profissionais com múltiplos tons:
+                      formal, técnico ou persuasivo. Inclui fundamentação legal,
                       jurisprudência e argumentações estruturadas. Suporta todas
                       as áreas.
                     </p>
@@ -6562,36 +6532,22 @@ export default function AdvogadoDashboard() {
           <div className={styles.packageGrid}>
             <div
               className={styles.packageCard}
-              onClick={() => handleBuyJuris(10, appliedCoupon)}
+              onClick={() => handleBuyJuris(10)}
             >
               <span className={styles.packageAmount}>10</span>
               <span className={styles.packageUnit}>Juris</span>
-              <span className={styles.packagePrice}>
-                {appliedCoupon && appliedCoupon.status === 'success' && appliedCoupon.tipo_internal === 'COMPRA_JURIS' ? (
-                  <>
-                    <span style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: '0.8rem', marginRight: '5px' }}>R$ 9.90</span>
-                    R$ {(9.90 * (appliedCoupon.desconto_tipo === 'PERCENTUAL' ? (1 - appliedCoupon.valor / 100) : 1) - (appliedCoupon.desconto_tipo === 'FIXO' ? appliedCoupon.valor : 0)).toFixed(2)}
-                  </>
-                ) : "R$ 9.90"}
-              </span>
+              <span className={styles.packagePrice}>R$ 9.90</span>
               <button className={styles.packageBtn}>Comprar</button>
             </div>
 
             <div
               className={`${styles.packageCard} ${styles.popularCard}`}
-              onClick={() => handleBuyJuris(20, appliedCoupon)}
+              onClick={() => handleBuyJuris(20)}
             >
               <span className={styles.popularBadge}>Mais Popular</span>
               <span className={styles.packageAmount}>20</span>
               <span className={styles.packageUnit}>Juris</span>
-              <span className={styles.packagePrice}>
-                {appliedCoupon && appliedCoupon.tipo_internal === 'COMPRA_JURIS' ? (
-                  <>
-                    <span style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: '0.8rem', marginRight: '5px' }}>R$ 16.90</span>
-                    R$ {(16.90 * (appliedCoupon.desconto_tipo === 'PERCENTUAL' ? (1 - appliedCoupon.valor / 100) : 1) - (appliedCoupon.desconto_tipo === 'FIXO' ? appliedCoupon.valor : 0)).toFixed(2)}
-                  </>
-                ) : "R$ 16.90"}
-              </span>
+              <span className={styles.packagePrice}>R$ 16.90</span>
               <button
                 className={`${styles.packageBtn} ${styles.popularPkgBtn}`}
               >
@@ -6601,44 +6557,13 @@ export default function AdvogadoDashboard() {
 
             <div
               className={styles.packageCard}
-              onClick={() => handleBuyJuris(50, appliedCoupon)}
+              onClick={() => handleBuyJuris(50)}
             >
               <span className={styles.packageAmount}>50</span>
               <span className={styles.packageUnit}>Juris</span>
-              <span className={styles.packagePrice}>
-                {appliedCoupon && appliedCoupon.tipo_internal === 'COMPRA_JURIS' ? (
-                  <>
-                    <span style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: '0.8rem', marginRight: '5px' }}>R$ 39.90</span>
-                    R$ {(39.90 * (appliedCoupon.desconto_tipo === 'PERCENTUAL' ? (1 - appliedCoupon.valor / 100) : 1) - (appliedCoupon.desconto_tipo === 'FIXO' ? appliedCoupon.valor : 0)).toFixed(2)}
-                  </>
-                ) : "R$ 39.90"}
-              </span>
+              <span className={styles.packagePrice}>R$ 39.90</span>
               <button className={styles.packageBtn}>Comprar</button>
             </div>
-          </div>
-
-          <div className={styles.couponArea}>
-             <label>Possui um cupom de desconto?</label>
-             <div className={styles.couponRow}>
-                <input 
-                  type="text" 
-                  placeholder="DIGITE SEU CUPOM" 
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  className={styles.couponInput}
-                  disabled={appliedCoupon}
-                />
-                <button 
-                  className={styles.applyCouponBtn}
-                  onClick={() => handleApplyCoupon('COMPRA_JURIS')}
-                  disabled={isValidatingCoupon || !couponCode || appliedCoupon}
-                >
-                  {isValidatingCoupon ? "..." : appliedCoupon ? "APLICADO" : "VALIDAR"}
-                </button>
-             </div>
-             {appliedCoupon && (
-               <p className={styles.couponSuccess}>Desconto de {appliedCoupon.desconto_tipo === 'PERCENTUAL' ? `${appliedCoupon.valor}%` : `R$ ${appliedCoupon.valor}`} ativado!</p>
-             )}
           </div>
 
           <button
@@ -6678,34 +6603,9 @@ export default function AdvogadoDashboard() {
             </div>
             <div className={styles.priceContainer}>
               <div className={styles.priceLarge}>
-                {appliedCoupon && appliedCoupon.stripe_coupon_id ? (
-                  <>
-                    <span style={{ textDecoration: 'line-through', opacity: 0.4, fontSize: '1.5rem', marginRight: '10px' }}>R$ 69,90</span>
-                    R$ {(69.90 * (appliedCoupon.desconto_tipo === 'PERCENTUAL' ? (1 - appliedCoupon.valor / 100) : 1) - (appliedCoupon.desconto_tipo === 'FIXO' ? appliedCoupon.valor : 0)).toFixed(2).replace('.', ',')}
-                  </>
-                ) : "R$ 69,90"}
+                R$ 69<span className={styles.priceCents}>,90</span>
               </div>
               <div className={styles.pricePeriod}>cobrado mensalmente</div>
-            </div>
-
-            <div className={styles.proCouponArea}>
-                <div className={styles.proCouponRow}>
-                  <input 
-                    type="text" 
-                    placeholder="CUPOM DE DESCONTO" 
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    className={styles.proCouponInput}
-                  />
-                  <button 
-                    className={styles.proApplyBtn}
-                    onClick={() => handleApplyCoupon('PLANO_PRO')}
-                    disabled={isValidatingCoupon || appliedCoupon}
-                  >
-                    {isValidatingCoupon ? "..." : "APLICAR"}
-                  </button>
-                </div>
-                {appliedCoupon && <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '5px' }}>✓ Desconto aplicado com sucesso!</p>}
             </div>
           </div>
 
@@ -6779,7 +6679,7 @@ export default function AdvogadoDashboard() {
               <div className={styles.bonusValue}>+20 Juris todo mês</div>
             </div>
 
-            <button className={styles.subscribeBtn} onClick={() => handleBecomePro(appliedCoupon)}>
+            <button className={styles.subscribeBtn} onClick={handleBecomePro}>
               Assinar Agora <ChevronRight size={20} />
             </button>
           </div>

@@ -121,3 +121,86 @@
     font-size: 1.05rem;
   }
 }
+
+/* ─── CONTADOR DE USUÁRIOS ─────────────────────────────────── */
+.statsBar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 16px;
+  padding: 14px 32px;
+  margin-bottom: 36px;
+  backdrop-filter: blur(8px);
+  animation: fadeSlideUp 0.6s ease both;
+  animation-delay: 0.15s;
+}
+
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 28px;
+}
+
+.statIcon {
+  color: var(--color-gold);
+  flex-shrink: 0;
+}
+
+.statTexts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.statNumber {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--color-gold);
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.statLabel {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.statDivider {
+  width: 1px;
+  height: 36px;
+  background: rgba(212, 175, 55, 0.2);
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .statsBar {
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px 24px;
+  }
+  .statItem {
+    padding: 0;
+  }
+  .statDivider {
+    width: 60px;
+    height: 1px;
+  }
+}

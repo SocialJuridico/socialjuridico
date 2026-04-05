@@ -1,0 +1,268 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  min-height: 100vh;
+  color: #fff;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  gap: 20px;
+}
+
+.backBtn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  padding: 10px;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.backBtn:hover {
+  background: rgba(255,255,255,0.1);
+  transform: translateX(-5px);
+}
+
+.header h1 {
+  font-size: 1.8rem;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+
+.header p {
+  opacity: 0.6;
+  font-size: 0.95rem;
+}
+
+.searchWrapper {
+  position: relative;
+  width: 350px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.4;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 12px 15px 12px 45px;
+  background: #111317;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+  border-color: var(--color-gold);
+}
+
+.content {
+  background: #090b0e;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 20px;
+}
+
+.loadingState {
+  padding: 50px;
+  text-align: center;
+  opacity: 0.6;
+}
+
+.emptyState {
+  padding: 100px 50px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.emptyState p {
+  opacity: 0.5;
+  font-size: 1.1rem;
+}
+
+.notifGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.notifCard {
+  background: #111317;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 16px;
+  padding: 24px;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.notifCard:hover {
+  border-color: rgba(212,175,55,0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.notifHeader {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.notifIcon {
+  background: rgba(212,175,55,0.1);
+  padding: 10px;
+  border-radius: 10px;
+  color: var(--color-gold);
+}
+
+.notifTitleInfo {
+  flex: 1;
+}
+
+.notifTitleInfo h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.notifDate {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  display: flex;
+  align-items: center;
+}
+
+.deleteBtn {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: none;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  opacity: 0.3;
+}
+
+.notifCard:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  background: #ef4444;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.notifMensagem {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  opacity: 0.8;
+  margin-bottom: 15px;
+  word-break: break-word;
+}
+
+.notifFooter {
+  margin-top: auto;
+  display: flex;
+  gap: 10px;
+}
+
+.notifTypeBadge {
+  font-size: 0.7rem;
+  padding: 4px 10px;
+  background: rgba(212,175,55,0.05);
+  border: 1px solid rgba(212,175,55,0.2);
+  border-radius: 20px;
+  color: var(--color-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.confirmModal {
+  background: #111317;
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 40px;
+  border-radius: 24px;
+  max-width: 450px;
+  width: 100%;
+  text-align: center;
+}
+
+.confirmModal h3 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.confirmModal p {
+  opacity: 0.6;
+  margin-bottom: 30px;
+}
+
+.modalActions {
+  display: flex;
+  gap: 12px;
+}
+
+.btnCancel {
+  flex: 1;
+  padding: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #fff;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btnDelete {
+  flex: 1.5;
+  padding: 14px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .searchWrapper {
+    width: 100%;
+  }
+  .notifGrid {
+    grid-template-columns: 1fr;
+  }
+}

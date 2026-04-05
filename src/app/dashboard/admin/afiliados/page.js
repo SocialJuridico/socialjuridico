@@ -20,6 +20,10 @@ export default function AdminAfiliadosPage() {
   const [indicacoes, setIndicacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [selectedInd, setSelectedInd] = useState(null);
+  const [creditAmount, setCreditAmount] = useState("35");
+  const [isCrediting, setIsCrediting] = useState(false);
 
   const fetchIndicacoes = useCallback(async () => {
     setLoading(true);
@@ -43,34 +47,43 @@ export default function AdminAfiliadosPage() {
     fetchIndicacoes();
   }, [fetchIndicacoes]);
 
-  const handleCredit = async (indicacao) => {
-    const valor = prompt(`Quanto deseja creditar para ${indicacao.indicador?.name || 'este advogado'}? 50% do PRO (R$ 69,90) é ~35 Juris.`, "35");
-    
-    if (valor && !isNaN(valor)) {
-      const confirmed = confirm(`Confirmar crédito de ${valor} Juris para o advogado indicador?`);
-      if (!confirmed) return;
+  const handleCredit = (indicacao) => {
+    setSelectedInd(indicacao);
+    setCreditAmount("35");
+    setShowCreditModal(true);
+  };
 
-      try {
-        const res = await fetch("/api/admin/indicacoes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            indicacao_id: indicacao.id,
-            indicador_id: indicacao.indicador_id,
-            valor: Number(valor)
-          })
-        });
+  const executeCredit = async () => {
+    if (!selectedInd || !creditAmount || isNaN(creditAmount)) {
+      toast.error("Informe um valor válido");
+      return;
+    }
 
-        const data = await res.json();
-        if (data.success) {
-          toast.success("Crédito realizado com sucesso!");
-          fetchIndicacoes(); // Recarrega a lista
-        } else {
-          toast.error(data.message || "Erro ao realizar crédito");
-        }
-      } catch (e) {
-        toast.error("Erro ao processar crédito");
+    setIsCrediting(true);
+    try {
+      const res = await fetch("/api/admin/indicacoes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          indicacao_id: selectedInd.id,
+          indicador_id: selectedInd.indicador_id,
+          valor: Number(creditAmount)
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Crédito realizado com sucesso!");
+        setShowCreditModal(false);
+        setSelectedInd(null);
+        fetchIndicacoes(); // Recarrega a lista
+      } else {
+        toast.error(data.message || "Erro ao realizar crédito");
       }
+    } catch (e) {
+      toast.error("Erro ao processar crédito");
+    } finally {
+      setIsCrediting(false);
     }
   };
 
@@ -199,6 +212,45 @@ export default function AdminAfiliadosPage() {
           </table>
         )}
       </div>
+      {showCreditModal && selectedInd && (
+        <div className={styles.modalOverlay} style={{ zIndex: 100000, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className={styles.confirmModal} style={{ textAlign: 'center', maxWidth: '450px', background: '#111317', padding: '30px', borderRadius: '15px', border: '1px solid rgba(212,175,55,0.2)' }}>
+             <div style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <Coins size={32} />
+             </div>
+             <h3>Efetuar Crédito de Juris</h3>
+             <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: 25 }}>Você está creditando bônus para o advogado indicador: <br/><strong>{selectedInd.indicador?.name || selectedInd.indicador?.email}</strong></p>
+             
+             <div style={{ marginBottom: 30, textAlign: 'left' }}>
+                <label style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem', opacity: 0.7 }}>Quantidade de Juris</label>
+                <input 
+                  type="number" 
+                  value={creditAmount}
+                  onChange={(e) => setCreditAmount(e.target.value)}
+                  placeholder="Ex: 35"
+                  style={{ width: '100%', padding: '14px', background: '#1a1d23', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', fontSize: '1rem', outline: 'none' }}
+                />
+                <span style={{ fontSize: '0.75rem', opacity: 0.4, marginTop: 8, display: 'block' }}>Sugestão: 35 Juris (50% do valor da assinatura PRO)</span>
+             </div>
+
+             <div style={{ display: 'flex', gap: 12 }}>
+                <button 
+                  onClick={() => { setShowCreditModal(false); setSelectedInd(null); }}
+                  style={{ flex: 1, padding: 14, borderRadius: 10, background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={executeCredit}
+                  disabled={isCrediting || !creditAmount}
+                  style={{ flex: 1.5, padding: 14, borderRadius: 10, background: 'var(--color-gold)', color: '#000', border: 'none', fontWeight: 800, cursor: 'pointer', opacity: (isCrediting || !creditAmount) ? 0.6 : 1 }}
+                >
+                  {isCrediting ? "Creditando..." : "Confirmar Crédito"}
+                </button>
+             </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

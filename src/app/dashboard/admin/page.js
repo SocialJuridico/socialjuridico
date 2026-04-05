@@ -138,9 +138,17 @@ export default function AdminDashboardPage() {
           <Link href="/dashboard/admin/mensagens" className={styles.cardLink}>
             <article className={`${styles.card} ${styles.cardClickable}`}>
               <div className={styles.cardTop}>
-                <MessageSquare size={16} /> Mensagens
+                <MessageSquare size={16} /> Mensagens Enviadas
               </div>
               <strong>Conversas</strong>
+            </article>
+          </Link>
+          <Link href="/dashboard/admin/notificacoes" className={styles.cardLink}>
+            <article className={`${styles.card} ${styles.cardClickable}`}>
+              <div className={styles.cardTop}>
+                <Bell size={16} /> Minhas Mensagens
+              </div>
+              <strong>Recebidas</strong>
             </article>
           </Link>
           <Link href="/dashboard/admin/banners" className={styles.cardLink}>

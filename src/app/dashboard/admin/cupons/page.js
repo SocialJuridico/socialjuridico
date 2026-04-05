@@ -26,6 +26,8 @@ export default function AdminCuponsPage() {
     limite_por_usuario: 1,
     expira_em: ''
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [couponToDelete, setCouponToDelete] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -81,12 +83,23 @@ export default function AdminCuponsPage() {
   }
 
   async function handleDelete(id) {
-    if (!confirm('Tem certeza que deseja excluir este cupom?')) return;
+    setCouponToDelete(id);
+    setShowDeleteConfirm(true);
+  }
+
+  async function executeDelete() {
+    if (!couponToDelete) return;
     try {
-      const res = await fetch(`/api/admin/cupons?id=${id}`, { method: 'DELETE' });
-      if (res.ok) fetchCupons();
+      const res = await fetch(`/api/admin/cupons?id=${couponToDelete}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchCupons();
+        setShowDeleteConfirm(false);
+        setCouponToDelete(null);
+        toast.success("Cupom excluído!");
+      }
     } catch (error) {
       console.error('Erro ao excluir cupom:', error);
+      toast.error("Erro ao excluir cupom.");
     }
   }
 
@@ -240,6 +253,31 @@ export default function AdminCuponsPage() {
           </table>
         </div>
       </div>
+      {showDeleteConfirm && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.confirmModal}>
+            <div className={styles.warningIcon} style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', marginBottom: 15, width: 64, height: 64, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+               <Trash2 size={32} />
+            </div>
+            <h3 style={{ textAlign: 'center', margin: '15px 0' }}>Excluir Cupom?</h3>
+            <p style={{ textAlign: 'center', opacity: 0.7, marginBottom: 30 }}>Esta ação é irreversível. O cupom não poderá mais ser utilizado por novos advogados.</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button 
+                onClick={() => { setShowDeleteConfirm(false); setCouponToDelete(null); }}
+                style={{ flex: 1, padding: 12, borderRadius: 8, background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={executeDelete}
+                style={{ flex: 1, padding: 12, borderRadius: 8, background: '#ef4444', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}
+              >
+                Confirmar Exclusão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

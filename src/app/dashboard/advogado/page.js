@@ -116,6 +116,8 @@ export default function AdvogadoDashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showNotifDeleteConfirm, setShowNotifDeleteConfirm] = useState(false);
+  const [notifToDelete, setNotifToDelete] = useState(null);
   const [docToDelete, setDocToDelete] = useState(null);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
@@ -416,6 +418,35 @@ export default function AdvogadoDashboard() {
     await syncNotificacoes();
     setLoadingNotificacoes(false);
   }, [syncNotificacoes]);
+
+  const handleDeleteNotification = async (e, id) => {
+    e.stopPropagation();
+    setNotifToDelete(id);
+    setShowNotifDeleteConfirm(true);
+  };
+
+  const executeDeleteNotification = async () => {
+    if (!notifToDelete) return;
+    try {
+      const res = await fetch(`/api/notificacoes?id=${notifToDelete}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Mensagem excluída!");
+        setNotificacoes((prev) => prev.filter((n) => n.id !== notifToDelete));
+        setShowNotifDeleteConfirm(false);
+        setNotifToDelete(null);
+      } else {
+        toast.error(data.message || "Erro ao excluir mensagem");
+      }
+    } catch (err) {
+      console.error("Erro ao excluir notificação:", err);
+      toast.error("Erro de conexão ao excluir.");
+    }
+  };
+
 
   const loadDataFull = useCallback(async () => {
     setLoadingProfile(true);
@@ -1356,11 +1387,11 @@ export default function AdvogadoDashboard() {
           <div className={styles.loadingState}>Carregando mensagens...</div>
         ) : notificacoes.length > 0 ? (
           notificacoes.map((msg) => (
-            <button
-              type="button"
+            <div
               key={msg.id}
               className={`${styles.opCard} ${styles.clickableMessageCard}`}
               onClick={() => handleOpenAdminChat(msg)}
+              style={{ cursor: "pointer", position: "relative" }}
             >
               <div className={styles.opHeader}>
                 <div className={styles.opArea}>
@@ -1375,15 +1406,39 @@ export default function AdvogadoDashboard() {
                     <span className={styles.opLocation}>Administrador</span>
                   </div>
                 </div>
-                <span className={styles.opDate}>
-                  {msg.created_at
-                    ? new Date(msg.created_at).toLocaleString("pt-BR")
-                    : "Agora"}
-                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                  <span className={styles.opDate}>
+                    {msg.created_at
+                      ? new Date(msg.created_at).toLocaleString("pt-BR")
+                      : "Agora"}
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.deleteNotifBtn}
+                    onClick={(e) => handleDeleteNotification(e, msg.id)}
+                    title="Excluir mensagem"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "rgba(255,255,255,0.3)",
+                      cursor: "pointer",
+                      padding: "5px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.color = "#ff4d4d")}
+                    onMouseOut={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
               <p className={styles.opDesc}>{msg.mensagem || "Sem conteúdo."}</p>
-            </button>
+            </div>
           ))
+
         ) : (
           <div className={styles.emptyState}>
             Você ainda não recebeu mensagens.
@@ -6273,6 +6328,42 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const renderNotifDeleteConfirmModal = () => {
+    if (!showNotifDeleteConfirm) return null;
+
+    return (
+      <div className={styles.modalOverlay} style={{ zIndex: 20000 }}>
+        <div className={styles.confirmModal}>
+          <div className={styles.confirmIcon} style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444" }}>
+            <Trash2 size={32} />
+          </div>
+          <h3 className={styles.confirmTitle}>Excluir Mensagem?</h3>
+          <p className={styles.confirmText}>
+            Esta ação removerá a mensagem permanentemente da sua caixa de entrada.
+          </p>
+          <div className={styles.confirmActions}>
+            <button
+              className={styles.cancelBtn}
+              onClick={() => {
+                setShowNotifDeleteConfirm(false);
+                setNotifToDelete(null);
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              className={styles.confirmDeleteBtn}
+              onClick={executeDeleteNotification}
+              style={{ background: "#ef4444" }}
+            >
+              Excluir
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderChatModal = () => {
     if (!showChatModal || !selectedClient) return null;
 
@@ -7187,6 +7278,7 @@ export default function AdvogadoDashboard() {
       {renderDeleteConfirmModal()}
       {renderChatModal()}
       {renderAgendaModal()}
+      {renderNotifDeleteConfirmModal()}
     </div>
   );
 }

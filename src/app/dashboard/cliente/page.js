@@ -147,6 +147,8 @@ export default function ClienteDashboard() {
   const [selectedLawyer, setSelectedLawyer] = useState(null);
   const [isCaseSelectOpen, setIsCaseSelectOpen] = useState(false);
   const [isProcessingChat, setIsProcessingChat] = useState(false);
+  const [showNotifDeleteConfirm, setShowNotifDeleteConfirm] = useState(false);
+  const [notifToDelete, setNotifToDelete] = useState(null);
 
   // Filtra advogados com especialidade preenchida
   const advogadosComEspecialidade = useMemo(() => {
@@ -263,6 +265,34 @@ export default function ClienteDashboard() {
     await syncNotificacoes(false);
     setLoadingNotificacoes(false);
   }, [syncNotificacoes]);
+
+  const handleDeleteNotification = async (id) => {
+    setNotifToDelete(id);
+    setShowNotifDeleteConfirm(true);
+  };
+
+  const executeDeleteNotification = async () => {
+    if (!notifToDelete) return;
+    try {
+      const res = await fetch(`/api/notificacoes?id=${notifToDelete}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Notificação excluída!");
+        setNotificacoes((prev) => prev.filter((n) => n.id !== notifToDelete));
+        setShowNotifDeleteConfirm(false);
+        setNotifToDelete(null);
+      } else {
+        toast.error(data.message || "Erro ao excluir.");
+      }
+    } catch (err) {
+      console.error("Erro delete notif:", err);
+      toast.error("Erro na conexão.");
+    }
+  };
+
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true);
@@ -1565,10 +1595,36 @@ export default function ClienteDashboard() {
                         <span className={styles.notifTitle}>
                           {notif.titulo}
                         </span>
-                        <span className={styles.notifDate}>
-                          {new Date(notif.created_at).toLocaleDateString()}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <span className={styles.notifDate}>
+                            {new Date(notif.created_at).toLocaleDateString()}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteNotification(notif.id);
+                            }}
+                            title="Excluir notificação"
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "rgba(255,255,255,0.2)",
+                              cursor: "pointer",
+                              padding: "4px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              transition: "all 0.2s",
+                            }}
+                            onMouseOver={(e) => (e.currentTarget.style.color = "#ef4444")}
+                            onMouseOut={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.2)")}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
+
                       <p className={styles.notifDesc}>{notif.mensagem}</p>
                     </div>
                     {!notif.lida && <div className={styles.unreadDot}></div>}
@@ -2367,6 +2423,34 @@ export default function ClienteDashboard() {
                 Pular
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* MODAL CONFIRMAÇÃO EXCLUSÃO NOTIFICAÇÃO */}
+      {showNotifDeleteConfirm && (
+        <div className={styles.modalOverlay} style={{ zIndex: 100000 }}>
+          <div className={`${styles.editModal} ${styles.confirmSpecial}`} style={{ maxWidth: '400px', textAlign: 'center' }}>
+             <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <Trash2 size={32} />
+             </div>
+             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>Excluir Notificação?</h3>
+             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '30px', lineHeight: '1.5' }}>
+                Esta mensagem será removida permanentemente da sua área de notificações.
+             </p>
+             <div style={{ display: 'flex', gap: '12px' }}>
+                <button 
+                  onClick={() => { setShowNotifDeleteConfirm(false); setNotifToDelete(null); }}
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={executeDeleteNotification}
+                  style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800 }}
+                >
+                  Excluir
+                </button>
+             </div>
           </div>
         </div>
       )}

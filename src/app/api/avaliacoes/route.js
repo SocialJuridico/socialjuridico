@@ -110,6 +110,31 @@ export async function POST(request) {
 
     if (insertError) throw insertError;
 
+    // 💡 ATUALIZAR MÉDIAS NO PERFIL DO ADVOGADO (Denormalização para performance)
+    try {
+      const { data: allRatings } = await db
+        .from("avaliacoes_advogado")
+        .select("nota")
+        .eq("advogado_id", advogado_id);
+
+      if (allRatings && allRatings.length > 0) {
+        const total = allRatings.length;
+        const sum = allRatings.reduce((acc, curr) => acc + curr.nota, 0);
+        const avg = Number((sum / total).toFixed(2));
+
+        await db
+          .from("advogados")
+          .update({
+            avg_rating: avg,
+            total_ratings: total
+          })
+          .eq("id", advogado_id);
+      }
+    } catch (updateErr) {
+      console.warn("Erro ao atualizar agregados do advogado:", updateErr);
+      // Não falha a resposta principal se der erro aqui
+    }
+
     return NextResponse.json({
       success: true,
       message: "Avaliação registrada com sucesso!",

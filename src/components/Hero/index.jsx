@@ -1,21 +1,24 @@
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Users, Scale } from 'lucide-react';
+import { supabaseAdmin } from '@/lib/supabase';
 import Button from '../Button';
 import styles from './Hero.module.css';
 
-// Server Component — busca os dados no servidor sem JS no cliente
+// Busca direto no Supabase — funciona tanto no build quanto em ISR
 async function getStats() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/stats/publico`, {
-      next: { revalidate: 300 }, // Revalida a cada 5 minutos
-    });
-    const data = await res.json();
-    if (data.success) return data.data;
+    const [clientesRes, advRes] = await Promise.all([
+      supabaseAdmin.from('clientes').select('id', { count: 'exact', head: true }),
+      supabaseAdmin.from('advogados').select('id', { count: 'exact', head: true }),
+    ]);
+    return {
+      totalClientes: clientesRes.count || 0,
+      totalAdvogados: advRes.count || 0,
+    };
   } catch (e) {
-    console.warn('Erro ao buscar stats públicas:', e);
+    console.warn('Erro ao buscar stats:', e);
+    return { totalClientes: 0, totalAdvogados: 0 };
   }
-  return { totalClientes: 0, totalAdvogados: 0 };
 }
 
 export default async function Hero() {

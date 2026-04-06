@@ -4724,7 +4724,9 @@
   display: flex;
   white-space: nowrap;
   animation: marquee_anim 40s linear infinite;
-  gap: 50px;
+  gap: 80px;
+  width: max-content;
+  padding-left: 100%; /* Empurra tudo para a direita p/ começar entrando */
 }
 
 .marqueeContent:hover {
@@ -4733,7 +4735,7 @@
 
 .avisoItem {
   color: var(--color-silver);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 500;
   display: flex;
   align-items: center;
@@ -4743,12 +4745,12 @@
 .avisoSeparator {
   color: var(--color-gold);
   font-weight: 900;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 @keyframes marquee_anim {
   0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+  100% { transform: translateX(-100%); }
 }
 
 @media (max-width: 768px) {

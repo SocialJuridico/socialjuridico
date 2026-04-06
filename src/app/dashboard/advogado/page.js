@@ -918,15 +918,8 @@ export default function AdvogadoDashboard() {
       {avisos.length > 0 && (
         <div className={styles.avisosMarquee}>
           <div className={styles.marqueeContent}>
-            {avisos.map((aviso, idx) => (
-              <span key={`aviso-1-${aviso.id || idx}`} className={styles.avisoItem}>
-                {aviso.texto}
-                <span className={styles.avisoSeparator}>•</span>
-              </span>
-            ))}
-            {/* Duplicar para o loop infinito ser suave */}
-            {avisos.map((aviso, idx) => (
-              <span key={`aviso-2-${aviso.id || idx}`} className={styles.avisoItem}>
+            {[...avisos, ...avisos, ...avisos].map((aviso, idx) => (
+              <span key={`aviso-${idx}`} className={styles.avisoItem}>
                 {aviso.texto}
                 <span className={styles.avisoSeparator}>•</span>
               </span>

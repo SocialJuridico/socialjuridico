@@ -28,13 +28,13 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { titulo, descricao, area_atuacao, anexos } = body || {};
+    const { titulo, descricao, area_atuacao, anexos, cidade, estado } = body || {};
 
-    if (!titulo?.trim() || !descricao?.trim() || !area_atuacao?.trim()) {
+    if (!titulo?.trim() || !descricao?.trim() || !area_atuacao?.trim() || !cidade?.trim() || !estado?.trim()) {
       return NextResponse.json(
         {
           success: false,
-          message: "Título, descrição e área de atuação são obrigatórios",
+          message: "Título, descrição, área de atuação, cidade e estado em que se encontra o caso são obrigatórios",
         },
         { status: 400 },
       );
@@ -47,6 +47,8 @@ export async function POST(request) {
           titulo: titulo.trim(),
           descricao: descricao.trim(),
           area_atuacao: area_atuacao.trim(),
+          cidade: cidade.trim(),
+          estado: estado.trim(),
           cliente_id: user.id,
           anexos: Array.isArray(anexos) ? anexos : [],
           status: "ABERTO",
@@ -161,7 +163,7 @@ export async function PUT(request) {
     }
 
     const body = await request.json();
-    const { id, titulo, descricao, area_atuacao } = body;
+    const { id, titulo, descricao, area_atuacao, cidade, estado } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -178,6 +180,8 @@ export async function PUT(request) {
         titulo,
         descricao,
         area_atuacao,
+        cidade,
+        estado,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)

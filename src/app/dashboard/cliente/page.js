@@ -114,6 +114,8 @@ export default function ClienteDashboard() {
     titulo: "",
     area: "",
     descricao: "",
+    cidade: "",
+    estado: "",
   });
 
   // States para Notificações
@@ -131,6 +133,8 @@ export default function ClienteDashboard() {
     titulo: "",
     area: "",
     descricao: "",
+    cidade: "",
+    estado: "",
   });
 
   // States para Perfil
@@ -578,6 +582,8 @@ export default function ClienteDashboard() {
       titulo: caso.titulo || "",
       area: caso.area_atuacao || "",
       descricao: caso.descricao || "",
+      cidade: caso.cidade || "",
+      estado: caso.estado || "",
     });
     setIsEditModalOpen(true);
   };
@@ -594,6 +600,8 @@ export default function ClienteDashboard() {
           titulo: editFormData.titulo,
           area_atuacao: editFormData.area,
           descricao: editFormData.descricao,
+          cidade: editFormData.cidade,
+          estado: editFormData.estado,
         }),
       });
 
@@ -837,6 +845,8 @@ export default function ClienteDashboard() {
           titulo: formData.titulo,
           descricao: formData.descricao,
           area_atuacao: formData.area,
+          cidade: formData.cidade,
+          estado: formData.estado,
           anexos: uploadedUrls,
         }),
       });
@@ -856,7 +866,7 @@ export default function ClienteDashboard() {
         }
 
         setFormSuccess(true);
-        setFormData({ titulo: "", area: "", descricao: "" });
+        setFormData({ titulo: "", area: "", descricao: "", cidade: "", estado: "" });
         setSelectedFiles([]);
         setShareCaseOnFacebook(false);
         setTimeout(() => {
@@ -1473,13 +1483,69 @@ export default function ClienteDashboard() {
                     <input
                       type="text"
                       className={styles.formInput}
-                      placeholder="Ex: Problema com contrato de aluguel"
+                      placeholder="Ex: Divórcio Consensual, Ação Revisional..."
                       required
                       value={formData.titulo}
                       onChange={(e) =>
                         setFormData({ ...formData, titulo: e.target.value })
                       }
                     />
+                  </div>
+
+                  <div className={styles.formRow} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div className={styles.formGroup}>
+                      <label>Cidade</label>
+                      <input
+                        type="text"
+                        className={styles.formInput}
+                        placeholder="Ex: Porto Alegre"
+                        required
+                        value={formData.cidade}
+                        onChange={(e) =>
+                          setFormData({ ...formData, cidade: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Estado (UF)</label>
+                      <select
+                        className={styles.formSelect}
+                        required
+                        value={formData.estado}
+                        onChange={(e) =>
+                          setFormData({ ...formData, estado: e.target.value })
+                        }
+                      >
+                        <option value="">Selecione</option>
+                        <option value="AC">Acre</option>
+                        <option value="AL">Alagoas</option>
+                        <option value="AP">Amapá</option>
+                        <option value="AM">Amazonas</option>
+                        <option value="BA">Bahia</option>
+                        <option value="CE">Ceará</option>
+                        <option value="DF">Distrito Federal</option>
+                        <option value="ES">Espírito Santo</option>
+                        <option value="GO">Goiás</option>
+                        <option value="MA">Maranhão</option>
+                        <option value="MT">Mato Grosso</option>
+                        <option value="MS">Mato Grosso do Sul</option>
+                        <option value="MG">Minas Gerais</option>
+                        <option value="PA">Pará</option>
+                        <option value="PB">Paraíba</option>
+                        <option value="PR">Paraná</option>
+                        <option value="PE">Pernambuco</option>
+                        <option value="PI">Piauí</option>
+                        <option value="RJ">Rio de Janeiro</option>
+                        <option value="RN">Rio Grande do Norte</option>
+                        <option value="RS">Rio Grande do Sul</option>
+                        <option value="RO">Rondônia</option>
+                        <option value="RR">Roraima</option>
+                        <option value="SC">Santa Catarina</option>
+                        <option value="SP">São Paulo</option>
+                        <option value="SE">Sergipe</option>
+                        <option value="TO">Tocantins</option>
+                      </select>
+                    </div>
                   </div>
 
                   <div className={styles.formGroup}>
@@ -2016,6 +2082,33 @@ export default function ClienteDashboard() {
                   className={styles.modalInput}
                   required
                 />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                <div className={styles.formGroup}>
+                  <label>Cidade</label>
+                  <input
+                    type="text"
+                    className={styles.modalInput}
+                    value={editFormData.cidade}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, cidade: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Estado</label>
+                  <input
+                    type="text"
+                    className={styles.modalInput}
+                    value={editFormData.estado}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, estado: e.target.value })
+                    }
+                    required
+                  />
+                </div>
               </div>
 
               <div className={styles.formGroup}>

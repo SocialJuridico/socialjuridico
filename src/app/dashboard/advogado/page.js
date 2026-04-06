@@ -1051,7 +1051,7 @@ export default function AdvogadoDashboard() {
                         <div className={styles.opTitleGroup}>
                           <h3>{caso.titulo || "Caso Jurídico"}</h3>
                           <span className={styles.opLocation}>
-                            {caso.area_atuacao || "Direito Geral"}
+                            {caso.area_atuacao || "Direito Geral"} • {caso.cidade || "N/A"} - {caso.estado || "UF"}
                           </span>
                         </div>
                       </div>
@@ -1144,14 +1144,19 @@ export default function AdvogadoDashboard() {
                   <span style={{ background: 'rgba(212,175,55,0.15)', color: '#d4af37', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>
                     {selectedCasoModal.area_atuacao || 'Direito Geral'}
                   </span>
-                  <span style={{ 
-                    background: selectedCasoModal.status === 'NEGOCIANDO' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(16,185,129,0.15)', 
-                    color: selectedCasoModal.status === 'NEGOCIANDO' ? '#000' : '#10b981',
-                    padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 
-                  }}>
-                    {selectedCasoModal.status}
-                  </span>
-                </div>
+                    <span style={{ 
+                      background: selectedCasoModal.status === 'NEGOCIANDO' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(16,185,129,0.15)', 
+                      color: selectedCasoModal.status === 'NEGOCIANDO' ? '#000' : '#10b981',
+                      padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 
+                    }}>
+                      {selectedCasoModal.status}
+                    </span>
+                    {selectedCasoModal.cidade && (
+                      <span style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(255,255,255,0.1)' }}>
+                        📍 {selectedCasoModal.cidade} - {selectedCasoModal.estado}
+                      </span>
+                    )}
+                  </div>
               </div>
               <button onClick={() => setSelectedCasoModal(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '12px', padding: '8px 12px', color: '#fff', cursor: 'pointer', fontSize: '1.2rem' }}>
                 ✕

@@ -262,6 +262,16 @@ export async function PUT(request) {
         );
       }
       updates.balance = (lawyer.balance || 0) + amountToAdd;
+    } else if (action === "REMOVE_JURIS") {
+      const amountToRemove = Number(value);
+      if (isNaN(amountToRemove)) {
+        return NextResponse.json(
+          { success: false, message: "Valor de Juris inválido" },
+          { status: 400 },
+        );
+      }
+      // Garante que o saldo não fique negativo (opcional, dependendo da regra de negócio)
+      updates.balance = Math.max(0, (lawyer.balance || 0) - amountToRemove);
     } else if (action === "REMOVE_PRO") {
       updates.is_premium = false;
       updates.premium_expires_at = null;

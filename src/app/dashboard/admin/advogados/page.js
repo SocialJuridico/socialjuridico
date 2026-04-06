@@ -130,6 +130,7 @@ export default function AdminAdvogadosPage() {
           }
           if (action === "REMOVE_PRO") return { ...a, is_premium: false, premium_expires_at: null };
           if (action === "ADD_JURIS") return { ...a, balance: (a.balance || 0) + Number(value) };
+          if (action === "REMOVE_JURIS") return { ...a, balance: Math.max(0, (a.balance || 0) - Number(value)) };
         }
         return a;
       }));
@@ -316,7 +317,15 @@ export default function AdminAdvogadosPage() {
                         onClick={() => confirmUpdate(modalAction.item, "ADD_JURIS", jurisAmount)}
                         disabled={updatingId === modalAction.item.id}
                       >
-                        Adicionar Juris
+                        Adicionar
+                      </button>
+                      <button 
+                        className={styles.removeJurisBtn}
+                        onClick={() => confirmUpdate(modalAction.item, "REMOVE_JURIS", jurisAmount)}
+                        disabled={updatingId === modalAction.item.id}
+                        style={{ background: "#ef4444", color: "#fff", border: "none", padding: "8px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600 }}
+                      >
+                        Remover
                       </button>
                     </div>
                   </div>

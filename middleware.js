@@ -20,6 +20,17 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
+  // ── VERIFICAÇÃO DE SESSÃO DO ANUNCIANTE (COOKIE CUSTOMIZADO) ──
+  const anuncianteSession = request.cookies.get("sj_anunciante_session");
+  if (pathname.startsWith("/dashboard/anunciante")) {
+    if (!anuncianteSession) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login-anunciante";
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({
     request: { headers: request.headers },
   });

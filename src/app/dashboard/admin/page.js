@@ -17,6 +17,7 @@ import {
   Ticket,
   Star,
   DollarSign,
+  Megaphone,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./AdminDashboard.module.css";
@@ -217,6 +218,15 @@ export default function AdminDashboardPage() {
                 <DollarSign size={16} color="#10b981" /> Gestão Financeira
               </div>
               <strong>Ver Vendas</strong>
+            </article>
+          </Link>
+
+          <Link href="/dashboard/admin/anunciantes" className={styles.cardLink}>
+            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #8b5cf6", background: 'rgba(139, 92, 246, 0.03)' }}>
+              <div className={styles.cardTop}>
+                <Megaphone size={16} color="#8b5cf6" /> Anunciantes de Serviços
+              </div>
+              <strong>Gerenciar</strong>
             </article>
           </Link>
         </section>

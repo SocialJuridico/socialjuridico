@@ -68,6 +68,7 @@ import {
   Plus,
   Menu,
   Star,
+  MapPin,
 } from "lucide-react";
 
 import * as CalcUtils from "@/lib/calculators";
@@ -126,6 +127,11 @@ export default function AdvogadoDashboard() {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [showAnunciosSubmenu, setShowAnunciosSubmenu] = useState(false);
+  const [highlightedAd, setHighlightedAd] = useState(null);
+  const [anunciosData, setAnunciosData] = useState([]);
+  const [loadingAnuncios, setLoadingAnuncios] = useState(false);
+  const [activeAnuncioTab, setActiveAnuncioTab] = useState("PREPOSTOS");
 
   // CALCULADORA STATE
   const [activeCalculator, setActiveCalculator] = useState("rescisao");
@@ -521,10 +527,38 @@ export default function AdvogadoDashboard() {
     syncNotificacoes,
   ]);
 
+  const fetchAnuncios = useCallback(async (categoria) => {
+    setLoadingAnuncios(true);
+    try {
+      const res = await fetch(`/api/anuncios?categoria=${categoria.toUpperCase()}`);
+      const data = await res.json();
+      if (data.success) {
+        setAnunciosData(data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingAnuncios(false);
+    }
+  }, []);
+
+  const fetchHighlightedAd = useCallback(async () => {
+    try {
+      const res = await fetch("/api/anuncios?destaque=true");
+      const data = await res.json();
+      if (data.success && data.data.length > 0) {
+        setHighlightedAd(data.data[0]);
+      }
+    } catch (err) {
+       console.error(err);
+    }
+  }, []);
+
   useEffect(() => {
     loadDataFull();
     fetchAvisos();
-  }, [loadDataFull, fetchAvisos]);
+    fetchHighlightedAd();
+  }, [loadDataFull, fetchAvisos, fetchHighlightedAd]);
 
   useEffect(() => {
     if (!profileData?.id) return;
@@ -725,6 +759,11 @@ export default function AdvogadoDashboard() {
     if (PRO_TABS.includes(tab) && !profileData?.is_premium) {
       setShowProModal(true);
       return;
+    }
+    if (tab.startsWith("anuncios-")) {
+       const cat = tab.split("-")[1];
+       setActiveAnuncioTab(cat);
+       fetchAnuncios(cat);
     }
     setActiveTab(tab);
   };
@@ -985,9 +1024,72 @@ export default function AdvogadoDashboard() {
         return renderQueroSite();
       case "documentacao":
         return renderDocumentacao();
+      case "anuncios-PREPOSTOS":
+      case "anuncios-DILIGENCIAS":
+      case "anuncios-OUTROS":
+        return renderAnuncios();
       default:
         return renderOportunidades();
     }
+  };
+
+  const renderAnuncios = () => {
+    return (
+      <div className={styles.anunciosPageContainer}>
+        <div className={styles.anunciosHeader}>
+          <div>
+            <h2 className={styles.sectionTitle}>Anúncios de Serviços</h2>
+              <p className={styles.sectionDesc}>
+                Encontre parceiros e serviços para sua prática jurídica ({activeAnuncioTab.replace("anuncios-", "")})
+              </p>
+          </div>
+          <div className={styles.categoryBadge}>{activeAnuncioTab.replace("anuncios-", "")}</div>
+        </div>
+
+        {loadingAnuncios ? (
+          <div className={styles.loadingState}>Buscando anunciantes...</div>
+        ) : anunciosData.length > 0 ? (
+          <div className={styles.anuncioGrid}>
+            {anunciosData.map((anuncio) => (
+              <div key={anuncio.id} className={styles.anuncioCard}>
+                {anuncio.em_destaque && <span className={styles.adBadge}>Destaque</span>}
+                <div className={styles.adHeader}>
+                  <span className={styles.adCategory}>{anuncio.categoria}</span>
+                  <h3 className={styles.adTitle}>{anuncio.titulo}</h3>
+                </div>
+                <p className={styles.adDescription}>{anuncio.descricao}</p>
+                <div className={styles.adFooter}>
+                  <div className={styles.adVendor}>
+                    <div className={styles.vendorInitials}>
+                      {anuncio.anunciante?.nome_empresa?.substring(0, 2).toUpperCase() || "AN"}
+                    </div>
+                    <span className={styles.vendorName}>{anuncio.anunciante?.nome_empresa}</span>
+                  </div>
+                  <button 
+                     className={styles.adContactBtn}
+                     onClick={() => {
+                       const phone = anuncio.anunciante?.whatsapp?.replace(/\D/g, "");
+                       if (phone) {
+                         window.open(`https://wa.me/55${phone}?text=Olá, vi seu anúncio "${anuncio.titulo}" no SocialJurídico e gostaria de mais informações.`, "_blank");
+                       } else {
+                         toast.error("Contato não disponível");
+                       }
+                     }}
+                  >
+                    <MessageSquare size={16} /> Contatar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.emptyState}>
+            <Users size={48} style={{ opacity: 0.1, marginBottom: 20 }} />
+            <p>Nenhum anúncio disponível para esta categoria no momento.</p>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderOportunidades = () => (
@@ -7105,6 +7207,53 @@ export default function AdvogadoDashboard() {
             <Globe size={18} /> <span>Oportunidades</span>
           </div>
           <div
+            className={`${styles.navItem} ${activeTab === "minhas-mensagens" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("minhas-mensagens")}
+          >
+            <MessageSquare size={18} />
+            <span>Minhas Mensagens</span>
+          </div>
+
+          {/* ANUNCIOS DE SERVICOS MENU */}
+          <div
+            className={`${styles.anunciosNav}`}
+            onClick={() => setShowAnunciosSubmenu(!showAnunciosSubmenu)}
+          >
+            <Zap size={18} fill="currentColor" />
+            <span>Anúncios de Serviços</span>
+            <ChevronDown 
+              size={16} 
+              style={{ marginLeft: "auto", transform: showAnunciosSubmenu ? "rotate(180deg)" : "none", transition: "0.2s" }} 
+            />
+          </div>
+          
+          {showAnunciosSubmenu && (
+            <div className={styles.anuncioSubmenu}>
+              <div 
+                className={`${styles.subNavItem} ${activeTab === "anuncios-PREPOSTOS" ? styles.activeSubNav : ""}`}
+                onClick={() => handleTabChange("anuncios-PREPOSTOS")}
+              >
+                <Users size={14} />
+                <span>PREPOSTOS</span>
+              </div>
+              <div 
+                className={`${styles.subNavItem} ${activeTab === "anuncios-DILIGENCIAS" ? styles.activeSubNav : ""}`}
+                onClick={() => handleTabChange("anuncios-DILIGENCIAS")}
+              >
+                <MapPin size={14} />
+                <span>DILIGÊNCIAS</span>
+              </div>
+              <div 
+                className={`${styles.subNavItem} ${activeTab === "anuncios-OUTROS" ? styles.activeSubNav : ""}`}
+                onClick={() => handleTabChange("anuncios-OUTROS")}
+              >
+                <PlusCircle size={14} />
+                <span>OUTROS</span>
+              </div>
+            </div>
+          )}
+
+          <div
             className={`${styles.navItem} ${activeTab === "quero-site" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("quero-site")}
             style={{ border: '1px solid rgba(212, 175, 55, 0.3)', background: 'rgba(212, 175, 55, 0.05)' }}
@@ -7122,12 +7271,6 @@ export default function AdvogadoDashboard() {
             onClick={() => handleTabChange("declarei-interesse")}
           >
             <Check size={18} /> <span>Declarei Interesse</span>
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "minhas-mensagens" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("minhas-mensagens")}
-          >
-            <Bell size={18} /> <span>Minhas Mensagens</span>
           </div>
 
           <div className={styles.navGroupLabel}>Ferramentas PRO</div>
@@ -7310,6 +7453,9 @@ export default function AdvogadoDashboard() {
             {activeTab === "documentacao" && (
               <BookOpen size={20} className={styles.breadcrumbIcon} />
             )}
+            {activeTab?.startsWith("anuncios-") && (
+              <Zap size={20} className={styles.breadcrumbIcon} />
+            )}
             <span>
               {activeTab === "oportunidades"
                 ? "Oportunidades em Aberto"
@@ -7337,7 +7483,9 @@ export default function AdvogadoDashboard() {
                                     ? "Cartão Digital"
                                     : activeTab === "perfil"
                                       ? "Perfil"
-                                      : "Documentação"}
+                                      : activeTab?.startsWith("anuncios-")
+                                        ? `Anúncios: ${activeTab.split("-")[1]}`
+                                        : "Documentação"}
             </span>
           </div>
 
@@ -7398,6 +7546,32 @@ export default function AdvogadoDashboard() {
               >
                 <X size={18} />
               </button>
+            </div>
+          )}
+          {highlightedAd && activeTab === "oportunidades" && (
+            <div className={styles.highlightedAdContainer}>
+              <div className={styles.highlightedInfo}>
+                <h4><Sparkles size={14} /> ANÚNCIO EM DESTAQUE</h4>
+                <h3>{highlightedAd.titulo}</h3>
+                <p>{highlightedAd.descricao}</p>
+              </div>
+              <div className={styles.highlightedAction}>
+                <button 
+                  className={styles.premiumBtn}
+                  style={{ margin: 0 }}
+                  onClick={() => {
+                    const phone = highlightedAd.anunciante?.whatsapp?.replace(/\D/g, "");
+                    if (phone) {
+                      window.open(`https://wa.me/55${phone}?text=Olá, vi seu destaque no SocialJurídico e gostaria de mais informações.`, "_blank");
+                    }
+                  }}
+                >
+                  Falar agora
+                </button>
+                <div className={styles.adVendor}>
+                   <span className={styles.vendorName} style={{ fontSize: '0.7rem', color: "rgba(255, 255, 255, 0.5)" }}>Por: {highlightedAd.anunciante?.nome_empresa}</span>
+                </div>
+              </div>
             </div>
           )}
           {renderActiveContent()}

@@ -16,6 +16,7 @@ import {
   Trash2,
   Ticket,
   Star,
+  DollarSign,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./AdminDashboard.module.css";
@@ -207,6 +208,15 @@ export default function AdminDashboardPage() {
                 <Bell size={16} color="#f59e0b" /> Gestão de Avisos
               </div>
               <strong>Configurar</strong>
+            </article>
+          </Link>
+
+          <Link href="/dashboard/admin/transacoes" className={styles.cardLink}>
+            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #10b981", background: 'rgba(16, 185, 129, 0.03)' }}>
+              <div className={styles.cardTop}>
+                <DollarSign size={16} color="#10b981" /> Gestão Financeira
+              </div>
+              <strong>Ver Vendas</strong>
             </article>
           </Link>
         </section>

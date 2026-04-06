@@ -88,8 +88,18 @@ async function handleCheckoutCompleted(session) {
         .update({ balance: newBalance })
         .eq("id", userId);
 
-      // Registrar log de transação (opcional, se tiver tabela)
-      // await supabaseAdmin.from('transacoes').insert([...]);
+      // Registrar log de transação Real
+      await supabaseAdmin.from('transacoes').insert([{
+        advogado_id: userId,
+        tipo: 'JURIS_PURCHASE',
+        valor: (session.amount_total || 0) / 100,
+        moeda: session.currency || 'BRL',
+        status: 'succeeded',
+        juris_amount: jurisAmount,
+        stripe_session_id: session.id,
+        cupom_id: cupomId || null,
+        created_at: new Date().toISOString()
+      }]);
     }
   } else if (type === "PRO_SUBSCRIPTION") {
     // ⚠️ SEGURANÇA: Não logar user IDs
@@ -113,6 +123,19 @@ async function handleCheckoutCompleted(session) {
         balance: newBalance,
       })
       .eq("id", userId);
+
+    // Registrar log de transação Real para PRO
+    await supabaseAdmin.from('transacoes').insert([{
+      advogado_id: userId,
+      tipo: 'PRO_SUBSCRIPTION',
+      valor: (session.amount_total || 0) / 100,
+      moeda: session.currency || 'BRL',
+      status: 'succeeded',
+      juris_amount: 20, // Bônus do plano
+      stripe_session_id: session.id,
+      cupom_id: cupomId || null,
+      created_at: new Date().toISOString()
+    }]);
 
     console.log(
       `✅ PRO ativado. +20 Juris (novo saldo: ${newBalance}) para ${userId}`,

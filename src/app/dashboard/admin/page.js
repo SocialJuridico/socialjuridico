@@ -200,6 +200,15 @@ export default function AdminDashboardPage() {
               <strong>Ver Notas</strong>
             </article>
           </Link>
+
+          <Link href="/dashboard/admin/avisos" className={styles.cardLink}>
+            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #f59e0b" }}>
+              <div className={styles.cardTop}>
+                <Bell size={16} color="#f59e0b" /> Gestão de Avisos
+              </div>
+              <strong>Configurar</strong>
+            </article>
+          </Link>
         </section>
       </main>
     </div>

@@ -252,6 +252,8 @@ export default function AdvogadoDashboard() {
     nome: "",
     motivo: "",
   });
+  const [avisos, setAvisos] = useState([]);
+  const [loadingAvisos, setLoadingAvisos] = useState(false);
 
   const fileInputRef = useRef(null);
   const smartFileInputRef = useRef(null);
@@ -285,6 +287,21 @@ export default function AdvogadoDashboard() {
       setIsValidatingCoupon(false);
     }
   };
+
+  const fetchAvisos = useCallback(async () => {
+    setLoadingAvisos(true);
+    try {
+      const res = await fetch("/api/avisos");
+      const data = await res.json();
+      if (data.success) {
+        setAvisos(data.data);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar avisos:", err);
+    } finally {
+      setLoadingAvisos(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -506,7 +523,8 @@ export default function AdvogadoDashboard() {
 
   useEffect(() => {
     loadDataFull();
-  }, [loadDataFull]);
+    fetchAvisos();
+  }, [loadDataFull, fetchAvisos]);
 
   useEffect(() => {
     if (!profileData?.id) return;
@@ -896,6 +914,26 @@ export default function AdvogadoDashboard() {
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
+
+      {avisos.length > 0 && (
+        <div className={styles.avisosMarquee}>
+          <div className={styles.marqueeContent}>
+            {avisos.map((aviso, idx) => (
+              <span key={`aviso-1-${aviso.id || idx}`} className={styles.avisoItem}>
+                {aviso.texto}
+                <span className={styles.avisoSeparator}>•</span>
+              </span>
+            ))}
+            {/* Duplicar para o loop infinito ser suave */}
+            {avisos.map((aviso, idx) => (
+              <span key={`aviso-2-${aviso.id || idx}`} className={styles.avisoItem}>
+                {aviso.texto}
+                <span className={styles.avisoSeparator}>•</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className={styles.contentRow}>
         <aside className={styles.bannerLeft}>

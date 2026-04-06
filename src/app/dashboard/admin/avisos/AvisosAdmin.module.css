@@ -1,0 +1,299 @@
+.page {
+  padding: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  color: #f1f5f9;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.headerTitle h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  color: #94a3b8;
+  transition: all 0.2s;
+}
+
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.addBtn {
+  background: #f59e0b;
+  color: #000;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.addBtn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.loading {
+  text-align: center;
+  padding: 100px;
+  color: #94a3b8;
+}
+
+.empty {
+  text-align: center;
+  padding: 60px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  color: #64748b;
+  border: 1px dashed rgba(255, 255, 255, 0.05);
+}
+
+.avisosList {
+  display: grid;
+  gap: 16px;
+}
+
+.avisoCard {
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.avisoCard:hover {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.avisoCard.expired {
+  opacity: 0.6;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.avisoMain {
+  display: flex;
+  gap: 15px;
+  flex: 1;
+}
+
+.avisoIcon {
+  padding-top: 2px;
+}
+
+.avisoContent {
+  flex: 1;
+}
+
+.avisoText {
+  font-size: 1rem;
+  color: #f8fafc;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.avisoMeta {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.avisoMeta span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.expiredBadge {
+  background: #ef4444;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.7rem;
+}
+
+.avisoActions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-left: 20px;
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.activeToggle, .inactiveToggle {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+.activeToggle {
+  background: #059669;
+  color: #fff;
+}
+
+.inactiveToggle {
+  background: #334155;
+  color: #94a3b8;
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal {
+  background: #1c1c1e;
+  width: 100%;
+  max-width: 500px;
+  border-radius: 20px;
+  padding: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modal h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 25px;
+  color: #fff;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+
+.formGroup textarea {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 1rem;
+  resize: none;
+  min-height: 100px;
+}
+
+.daysInput {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px;
+  border-radius: 12px;
+  color: #94a3b8;
+}
+
+.daysInput input {
+  background: none;
+  border: none;
+  color: #fff;
+  width: 50px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.modalActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.cancelBtn, .confirmBtn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelBtn {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+}
+
+.cancelBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.confirmBtn {
+  background: #f59e0b;
+  color: #000;
+}
+
+.confirmBtn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.confirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -4705,3 +4705,57 @@
 .proApplyBtn:hover:not(:disabled) {
   background: var(--color-gold);
 }
+
+/* AVISOS MARQUEE */
+.avisosMarquee {
+  width: 100%;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(212, 175, 55, 0.05) 50%, rgba(255, 255, 255, 0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 12px 20px;
+  margin-bottom: 25px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.marqueeContent {
+  display: flex;
+  white-space: nowrap;
+  animation: marquee_anim 40s linear infinite;
+  gap: 50px;
+}
+
+.marqueeContent:hover {
+  animation-play-state: paused;
+}
+
+.avisoItem {
+  color: var(--color-silver);
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.avisoSeparator {
+  color: var(--color-gold);
+  font-weight: 900;
+  opacity: 0.5;
+}
+
+@keyframes marquee_anim {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@media (max-width: 768px) {
+  .avisosMarquee {
+    padding: 8px 15px;
+  }
+  .avisoItem {
+    font-size: 0.85rem;
+  }
+}

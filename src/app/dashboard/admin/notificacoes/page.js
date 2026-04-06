@@ -11,9 +11,21 @@ import {
   Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 import styles from './Notificacoes.module.css';
 
+const parseMeta = (meta) => {
+  if (!meta) return {};
+  if (typeof meta === 'object') return meta;
+  try {
+     return JSON.parse(meta);
+  } catch {
+     return {};
+  }
+};
+
 export default function AdminNotificacoesPage() {
+  const router = useRouter();
   const [notificacoes, setNotificacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -64,6 +76,21 @@ export default function AdminNotificacoesPage() {
     }
   };
 
+  const handleNotifClick = (notif) => {
+     // Se for chat admin ou broadcast, tentamos abrir o chat com o parceiro certo
+     if (notif.tipo === 'ADMIN_CHAT' || notif.tipo === 'ADMIN_BROADCAST') {
+        const meta = parseMeta(notif.meta);
+        // O parceiro pode estar em chat_with (se for mirror), sender_id (se recebida) ou sent_by (se broadcast)
+        const partnerId = meta.chat_with || meta.sender_id || meta.sent_by;
+        
+        if (partnerId) {
+           router.push(`/chat/admin/${partnerId}`);
+        } else {
+           toast.error("Não foi possível identificar o participante desta conversa.");
+        }
+     }
+  };
+
   const filtered = notificacoes.filter(n => 
     (n.titulo || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (n.mensagem || "").toLowerCase().includes(searchTerm.toLowerCase())
@@ -99,7 +126,11 @@ export default function AdminNotificacoesPage() {
         ) : filtered.length > 0 ? (
           <div className={styles.notifGrid}>
             {filtered.map((notif) => (
-              <div key={notif.id} className={styles.notifCard}>
+              <div 
+                key={notif.id} 
+                className={`${styles.notifCard} ${(notif.tipo === 'ADMIN_CHAT' || notif.tipo === 'ADMIN_BROADCAST') ? styles.clickable : ''}`}
+                onClick={() => handleNotifClick(notif)}
+              >
                 <div className={styles.notifHeader}>
                    <div className={styles.notifIcon}>
                       <Bell size={20} color="#d4af37" />
@@ -113,7 +144,10 @@ export default function AdminNotificacoesPage() {
                    </div>
                    <button 
                       className={styles.deleteBtn} 
-                      onClick={() => handleDelete(notif.id)}
+                      onClick={(e) => {
+                         e.stopPropagation();
+                         handleDelete(notif.id);
+                      }}
                       title="Apagar notificação"
                    >
                       <Trash2 size={16} />

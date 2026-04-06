@@ -101,19 +101,23 @@
 
 .notifCard {
   background: #111317;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
   padding: 24px;
+  position: relative;
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
-  position: relative;
 }
 
-.notifCard:hover {
-  border-color: rgba(212,175,55,0.3);
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  border-color: rgba(212, 175, 55, 0.3);
   transform: translateY(-4px);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .notifHeader {

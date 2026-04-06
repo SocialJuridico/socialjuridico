@@ -141,6 +141,27 @@ export default function AdminChatPage() {
     return <div className={styles.loading}>Carregando chat...</div>;
   }
 
+  if (!partner) {
+    return (
+      <div className={styles.page}>
+        <header className={styles.header}>
+           <Link href="/dashboard/admin/mensagens" className={styles.backLink}>
+             <ArrowLeft size={16} /> Voltar
+           </Link>
+           <h1>Chat Indisponível</h1>
+        </header>
+        <div className={styles.empty} style={{ height: '300px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+           <MessageSquare size={48} style={{ opacity: 0.1 }} />
+           <p><strong>Participante não encontrado</strong></p>
+           <p>Este usuário pode ter sido excluído da plataforma.</p>
+           <Link href="/dashboard/admin/notificacoes" className={styles.backLink} style={{ margin: '0 auto' }}>
+              Voltar para notificações
+           </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>

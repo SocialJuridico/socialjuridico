@@ -3979,6 +3979,16 @@ export default function AdvogadoDashboard() {
       "Consumidor",
       "Imobiliário",
       "Empresarial",
+      "Bancário",
+      "Saúde",
+      "Trânsito",
+      "Administrativo",
+      "Militar",
+      "Internacional",
+      "Ambiental",
+      "Constitucional",
+      "Eleitoral",
+      "Desportivo",
     ];
 
     const currentSpecs = profileForm.specialties

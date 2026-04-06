@@ -729,6 +729,91 @@ export default function AdvogadoDashboard() {
     setActiveTab(tab);
   };
 
+  const renderQueroSite = () => {
+    const whatsappMsg = encodeURIComponent("Olá sou advogado pró do site Social Jurídico, e gostaria de contratar o meu site com o desconto de 50%.");
+    const whatsappUrl = `https://wa.me/5551993392983?text=${whatsappMsg}`;
+
+    return (
+      <div className={styles.toolContainer}>
+        <div className={styles.queroSiteCard}>
+          <div className={styles.queroSiteBadge}>
+            <Sparkles size={14} /> OPORTUNIDADE EXCLUSIVA PRO
+          </div>
+          <h2 className={styles.queroSiteTitle}>
+            Seja a Autoridade que seus Clientes Procuram: Seu Site Profissional com 50% de Desconto!
+          </h2>
+          
+          <div className={styles.queroSiteContent}>
+            <p className={styles.queroSiteText}>
+              No mundo jurídico moderno, quem não tem um site de alta performance não existe para o Google. 
+              Como advogado(a) PRO do SocialJurídico, você garante as melhores ferramentas de gestão, e agora, a melhor vitrine digital.
+            </p>
+            
+            <div className={styles.queroSiteFeatureGrid}>
+              <div className={styles.queroSiteFeature}>
+                <Zap size={20} color="var(--color-gold)" />
+                <div>
+                  <h4>Tecnologia Next.js</h4>
+                  <p>A mesma tecnologia da Netflix e TikTok. Velocidade extrema e estabilidade.</p>
+                </div>
+              </div>
+              <div className={styles.queroSiteFeature}>
+                <Search size={20} color="var(--color-gold)" />
+                <div>
+                  <h4>SEO Avançado</h4>
+                  <p>Estrutura otimizada para você aparecer no topo das buscas orgânicas.</p>
+                </div>
+              </div>
+              <div className={styles.queroSiteFeature}>
+                <Shield size={20} color="var(--color-gold)" />
+                <div>
+                  <h4>Hospedagem Gratuita</h4>
+                  <p>Esqueça mensalidades de servidor. Hospedagem gratuita vitalícia inclusa.</p>
+                </div>
+              </div>
+              <div className={styles.queroSiteFeature}>
+                <Paperclip size={20} color="var(--color-gold)" />
+                <div>
+                  <h4>Código Fonte</h4>
+                  <p>O site é seu de verdade. Entregamos o código fonte completo e original.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className={styles.queroSitePromoBox}>
+              <div className={styles.promoLabel}>INVESTIMENTO EXCLUSIVO PRO</div>
+              <div className={styles.promoPrices}>
+                <span className={styles.oldPrice}>R$ 1.000,00</span>
+                <span className={styles.newPrice}>R$ 500,00</span>
+              </div>
+              <p className={styles.promoInclude}>
+                Site Completo + Banco de Dados + Suporte de 45 dias + SEO
+              </p>
+            </div>
+
+            <div className={styles.devProfile}>
+              <div className={styles.devAvatar}>
+                <User size={30} />
+              </div>
+              <div className={styles.devInfo}>
+                <span className={styles.devName}>Desenvolvedor: <strong>Saulo Pavanello</strong></span>
+                <a href="https://www.saulopavanello.com.br" target="_blank" rel="noopener noreferrer" className={styles.devLink}>
+                   www.saulopavanello.com.br
+                </a>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '40px', textAlign: 'center' }}>
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={styles.wppBtn}>
+                <MessageSquare size={20} /> Contratar Agora via WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderIndicacoes = () => {
     const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/cadastro?ref=${profileData?.id}` : "";
     
@@ -896,6 +981,8 @@ export default function AdvogadoDashboard() {
         return renderPerfil();
       case "indicacoes":
         return renderIndicacoes();
+      case "quero-site":
+        return renderQueroSite();
       case "documentacao":
         return renderDocumentacao();
       default:
@@ -7001,6 +7088,13 @@ export default function AdvogadoDashboard() {
             onClick={() => handleTabChange("oportunidades")}
           >
             <Globe size={18} /> <span>Oportunidades</span>
+          </div>
+          <div
+            className={`${styles.navItem} ${activeTab === "quero-site" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("quero-site")}
+            style={{ border: '1px solid rgba(212, 175, 55, 0.3)', background: 'rgba(212, 175, 55, 0.05)' }}
+          >
+            <Globe size={18} color="var(--color-gold)" /> <span style={{ color: 'var(--color-gold)', fontWeight: '800' }}>QUERO UM SITE</span>
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "meus-casos" ? styles.activeNavItem : ""}`}

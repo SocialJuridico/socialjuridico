@@ -64,14 +64,14 @@ async function resolvePartner(db, currentRole, partnerId) {
 
 function mapChatMessage(row, currentUserId) {
   const meta = parseMeta(row.meta);
-  const senderId = meta.sender_id || null;
+  const senderId = meta.sender_id || meta.sent_by || null;
   return {
     id: row.id,
     content: row.mensagem || "",
     created_at: row.created_at,
     sender_id: senderId,
-    sender_role: meta.sender_role || null,
-    isOwn: senderId === currentUserId,
+    sender_role: meta.sender_role || (row.tipo === 'ADMIN_BROADCAST' ? 'ADMIN' : null),
+    isOwn: String(senderId) === String(currentUserId),
     tipo: row.tipo || null,
   };
 }
@@ -153,18 +153,28 @@ export async function GET(request) {
       }
 
       if (role === "ADMIN") {
-        if (row.user_id !== user.id) return false;
+        // Para ADMIN, permitimos ver:
+        // 1. O que foi enviado PARA ele (user_id === adminId)
+        // 2. O que ele enviou PARA o parceiro (user_id === partnerId AND sent_by === adminId)
 
         if (row.tipo === "ADMIN_BROADCAST") {
-          return String(meta.sent_by || "") === user.id || String(meta.sent_by || "") === partnerId;
+          const sentByMe = String(meta.sent_by || "") === user.id && row.user_id === partnerId;
+          const sentByPartner = String(meta.sent_by || "") === partnerId && row.user_id === user.id;
+          return sentByMe || sentByPartner;
         }
 
         if (row.tipo === "ADMIN_CHAT") {
-          // Chat dele com este parceiro específico
-          return (
-            String(meta.sender_id || "") === partnerId || // Recebida do parceiro
-            String(meta.chat_with || "") === partnerId    // Mirror de enviada para parceiro
-          );
+          if (row.user_id === user.id) {
+            // Mirror ou recebida
+            return (
+              String(meta.sender_id || "") === partnerId || 
+              String(meta.chat_with || "") === partnerId
+            );
+          }
+          if (row.user_id === partnerId) {
+             // O que o parceiro recebeu DE mim
+             return String(meta.sender_id || "") === user.id;
+          }
         }
 
         return false;

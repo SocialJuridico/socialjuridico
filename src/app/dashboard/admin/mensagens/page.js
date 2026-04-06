@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MessageSquare, ChevronRight, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useMemo } from "react";
 import styles from "./MensagensAdmin.module.css";
 
 export default function AdminMensagensPage() {
@@ -65,6 +66,26 @@ export default function AdminMensagensPage() {
     }
   };
 
+  const groupedConversas = useMemo(() => {
+    const groups = {};
+    conversas.forEach(conv => {
+       const dateObj = conv.lastDate ? new Date(conv.lastDate) : new Date();
+       const dateKey = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+       
+       if (!groups[dateKey]) {
+          groups[dateKey] = [];
+       }
+       groups[dateKey].push(conv);
+    });
+
+    // Ordenar as chaves (datas) de forma decrescente
+    return Object.entries(groups).sort((a, b) => {
+       const dateA = new Date(a[1][0].lastDate);
+       const dateB = new Date(b[1][0].lastDate);
+       return dateB - dateA;
+    });
+  }, [conversas]);
+
   if (loading) {
     return <div className={styles.loading}>Carregando mensagens...</div>;
   }
@@ -86,58 +107,65 @@ export default function AdminMensagensPage() {
         </div>
       ) : (
         <div className={styles.list}>
-          {conversas.map((conv) => (
-            <div
-              key={conv.userId}
-              className={styles.item}
-              onClick={() => {
-                window.location.href = `/chat/admin/${conv.userId}`;
-              }}
-            >
-              <div className={styles.itemTop}>
-                <div>
-                  <p className={styles.name}>
-                    {conv.lawyer?.name || "Advogado"}
-                  </p>
-                  <p className={styles.meta}>
-                    {conv.lawyer?.email || "sem email"}
-                    {conv.lawyer?.oab ? ` · OAB ${conv.lawyer.oab}` : ""}
-                  </p>
+          {groupedConversas.map(([dateTitle, items]) => (
+             <div key={dateTitle} className={styles.dateGroup}>
+                <div className={styles.dateSeparator}>
+                   <span>{dateTitle}</span>
                 </div>
-                <span className={styles.date}>
-                  {conv.lastDate
-                    ? new Date(conv.lastDate).toLocaleString("pt-BR")
-                    : ""}
-                </span>
-              </div>
+                {items.map((conv) => (
+                  <div
+                    key={conv.userId}
+                    className={styles.item}
+                    onClick={() => {
+                      window.location.href = `/chat/admin/${conv.userId}`;
+                    }}
+                  >
+                    <div className={styles.itemTop}>
+                      <div>
+                        <p className={styles.name}>
+                          {conv.lawyer?.name || "Advogado"}
+                        </p>
+                        <p className={styles.meta}>
+                          {conv.lawyer?.email || "sem email"}
+                          {conv.lawyer?.oab ? ` · OAB ${conv.lawyer.oab}` : ""}
+                        </p>
+                      </div>
+                      <span className={styles.date}>
+                        {conv.lastDate
+                          ? new Date(conv.lastDate).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })
+                          : ""}
+                      </span>
+                    </div>
 
-              <p className={styles.previewTitle}>
-                {conv.lastTitle || "Mensagem"}
-              </p>
-              <p className={styles.previewText}>
-                {conv.lastMessage || "Sem conteúdo"}
-              </p>
+                    <p className={styles.previewTitle}>
+                      {conv.lastTitle || "Mensagem"}
+                    </p>
+                    <p className={styles.previewText}>
+                      {conv.lastMessage || "Sem conteúdo"}
+                    </p>
 
-              <div className={styles.itemFooter}>
-                <span>{conv.totalMessages} mensagem(ns)</span>
-                <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-                   <button 
-                      className={styles.deleteBtnInline}
-                      onClick={(e) => {
-                         e.stopPropagation();
-                         setPartnerToDelete(conv.userId);
-                         setShowDeleteModal(true);
-                      }}
-                      title="Excluir conversa inteira"
-                   >
-                      <Trash2 size={16} />
-                   </button>
-                   <span className={styles.openChat}>
-                     Abrir chat <ChevronRight size={14} />
-                   </span>
-                </div>
-              </div>
-            </div>
+                    <div className={styles.itemFooter}>
+                      <span>{conv.totalMessages} mensagem(ns)</span>
+                      <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
+                         <button 
+                            className={styles.deleteBtnInline}
+                            onClick={(e) => {
+                               e.stopPropagation();
+                               setPartnerToDelete(conv.userId);
+                               setShowDeleteModal(true);
+                            }}
+                            title="Excluir conversa inteira"
+                         >
+                            <Trash2 size={16} />
+                         </button>
+                         <span className={styles.openChat}>
+                           Abrir chat <ChevronRight size={14} />
+                         </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+             </div>
           ))}
         </div>
       )}

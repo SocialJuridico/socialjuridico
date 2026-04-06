@@ -12,6 +12,42 @@
   margin-bottom: 18px;
 }
 
+.list {
+  display: grid;
+  gap: 12px;
+}
+
+.dateGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.dateSeparator {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.dateSeparator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dateSeparator span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #d4af37;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba(212, 175, 55, 0.1);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
 .backLink {
   color: #d4af37;
   text-decoration: none;

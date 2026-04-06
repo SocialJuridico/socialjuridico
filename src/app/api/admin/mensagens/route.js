@@ -52,18 +52,22 @@ export async function GET() {
     const { data, error } = await db
       .from("notificacoes")
       .select("id, user_id, titulo, mensagem, created_at, tipo, meta")
+      .in("tipo", ["ADMIN_CHAT", "ADMIN_BROADCAST"])
       .order("created_at", { ascending: false })
-      .limit(1000);
+      .limit(3000); // Mais mensagens se filtrado por tipo
 
     if (error) throw error;
 
     const sentRows = (data || []).filter((row) => {
       const meta = parseMeta(row.meta);
-      return (
-        (row.tipo === "ADMIN_BROADCAST" &&
-          String(meta.sent_by || "") === user.id) ||
+      const isSentByMe = (
+        (row.tipo === "ADMIN_BROADCAST" && String(meta.sent_by || "") === user.id) ||
         (row.tipo === "ADMIN_CHAT" && String(meta.sender_id || "") === user.id)
       );
+      
+      // Também incluímos as que EU recebi ( mirrors ou lidas) se quisermos o partnerId correto
+      // Mas o objetivo aqui são conversas que eu iniciei ou participei
+      return isSentByMe;
     });
 
     const targetIds = Array.from(

@@ -125,8 +125,9 @@ export async function GET(request) {
     const { data, error } = await db
       .from("notificacoes")
       .select("id, user_id, titulo, mensagem, created_at, tipo, meta")
-      .order("created_at", { ascending: true })
-      .limit(1200);
+      .or(`user_id.eq.${user.id},user_id.eq.${partnerId}`)
+      .in("tipo", ["ADMIN_CHAT", "ADMIN_BROADCAST"])
+      .order("created_at", { ascending: true });
 
     if (error) throw error;
 
@@ -141,8 +142,9 @@ export async function GET(request) {
         }
 
         if (row.tipo === "ADMIN_CHAT") {
+          // Recebida do admin ou Mirror de enviada para admin
           return (
-            String(meta.sender_id || "") === partnerId ||
+            String(meta.sender_id || "") === partnerId || 
             String(meta.chat_with || "") === partnerId
           );
         }
@@ -151,13 +153,9 @@ export async function GET(request) {
       }
 
       if (role === "ADMIN") {
-        // Para admin, mostramos apenas o SEU fluxo (mensagens que ele recebeu ou seus mirrors de enviadas)
         if (row.user_id !== user.id) return false;
 
-        const meta = parseMeta(row.meta);
-
         if (row.tipo === "ADMIN_BROADCAST") {
-          // Broadcast enviado por ele ou por outro admin que ele deva ver
           return String(meta.sent_by || "") === user.id || String(meta.sent_by || "") === partnerId;
         }
 
@@ -165,8 +163,7 @@ export async function GET(request) {
           // Chat dele com este parceiro específico
           return (
             String(meta.sender_id || "") === partnerId || // Recebida do parceiro
-            String(meta.chat_with || "") === partnerId || // Mirror de enviada para parceiro
-            String(meta.sender_id || "") === user.id      // Verificação extra de posse
+            String(meta.chat_with || "") === partnerId    // Mirror de enviada para parceiro
           );
         }
 

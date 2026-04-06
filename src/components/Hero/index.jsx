@@ -1,15 +1,16 @@
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Users, Scale } from 'lucide-react';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 import Button from '../Button';
 import styles from './Hero.module.css';
 
 // Busca direto no Supabase — funciona tanto no build quanto em ISR
 async function getStats() {
   try {
+    const client = supabaseAdmin || supabase;
     const [clientesRes, advRes] = await Promise.all([
-      supabaseAdmin.from('clientes').select('id', { count: 'exact', head: true }),
-      supabaseAdmin.from('advogados').select('id', { count: 'exact', head: true }),
+      client.from('clientes').select('id', { count: 'exact', head: true }),
+      client.from('advogados').select('id', { count: 'exact', head: true }),
     ]);
     return {
       totalClientes: clientesRes.count || 0,

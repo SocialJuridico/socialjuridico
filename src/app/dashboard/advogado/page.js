@@ -5355,20 +5355,20 @@ export default function AdvogadoDashboard() {
     }
   };
 
-  const handleBuyJuris = async (amount = 20) => {
+  const handleBuyJuris = async (amount = 20, couponData = null) => {
     try {
       toast.loading("Iniciando pagamento...");
-      await createJurisCheckout(amount);
+      await createJurisCheckout(amount, couponData);
     } catch (err) {
       toast.dismiss();
       toast.error("Erro ao iniciar compra: " + err.message);
     }
   };
 
-  const handleBecomePro = async () => {
+  const handleBecomePro = async (couponData = null) => {
     try {
       toast.loading("Iniciando assinatura...");
-      await createProSubscription();
+      await createProSubscription(couponData);
     } catch (err) {
       toast.dismiss();
       toast.error("Erro ao assinar Premium: " + err.message);
@@ -6694,7 +6694,7 @@ export default function AdvogadoDashboard() {
           <div className={styles.packageGrid}>
             <div
               className={styles.packageCard}
-              onClick={() => handleBuyJuris(10, appliedCoupon)}
+              onClick={() => handleBuyJuris(10, appliedCoupon?.tipo_internal === 'COMPRA_JURIS' ? appliedCoupon : null)}
             >
               <span className={styles.packageAmount}>10</span>
               <span className={styles.packageUnit}>Juris</span>
@@ -6711,7 +6711,7 @@ export default function AdvogadoDashboard() {
 
             <div
               className={`${styles.packageCard} ${styles.popularCard}`}
-              onClick={() => handleBuyJuris(20, appliedCoupon)}
+              onClick={() => handleBuyJuris(20, appliedCoupon?.tipo_internal === 'COMPRA_JURIS' ? appliedCoupon : null)}
             >
               <span className={styles.popularBadge}>Mais Popular</span>
               <span className={styles.packageAmount}>20</span>
@@ -6733,7 +6733,7 @@ export default function AdvogadoDashboard() {
 
             <div
               className={styles.packageCard}
-              onClick={() => handleBuyJuris(50, appliedCoupon)}
+              onClick={() => handleBuyJuris(50, appliedCoupon?.tipo_internal === 'COMPRA_JURIS' ? appliedCoupon : null)}
             >
               <span className={styles.packageAmount}>50</span>
               <span className={styles.packageUnit}>Juris</span>
@@ -6810,7 +6810,7 @@ export default function AdvogadoDashboard() {
             </div>
             <div className={styles.priceContainer}>
               <div className={styles.priceLarge}>
-                {appliedCoupon && appliedCoupon.stripe_coupon_id ? (
+                {appliedCoupon && appliedCoupon.stripe_coupon_id && appliedCoupon.tipo_internal === 'PLANO_PRO' ? (
                   <>
                     <span style={{ textDecoration: 'line-through', opacity: 0.4, fontSize: '1.5rem', marginRight: '10px' }}>R$ 69,90</span>
                     R$ {(69.90 * (appliedCoupon.desconto_tipo === 'PERCENTUAL' ? (1 - appliedCoupon.valor / 100) : 1) - (appliedCoupon.desconto_tipo === 'FIXO' ? appliedCoupon.valor : 0)).toFixed(2).replace('.', ',')}
@@ -6837,7 +6837,7 @@ export default function AdvogadoDashboard() {
                     {isValidatingCoupon ? "..." : "APLICAR"}
                   </button>
                 </div>
-                {appliedCoupon && <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '5px' }}>✓ Desconto aplicado com sucesso!</p>}
+                {appliedCoupon && appliedCoupon.tipo_internal === 'PLANO_PRO' && <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '5px' }}>✓ Desconto aplicado com sucesso!</p>}
             </div>
           </div>
 
@@ -6911,7 +6911,7 @@ export default function AdvogadoDashboard() {
               <div className={styles.bonusValue}>+20 Juris todo mês</div>
             </div>
 
-            <button className={styles.subscribeBtn} onClick={() => handleBecomePro(appliedCoupon)}>
+            <button className={styles.subscribeBtn} onClick={() => handleBecomePro(appliedCoupon?.tipo_internal === 'PLANO_PRO' ? appliedCoupon : null)}>
               Assinar Agora <ChevronRight size={20} />
             </button>
           </div>

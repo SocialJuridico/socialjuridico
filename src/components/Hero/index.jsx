@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Users, Scale } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Users, Scale, Briefcase } from 'lucide-react';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import Button from '../Button';
 import styles from './Hero.module.css';
@@ -8,17 +8,19 @@ import styles from './Hero.module.css';
 async function getStats() {
   try {
     const client = supabaseAdmin || supabase;
-    const [clientesRes, advRes] = await Promise.all([
+    const [clientesRes, advRes, casosRes] = await Promise.all([
       client.from('clientes').select('id', { count: 'exact', head: true }),
       client.from('advogados').select('id', { count: 'exact', head: true }),
+      client.from('casos').select('id', { count: 'exact', head: true }).eq('status', 'ABERTO'),
     ]);
     return {
       totalClientes: clientesRes.count || 0,
       totalAdvogados: advRes.count || 0,
+      totalCasos: casosRes.count || 0,
     };
   } catch (e) {
     console.warn('Erro ao buscar stats:', e);
-    return { totalClientes: 0, totalAdvogados: 0 };
+    return { totalClientes: 0, totalAdvogados: 0, totalCasos: 0 };
   }
 }
 
@@ -60,6 +62,14 @@ export default async function Hero() {
             <div className={styles.statTexts}>
               <span className={styles.statNumber}>{fmt(stats.totalAdvogados)}+</span>
               <span className={styles.statLabel}>Advogados na plataforma</span>
+            </div>
+          </div>
+          <div className={styles.statDivider} aria-hidden="true" />
+          <div className={styles.statItem}>
+            <Briefcase size={18} className={styles.statIcon} />
+            <div className={styles.statTexts}>
+              <span className={styles.statNumber}>{fmt(stats.totalCasos)}+</span>
+              <span className={styles.statLabel}>Casos abertos agora</span>
             </div>
           </div>
         </div>

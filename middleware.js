@@ -121,7 +121,7 @@ export async function middleware(request) {
   // Política de segurança de conteúdo (CSP) básica
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' *.openai.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' *.supabase.co wss://*.supabase.co *.openai.com; frame-ancestors 'none';",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' *.openai.com *.cloudflareinsights.com www.googletagmanager.com js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' *.supabase.co wss://*.supabase.co *.openai.com *.cloudflareinsights.com *.google-analytics.com api.stripe.com; frame-src js.stripe.com; frame-ancestors 'none';",
   );
 
   // HSTS (HTTP Strict Transport Security) - força HTTPS

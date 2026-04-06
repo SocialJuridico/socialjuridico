@@ -273,7 +273,7 @@ export default function AdvogadoDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        setAppliedCoupon(data);
+        setAppliedCoupon({ ...data, tipo_internal: tipo, status: 'success' });
         toast.success("Cupom aplicado com sucesso!");
       } else {
         toast.error(data.error);

@@ -50,11 +50,15 @@ export default function AdminCasosPage() {
       const area = String(c.area || "").toLowerCase();
       const clienteName = String(c.cliente_name || "").toLowerCase();
       const clienteEmail = String(c.cliente_email || "").toLowerCase();
+      const advogadoName = String(c.advogado_name || "").toLowerCase();
+      const advogadoEmail = String(c.advogado_email || "").toLowerCase();
       return (
         titulo.includes(term) ||
         area.includes(term) ||
         clienteName.includes(term) ||
-        clienteEmail.includes(term)
+        clienteEmail.includes(term) ||
+        advogadoName.includes(term) ||
+        advogadoEmail.includes(term)
       );
     });
   }, [casos, search]);
@@ -120,6 +124,7 @@ export default function AdminCasosPage() {
                 <th>Área</th>
                 <th>Status</th>
                 <th>Cliente</th>
+                <th>Advogado</th>
                 <th>Cadastro</th>
                 <th>Ações</th>
               </tr>
@@ -134,6 +139,12 @@ export default function AdminCasosPage() {
                     <div className={styles.clientCell}>
                       <span>{caso.cliente_name || "-"}</span>
                       <small>{caso.cliente_email || "-"}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <div className={styles.clientCell}>
+                      <span>{caso.advogado_name || "-"}</span>
+                      <small>{caso.advogado_email || ""}</small>
                     </div>
                   </td>
                   <td>

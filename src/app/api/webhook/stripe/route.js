@@ -75,21 +75,36 @@ async function handleCheckoutCompleted(session) {
       );
 
       // Buscar saldo atual
-      const { data: profile } = await supabaseAdmin
+      const { data: profile, error: fetchError } = await supabaseAdmin
         .from("advogados")
         .select("balance")
         .eq("id", userId)
         .single();
 
-      const newBalance = (profile?.balance || 0) + jurisAmount;
+      if (fetchError) {
+        console.error(`❌ Erro ao buscar saldo do perfil ${userId}:`, fetchError);
+      }
 
-      await supabaseAdmin
+      const currentBalance = profile?.balance || 0;
+      const newBalance = currentBalance + jurisAmount;
+
+      console.log(`📈 Atualizando saldo de ${currentBalance} para ${newBalance} (id: ${userId})`);
+
+      const { error: updateError } = await supabaseAdmin
         .from("advogados")
         .update({ balance: newBalance })
         .eq("id", userId);
 
+      if (updateError) {
+        console.error(`❌ Erro FATAL ao atualizar saldo do perfil ${userId}:`, updateError);
+        // Não jogamos erro para não dar Loop no Stripe se for algo intermitente, 
+        // mas o log acima vai nos ajudar no terminal.
+      } else {
+        console.log(`✅ Saldo atualizado com sucesso para o usuário ${userId}`);
+      }
+
       // Registrar log de transação Real
-      await supabaseAdmin.from('transacoes').insert([{
+      const { error: transError } = await supabaseAdmin.from('transacoes').insert([{
         advogado_id: userId,
         tipo: 'JURIS_PURCHASE',
         valor: (session.amount_total || 0) / 100,
@@ -100,6 +115,10 @@ async function handleCheckoutCompleted(session) {
         cupom_id: cupomId || null,
         created_at: new Date().toISOString()
       }]);
+
+      if (transError) {
+        console.error(`❌ Erro ao registrar transação no BD para ${userId}:`, transError);
+      }
     }
   } else if (type === "PRO_SUBSCRIPTION") {
     // ⚠️ SEGURANÇA: Não logar user IDs

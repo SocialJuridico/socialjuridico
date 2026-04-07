@@ -75,10 +75,25 @@ export async function GET() {
       clientesMap = Object.fromEntries((clientes || []).map((c) => [c.id, c]));
     }
 
+    const advogadoIds = Array.from(
+      new Set((data || []).map((c) => c.advogado_id).filter(Boolean)),
+    );
+
+    let lawyersMap = {};
+    if (advogadoIds.length > 0) {
+      const { data: lawyers } = await db
+        .from("advogados")
+        .select("id, name, email")
+        .in("id", advogadoIds);
+      lawyersMap = Object.fromEntries((lawyers || []).map((l) => [l.id, l]));
+    }
+
     const enriched = (data || []).map((caso) => ({
       ...caso,
       cliente_name: clientesMap[caso.cliente_id]?.name || null,
       cliente_email: clientesMap[caso.cliente_id]?.email || null,
+      advogado_name: lawyersMap[caso.advogado_id]?.name || null,
+      advogado_email: lawyersMap[caso.advogado_id]?.email || null,
     }));
 
     return NextResponse.json({ success: true, data: enriched });

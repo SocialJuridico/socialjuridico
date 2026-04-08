@@ -15,8 +15,8 @@ export async function sendPushNotification({
 
   const body = {
     app_id: appId,
-    headings: { pt: title },
-    contents: { pt: message },
+    headings: { pt: title, en: title },
+    contents: { pt: message, en: message },
     url: url.startsWith("http") ? url : `https://socialjuridico.com.br${url}`,
   };
 

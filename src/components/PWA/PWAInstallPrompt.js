@@ -9,23 +9,27 @@ export default function PWAInstallPrompt() {
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    const isIosDevice = typeof window !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    setTimeout(() => setIsIOS(isIosDevice), 100);
+    // Só executa se for mobile (tela <= 768px)
+    if (typeof window === "undefined" || window.innerWidth > 768) {
+      return;
+    }
+
+    const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    setIsIOS(isIosDevice);
 
     const handleBeforeInstallPrompt = (e) => {
       console.log("PWA: beforeinstallprompt disparado");
       e.preventDefault();
       setInstallPrompt(e);
-      // Mostrar o popup mais rápido (2 segundos)
-      setIsVisible(true);
+      // Mostrar o popup após um pequeno delay no mobile
+      setTimeout(() => setIsVisible(true), 3000);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
     // Se for iOS e não estiver instalado, mostrar aviso
     if (isIosDevice && !window.navigator.standalone) {
-      console.log("PWA: Dispositivo iOS detectado");
-      const timer = setTimeout(() => setIsVisible(true), 3000);
+      const timer = setTimeout(() => setIsVisible(true), 4000);
       return () => clearTimeout(timer);
     }
 
@@ -110,9 +114,7 @@ export default function PWAInstallPrompt() {
         
         @media (min-width: 768px) {
           .pwa-popup-overlay {
-            left: auto;
-            right: 30px;
-            width: 350px;
+            display: none; /* Garante que suma acima de 768px */
           }
         }
 
@@ -126,6 +128,8 @@ export default function PWAInstallPrompt() {
           position: relative;
           color: white;
           text-align: center;
+          max-width: 400px;
+          width: 100%;
         }
 
         .pwa-close {

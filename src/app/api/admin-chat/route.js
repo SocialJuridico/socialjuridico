@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { sendPushNotification } from "@/lib/oneSignal";
 
 function parseMeta(meta) {
   if (!meta) return {};
@@ -288,6 +289,19 @@ export async function POST(request) {
       .insert([recipientRow, senderMirrorRow]);
 
     if (error) throw error;
+
+    // Enviar PUSH via OneSignal para o destinatário
+    try {
+       await sendPushNotification(
+          partnerId,
+          `Nova mensagem do ${senderLabel}`,
+          content,
+          `/dashboard/${partner.role.toLowerCase()}`
+       );
+    } catch (pushErr) {
+       console.error("Erro ao enviar PUSH:", pushErr);
+       // Não travamos o chat se o push falhar
+    }
 
     return NextResponse.json({
       success: true,

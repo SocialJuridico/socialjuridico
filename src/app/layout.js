@@ -19,11 +19,19 @@ export const metadata = {
 import Footer from "@/components/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
 import { Toaster } from 'react-hot-toast';
+import OneSignalSetup from "@/components/PWA/OneSignalSetup";
+import PWAInstallPrompt from "@/components/PWA/PWAInstallPrompt";
 
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#D4AF37" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <OneSignalSetup />
         <Toaster position="top-right" toastOptions={{
           style: {
             background: '#121212',
@@ -34,6 +42,7 @@ export default function RootLayout({ children }) {
         <main>
           {children}
         </main>
+        <PWAInstallPrompt />
         <Footer />
         <ScrollToTop />
       </body>

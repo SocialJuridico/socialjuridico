@@ -1,0 +1,18 @@
+{
+  "name": "SocialJurídico",
+  "short_name": "SocialJurídico",
+  "description": "A sua plataforma jurídica de confiança.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#D4AF37",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "orientation": "portrait"
+}

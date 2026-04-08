@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { sendPushNotification } from "@/lib/oneSignal";
 
 async function ensureAdmin(db, userId) {
   const { data: admin, error } = await db
@@ -204,6 +205,18 @@ export async function POST(request) {
     }));
 
     await insertNotifications(db, notifications);
+
+    // Enviar PUSH via OneSignal para todos os destinatários
+    try {
+       await sendPushNotification(
+          recipients,
+          title,
+          message,
+          "/dashboard" // Link genérico para dashboard
+       );
+    } catch (pushErr) {
+       console.error("Erro ao enviar PUSH em massa:", pushErr);
+    }
 
     return NextResponse.json({
       success: true,

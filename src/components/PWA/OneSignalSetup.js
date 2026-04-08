@@ -49,8 +49,9 @@ export default function OneSignalSetup() {
             const role = user.user_metadata?.role || "LAWYER";
             await OneSignal.User.addTag("role", role);
 
+            console.log("OneSignal Permission:", OneSignal.Notifications.permission);
             if (OneSignal.Notifications.permission !== true) {
-              await OneSignal.Slidedown.promptPush();
+              await OneSignal.Slidedown.promptPush({ force: true });
             }
           } catch(e) {}
         };

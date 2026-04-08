@@ -129,13 +129,11 @@ export async function middleware(request) {
   // Habilita proteção XSS no navegador
   response.headers.set("X-XSS-Protection", "1; mode=block");
 
-  /* 
-  // Política de segurança de conteúdo (CSP) básica
+  // Política de segurança de conteúdo (CSP) permitindo OneSignal totalmente
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline' *.openai.com *.cloudflareinsights.com www.googletagmanager.com js.stripe.com onesignal.com *.onesignal.com https://cdn.onesignal.com; style-src 'self' 'unsafe-inline' onesignal.com *.onesignal.com https://onesignal.com; img-src 'self' data: https: onesignal.com *.onesignal.com; font-src 'self' data:; connect-src 'self' *.supabase.co wss://*.supabase.co *.openai.com *.cloudflareinsights.com *.google-analytics.com api.stripe.com onesignal.com *.onesignal.com; worker-src 'self' blob: onesignal.com *.onesignal.com https://cdn.onesignal.com; child-src 'self' blob: onesignal.com *.onesignal.com; frame-src js.stripe.com; frame-ancestors 'none';",
+    "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.onesignal.com https://onesignal.com www.googletagmanager.com js.stripe.com; style-src 'self' 'unsafe-inline' https://*.onesignal.com https://onesignal.com; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:; worker-src 'self' blob: https://*.onesignal.com https://onesignal.com; child-src 'self' blob: https://*.onesignal.com https://onesignal.com; frame-src https:; frame-ancestors 'none';"
   );
-  */
 
   // HSTS (HTTP Strict Transport Security) - força HTTPS
   // Nota: Usar com cuidado, ativar apenas quando tiver certificado SSL válido

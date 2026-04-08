@@ -55,13 +55,21 @@ export default function OneSignalSetup() {
           } catch(e) {}
         };
 
-        // Verifica a sessão todas as vezes que mudar de tela (Pois o login é feito via API)
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await bindUserAndPrompt(session.user);
-        } else {
-          // Se não tiver sessão (deslogado ou saindo)
-          await OneSignal.logout();
+        // Verifica a sessão todas as vezes que mudar de tela (lendo a fonte verdadeira de cookies via API)
+        try {
+          const res = await fetch("/api/perfil");
+          if (res.ok) {
+            const result = await res.json();
+            if (result.success && result.data?.id) {
+              await bindUserAndPrompt(result.data);
+            } else {
+              await OneSignal.logout();
+            }
+          } else {
+            await OneSignal.logout();
+          }
+        } catch (error) {
+          console.error("Erro ao puxar perfil no OneSignal", error);
         }
 
       } catch (e) {

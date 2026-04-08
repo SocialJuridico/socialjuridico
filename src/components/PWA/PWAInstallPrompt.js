@@ -13,18 +13,19 @@ export default function PWAInstallPrompt() {
     setIsIOS(isIosDevice);
 
     const handleBeforeInstallPrompt = (e) => {
+      console.log("PWA: beforeinstallprompt disparado");
       e.preventDefault();
       setInstallPrompt(e);
-      // Mostrar o popup após alguns segundos ou sob certas condições
-      const timer = setTimeout(() => setIsVisible(true), 5000);
-      return () => clearTimeout(timer);
+      // Mostrar o popup mais rápido (2 segundos)
+      setIsVisible(true);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // Se for iOS e não estiver instalado, mostrar aviso após delay
+    // Se for iOS e não estiver instalado, mostrar aviso
     if (isIosDevice && !window.navigator.standalone) {
-      const timer = setTimeout(() => setIsVisible(true), 8000);
+      console.log("PWA: Dispositivo iOS detectado");
+      const timer = setTimeout(() => setIsVisible(true), 3000);
       return () => clearTimeout(timer);
     }
 

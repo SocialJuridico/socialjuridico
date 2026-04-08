@@ -129,10 +129,10 @@ export async function middleware(request) {
   // Habilita proteção XSS no navegador
   response.headers.set("X-XSS-Protection", "1; mode=block");
 
-  // Política de segurança de conteúdo (CSP) permitindo OneSignal totalmente
+  // Política de segurança de conteúdo (CSP) ULTRA COMPLETA
   response.headers.set(
     "Content-Security-Policy",
-    "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.onesignal.com https://onesignal.com www.googletagmanager.com js.stripe.com; style-src 'self' 'unsafe-inline' https://*.onesignal.com https://onesignal.com; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:; worker-src 'self' blob: https://*.onesignal.com https://onesignal.com; child-src 'self' blob: https://*.onesignal.com https://onesignal.com; frame-src https:; frame-ancestors 'none';"
+    "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.onesignal.com https://onesignal.com *.openai.com *.cloudflareinsights.com www.googletagmanager.com js.stripe.com; script-src-elem 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:; worker-src 'self' blob: https://*.onesignal.com https://onesignal.com; child-src 'self' blob: https://*.onesignal.com https://onesignal.com; frame-src https:; frame-ancestors 'none';"
   );
 
   // HSTS (HTTP Strict Transport Security) - força HTTPS

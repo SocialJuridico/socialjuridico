@@ -36,35 +36,39 @@ export default function OneSignalSetup() {
         });
         console.log("OneSignal: Inicializado com sucesso");
 
-        // Vincular o ID do usuário do Supabase se ele estiver logado
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (user) {
-          await OneSignal.login(user.id);
-          console.log("OneSignal: Usuário vinculado", user.id);
-          
-          // Adicionar TAG de ROLE para segmentação de notificações
-          const role = user.user_metadata?.role || "LAWYER";
-          await OneSignal.User.addTag("role", role);
-          console.log("OneSignal: Tag de role adicionada:", role);
+        // Função auxiliar para vincular o usuário e pedir permissão
+        const bindUserAndPrompt = async (user) => {
+          if (!user) return;
+          try {
+            await OneSignal.login(user.id);
+            console.log("OneSignal: Usuário vinculado!", user.id);
+            
+            const role = user.user_metadata?.role || "LAWYER";
+            await OneSignal.User.addTag("role", role);
+            console.log("OneSignal: Tag de role adicionada:", role);
 
-          // Pedir permissão explicitamente se ainda não tiver usando o Slidedown (Evita bloqueio do Safari/Chrome por falta de interação)
-          const permission = OneSignal.Notifications.permission;
-          if (permission !== true) {
-            console.log("OneSignal: Solicitando permissão via Slidedown...");
-            await OneSignal.Slidedown.promptPush();
+            if (OneSignal.Notifications.permission !== true) {
+              console.log("OneSignal: Solicitando permissão via Slidedown...");
+              await OneSignal.Slidedown.promptPush();
+            }
+          } catch(e) {
+            console.log("Erro ao vincular OneSignal", e);
           }
+        };
+
+        // 1. Tentar pegar o usuário logo no carregamento
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await bindUserAndPrompt(session.user);
         }
 
-        // Escutar mudanças de autenticação para vincular/desvincular
+        // 2. Escutar mudanças (inclusive a restauração inicial da sessão)
         supabase.auth.onAuthStateChange(async (event, session) => {
-          if (event === 'SIGNED_IN' && session?.user) {
-            await OneSignal.login(session.user.id);
-            if (OneSignal.Notifications.permission !== true) {
-               await OneSignal.Slidedown.promptPush();
-            }
+          if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
+            await bindUserAndPrompt(session.user);
           } else if (event === 'SIGNED_OUT') {
             await OneSignal.logout();
+            console.log("OneSignal: Usuário deslogado");
           }
         });
       } catch (e) {

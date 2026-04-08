@@ -57,13 +57,18 @@ export default function OneSignalSetup() {
         };
 
         // 1. Tentar pegar o usuário logo no carregamento
-        const { data: { session } } = await supabase.auth.getSession();
+        console.log("OneSignal: Verificando supabase.auth.getSession()...");
+        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log("OneSignal: Resultado do getSession:", { sessionExists: !!session, userExists: !!session?.user, error });
+        
         if (session?.user) {
           await bindUserAndPrompt(session.user);
         }
 
         // 2. Escutar mudanças (inclusive a restauração inicial da sessão)
         supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log("OneSignal AuthStateChange Disparado:", event, "User:", session?.user?.id);
+          
           if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') && session?.user) {
             await bindUserAndPrompt(session.user);
           } else if (event === 'SIGNED_OUT') {

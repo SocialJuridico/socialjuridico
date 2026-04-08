@@ -76,10 +76,18 @@ export default function PWAInstallPrompt() {
               <li>Role para baixo e toque em <strong>&quot;Adicionar à Tela de Início&quot;</strong></li>
             </ol>
           </div>
-        ) : (
+        ) : installPrompt ? (
           <button className="pwa-install-btn" onClick={handleInstallClick}>
             <Download size={18} /> Instalar Aplicativo
           </button>
+        ) : (
+          <div className="ios-instructions">
+            <p>Para instalar no seu Android:</p>
+            <ol>
+              <li>Toque nos <strong>três pontinhos (⋮)</strong> no topo do Chrome</li>
+              <li>Toque em <strong>&quot;Instalar aplicativo&quot;</strong> ou <strong>&quot;Adicionar à tela inicial&quot;</strong></li>
+            </ol>
+          </div>
         )}
         
         <div className="pwa-feature-badges">

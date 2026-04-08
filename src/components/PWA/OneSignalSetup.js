@@ -30,14 +30,23 @@ export default function OneSignalSetup() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
-        console.log("OneSignal: Vinculando usuário", user.id);
         await OneSignal.login(user.id);
+        console.log("OneSignal: Usuário vinculado", user.id);
+        
+        // Pedir permissão explicitamente se ainda não tiver
+        if (OneSignal.Notifications.permission !== true) {
+          await OneSignal.Notifications.requestPermission();
+        }
       }
 
       // Escutar mudanças de autenticação para vincular/desvincular
       supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session?.user) {
           await OneSignal.login(session.user.id);
+          // Pedir permissão ao logar
+          if (OneSignal.Notifications.permission !== true) {
+            await OneSignal.Notifications.requestPermission();
+          }
         } else if (event === 'SIGNED_OUT') {
           await OneSignal.logout();
         }

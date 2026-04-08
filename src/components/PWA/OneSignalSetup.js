@@ -46,14 +46,17 @@ export default function OneSignalSetup() {
             await OneSignal.login(user.id);
             console.log("OneSignal: Usuário vinculado!", user.id);
             
-            const role = user.user_metadata?.role || "LAWYER";
-            await OneSignal.User.addTag("role", role);
+            const role = user.role || user.user_metadata?.role || "LAWYER";
+            await OneSignal.User.addTags({ role: role });
+            console.log("OneSignal: Tag role adicionada:", role);
 
             console.log("OneSignal Permission:", OneSignal.Notifications.permission);
             if (OneSignal.Notifications.permission !== true) {
               await OneSignal.Slidedown.promptPush({ force: true });
             }
-          } catch(e) {}
+          } catch(e) {
+            console.error("OneSignal erro em bindUserAndPrompt:", e);
+          }
         };
 
         // Verifica a sessão todas as vezes que mudar de tela (lendo a fonte verdadeira de cookies via API)

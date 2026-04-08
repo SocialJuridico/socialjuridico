@@ -60,13 +60,15 @@ export async function GET() {
 
     const sentRows = (data || []).filter((row) => {
       const meta = parseMeta(row.meta);
+      
+      // Se o admin apagou, pula
+      if (meta.deleted_by_admin) return false;
+
       const isSentByMe = (
         (row.tipo === "ADMIN_BROADCAST" && String(meta.sent_by || "") === user.id) ||
         (row.tipo === "ADMIN_CHAT" && String(meta.sender_id || "") === user.id)
       );
       
-      // Também incluímos as que EU recebi ( mirrors ou lidas) se quisermos o partnerId correto
-      // Mas o objetivo aqui são conversas que eu iniciei ou participei
       return isSentByMe;
     });
 

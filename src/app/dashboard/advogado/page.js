@@ -1,7 +1,7 @@
 "use client";
 // DUMMY COMMENT FOR GIT SYNC TEST
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as htmlToImage from "html-to-image";
 import Link from "next/link";
 import Image from "next/image";
@@ -265,6 +265,12 @@ export default function AdvogadoDashboard() {
   const smartFileInputRef = useRef(null);
   const avatarInputRef = useRef(null);
   const chatEndRef = useRef(null);
+  const [showMsgModal, setShowMsgModal] = useState(false);
+  const [selectedMsg, setSelectedMsg] = useState(null);
+
+  const unreadMessagesCount = useMemo(() => {
+    return notificacoes.filter((n) => !n.lida).length;
+  }, [notificacoes]);
 
   const handleApplyCoupon = async (tipo) => {
     if (!couponCode.trim()) return;
@@ -617,6 +623,26 @@ export default function AdvogadoDashboard() {
     }
   };
 
+  const handleOpenMessage = async (msg) => {
+    setSelectedMsg(msg);
+    setShowMsgModal(true);
+
+    if (!msg.lida) {
+      try {
+        await fetch("/api/notificacoes", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: msg.id }),
+        });
+        setNotificacoes((prev) =>
+          prev.map((n) => (n.id === msg.id ? { ...n, lida: true } : n)),
+        );
+      } catch (err) {
+        console.error("Erro ao marcar como lida:", err);
+      }
+    }
+  };
+
   const handleOpenAdminChat = (notification) => {
     const meta = parseNotificationMeta(notification);
     const adminId = meta?.sender_id || meta?.sent_by || null;
@@ -752,7 +778,7 @@ export default function AdvogadoDashboard() {
     "triagem",
   ];
 
-  const handleTabChange = (tab) => {
+  const handleTabChange = async (tab) => {
     if (tab === "indicacoes") {
       fetchIndicacoes();
     }
@@ -765,6 +791,22 @@ export default function AdvogadoDashboard() {
        setActiveAnuncioTab(cat);
        fetchAnuncios(cat);
     }
+
+    // Se clicar em mensagens, marcar todas como lidas no banco
+    if (tab === "minhas-mensagens" && unreadMessagesCount > 0) {
+      try {
+        await fetch("/api/notificacoes", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}), // body vazio marca todas do user
+        });
+        // Atualiza localmente para remover o badge imediatamente
+        setNotificacoes((prev) => prev.map((n) => ({ ...n, lida: true })));
+      } catch (err) {
+        console.error("Erro ao marcar como lidas:", err);
+      }
+    }
+
     setActiveTab(tab);
   };
 
@@ -1615,9 +1657,32 @@ export default function AdvogadoDashboard() {
             <div
               key={msg.id}
               className={`${styles.opCard} ${styles.clickableMessageCard}`}
-              onClick={() => handleOpenAdminChat(msg)}
-              style={{ cursor: "pointer", position: "relative" }}
+              onClick={() => handleOpenMessage(msg)}
+              style={{
+                cursor: "pointer",
+                position: "relative",
+                borderLeft: !msg.lida
+                  ? "4px solid #ef4444"
+                  : "1px solid rgba(255, 255, 255, 0.05)",
+              }}
             >
+              {!msg.lida && (
+                <div style={{
+                  position: 'absolute',
+                  top: '-10px',
+                  left: '10px',
+                  background: '#ef4444',
+                  color: '#white',
+                  fontSize: '0.6rem',
+                  fontWeight: 900,
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+                  zIndex: 2
+                }}>
+                  NOVA
+                </div>
+              )}
               <div className={styles.opHeader}>
                 <div className={styles.opArea}>
                   <div
@@ -6269,6 +6334,74 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const renderMessageContentModal = () => {
+    if (!showMsgModal || !selectedMsg) return null;
+
+    return (
+      <div
+        className={styles.modalOverlay}
+        onClick={() => setShowMsgModal(false)}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: "600px" }}
+        >
+          <div className={styles.modalHeader} style={{ textAlign: "center" }}>
+            <div
+              className={styles.opIcon}
+              style={{ background: "#f59e0b", margin: "0 auto 15px" }}
+            >
+              <Bell size={20} />
+            </div>
+            <h2 className={styles.modalTitle}>
+              {selectedMsg.titulo || "Mensagem do Administrador"}
+            </h2>
+            <p className={styles.modalSubtitle}>
+              Recebida em:{" "}
+              {new Date(selectedMsg.created_at).toLocaleString("pt-BR")}
+            </p>
+          </div>
+
+          <div
+            className={styles.modalDescription}
+            style={{
+              textAlign: "left",
+              padding: "20px",
+              background: "rgba(255,255,255,0.03)",
+              borderRadius: "12px",
+              lineHeight: "1.6",
+              whiteSpace: "pre-wrap",
+              fontSize: "1rem",
+              color: "var(--color-silver)",
+              marginBottom: "25px",
+            }}
+          >
+            {selectedMsg.mensagem}
+          </div>
+
+          <button
+            className={styles.premiumBtn}
+            style={{ margin: "0 0 10px 0" }}
+            onClick={() => {
+              setShowMsgModal(false);
+              handleOpenAdminChat(selectedMsg);
+            }}
+          >
+            <MessageSquare size={18} /> Conversar com Administrador
+          </button>
+
+          <button
+            className={styles.closeModalBtn}
+            onClick={() => setShowMsgModal(false)}
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const renderDossierModal = () => {
     if (!showDossierModal || !selectedClient) return null;
 
@@ -7206,12 +7339,20 @@ export default function AdvogadoDashboard() {
           >
             <Globe size={18} /> <span>Oportunidades</span>
           </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "minhas-mensagens" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("minhas-mensagens")}
-          >
-            <MessageSquare size={18} />
-            <span>Minhas Mensagens</span>
+          <div className={styles.navItemWrapper}>
+            <div
+              className={`${styles.navItem} ${activeTab === "minhas-mensagens" ? styles.activeNavItem : ""}`}
+              onClick={() => handleTabChange("minhas-mensagens")}
+              style={{ width: "100%" }}
+            >
+              <MessageSquare size={18} />
+              <span>Minhas Mensagens</span>
+            </div>
+            {unreadMessagesCount > 0 && (
+              <div className={`${styles.unreadBadge} ${styles.unreadBadgeActive}`}>
+                {unreadMessagesCount}
+              </div>
+            )}
           </div>
 
           {/* ANUNCIOS DE SERVICOS MENU */}
@@ -7591,6 +7732,7 @@ export default function AdvogadoDashboard() {
       {renderDossierModal()}
       {renderDeleteConfirmModal()}
       {renderChatModal()}
+      {renderMessageContentModal()}
       {renderAgendaModal()}
       {renderNotifDeleteConfirmModal()}
     </div>

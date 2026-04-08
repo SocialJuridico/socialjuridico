@@ -36,7 +36,12 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data: data || [] });
+    const filtered = (data || []).filter(n => {
+       const meta = typeof n.meta === 'string' ? JSON.parse(n.meta || '{}') : (n.meta || {});
+       return !meta.deleted_by_user;
+    });
+
+    return NextResponse.json({ success: true, data: filtered });
   } catch (error) {
     console.error("Erro na API GET /api/notificacoes:", error);
     return NextResponse.json(
@@ -82,19 +87,42 @@ export async function DELETE(req) {
     
     console.log(`[DELETE Notif] User: ${user.email}, isAdmin: ${isAdmin}, ID: ${notificationId}`);
 
-    // 3. Executa a exclusão
-    let query = db.from("notificacoes").delete().eq("id", notificationId);
+    // 3. Executa o soft-delete ou delete definitivo
+    const { data: targetNotif, error: fetchError } = await db
+      .from("notificacoes")
+      .select("*")
+      .eq("id", notificationId)
+      .maybeSingle();
 
-    // Se não for admin, só pode excluir se for dono da notificação
-    if (!isAdmin) {
-      query = query.eq("user_id", user.id);
+    if (fetchError) throw fetchError;
+    if (!targetNotif) return NextResponse.json({ success: true, message: "Já removida" });
+
+    // Permissão: se não for admin, só pode mexer se for dono
+    if (!isAdmin && targetNotif.user_id !== user.id) {
+       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 403 });
     }
 
-    const { error, count, status } = await query.select(); // Adicionando .select() para confirmar o que foi deletado
-
-    if (error) {
-      console.error("[DELETE Notif] DB Error:", error);
-      throw error;
+    const currentMeta = typeof targetNotif.meta === 'string' ? JSON.parse(targetNotif.meta || '{}') : (targetNotif.meta || {});
+    const isLawyerAction = targetNotif.user_id === user.id;
+    
+    // Se for o advogado apagando a dele
+    if (isLawyerAction) {
+       currentMeta.deleted_by_user = true;
+       // Se o admin já tinha "apagado" (pelo lado dele no papo), ou se não é uma msg de papo, apaga de vez
+       const isShared = targetNotif.tipo === 'ADMIN_CHAT' || targetNotif.tipo === 'ADMIN_BROADCAST';
+       if (!isShared || currentMeta.deleted_by_admin) {
+          await db.from("notificacoes").delete().eq("id", notificationId);
+       } else {
+          await db.from("notificacoes").update({ meta: JSON.stringify(currentMeta) }).eq("id", notificationId);
+       }
+    } else if (isAdmin) {
+       // Se for o admin apagando uma do advogado (comunicado enviado por exemplo)
+       currentMeta.deleted_by_admin = true;
+       if (currentMeta.deleted_by_user) {
+          await db.from("notificacoes").delete().eq("id", notificationId);
+       } else {
+          await db.from("notificacoes").update({ meta: JSON.stringify(currentMeta) }).eq("id", notificationId);
+       }
     }
 
     console.log(`[DELETE Notif] Success. Deleted: ${Array.isArray(status) ? status.length : 'ok'}`);
@@ -109,6 +137,49 @@ export async function DELETE(req) {
     console.error("Erro na API DELETE /api/notificacoes:", error);
     return NextResponse.json(
       { success: false, message: "Erro ao excluir mensagem" },
+      { status: 500 },
+    );
+  }
+}
+
+// PATCH /api/notificacoes -> marca todas as notificações do usuário como lidas
+export async function PATCH(req) {
+  try {
+    const supabase = createClient();
+    
+    // 1. Pega usuário logado
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
+    }
+
+    const { id } = await req.json().catch(() => ({}));
+    const db = supabaseAdmin || supabase;
+
+    // 2. Executa o update
+    let query = db.from("notificacoes").update({ lida: true }).eq("user_id", user.id);
+    
+    // Se passou um ID específico, marca só ela
+    if (id) {
+      query = query.eq("id", id);
+    } else {
+      // Caso contrário, marca todas as não lidas do usuário
+      query = query.eq("lida", false);
+    }
+
+    const { error } = await query;
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, message: "Notificações marcadas como lidas" });
+
+  } catch (error) {
+    console.error("Erro na API PATCH /api/notificacoes:", error);
+    return NextResponse.json(
+      { success: false, message: "Erro ao atualizar notificações" },
       { status: 500 },
     );
   }

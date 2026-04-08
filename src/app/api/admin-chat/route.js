@@ -134,6 +134,10 @@ export async function GET(request) {
     const filtered = (data || []).filter((row) => {
       const meta = parseMeta(row.meta);
 
+      // SOFT DELETE: Se a mensagem estiver marcada como apagada por quem está vendo, pula
+      if (role === "LAWYER" && meta.deleted_by_user) return false;
+      if (role === "ADMIN" && meta.deleted_by_admin) return false;
+
       if (role === "LAWYER") {
         if (row.user_id !== user.id) return false;
 
@@ -354,7 +358,7 @@ export async function DELETE(request) {
     if (fetchError) throw fetchError;
 
     // 2. Filtra no JS as mensagens que pertencem a esta conversa específica
-    const idsToDelete = (allNotifs || []).filter(row => {
+    const notifsToUpdate = (allNotifs || []).filter(row => {
       const meta = parseMeta(row.meta);
 
       // Verificações para ADMIN_CHAT
@@ -362,33 +366,65 @@ export async function DELETE(request) {
         const isAdminMirror = row.user_id === user.id && String(meta.chat_with || "") === partnerId;
         const isPartnerReceived = row.user_id === partnerId && String(meta.sender_id || "") === user.id;
         const isReceivedFromPartner = row.user_id === user.id && String(meta.sender_id || "") === partnerId;
+        
+        // Se for Lawyer apagando, ele apaga apenas o que está no user_id dele
+        if (role === "LAWYER") {
+          return row.user_id === user.id && (isReceivedFromPartner || isAdminMirror);
+        }
+
+        // Se for Admin apagando, ele quer esconder da visão dele (mirrors + recebidas)
+        // E TAMBÉM marcar o que ele enviou para o parceiro como "apagado pelo admin"
         return isAdminMirror || isPartnerReceived || isReceivedFromPartner;
       }
 
       // Verificações para ADMIN_BROADCAST
       if (row.tipo === "ADMIN_BROADCAST") {
-        const isBroadcastToPartner = row.user_id === partnerId && (String(meta.sent_by || "") === user.id);
-        return isBroadcastToPartner;
+        // Se for admin, marca os comunicados que ELE enviou para esse parceiro como apagados por ele
+        if (role === "ADMIN") {
+           return row.user_id === partnerId && String(meta.sent_by || "") === user.id;
+        }
+        // Se for lawyer, marca o que ele recebeu
+        if (role === "LAWYER") {
+           return row.user_id === user.id && String(meta.sent_by || "") === partnerId;
+        }
       }
 
       return false;
-    }).map(r => r.id);
+    });
 
-    console.log(`[DELETE AdminChat] Found ${idsToDelete.length} messages to delete.`);
+    console.log(`[DELETE AdminChat] Found ${notifsToUpdate.length} messages to soft-delete.`);
 
-    if (idsToDelete.length > 0) {
-      const { error: deleteError } = await db
-        .from("notificacoes")
-        .delete()
-        .in("id", idsToDelete);
-      
-      if (deleteError) throw deleteError;
+    if (notifsToUpdate.length > 0) {
+      // Como o meta pode variar, precisamos atualizar um a um ou em blocos se idênticos
+      // Para garantir a preservação de outros dados no meta, faremos em paralelo
+      const updates = notifsToUpdate.map(async (row) => {
+        const currentMeta = parseMeta(row.meta);
+        const newMeta = { ...currentMeta };
+        
+        if (role === "ADMIN") {
+          newMeta.deleted_by_admin = true;
+        } else {
+          newMeta.deleted_by_user = true;
+        }
+
+        // Se ambos apagaram, ou se é o dono apagando algo privado, podemos apagar físico
+        // Mas por segurança e para atender o requisito "não apaga para o outro", 
+        // o soft-delete resolve perfeitamente.
+        // Se a msg já estava apagada pelo outro, agora ela some definitivamente.
+        if (newMeta.deleted_by_admin && newMeta.deleted_by_user) {
+          return db.from("notificacoes").delete().eq("id", row.id);
+        }
+
+        return db.from("notificacoes").update({ meta: JSON.stringify(newMeta) }).eq("id", row.id);
+      });
+
+      await Promise.all(updates);
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: `${idsToDelete.length} mensagens excluídas com sucesso.`,
-      count: idsToDelete.length
+      message: `${notifsToUpdate.length} mensagens atualizadas/removidas com sucesso.`,
+      count: notifsToUpdate.length
     });
 
   } catch (error) {

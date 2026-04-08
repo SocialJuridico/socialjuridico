@@ -75,6 +75,7 @@ import * as CalcUtils from "@/lib/calculators";
 import styles from "./Dashboard.module.css";
 import { supabase } from "@/lib/supabase";
 import { maskCPFCNPJ, formatPhone, maskPhone } from "@/lib/securityUtils";
+import PWAInlineBanner from "@/components/PWA/PWAInlineBanner";
 
 import {
   createJurisCheckout,
@@ -122,6 +123,8 @@ export default function AdvogadoDashboard() {
   const [docToDelete, setDocToDelete] = useState(null);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
+  const [viewedOAB, setViewedOAB] = useState("");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [isTypingAI, setIsTypingAI] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -779,6 +782,10 @@ export default function AdvogadoDashboard() {
   ];
 
   const handleTabChange = async (tab) => {
+    // Fecha o menu automaticamente no mobile ao selecionar uma opção
+    if (window.innerWidth <= 768) {
+      setIsSidebarOpen(false);
+    }
     if (tab === "indicacoes") {
       fetchIndicacoes();
     }
@@ -1136,6 +1143,7 @@ export default function AdvogadoDashboard() {
 
   const renderOportunidades = () => (
     <div className={styles.toolContainer}>
+      <PWAInlineBanner />
       <div className={styles.searchWrapper}>
         <input
           type="text"
@@ -7289,11 +7297,14 @@ export default function AdvogadoDashboard() {
   };
 
   return (
-    <div className={styles.dashboardContainer}>
+    <div className={`${styles.dashboardContainer} ${isSidebarOpen ? styles.sidebarOpen : ""}`}>
       {/* SIDEBAR */}
-      <aside className={styles.sidebar}>
+      <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarActive : ""}`}>
         <div className={styles.sidebarHeader}>
-          <button className={styles.mobileToggle}>
+          <button 
+            className={styles.mobileToggle}
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          >
             <Menu size={24} />
           </button>
           <div className={styles.logoWrapper}>
@@ -7517,13 +7528,13 @@ export default function AdvogadoDashboard() {
           <div className={styles.navGroupLabel}>Sistema</div>
           <div
             className={`${styles.navItem} ${activeTab === "documentacao" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("documentacao")}
+            onClick={() => handleTabChange("documentacao")}
           >
             <BookOpen size={18} /> <span>Documentação</span>
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "cartao-visitas" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("cartao-visitas")}
+            onClick={() => handleTabChange("cartao-visitas")}
           >
             <Eye size={18} /> <span>Cartão Digital</span>
           </div>
@@ -7532,7 +7543,7 @@ export default function AdvogadoDashboard() {
         <div className={styles.sidebarFooter}>
           <div
             className={`${styles.navItem} ${activeTab === "perfil" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("perfil")}
+            onClick={() => handleTabChange("perfil")}
           >
             <User size={18} /> <span>Meu Perfil</span>
           </div>
@@ -7672,7 +7683,7 @@ export default function AdvogadoDashboard() {
               </div>
               <button
                 className={styles.reminderAction}
-                onClick={() => setActiveTab("perfil")}
+                onClick={() => handleTabChange("perfil")}
               >
                 Completar Agora
               </button>

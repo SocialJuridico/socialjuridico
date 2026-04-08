@@ -638,8 +638,41 @@
   .navItem span,
   .userName,
   .userOAB,
-  .jurisBadge {
+  .jurisBadge,
+  .anunciosNav span,
+  .anunciosNav svg:last-child,
+  .anuncioSubmenu,
+  .navItem svg:last-child {
     display: none !important;
+  }
+
+  /* SIDEBAR ATIVA (ABERTA NO MOBILE) */
+  .sidebarActive {
+    width: 280px !important;
+    padding: 0 10px !important;
+    box-shadow: 10px 0 50px rgba(0,0,0,0.8) !important;
+    background-color: #121212 !important;
+  }
+
+  .sidebarActive .logoWrapper,
+  .sidebarActive .logoText,
+  .sidebarActive .logoSub,
+  .sidebarActive .navItem span,
+  .sidebarActive .sidebarFooter span,
+  .sidebarActive .anunciosNav span,
+  .sidebarActive .anunciosNav svg:last-child,
+  .sidebarActive .navItem svg:last-child,
+  .sidebarActive .anuncioSubmenu {
+    display: flex !important;
+  }
+
+  .sidebarActive .subNavItem {
+    display: flex !important;
+  }
+
+  .sidebarActive .navItem {
+    justify-content: flex-start !important;
+    padding: 12px 14px !important;
   }
 
   .mainContent {
@@ -656,11 +689,17 @@
     padding: 10px 0;
   }
 
-  .navItem {
+  .navItem,
+  .anunciosNav {
     justify-content: center;
     padding: 15px 0;
     margin-bottom: 5px;
     border-radius: 0;
+    width: 100%;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    animation: none !important;
   }
 
   .activeNavItem {

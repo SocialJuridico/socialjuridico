@@ -129,11 +129,11 @@ export async function middleware(request) {
   // Habilita proteção XSS no navegador
   response.headers.set("X-XSS-Protection", "1; mode=block");
 
-  // ⚠️ CSP DE TESTE (TUDO LIBERADO) - Para identificar o bloqueio no OneSignal
-  response.headers.set(
-    "Content-Security-Policy",
-    "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline' 'unsafe-eval' data: blob:; img-src * data: blob:; style-src * 'unsafe-inline';"
-  );
+  // Cabeçalho de diagnóstico para saber se o middleware está rodando
+  response.headers.set("X-Middleware-Debug", "SocialJuridico-Active");
+
+  // Removendo CSP complexo por enquanto para testar a entrega de headers
+  response.headers.set("Access-Control-Allow-Origin", "*");
 
   // HSTS (HTTP Strict Transport Security) - força HTTPS
   // Nota: Usar com cuidado, ativar apenas quando tiver certificado SSL válido

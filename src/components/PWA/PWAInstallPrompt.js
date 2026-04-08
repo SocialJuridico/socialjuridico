@@ -15,7 +15,7 @@ export default function PWAInstallPrompt() {
     }
 
     const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    setIsIOS(isIosDevice);
+    if (isIosDevice) setIsIOS(true);
 
     const handleBeforeInstallPrompt = (e) => {
       console.log("PWA: beforeinstallprompt disparado");

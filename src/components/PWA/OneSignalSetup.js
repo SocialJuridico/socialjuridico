@@ -24,6 +24,7 @@ export default function OneSignalSetup() {
           appId: APP_ID,
           safari_web_id: SAFARI_ID,
           allowLocalhostAsSecureOrigin: true,
+          persistNotification: false,
           promptOptions: {
             slidedown: {
               enabled: true,
@@ -42,6 +43,11 @@ export default function OneSignalSetup() {
           await OneSignal.login(user.id);
           console.log("OneSignal: Usuário vinculado", user.id);
           
+          // Adicionar TAG de ROLE para segmentação de notificações
+          const role = user.user_metadata?.role || "LAWYER";
+          await OneSignal.User.addTag("role", role);
+          console.log("OneSignal: Tag de role adicionada:", role);
+
           // Pedir permissão explicitamente se ainda não tiver
           if (OneSignal.Notifications.permission !== true) {
             await OneSignal.Notifications.requestPermission();

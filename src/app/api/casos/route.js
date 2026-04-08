@@ -63,6 +63,36 @@ export async function POST(request) {
       throw error;
     }
 
+    // 📣 ENVIAR PUSH NOTIFICATION PARA ADVOGADOS (ONESIGNAL)
+    try {
+      const oneSignalAppId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
+      const oneSignalApiKey = process.env.ONESIGNAL_REST_API_KEY;
+
+      if (oneSignalAppId && oneSignalApiKey) {
+        await fetch("https://onesignal.com/api/v1/notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Basic ${oneSignalApiKey}`,
+          },
+          body: JSON.stringify({
+            app_id: oneSignalAppId,
+            filters: [
+              { field: "tag", key: "role", relation: "=", value: "LAWYER" },
+            ],
+            contents: {
+              pt: `🚩 Nova Oportunidade: ${titulo.substring(0, 50)}... em ${cidade}/${estado}.`,
+            },
+            headings: { pt: "SocialJurídico 📍" },
+            url: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://socialjuridico.com.br'}/dashboard/advogado`,
+          }),
+        });
+        console.log("OneSignal: Push de novo caso enviado com sucesso");
+      }
+    } catch (pushError) {
+      console.error("Erro ao enviar push OneSignal:", pushError);
+    }
+
     return NextResponse.json({ success: true, data });
   } catch (error) {
     console.error("Erro na API POST /api/casos:", error);

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { sendPushNotification } from "@/lib/pushNotifications";
 
 // POST /api/casos/interesse
 // Body: { interestId, action: 'ACCEPT' | 'DECLINE' | 'HIRE' }
@@ -86,6 +87,14 @@ export async function POST(request) {
         meta: JSON.stringify({ case_id: interest.case_id }),
       }]);
 
+      // 📣 ENVIAR PUSH NOTIFICATION (RECUSA)
+      await sendPushNotification({
+        userIds: [interest.lawyer_id],
+        title: "Proposta não aceita ❌",
+        message: `O cliente decidiu não prosseguir com a negociação no caso "${caso.titulo}".`,
+        url: "/dashboard/advogado"
+      });
+
       // Atualizar cache de negotiating_lawyers no caso
       await updateNegotiatingLawyers(db, interest.case_id);
 
@@ -127,6 +136,14 @@ export async function POST(request) {
         tipo: "NEGOCIACAO",
         meta: JSON.stringify({ case_id: interest.case_id }),
       }]);
+
+      // 📣 ENVIAR PUSH NOTIFICATION (ACEITE/NEGOCIAÇÃO)
+      await sendPushNotification({
+        userIds: [interest.lawyer_id],
+        title: "Você entrou em negociação! 🤝",
+        message: `O cliente aceitou sua proposta no caso "${caso.titulo}".`,
+        url: `/dashboard/advogado`
+      });
 
       return NextResponse.json({
         success: true,
@@ -222,6 +239,14 @@ export async function POST(request) {
         tipo: "CONTRATACAO",
         meta: JSON.stringify({ case_id: interest.case_id }),
       }]);
+
+      // 📣 ENVIAR PUSH NOTIFICATION (CONTRATAÇÃO)
+      await sendPushNotification({
+        userIds: [interest.lawyer_id],
+        title: "Você foi contratado! 🎉",
+        message: `Parabéns! O cliente escolheu você para o caso "${caso.titulo}".`,
+        url: "/dashboard/advogado"
+      });
 
       // Notificar advogados que perderam
       const { data: declinedInterests } = await db

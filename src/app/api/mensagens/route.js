@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { sendPushNotification } from "@/lib/pushNotifications";
 
 // GET /api/mensagens?caso_id=xxx&interest_id=yyy
 export async function GET(request) {
@@ -182,6 +183,16 @@ export async function POST(request) {
           tipo: "MENSAGEM",
           meta: JSON.stringify({ case_id: caso_id, interest_id: interest_id || null }),
         }]);
+
+        // 📣 ENVIAR PUSH NOTIFICATION (MENSAGEM)
+        await sendPushNotification({
+          userIds: [recipientId],
+          title: "Nova mensagem! 💬",
+          message: `Você recebeu uma nova mensagem no caso "${caso.titulo}".`,
+          url: interest_id 
+            ? `/dashboard/${user.id === caso.cliente_id ? 'advogado' : 'cliente'}` 
+            : `/chat/${caso_id}`
+        });
       }
     }
 

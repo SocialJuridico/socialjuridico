@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { sendPushNotification } from "@/lib/pushNotifications";
 
 async function ensureAdmin(db, userId) {
   const { data: admin, error } = await db
@@ -70,6 +71,14 @@ export async function POST(request) {
       .single();
 
     if (error) throw error;
+
+    // 📣 ENVIAR PUSH NOTIFICATION PARA TODOS OS ADVOGADOS (OU TODOS OS USUÁRIOS)
+    await sendPushNotification({
+      roles: ["LAWYER"], // Você pode adicionar "CLIENT" aqui se quiser que todos recebam
+      title: "SocialJurídico 📢",
+      message: texto.substring(0, 100),
+      url: "/dashboard"
+    });
 
     return NextResponse.json({ success: true, data });
   } catch (error) {

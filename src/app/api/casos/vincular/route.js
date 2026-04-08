@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isLawyer } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
+import { sendPushNotification } from "@/lib/pushNotifications";
 
 export async function POST(request) {
   try {
@@ -150,6 +151,14 @@ export async function POST(request) {
     };
 
     await db.from("notificacoes").insert([notifBase]);
+
+    // 📣 ENVIAR PUSH NOTIFICATION PARA O CLIENTE
+    await sendPushNotification({
+      userIds: [caso.cliente_id],
+      title: "Interesse no seu caso! ⚖️",
+      message: `O advogado ${advogado.name} manifestou interesse no seu caso "${caso.titulo}".`,
+      url: "/dashboard/cliente"
+    });
 
     return NextResponse.json({
       success: true,

@@ -22,13 +22,21 @@ export default function PWAInlineBanner() {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // No iOS, mostramos sempre se não for standalone (Safari não avisa o evento)
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    if (isIos) {
-      setTimeout(() => setIsVisible(true), 100);
-    }
+    // Se for mobile e não for standalone, mostramos o banner após 4 segundos
+    // mesmo que o evento beforeinstallprompt não dispare (fallback)
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    const timer = setTimeout(() => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+      if (isMobile && !isStandalone) {
+        setIsVisible(true);
+      }
+    }, 4000);
 
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleInstall = async () => {

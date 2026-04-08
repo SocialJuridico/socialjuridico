@@ -10,7 +10,7 @@ export default function PWAInstallPrompt() {
 
   useEffect(() => {
     const isIosDevice = typeof window !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    setIsIOS(isIosDevice);
+    setTimeout(() => setIsIOS(isIosDevice), 100);
 
     const handleBeforeInstallPrompt = (e) => {
       console.log("PWA: beforeinstallprompt disparado");
@@ -29,8 +29,12 @@ export default function PWAInstallPrompt() {
       return () => clearTimeout(timer);
     }
 
+    const handleOpenModal = () => setIsVisible(true);
+    window.addEventListener('openPWAInstallModal', handleOpenModal);
+
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener('openPWAInstallModal', handleOpenModal);
     };
   }, []);
 

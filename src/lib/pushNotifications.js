@@ -22,7 +22,8 @@ export async function sendPushNotification({
 
   // Se tiver IDs específicos (destinado a um usuário só, ex: chat)
   if (userIds.length > 0) {
-    body.include_external_user_ids = userIds;
+    body.include_aliases = { external_id: userIds };
+    body.target_channel = "push";
   } 
   
   // Se for destinado a um grupo (ex: todos os advogados)
@@ -31,8 +32,9 @@ export async function sendPushNotification({
       field: "tag", 
       key: "role", 
       relation: "=", 
-      value: role.toUpperCase()
+      value: String(role).toUpperCase()
     }));
+    body.target_channel = "push";
   }
 
   try {

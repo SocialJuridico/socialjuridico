@@ -48,9 +48,11 @@ export default function OneSignalSetup() {
           await OneSignal.User.addTag("role", role);
           console.log("OneSignal: Tag de role adicionada:", role);
 
-          // Pedir permissão explicitamente se ainda não tiver
-          if (OneSignal.Notifications.permission !== true) {
-            await OneSignal.Notifications.requestPermission();
+          // Pedir permissão explicitamente se ainda não tiver usando o Slidedown (Evita bloqueio do Safari/Chrome por falta de interação)
+          const permission = OneSignal.Notifications.permission;
+          if (permission !== true) {
+            console.log("OneSignal: Solicitando permissão via Slidedown...");
+            await OneSignal.Slidedown.promptPush();
           }
         }
 
@@ -59,7 +61,7 @@ export default function OneSignalSetup() {
           if (event === 'SIGNED_IN' && session?.user) {
             await OneSignal.login(session.user.id);
             if (OneSignal.Notifications.permission !== true) {
-              await OneSignal.Notifications.requestPermission();
+               await OneSignal.Slidedown.promptPush();
             }
           } else if (event === 'SIGNED_OUT') {
             await OneSignal.logout();

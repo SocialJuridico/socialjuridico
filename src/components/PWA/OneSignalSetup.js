@@ -35,6 +35,22 @@ export default function OneSignalSetup() {
                 timeDelay: 3,
                 pageViews: 1,
               }
+            },
+            notifyButton: {
+              enable: true,
+              size: "medium",
+              theme: "default",
+              position: "bottom-right",
+              displayPredicate: () => true, // garante que o sino aparece sempre se não estiver subscrito
+              text: {
+                "tip.state.unsubscribed": "Inscreva-se para notificações",
+                "tip.state.subscribed": "Você está inscrito",
+                "tip.state.blocked": "As notificações estão bloqueadas",
+                "message.action.subscribed": "Obrigado por se inscrever!",
+                "dialog.main.title": "Gerenciar Notificações",
+                "dialog.main.button.subscribe": "INSCREVER-SE",
+                "dialog.main.button.unsubscribe": "CANCELAR INSCRIÇÃO"
+              }
             }
           });
           OneSignal.initialized = true;

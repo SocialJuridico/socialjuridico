@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabase";
 import { getRoleFromDatabase } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
@@ -12,7 +13,8 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const role = await getRoleFromDatabase(supabase, user.id);
+    const db = supabaseAdmin || supabase;
+    const role = await getRoleFromDatabase(db, user.id);
     if (role !== "ADMIN") {
       return NextResponse.json({ success: false, message: "Apenas administradores podem enviar Push Notifications gerais." }, { status: 403 });
     }

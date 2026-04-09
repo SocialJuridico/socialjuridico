@@ -212,6 +212,15 @@ export default function AdminDashboardPage() {
             </article>
           </Link>
 
+          <Link href="/dashboard/admin/push" className={styles.cardLink}>
+            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #3b82f6", background: 'rgba(59, 130, 246, 0.03)' }}>
+              <div className={styles.cardTop}>
+                <Megaphone size={16} color="#3b82f6" /> Push Notifications
+              </div>
+              <strong>Disparar Alerta</strong>
+            </article>
+          </Link>
+
           <Link href="/dashboard/admin/transacoes" className={styles.cardLink}>
             <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #10b981", background: 'rgba(16, 185, 129, 0.03)' }}>
               <div className={styles.cardTop}>

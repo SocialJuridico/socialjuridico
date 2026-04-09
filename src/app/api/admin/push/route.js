@@ -54,7 +54,7 @@ export async function POST(request) {
       roles,
       title: title.trim(),
       message: message.trim(),
-      url: "/dashboard" // Padrão
+      url: "/" // Rota raiz, pois /dashboard gerava 404
     });
 
     return NextResponse.json({ 

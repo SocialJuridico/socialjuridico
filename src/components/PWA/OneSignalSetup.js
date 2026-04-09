@@ -26,7 +26,8 @@ export default function OneSignalSetup() {
             appId: APP_ID,
             safari_web_id: SAFARI_ID,
             allowLocalhostAsSecureOrigin: true,
-            persistNotification: false,
+            serviceWorkerParam: { scope: "/" },
+            serviceWorkerPath: "OneSignalSDKWorker.js",
             promptOptions: {
               slidedown: {
                 enabled: true,

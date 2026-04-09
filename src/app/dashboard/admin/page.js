@@ -104,141 +104,127 @@ export default function AdminDashboardPage() {
           <p>Visão geral da plataforma para usuários com perfil ADMIN.</p>
         </header>
 
-        <section className={styles.grid}>
-          <Link href="/dashboard/admin/clientes" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`}>
-              <div className={styles.cardTop}>
-                <Users size={16} /> Clientes
-              </div>
-              <strong>{stats.totalClientes}</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/advogados" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`}>
-              <div className={styles.cardTop}>
-                <Scale size={16} /> Advogados
-              </div>
-              <strong>{stats.totalAdvogados}</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/casos" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`}>
-              <div className={styles.cardTop}>
-                <FileText size={16} /> Casos
-              </div>
-              <strong>{stats.totalCasos}</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/comunicados" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`}>
-              <div className={styles.cardTop}>
-                <Bell size={16} /> Comunicados
-              </div>
-              <strong>{stats.totalNotificacoes}</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/mensagens" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`}>
-              <div className={styles.cardTop}>
-                <MessageSquare size={16} /> Mensagens Enviadas
-              </div>
-              <strong>Conversas</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/notificacoes" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`}>
-              <div className={styles.cardTop}>
-                <Bell size={16} /> Minhas Mensagens
-              </div>
-              <strong>Recebidas</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/banners" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`}>
-              <div className={styles.cardTop}>
-                <ImageIcon size={16} /> Banners
-              </div>
-              <strong>Gerenciar</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/afiliados" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid var(--color-gold)" }}>
-              <div className={styles.cardTop}>
-                <Scale size={16} color="var(--color-gold)" /> Gestão de Afiliados
-              </div>
-              <strong>Ver Indicações</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/admins" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`}>
-              <div className={styles.cardTop}>
-                <UserCog size={16} /> Admins
-              </div>
-              <strong>Gerenciar</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/solicitacoes-exclusao" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #ef4444" }}>
-              <div className={styles.cardTop}>
-                <Trash2 size={16} color="#ef4444" /> Solicitações Exclusão
-              </div>
-              <strong>Ver Pedidos</strong>
-            </article>
-          </Link>
+        <div className={styles.sectionsWrapper}>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}><Users size={20} /> Usuários & Perfis</h2>
+            <div className={styles.grid}>
+              <Link href="/dashboard/admin/clientes" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`}>
+                  <div className={styles.cardTop}><Users size={16} /> Clientes</div>
+                  <strong>{stats.totalClientes}</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/advogados" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`}>
+                  <div className={styles.cardTop}><Scale size={16} /> Advogados</div>
+                  <strong>{stats.totalAdvogados}</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/admins" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`}>
+                  <div className={styles.cardTop}><UserCog size={16} /> Admins</div>
+                  <strong>Gerenciar</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/avaliacoes" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: `4px solid #d4af37` }}>
+                  <div className={styles.cardTop}><Star size={16} fill="#d4af37" color="#d4af37" /> Avaliações</div>
+                  <strong>Ver Notas</strong>
+                </article>
+              </Link>
+            </div>
+          </section>
 
-          <Link href="/dashboard/admin/cupons" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #10b981" }}>
-              <div className={styles.cardTop}>
-                <Ticket size={16} color="#10b981" /> Gestão de Cupons
-              </div>
-              <strong>Gerenciar</strong>
-            </article>
-          </Link>
-          <Link href="/dashboard/admin/avaliacoes" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: `4px solid #d4af37` }}>
-              <div className={styles.cardTop}>
-                <Star size={16} fill="#d4af37" color="#d4af37" /> Avaliações
-              </div>
-              <strong>Ver Notas</strong>
-            </article>
-          </Link>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}><Megaphone size={20} /> Comunicação & Marketing</h2>
+            <div className={styles.grid}>
+              <Link href="/dashboard/admin/push" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #3b82f6", background: 'rgba(59, 130, 246, 0.03)' }}>
+                  <div className={styles.cardTop}><Megaphone size={16} color="#3b82f6" /> Push Notifications</div>
+                  <strong>Disparar Alerta</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/notificacoes" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`}>
+                  <div className={styles.cardTop}><Bell size={16} /> Minhas Mensagens</div>
+                  <strong>Recebidas</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/comunicados" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`}>
+                  <div className={styles.cardTop}><Bell size={16} /> Comunicados Gerais</div>
+                  <strong>{stats.totalNotificacoes}</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/mensagens" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`}>
+                  <div className={styles.cardTop}><MessageSquare size={16} /> Mensagens de Casos</div>
+                  <strong>Conversas</strong>
+                </article>
+              </Link>
+            </div>
+          </section>
 
-          <Link href="/dashboard/admin/avisos" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #f59e0b" }}>
-              <div className={styles.cardTop}>
-                <Bell size={16} color="#f59e0b" /> Gestão de Avisos
-              </div>
-              <strong>Configurar</strong>
-            </article>
-          </Link>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}><FileText size={20} /> Operacional & Financeiro</h2>
+            <div className={styles.grid}>
+              <Link href="/dashboard/admin/casos" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`}>
+                  <div className={styles.cardTop}><FileText size={16} /> Gestão de Casos</div>
+                  <strong>{stats.totalCasos}</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/transacoes" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #10b981", background: 'rgba(16, 185, 129, 0.03)' }}>
+                  <div className={styles.cardTop}><DollarSign size={16} color="#10b981" /> Gestão Financeira</div>
+                  <strong>Ver Vendas</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/anunciantes" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #8b5cf6", background: 'rgba(139, 92, 246, 0.03)' }}>
+                  <div className={styles.cardTop}><Megaphone size={16} color="#8b5cf6" /> Anunciantes de Serviços</div>
+                  <strong>Gerenciar</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/afiliados" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid var(--color-gold)" }}>
+                  <div className={styles.cardTop}><Scale size={16} color="var(--color-gold)" /> Gestão de Afiliados</div>
+                  <strong>Ver Indicações</strong>
+                </article>
+              </Link>
+            </div>
+          </section>
 
-          <Link href="/dashboard/admin/push" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #3b82f6", background: 'rgba(59, 130, 246, 0.03)' }}>
-              <div className={styles.cardTop}>
-                <Megaphone size={16} color="#3b82f6" /> Push Notifications
-              </div>
-              <strong>Disparar Alerta</strong>
-            </article>
-          </Link>
-
-          <Link href="/dashboard/admin/transacoes" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #10b981", background: 'rgba(16, 185, 129, 0.03)' }}>
-              <div className={styles.cardTop}>
-                <DollarSign size={16} color="#10b981" /> Gestão Financeira
-              </div>
-              <strong>Ver Vendas</strong>
-            </article>
-          </Link>
-
-          <Link href="/dashboard/admin/anunciantes" className={styles.cardLink}>
-            <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #8b5cf6", background: 'rgba(139, 92, 246, 0.03)' }}>
-              <div className={styles.cardTop}>
-                <Megaphone size={16} color="#8b5cf6" /> Anunciantes de Serviços
-              </div>
-              <strong>Gerenciar</strong>
-            </article>
-          </Link>
-        </section>
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}><Shield size={20} /> Sistema & Configurações</h2>
+            <div className={styles.grid}>
+              <Link href="/dashboard/admin/banners" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`}>
+                  <div className={styles.cardTop}><ImageIcon size={16} /> Banners do App</div>
+                  <strong>Gerenciar</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/cupons" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #10b981" }}>
+                  <div className={styles.cardTop}><Ticket size={16} color="#10b981" /> Gestão de Cupons</div>
+                  <strong>Gerenciar</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/avisos" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #f59e0b" }}>
+                  <div className={styles.cardTop}><Bell size={16} color="#f59e0b" /> Configurar Avisos </div>
+                  <strong>Gerenciar</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/solicitacoes-exclusao" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #ef4444" }}>
+                  <div className={styles.cardTop}><Trash2 size={16} color="#ef4444" /> LGPD: Exclusões</div>
+                  <strong>Ver Pedidos</strong>
+                </article>
+              </Link>
+            </div>
+          </section>
+        </div>
       </main>
     </div>
   );

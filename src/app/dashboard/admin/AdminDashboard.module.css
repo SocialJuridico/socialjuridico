@@ -69,8 +69,23 @@
   color: #9ca3af;
 }
 
+.section {
+  margin-top: 32px;
+}
+
+.sectionTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #d4af37;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+  padding-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .grid {
-  margin-top: 20px;
   display: grid;
   grid-template-columns: repeat(4, minmax(160px, 1fr));
   gap: 14px;

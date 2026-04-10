@@ -42,44 +42,42 @@ export async function POST(request) {
     if (interestId) {
       const { data: interest, error: iError } = await db
         .from("case_interests")
-        .select("id, lawyer_id, chat_started")
+        .select("id, lawyer_id")
         .eq("id", interestId)
         .single();
         
-      if (iError || !interest || interest.lawyer_id !== user.id) {
+      if (iError || !interest) {
+        console.error("Erro ao buscar case_interests:", iError);
+        return NextResponse.json(
+          { success: false, message: "Interesse não encontrado" },
+          { status: 404 },
+        );
+      }
+
+      // Verificar se o usuário é o advogado do interesse OU o cliente dono do caso
+      const { data: casoOwner } = await db
+        .from("casos")
+        .select("cliente_id, chat_started")
+        .eq("id", casoId)
+        .single();
+
+      const isInterestLawyer = interest.lawyer_id === user.id;
+      const isCaseClient = casoOwner?.cliente_id === user.id;
+
+      if (!isInterestLawyer && !isCaseClient) {
         return NextResponse.json(
           { success: false, message: "Interesse inválido ou não autorizado" },
           { status: 403 },
         );
       }
 
-      if (interest.chat_started) {
-        return NextResponse.json({
-          success: true,
-          alreadyStarted: true,
-          message: "Chat de negociação já iniciado anteriormente.",
-        });
-      }
-
-      const { data: advogado, error: advError } = await db.from("advogados").select("balance").eq("id", user.id).single();
-      if ((advogado?.balance || 0) < 1) {
-        return NextResponse.json(
-          { success: false, message: `Saldo insuficiente. Necessário 1 Juri. Saldo atual: ${advogado.balance || 0}` },
-          { status: 402 },
-        );
-      }
-
-      const newBalance = advogado.balance - 1;
-      await Promise.all([
-        db.from("advogados").update({ balance: newBalance }).eq("id", user.id),
-        db.from("case_interests").update({ chat_started: true }).eq("id", interestId),
-      ]);
-
+      // O advogado já pagou 1 Juri na hora de manifestar o interesse (rota /vincular).
+      // O cliente não paga.
+      // E a tabela 'case_interests' não possui coluna 'chat_started', portanto não precisa atualizar nada.
       return NextResponse.json({
         success: true,
-        alreadyStarted: false,
-        message: "Chat de negociação iniciado! 1 Juri debitado.",
-        newBalance,
+        alreadyStarted: true,
+        message: "Acesso autorizado ao chat de negociação.",
       });
     }
 

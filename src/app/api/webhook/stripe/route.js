@@ -1,6 +1,8 @@
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { resend } from "@/lib/resend";
+import { novaVendaAdminTemplate } from "@/lib/emailTemplates";
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -269,6 +271,16 @@ async function handleJurisPurchase(session, userId, cupomId) {
     if (transError) {
       console.error(`⚠️ Erro ao registrar transação (crédito já foi aplicado):`, transError.message);
     }
+
+    // 📧 NOTIFICAR ADMINS DA VENDA
+    const advEmail = session.customer_email || session.customer_details?.email || '';
+    await notifyAdminsOfSale({
+      tipoVenda: 'JURIS_PURCHASE',
+      advogadoId: userId,
+      advogadoEmail: advEmail,
+      valor: ((session.amount_total || 0) / 100).toFixed(2),
+      jurisAmount,
+    });
   }
 }
 
@@ -319,6 +331,71 @@ async function handleProSubscription(session, userId, cupomId) {
 
   if (transError) {
     console.error(`⚠️ [PRO] Erro ao registrar transação:`, transError.message);
+  }
+
+  // 📧 NOTIFICAR ADMINS DA VENDA PRO
+  if (!updateError) {
+    const advEmail = session.customer_email || session.customer_details?.email || '';
+    await notifyAdminsOfSale({
+      tipoVenda: 'PRO_SUBSCRIPTION',
+      advogadoId: userId,
+      advogadoEmail: advEmail,
+      valor: ((session.amount_total || 0) / 100).toFixed(2),
+      jurisAmount: 20,
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPER: Notificar todos os admins sobre uma venda
+// ═══════════════════════════════════════════════════════════════
+async function notifyAdminsOfSale({ tipoVenda, advogadoId, advogadoEmail, valor, jurisAmount }) {
+  try {
+    // Buscar nome do advogado comprador
+    const { data: advogado } = await supabaseAdmin
+      .from("advogados")
+      .select("name, email")
+      .eq("id", advogadoId)
+      .single();
+
+    const advNome = advogado?.name || 'Advogado';
+    const advMail = advogado?.email || advogadoEmail;
+
+    // Buscar todos os admins
+    const { data: admins, error: adminError } = await supabaseAdmin
+      .from("admins")
+      .select("name, email")
+      .not("email", "is", null);
+
+    if (adminError || !admins?.length) {
+      console.warn("⚠️ [notifyAdmins] Nenhum admin encontrado para notificar");
+      return;
+    }
+
+    console.log(`📧 Notificando ${admins.length} admin(s) sobre venda de ${tipoVenda}...`);
+
+    const emailPayloads = admins.filter(a => a.email).map(admin => ({
+      from: 'Social Jurídico <contato@socialjuridico.com.br>',
+      to: [admin.email],
+      subject: tipoVenda === 'PRO_SUBSCRIPTION'
+        ? `👑 Nova venda: Plano PRO — R$ ${valor}`
+        : `💰 Nova venda: ${jurisAmount} Juris — R$ ${valor}`,
+      html: novaVendaAdminTemplate({
+        adminName: admin.name || 'Admin',
+        tipoVenda,
+        advogadoNome: advNome,
+        advogadoEmail: advMail,
+        valor,
+        jurisAmount,
+      }),
+    }));
+
+    if (emailPayloads.length > 0) {
+      await resend.batch.send(emailPayloads);
+      console.log(`✅ Email de venda enviado para ${emailPayloads.length} admin(s)`);
+    }
+  } catch (err) {
+    console.error("⚠️ Erro ao notificar admins de venda (não-fatal):", err.message);
   }
 }
 

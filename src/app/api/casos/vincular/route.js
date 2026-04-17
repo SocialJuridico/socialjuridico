@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { isLawyer } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
+import { resend } from "@/lib/resend";
+import { interesseCasoTemplate } from "@/lib/emailTemplates";
 
 export async function POST(request) {
   try {
@@ -159,6 +161,31 @@ export async function POST(request) {
       message: `O advogado ${advogado.name} manifestou interesse no seu caso "${caso.titulo}".`,
       url: "/dashboard/cliente"
     });
+
+    // 📧 ENVIAR EMAIL PARA O CLIENTE VIA RESEND
+    try {
+      const { data: cliente } = await db
+        .from("clientes")
+        .select("name, email")
+        .eq("id", caso.cliente_id)
+        .single();
+
+      if (cliente?.email) {
+        await resend.emails.send({
+          from: 'Social Jurídico <contato@socialjuridico.com.br>',
+          to: cliente.email,
+          subject: `⚖️ Advogado interessado no seu caso "${caso.titulo}"`,
+          html: interesseCasoTemplate({
+            titulo: caso.titulo,
+            lawyerName: advogado.name || 'Um advogado',
+            clientName: cliente.name || 'Cliente',
+          }),
+        });
+        console.log(`📧 Email de interesse enviado para ${cliente.email}`);
+      }
+    } catch (emailErr) {
+      console.error("⚠️ Erro ao enviar email de interesse (não-fatal):", emailErr.message);
+    }
 
     return NextResponse.json({
       success: true,

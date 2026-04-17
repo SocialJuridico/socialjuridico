@@ -5,7 +5,7 @@
 }
 
 .header {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .backBtn {
@@ -17,6 +17,8 @@
   padding: 8px 12px;
   border-radius: 8px;
   transition: all 0.2s;
+  gap: 6px;
+  font-size: 14px;
 }
 
 .backBtn:hover {
@@ -35,13 +37,82 @@
   font-size: 14px;
 }
 
+/* ═══ TABS ═══ */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: #a0a0a0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.25s ease;
+}
+
+.tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tabActive {
+  background: rgba(212, 175, 55, 0.12) !important;
+  color: #d4af37 !important;
+  border: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+/* ═══ FORM CARD ═══ */
 .formCard {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 30px;
+  animation: fadeIn 0.3s ease;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.formCardHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.formCardHeader h2 {
+  font-size: 18px;
+  color: #fff;
+  margin: 0 0 4px;
+  font-weight: 700;
+}
+
+.formCardHeader p {
+  font-size: 13px;
+  color: #a0a0a0;
+  margin: 0;
+}
+
+/* ═══ FORM ELEMENTS ═══ */
 .formGroup {
   margin-bottom: 20px;
 }
@@ -54,7 +125,7 @@
   font-weight: 500;
 }
 
-.input, .select, .textarea {
+.input, .select, .textarea, .textareaLarge {
   width: 100%;
   padding: 12px;
   background: rgba(0, 0, 0, 0.5);
@@ -63,9 +134,10 @@
   color: #fff;
   font-size: 15px;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
-.input:focus, .select:focus, .textarea:focus {
+.input:focus, .select:focus, .textarea:focus, .textareaLarge:focus {
   outline: none;
   border-color: #d4af37;
 }
@@ -73,6 +145,14 @@
 .textarea {
   min-height: 120px;
   resize: vertical;
+  font-family: inherit;
+}
+
+.textareaLarge {
+  min-height: 200px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.7;
 }
 
 .select option {
@@ -80,13 +160,14 @@
   color: #fff;
 }
 
+/* ═══ SUBMIT BUTTONS ═══ */
 .submitBtn {
   background: #d4af37;
   color: #000;
   border: none;
   border-radius: 8px;
-  padding: 12px 24px;
-  font-weight: 600;
+  padding: 14px 24px;
+  font-weight: 700;
   font-size: 15px;
   cursor: pointer;
   display: flex;
@@ -94,15 +175,28 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  transition: background 0.2s, opacity 0.2s;
+  transition: all 0.2s;
   margin-top: 10px;
 }
 
 .submitBtn:hover {
   background: #f2c94c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
 }
 
 .submitBtn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.submitBtnEmail {
+  background: linear-gradient(135deg, #d4af37, #b8962e);
+  color: #0d0f12;
+}
+
+.submitBtnEmail:hover {
+  background: linear-gradient(135deg, #f2c94c, #d4af37);
 }

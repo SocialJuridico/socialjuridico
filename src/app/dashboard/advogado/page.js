@@ -131,7 +131,8 @@ export default function AdvogadoDashboard() {
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [showAnunciosSubmenu, setShowAnunciosSubmenu] = useState(false);
-  const [highlightedAd, setHighlightedAd] = useState(null);
+  const [highlightedAds, setHighlightedAds] = useState([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [anunciosData, setAnunciosData] = useState([]);
   const [loadingAnuncios, setLoadingAnuncios] = useState(false);
   const [activeAnuncioTab, setActiveAnuncioTab] = useState("PREPOSTOS");
@@ -556,12 +557,21 @@ export default function AdvogadoDashboard() {
       const res = await fetch("/api/anuncios?destaque=true");
       const data = await res.json();
       if (data.success && data.data.length > 0) {
-        setHighlightedAd(data.data[0]);
+        setHighlightedAds(data.data);
       }
     } catch (err) {
        console.error(err);
     }
   }, []);
+
+  // Auto-rotate highlighted ads every 10 seconds
+  useEffect(() => {
+    if (highlightedAds.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentAdIndex((prev) => (prev + 1) % highlightedAds.length);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [highlightedAds.length]);
 
   useEffect(() => {
     loadDataFull();
@@ -7700,32 +7710,79 @@ export default function AdvogadoDashboard() {
               </button>
             </div>
           )}
-          {highlightedAd && activeTab === "oportunidades" && (
-            <div className={styles.highlightedAdContainer}>
-              <div className={styles.highlightedInfo}>
-                <h4><Sparkles size={14} /> ANÚNCIO EM DESTAQUE</h4>
-                <h3>{highlightedAd.titulo}</h3>
-                <p>{highlightedAd.descricao}</p>
-              </div>
-              <div className={styles.highlightedAction}>
-                <button 
-                  className={styles.premiumBtn}
-                  style={{ margin: 0 }}
-                  onClick={() => {
-                    const phone = highlightedAd.anunciante?.whatsapp?.replace(/\D/g, "");
-                    if (phone) {
-                      window.open(`https://wa.me/55${phone}?text=Olá, vi seu destaque no SocialJurídico e gostaria de mais informações.`, "_blank");
-                    }
-                  }}
-                >
-                  Falar agora
-                </button>
-                <div className={styles.adVendor}>
-                   <span className={styles.vendorName} style={{ fontSize: '0.7rem', color: "rgba(255, 255, 255, 0.5)" }}>Por: {highlightedAd.anunciante?.nome_empresa}</span>
+          {highlightedAds.length > 0 && activeTab === "oportunidades" && (() => {
+            const ad = highlightedAds[currentAdIndex];
+            if (!ad) return null;
+            return (
+              <div className={styles.highlightedAdContainer}>
+                {/* Seta esquerda */}
+                {highlightedAds.length > 1 && (
+                  <button
+                    className={styles.carouselArrow}
+                    style={{ left: '8px' }}
+                    onClick={() => setCurrentAdIndex((prev) => (prev - 1 + highlightedAds.length) % highlightedAds.length)}
+                    aria-label="Anúncio anterior"
+                  >
+                    ‹
+                  </button>
+                )}
+
+                <div className={styles.highlightedInfo} key={ad.id} style={{ animation: 'fadeSlide 0.5s ease' }}>
+                  <h4>
+                    <Sparkles size={14} /> ANÚNCIO EM DESTAQUE
+                    {highlightedAds.length > 1 && (
+                      <span className={styles.adCounter}>{currentAdIndex + 1}/{highlightedAds.length}</span>
+                    )}
+                  </h4>
+                  <h3>{ad.titulo}</h3>
+                  <p>{ad.descricao}</p>
                 </div>
+                <div className={styles.highlightedAction}>
+                  <button
+                    className={styles.premiumBtn}
+                    style={{ margin: 0 }}
+                    onClick={() => {
+                      const phone = ad.anunciante?.whatsapp?.replace(/\D/g, "");
+                      if (phone) {
+                        window.open(`https://wa.me/55${phone}?text=Olá, vi seu destaque no SocialJurídico e gostaria de mais informações.`, "_blank");
+                      }
+                    }}
+                  >
+                    Falar agora
+                  </button>
+                  <div className={styles.adVendor}>
+                    <span className={styles.vendorName} style={{ fontSize: '0.7rem', color: "rgba(255, 255, 255, 0.5)" }}>Por: {ad.anunciante?.nome_empresa}</span>
+                  </div>
+                </div>
+
+                {/* Seta direita */}
+                {highlightedAds.length > 1 && (
+                  <button
+                    className={styles.carouselArrow}
+                    style={{ right: '8px' }}
+                    onClick={() => setCurrentAdIndex((prev) => (prev + 1) % highlightedAds.length)}
+                    aria-label="Próximo anúncio"
+                  >
+                    ›
+                  </button>
+                )}
+
+                {/* Dots indicadores */}
+                {highlightedAds.length > 1 && (
+                  <div className={styles.carouselDots}>
+                    {highlightedAds.map((_, idx) => (
+                      <button
+                        key={idx}
+                        className={`${styles.carouselDot} ${idx === currentAdIndex ? styles.carouselDotActive : ''}`}
+                        onClick={() => setCurrentAdIndex(idx)}
+                        aria-label={`Ir para anúncio ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
           {renderActiveContent()}
         </section>
       </main>

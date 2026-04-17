@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getRoleFromDatabase } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
+import { resend } from "@/lib/resend";
+import { novoCasoTemplate, casoCanceladoTemplate } from "@/lib/emailTemplates";
 
 export async function POST(request) {
   try {
@@ -71,6 +73,73 @@ export async function POST(request) {
       message: `🚩 Nova Oportunidade: ${titulo.substring(0, 50)}... em ${cidade}/${estado}.`,
       url: "/dashboard/advogado"
     });
+
+    // 📧 ENVIAR EMAIL PARA TODOS OS ADVOGADOS VIA RESEND (BATCH API)
+    try {
+      const { data: advogados, error: advError } = await db
+        .from("advogados")
+        .select("name, email")
+        .not("email", "is", null);
+
+      if (!advError && advogados && advogados.length > 0) {
+        // Deduplicar emails (evita envios duplicados)
+        const seenEmails = new Set();
+        const uniqueAdvogados = advogados.filter(adv => {
+          const email = adv.email?.trim().toLowerCase();
+          if (!email || seenEmails.has(email)) return false;
+          seenEmails.add(email);
+          return true;
+        });
+
+        console.log(`📧 Enviando email de novo caso para ${uniqueAdvogados.length} advogado(s) (${advogados.length - uniqueAdvogados.length} duplicados removidos)...`);
+
+        // Usar Resend Batch API: até 100 emails por chamada, com delay entre lotes
+        const BATCH_SIZE = 100;
+        const DELAY_BETWEEN_BATCHES_MS = 1500; // 1.5s entre lotes para respeitar rate limit
+
+        for (let i = 0; i < uniqueAdvogados.length; i += BATCH_SIZE) {
+          const batch = uniqueAdvogados.slice(i, i + BATCH_SIZE);
+          const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+          const totalBatches = Math.ceil(uniqueAdvogados.length / BATCH_SIZE);
+
+          // Montar array de emails para a Batch API
+          const emailPayloads = batch.map((adv) => ({
+            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            to: [adv.email.trim()],
+            subject: `📍 Nova Oportunidade: ${area_atuacao} em ${cidade}/${estado}`,
+            html: novoCasoTemplate({
+              titulo: titulo.trim(),
+              area_atuacao: area_atuacao.trim(),
+              cidade: cidade.trim(),
+              estado: estado.trim(),
+              lawyerName: adv.name || 'Advogado(a)',
+            }),
+          }));
+
+          try {
+            const { data: batchResult, error: batchError } = await resend.batch.send(emailPayloads);
+            
+            if (batchError) {
+              console.error(`⚠️ Erro no lote ${batchNumber}/${totalBatches}:`, batchError);
+            } else {
+              console.log(`✅ Lote ${batchNumber}/${totalBatches}: ${batch.length} emails enviados`);
+            }
+          } catch (batchErr) {
+            console.error(`❌ Falha no lote ${batchNumber}/${totalBatches}:`, batchErr.message);
+          }
+
+          // Delay entre lotes para respeitar rate limit do Resend
+          if (i + BATCH_SIZE < uniqueAdvogados.length) {
+            await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+          }
+        }
+
+        console.log(`✅ Todos os emails de novo caso foram processados.`);
+      }
+    } catch (emailErr) {
+      console.error("⚠️ Erro ao enviar emails de novo caso (não-fatal):", emailErr.message);
+      // Não bloqueia a criação do caso se o email falhar
+    }
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
@@ -304,7 +373,7 @@ export async function DELETE(request) {
     // 1. Verificar se o caso tem advogado vinculado antes de apagar
     const { data: caso, error: casoError } = await supabaseAdmin
       .from("casos")
-      .select("id, cliente_id, advogado_id")
+      .select("id, cliente_id, advogado_id, titulo")
       .eq("id", casoId)
       .eq("cliente_id", user.id)
       .single();
@@ -328,17 +397,33 @@ export async function DELETE(request) {
 
       if (cancelError) throw cancelError;
 
-      // Opcional: Notificar o advogado explicitamente
+      // Notificar o advogado explicitamente
       await supabaseAdmin.from("notificacoes").insert([
         {
           user_id: caso.advogado_id,
           titulo: "Um caso foi cancelado",
           mensagem:
-            "O cliente decidiu encerrar um dos casos que você estava atendendo.",
+            `O cliente decidiu encerrar o caso "${caso.titulo}" que você estava atendendo.`,
           tipo: "CASO_CANCELADO",
           meta: JSON.stringify({ case_id: casoId }),
         },
       ]);
+
+      // 📧 ENVIAR EMAIL DE CANCELAMENTO PARA O ADVOGADO
+      try {
+        const { data: advCancel } = await supabaseAdmin.from("advogados").select("name, email").eq("id", caso.advogado_id).single();
+        if (advCancel?.email) {
+          await resend.emails.send({
+            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            to: advCancel.email,
+            subject: `🚫 Caso "${caso.titulo}" foi cancelado`,
+            html: casoCanceladoTemplate({ lawyerName: advCancel.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+          });
+          console.log(`📧 Email de cancelamento enviado para ${advCancel.email}`);
+        }
+      } catch (emailErr) {
+        console.error("⚠️ Erro ao enviar email de cancelamento (não-fatal):", emailErr.message);
+      }
 
       return NextResponse.json({
         success: true,
@@ -346,7 +431,36 @@ export async function DELETE(request) {
       });
     }
 
-    // 3. Se não houver advogado, apaga definitivamente (limpeza)
+    // 3. Se não houver advogado, notificar advogados com interesse e apagar
+    // Buscar advogados que tinham interesse antes de deletar
+    const { data: interessados } = await supabaseAdmin
+      .from("case_interests")
+      .select("lawyer_id")
+      .eq("case_id", casoId)
+      .in("status", ["PENDING", "NEGOTIATING"]);
+
+    // 📧 ENVIAR EMAIL PARA ADVOGADOS COM INTERESSE
+    if (interessados && interessados.length > 0) {
+      try {
+        const lawyerIds = [...new Set(interessados.map(i => i.lawyer_id))];
+        const { data: advs } = await supabaseAdmin.from("advogados").select("name, email").in("id", lawyerIds);
+        if (advs?.length > 0) {
+          const emailPayloads = advs.filter(a => a.email).map(a => ({
+            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            to: [a.email],
+            subject: `🚫 Caso "${caso.titulo}" foi removido`,
+            html: casoCanceladoTemplate({ lawyerName: a.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+          }));
+          if (emailPayloads.length > 0) {
+            await resend.batch.send(emailPayloads);
+            console.log(`📧 Email de cancelamento enviado para ${emailPayloads.length} advogado(s) interessado(s)`);
+          }
+        }
+      } catch (emailErr) {
+        console.error("⚠️ Erro ao enviar email de cancelamento aos interessados (não-fatal):", emailErr.message);
+      }
+    }
+
     await supabaseAdmin.from("mensagens").delete().eq("caso_id", casoId);
     await supabaseAdmin.from("case_interests").delete().eq("case_id", casoId);
 

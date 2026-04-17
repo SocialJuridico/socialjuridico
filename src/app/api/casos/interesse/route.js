@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
+import { resend } from "@/lib/resend";
+import { interesseRecusadoTemplate, interesseAceitoTemplate, advogadoContratadoTemplate, casoEncerradoTemplate } from "@/lib/emailTemplates";
 
 // POST /api/casos/interesse
 // Body: { interestId, action: 'ACCEPT' | 'DECLINE' | 'HIRE' }
@@ -95,6 +97,22 @@ export async function POST(request) {
         url: "/dashboard/advogado"
       });
 
+      // 📧 ENVIAR EMAIL DE RECUSA PARA O ADVOGADO
+      try {
+        const { data: advRecusa } = await db.from("advogados").select("name, email").eq("id", interest.lawyer_id).single();
+        if (advRecusa?.email) {
+          await resend.emails.send({
+            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            to: advRecusa.email,
+            subject: `📋 Atualização sobre o caso "${caso.titulo}"`,
+            html: interesseRecusadoTemplate({ lawyerName: advRecusa.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+          });
+          console.log(`📧 Email de recusa enviado para ${advRecusa.email}`);
+        }
+      } catch (emailErr) {
+        console.error("⚠️ Erro ao enviar email de recusa (não-fatal):", emailErr.message);
+      }
+
       // Atualizar cache de negotiating_lawyers no caso
       await updateNegotiatingLawyers(db, interest.case_id);
 
@@ -144,6 +162,22 @@ export async function POST(request) {
         message: `O cliente aceitou sua proposta no caso "${caso.titulo}".`,
         url: `/dashboard/advogado`
       });
+
+      // 📧 ENVIAR EMAIL DE ACEITE PARA O ADVOGADO
+      try {
+        const { data: advAceito } = await db.from("advogados").select("name, email").eq("id", interest.lawyer_id).single();
+        if (advAceito?.email) {
+          await resend.emails.send({
+            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            to: advAceito.email,
+            subject: `🤝 Proposta aceita no caso "${caso.titulo}"`,
+            html: interesseAceitoTemplate({ lawyerName: advAceito.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+          });
+          console.log(`📧 Email de aceite enviado para ${advAceito.email}`);
+        }
+      } catch (emailErr) {
+        console.error("⚠️ Erro ao enviar email de aceite (não-fatal):", emailErr.message);
+      }
 
       return NextResponse.json({
         success: true,
@@ -248,6 +282,22 @@ export async function POST(request) {
         url: "/dashboard/advogado"
       });
 
+      // 📧 ENVIAR EMAIL DE CONTRATAÇÃO PARA O ADVOGADO
+      try {
+        const { data: advContratado } = await db.from("advogados").select("name, email").eq("id", interest.lawyer_id).single();
+        if (advContratado?.email) {
+          await resend.emails.send({
+            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            to: advContratado.email,
+            subject: `🎉 Parabéns! Você foi contratado no caso "${caso.titulo}"`,
+            html: advogadoContratadoTemplate({ lawyerName: advContratado.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+          });
+          console.log(`📧 Email de contratação enviado para ${advContratado.email}`);
+        }
+      } catch (emailErr) {
+        console.error("⚠️ Erro ao enviar email de contratação (não-fatal):", emailErr.message);
+      }
+
       // Notificar advogados que perderam
       const { data: declinedInterests } = await db
         .from("case_interests")
@@ -267,6 +317,26 @@ export async function POST(request) {
           meta: JSON.stringify({ case_id: interest.case_id }),
         }));
         await db.from("notificacoes").insert(declineNotifs);
+
+        // 📧 ENVIAR EMAIL PARA ADVOGADOS QUE PERDERAM A VAGA
+        try {
+          const loserIds = declinedInterests.map(di => di.lawyer_id);
+          const { data: losers } = await db.from("advogados").select("name, email").in("id", loserIds);
+          if (losers?.length > 0) {
+            const emailPayloads = losers.filter(l => l.email).map(l => ({
+              from: 'Social Jurídico <contato@socialjuridico.com.br>',
+              to: [l.email],
+              subject: `📌 Atualização: caso "${caso.titulo}" encerrado`,
+              html: casoEncerradoTemplate({ lawyerName: l.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+            }));
+            if (emailPayloads.length > 0) {
+              await resend.batch.send(emailPayloads);
+              console.log(`📧 Email de caso encerrado enviado para ${emailPayloads.length} advogado(s)`);
+            }
+          }
+        } catch (emailErr) {
+          console.error("⚠️ Erro ao enviar email de caso encerrado (não-fatal):", emailErr.message);
+        }
       }
 
       return NextResponse.json({

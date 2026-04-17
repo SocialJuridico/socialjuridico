@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
+import { resend } from "@/lib/resend";
+import { novaMensagemTemplate, novaMensagemClienteTemplate } from "@/lib/emailTemplates";
 
 // GET /api/mensagens?caso_id=xxx&interest_id=yyy
 export async function GET(request) {
@@ -193,6 +195,61 @@ export async function POST(request) {
             ? `/dashboard/${user.id === caso.cliente_id ? 'advogado' : 'cliente'}` 
             : `/chat/${caso_id}`
         });
+
+        // 📧 ENVIAR EMAIL SE O CLIENTE MANDOU MSG PARA O ADVOGADO
+        if (user.id === caso.cliente_id) {
+          try {
+            const { data: advMsg } = await supabaseAdmin
+              .from("advogados")
+              .select("name, email")
+              .eq("id", recipientId)
+              .single();
+            if (advMsg?.email) {
+              await resend.emails.send({
+                from: 'Social Jurídico <contato@socialjuridico.com.br>',
+                to: advMsg.email,
+                subject: `💬 Nova mensagem no caso "${caso.titulo}"`,
+                html: novaMensagemTemplate({ lawyerName: advMsg.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+              });
+              console.log(`📧 Email de nova mensagem enviado para ${advMsg.email}`);
+            }
+          } catch (emailErr) {
+            console.error("⚠️ Erro ao enviar email de mensagem (não-fatal):", emailErr.message);
+          }
+        }
+
+        // 📧 ENVIAR EMAIL SE O ADVOGADO MANDOU MSG PARA O CLIENTE
+        if (user.id !== caso.cliente_id) {
+          try {
+            // Buscar nome do advogado remetente
+            const { data: advSender } = await supabaseAdmin
+              .from("advogados")
+              .select("name")
+              .eq("id", user.id)
+              .single();
+            // Buscar dados do cliente destinatário
+            const { data: clienteMsg } = await supabaseAdmin
+              .from("clientes")
+              .select("name, email")
+              .eq("id", recipientId)
+              .single();
+            if (clienteMsg?.email) {
+              await resend.emails.send({
+                from: 'Social Jurídico <contato@socialjuridico.com.br>',
+                to: clienteMsg.email,
+                subject: `💬 Nova mensagem do advogado no caso "${caso.titulo}"`,
+                html: novaMensagemClienteTemplate({
+                  clientName: clienteMsg.name || 'Cliente',
+                  casoTitulo: caso.titulo,
+                  lawyerName: advSender?.name || 'Seu advogado',
+                }),
+              });
+              console.log(`📧 Email de nova mensagem enviado para cliente ${clienteMsg.email}`);
+            }
+          } catch (emailErr) {
+            console.error("⚠️ Erro ao enviar email de mensagem ao cliente (não-fatal):", emailErr.message);
+          }
+        }
       }
     }
 

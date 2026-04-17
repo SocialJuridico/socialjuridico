@@ -5097,10 +5097,10 @@
   background: rgba(212, 175, 55, 0.05) !important;
 }
 
-/* HIGHLIGHTED AD */
+/* HIGHLIGHTED AD CAROUSEL */
 .highlightedAdContainer {
   margin: 20px 40px;
-  padding: 24px;
+  padding: 24px 44px;
   background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(18, 18, 18, 0.9) 100%);
   border: 1px solid rgba(212, 175, 55, 0.4);
   border-radius: 16px;
@@ -5109,12 +5109,19 @@
   justify-content: space-between;
   gap: 30px;
   animation: pulseLight 3s infinite ease-in-out;
+  position: relative;
+  overflow: hidden;
 }
 
 @keyframes pulseLight {
   0% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.1); }
   50% { box-shadow: 0 0 20px rgba(212, 175, 55, 0.3); }
   100% { box-shadow: 0 0 10px rgba(212, 175, 55, 0.1); }
+}
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateX(15px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .highlightedInfo h4 {
@@ -5146,7 +5153,105 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
+
+/* Carousel Arrow Buttons */
+.carouselArrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 50%;
+  color: var(--color-gold);
+  font-size: 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  transition: all 0.2s ease;
+  line-height: 1;
+  padding: 0;
+}
+
+.carouselArrow:hover {
+  background: rgba(212, 175, 55, 0.35);
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+}
+
+/* Carousel Dot Indicators */
+.carouselDots {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 3;
+}
+
+.carouselDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.25s ease;
+}
+
+.carouselDot:hover {
+  background: rgba(212, 175, 55, 0.5);
+}
+
+.carouselDotActive {
+  background: var(--color-gold) !important;
+  width: 20px;
+  border-radius: 10px;
+}
+
+/* Counter badge */
+.adCounter {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 8px;
+  letter-spacing: 0;
+}
+
+@media (max-width: 768px) {
+  .highlightedAdContainer {
+    margin: 10px 15px;
+    padding: 20px 36px;
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+    padding-bottom: 30px;
+  }
+  .highlightedAction {
+    width: 100%;
+  }
+  .highlightedInfo p {
+    max-width: 100%;
+  }
+  .carouselArrow {
+    width: 28px;
+    height: 28px;
+    font-size: 1.1rem;
+  }
+}
+
 
 /* ANUNCIOS GRID */
 .anunciosPageContainer {

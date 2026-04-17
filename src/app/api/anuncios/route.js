@@ -17,7 +17,7 @@ export async function GET(request) {
     `);
 
     if (destaque === "true") {
-      query = query.eq("em_destaque", true).limit(1);
+      query = query.eq("em_destaque", true);
     }
 
     if (categoria) {

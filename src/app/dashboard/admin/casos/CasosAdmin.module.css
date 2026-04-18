@@ -59,6 +59,55 @@
   overflow: hidden;
 }
 
+/* TABS STYLES */
+.tabsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 12px;
+}
+
+.tabBtn {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid transparent;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tabBtn:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: #e5e7eb;
+}
+
+.activeTab {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: rgba(212, 175, 55, 0.3);
+  color: #d4af37;
+}
+
+.tabBadge {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+}
+
+.activeTab .tabBadge {
+  background: rgba(212, 175, 55, 0.2);
+  color: #d4af37;
+}
+
 .table {
   width: 100%;
   border-collapse: collapse;

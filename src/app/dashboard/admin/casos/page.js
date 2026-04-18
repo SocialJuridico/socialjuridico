@@ -7,10 +7,21 @@ import { ArrowLeft, Trash2, FileText, Search } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./CasosAdmin.module.css";
 
+const TABS = [
+  { id: "TUDO", label: "Cadastrados" },
+  { id: "ABERTO", label: "Abertos" },
+  { id: "PENDENTE", label: "Interesse Pendente" },
+  { id: "REJEITADO", label: "Interesse Rejeitado" },
+  { id: "NEGOCIANDO", label: "Em Negociação" },
+  { id: "CANCELADO", label: "Cancelados" },
+  { id: "CONTRATADO", label: "Advogado Contratado" },
+];
+
 export default function AdminCasosPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [casos, setCasos] = useState([]);
+  const [activeTab, setActiveTab] = useState("TUDO");
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState(null);
   const [casoToDelete, setCasoToDelete] = useState(null);
@@ -42,10 +53,32 @@ export default function AdminCasosPage() {
   }, [router]);
 
   const filteredCasos = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return casos;
+    let list = casos;
 
-    return casos.filter((c) => {
+    if (activeTab === "ABERTO") {
+      list = list.filter((c) => c.status === "ABERTO");
+    } else if (activeTab === "PENDENTE") {
+      list = list.filter((c) => (c.interests || []).some((i) => i.status === "PENDING"));
+    } else if (activeTab === "REJEITADO") {
+      list = list.filter((c) =>
+        (c.interests || []).some((i) => ["DECLINED", "LOST_VACANCY", "CANCELED"].includes(i.status))
+      );
+    } else if (activeTab === "NEGOCIANDO") {
+      list = list.filter(
+        (c) => c.status === "NEGOCIANDO" || (c.interests || []).some((i) => i.status === "NEGOTIATING")
+      );
+    } else if (activeTab === "CANCELADO") {
+      list = list.filter((c) => ["CANCELADO", "FECHADO"].includes(c.status));
+    } else if (activeTab === "CONTRATADO") {
+      list = list.filter(
+        (c) => c.status === "CONTRATADO" || (c.interests || []).some((i) => i.status === "HIRED")
+      );
+    }
+
+    const term = search.trim().toLowerCase();
+    if (!term) return list;
+
+    return list.filter((c) => {
       const titulo = String(c.titulo || "").toLowerCase();
       const area = String(c.area || "").toLowerCase();
       const clienteName = String(c.cliente_name || "").toLowerCase();
@@ -61,7 +94,7 @@ export default function AdminCasosPage() {
         advogadoEmail.includes(term)
       );
     });
-  }, [casos, search]);
+  }, [casos, search, activeTab]);
 
   const confirmDelete = async (caso) => {
     setDeletingId(caso.id);
@@ -113,6 +146,29 @@ export default function AdminCasosPage() {
         />
       </div>
 
+      <div className={styles.tabsContainer}>
+        {TABS.map((tab) => {
+          let count = 0;
+          if (tab.id === "TUDO") count = casos.length;
+          else if (tab.id === "ABERTO") count = casos.filter((c) => c.status === "ABERTO").length;
+          else if (tab.id === "PENDENTE") count = casos.filter((c) => (c.interests || []).some((i) => i.status === "PENDING")).length;
+          else if (tab.id === "REJEITADO") count = casos.filter((c) => (c.interests || []).some((i) => ["DECLINED", "LOST_VACANCY", "CANCELED"].includes(i.status))).length;
+          else if (tab.id === "NEGOCIANDO") count = casos.filter((c) => c.status === "NEGOCIANDO" || (c.interests || []).some((i) => i.status === "NEGOTIATING")).length;
+          else if (tab.id === "CANCELADO") count = casos.filter((c) => ["CANCELADO", "FECHADO"].includes(c.status)).length;
+          else if (tab.id === "CONTRATADO") count = casos.filter((c) => c.status === "CONTRATADO" || (c.interests || []).some((i) => i.status === "HIRED")).length;
+
+          return (
+            <button
+              key={tab.id}
+              className={`${styles.tabBtn} ${activeTab === tab.id ? styles.activeTab : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label} <span className={styles.tabBadge}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className={styles.tableWrap}>
         {filteredCasos.length === 0 ? (
           <p className={styles.empty}>Nenhum caso encontrado.</p>
@@ -143,8 +199,57 @@ export default function AdminCasosPage() {
                   </td>
                   <td>
                     <div className={styles.clientCell}>
-                      <span>{caso.advogado_name || "-"}</span>
-                      <small>{caso.advogado_email || ""}</small>
+                      {(() => {
+                        const interests = caso.interests || [];
+                        if (interests.length === 0) {
+                          return <span style={{ color: 'var(--color-silver-dark)', fontSize: '0.8rem' }}>Sem interações</span>;
+                        }
+
+                        const inReview = interests.filter(i => i.status === 'PENDING');
+                        const negotiating = interests.filter(i => i.status === 'NEGOTIATING');
+                        const hired = interests.filter(i => i.status === 'HIRED');
+                        const rejected = interests.filter(i => ['DECLINED', 'LOST_VACANCY', 'CANCELED'].includes(i.status));
+
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem', minWidth: '200px' }}>
+                            {hired.length > 0 && (
+                              <div>
+                                <strong style={{ color: '#10b981', display: 'block', marginBottom: '2px' }}>Contratado:</strong>
+                                {hired.map(h => (
+                                  <div key={h.id}>✓ {h.lawyer_name}</div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {negotiating.length > 0 && (
+                              <div>
+                                <strong style={{ color: '#3b82f6', display: 'block', marginBottom: '2px' }}>Negociando:</strong>
+                                {negotiating.map(n => (
+                                  <div key={n.id}>💬 {n.lawyer_name}</div>
+                                ))}
+                              </div>
+                            )}
+
+                            {inReview.length > 0 && caso.status !== 'CONTRATADO' && (
+                              <div>
+                                <strong style={{ color: 'var(--color-gold)', display: 'block', marginBottom: '2px' }}>Interessados:</strong>
+                                {inReview.map(r => (
+                                  <div key={r.id}>✋ {r.lawyer_name}</div>
+                                ))}
+                              </div>
+                            )}
+
+                            {rejected.length > 0 && caso.status === 'CONTRATADO' && (
+                              <div style={{ opacity: 0.6 }}>
+                                <strong style={{ color: '#ef4444', display: 'block', marginBottom: '2px' }}>Dispensados:</strong>
+                                {rejected.map(r => (
+                                  <div key={r.id}>✖ {r.lawyer_name}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </td>
                   <td>

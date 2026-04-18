@@ -62,6 +62,18 @@ export async function GET() {
       data = dataWithArea || [];
     }
 
+    const casoIds = (data || []).map(c => c.id);
+
+    let caseInterests = [];
+    if (casoIds.length > 0) {
+      const { data: interests } = await db
+        .from("case_interests")
+        .select("id, case_id, lawyer_id, status, created_at")
+        .in("case_id", casoIds)
+        .order("created_at", { ascending: true });
+      caseInterests = interests || [];
+    }
+
     const clienteIds = Array.from(
       new Set((data || []).map((c) => c.cliente_id).filter(Boolean)),
     );
@@ -75,9 +87,11 @@ export async function GET() {
       clientesMap = Object.fromEntries((clientes || []).map((c) => [c.id, c]));
     }
 
-    const advogadoIds = Array.from(
-      new Set((data || []).map((c) => c.advogado_id).filter(Boolean)),
-    );
+    let advogadoIdsSet = new Set((data || []).map((c) => c.advogado_id).filter(Boolean));
+    caseInterests.forEach(ci => {
+      if (ci.lawyer_id) advogadoIdsSet.add(ci.lawyer_id);
+    });
+    const advogadoIds = Array.from(advogadoIdsSet);
 
     let lawyersMap = {};
     if (advogadoIds.length > 0) {
@@ -88,13 +102,24 @@ export async function GET() {
       lawyersMap = Object.fromEntries((lawyers || []).map((l) => [l.id, l]));
     }
 
-    const enriched = (data || []).map((caso) => ({
-      ...caso,
-      cliente_name: clientesMap[caso.cliente_id]?.name || null,
-      cliente_email: clientesMap[caso.cliente_id]?.email || null,
-      advogado_name: lawyersMap[caso.advogado_id]?.name || null,
-      advogado_email: lawyersMap[caso.advogado_id]?.email || null,
-    }));
+    const enriched = (data || []).map((caso) => {
+      const cInterests = caseInterests
+        .filter((ci) => ci.case_id === caso.id)
+        .map((ci) => ({
+          ...ci,
+          lawyer_name: lawyersMap[ci.lawyer_id]?.name || "Desconhecido",
+          lawyer_email: lawyersMap[ci.lawyer_id]?.email || "",
+        }));
+
+      return {
+        ...caso,
+        cliente_name: clientesMap[caso.cliente_id]?.name || null,
+        cliente_email: clientesMap[caso.cliente_id]?.email || null,
+        advogado_name: lawyersMap[caso.advogado_id]?.name || null,
+        advogado_email: lawyersMap[caso.advogado_id]?.email || null,
+        interests: cInterests
+      };
+    });
 
     return NextResponse.json({ success: true, data: enriched });
   } catch (error) {

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Trash2, FileText, Search } from "lucide-react";
+import { ArrowLeft, Trash2, FileText, Search, Mail } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./CasosAdmin.module.css";
 
@@ -24,6 +24,7 @@ export default function AdminCasosPage() {
   const [activeTab, setActiveTab] = useState("TUDO");
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [isNotifying, setIsNotifying] = useState({});
   const [casoToDelete, setCasoToDelete] = useState(null);
 
   useEffect(() => {
@@ -117,6 +118,29 @@ export default function AdminCasosPage() {
     } finally {
       setDeletingId(null);
       setCasoToDelete(null);
+    }
+  };
+
+  const handleNotifyClient = async (caso) => {
+    setIsNotifying((prev) => ({ ...prev, [caso.id]: true }));
+    try {
+      const res = await fetch("/api/admin/casos/notify-client-interest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ casoId: caso.id }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Erro ao notificar cliente.");
+      } else {
+        toast.success("Email enviado com sucesso!");
+      }
+    } catch (error) {
+      console.error("Erro ao notificar cliente:", error);
+      toast.error("Erro interno ao enviar notificação.");
+    } finally {
+      setIsNotifying((prev) => ({ ...prev, [caso.id]: false }));
     }
   };
 
@@ -258,15 +282,30 @@ export default function AdminCasosPage() {
                       : "-"}
                   </td>
                   <td>
-                    <button
-                      type="button"
-                      className={styles.deleteBtn}
-                      onClick={() => setCasoToDelete(caso)}
-                      disabled={deletingId === caso.id}
-                    >
-                      <Trash2 size={14} />
-                      {deletingId === caso.id ? "Excluindo..." : "Excluir"}
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className={styles.deleteBtn}
+                        onClick={() => setCasoToDelete(caso)}
+                        disabled={deletingId === caso.id}
+                        title="Excluir Caso"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+
+                      {(caso.interests || []).some((i) => i.status === "PENDING") && (
+                        <button
+                          type="button"
+                          className={styles.notifyBtn}
+                          onClick={() => handleNotifyClient(caso)}
+                          disabled={isNotifying[caso.id]}
+                          title="Avisar cliente por email"
+                        >
+                          <Mail size={14} />
+                          {isNotifying[caso.id] ? "..." : "Avisar"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -56,23 +56,25 @@ export default function AdminCasosPage() {
   const filteredCasos = useMemo(() => {
     let list = casos;
 
-    if (activeTab === "ABERTO") {
-      list = list.filter((c) => c.status === "ABERTO");
-    } else if (activeTab === "PENDENTE") {
-      list = list.filter((c) => (c.interests || []).some((i) => i.status === "PENDING"));
-    } else if (activeTab === "REJEITADO") {
-      list = list.filter((c) =>
-        (c.interests || []).some((i) => ["DECLINED", "LOST_VACANCY", "CANCELED"].includes(i.status))
-      );
-    } else if (activeTab === "NEGOCIANDO") {
-      list = list.filter(
-        (c) => c.status === "NEGOCIANDO" || (c.interests || []).some((i) => i.status === "NEGOTIATING")
-      );
-    } else if (activeTab === "CANCELADO") {
+    if (activeTab === "CANCELADO") {
       list = list.filter((c) => ["CANCELADO", "FECHADO"].includes(c.status));
     } else if (activeTab === "CONTRATADO") {
-      list = list.filter(
-        (c) => c.status === "CONTRATADO" || (c.interests || []).some((i) => i.status === "HIRED")
+      list = list.filter((c) => c.status === "CONTRATADO" || (c.interests || []).some((i) => i.status === "HIRED"));
+    } else if (activeTab === "NEGOCIANDO") {
+      list = list.filter((c) => c.status === "NEGOCIANDO" || (c.interests || []).some((i) => i.status === "NEGOTIATING"));
+    } else if (activeTab === "PENDENTE") {
+      list = list.filter((c) => c.status === "ABERTO" && (c.interests || []).some((i) => i.status === "PENDING"));
+    } else if (activeTab === "REJEITADO") {
+      list = list.filter((c) => 
+        c.status === "ABERTO" && 
+        !(c.interests || []).some((i) => i.status === "PENDING") && 
+        (c.interests || []).some((i) => ["DECLINED", "LOST_VACANCY", "CANCELED"].includes(i.status))
+      );
+    } else if (activeTab === "ABERTO") {
+      list = list.filter((c) => 
+        c.status === "ABERTO" && 
+        !(c.interests || []).some((i) => i.status === "PENDING") &&
+        !(c.interests || []).some((i) => ["DECLINED", "LOST_VACANCY", "CANCELED"].includes(i.status))
       );
     }
 
@@ -174,12 +176,12 @@ export default function AdminCasosPage() {
         {TABS.map((tab) => {
           let count = 0;
           if (tab.id === "TUDO") count = casos.length;
-          else if (tab.id === "ABERTO") count = casos.filter((c) => c.status === "ABERTO").length;
-          else if (tab.id === "PENDENTE") count = casos.filter((c) => (c.interests || []).some((i) => i.status === "PENDING")).length;
-          else if (tab.id === "REJEITADO") count = casos.filter((c) => (c.interests || []).some((i) => ["DECLINED", "LOST_VACANCY", "CANCELED"].includes(i.status))).length;
-          else if (tab.id === "NEGOCIANDO") count = casos.filter((c) => c.status === "NEGOCIANDO" || (c.interests || []).some((i) => i.status === "NEGOTIATING")).length;
           else if (tab.id === "CANCELADO") count = casos.filter((c) => ["CANCELADO", "FECHADO"].includes(c.status)).length;
           else if (tab.id === "CONTRATADO") count = casos.filter((c) => c.status === "CONTRATADO" || (c.interests || []).some((i) => i.status === "HIRED")).length;
+          else if (tab.id === "NEGOCIANDO") count = casos.filter((c) => c.status === "NEGOCIANDO" || (c.interests || []).some((i) => i.status === "NEGOTIATING")).length;
+          else if (tab.id === "PENDENTE") count = casos.filter((c) => c.status === "ABERTO" && (c.interests || []).some((i) => i.status === "PENDING")).length;
+          else if (tab.id === "REJEITADO") count = casos.filter((c) => c.status === "ABERTO" && !(c.interests || []).some((i) => i.status === "PENDING") && (c.interests || []).some((i) => ["DECLINED", "LOST_VACANCY", "CANCELED"].includes(i.status))).length;
+          else if (tab.id === "ABERTO") count = casos.filter((c) => c.status === "ABERTO" && !(c.interests || []).some((i) => i.status === "PENDING") && !(c.interests || []).some((i) => ["DECLINED", "LOST_VACANCY", "CANCELED"].includes(i.status))).length;
 
           return (
             <button

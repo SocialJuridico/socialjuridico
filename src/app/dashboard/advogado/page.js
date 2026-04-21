@@ -573,6 +573,45 @@ export default function AdvogadoDashboard() {
     return () => clearInterval(timer);
   }, [highlightedAds.length]);
 
+  // Handle Stripe Redirection Race Condition
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get("payment_status");
+      
+      if (paymentStatus === "success") {
+        toast.success("Pagamento aprovado! Atualizando sua carteira...", { duration: 4000 });
+        
+        // Polling the profile api 3 times, every 2s, to catch the async webhook update
+        let attempts = 0;
+        const interval = setInterval(async () => {
+          attempts++;
+          try {
+            const res = await fetch("/api/perfil", { cache: "no-store" });
+            const data = await res.json();
+            if (data.success && data.data) {
+              setProfileData(data.data);
+            }
+          } catch (e) {
+            console.error("Erro ao atualizar saldo automático:", e);
+          }
+          if (attempts >= 3) {
+            clearInterval(interval);
+            // Delete parameter from url to avoid looping
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+          }
+        }, 2000);
+        
+        return () => clearInterval(interval);
+      } else if (paymentStatus === "cancel") {
+        toast.error("O pagamento foi cancelado.");
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     loadDataFull();
     fetchAvisos();

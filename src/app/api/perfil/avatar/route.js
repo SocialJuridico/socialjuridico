@@ -45,7 +45,7 @@ export async function POST(request) {
     let profileTable = 'clientes';
     const tables = ['clientes', 'advogados', 'admins'];
     for (const table of tables) {
-      const { data } = await supabaseAdmin.from(table).select('id').eq('id', user.id).single();
+      const { data } = await supabaseAdmin.from(table).select('id').eq('id', user.id).maybeSingle();
       if (data) {
         profileTable = table;
         break;

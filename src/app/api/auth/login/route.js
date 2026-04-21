@@ -127,7 +127,7 @@ export async function POST(request) {
           .from(table)
           .select("id, name, role")
           .eq("email", email.trim().toLowerCase())
-          .single();
+          .maybeSingle();
         if (data) {
           existingProfile = { ...data, table };
           break;
@@ -213,7 +213,7 @@ export async function POST(request) {
         .from(table)
         .select("id, name, email, role, phone, avatar")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
       if (data) {
         profile = data;
         break;

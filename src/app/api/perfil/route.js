@@ -62,7 +62,7 @@ export async function GET(request) {
         .from(table)
         .select(getSelectFields(table))
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
       if (data && !error) {
         profile = data;
         break;
@@ -77,7 +77,7 @@ export async function GET(request) {
           .from(table)
           .select(getSelectFields(table))
           .eq("email", user.email)
-          .single();
+          .maybeSingle();
         if (data && !error) {
           profile = data;
           break;
@@ -111,7 +111,7 @@ export async function GET(request) {
           .from("clientes")
           .select(getSelectFields("clientes"))
           .eq("email", user.email)
-          .single();
+          .maybeSingle();
         if (retry) profile = retry;
       }
     }
@@ -159,7 +159,7 @@ export async function PUT(request) {
         .from(table)
         .select("id")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
       if (data) {
         profileTable = table;
         break;

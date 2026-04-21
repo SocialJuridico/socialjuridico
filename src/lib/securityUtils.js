@@ -21,7 +21,7 @@ export async function getRoleFromDatabase(db, userId) {
       .from("admins")
       .select("role")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (adminData?.role) {
       return adminData.role; // "ADMIN"
@@ -32,7 +32,7 @@ export async function getRoleFromDatabase(db, userId) {
       .from("advogados")
       .select("id")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (lawyerData) {
       return "LAWYER";
@@ -43,7 +43,7 @@ export async function getRoleFromDatabase(db, userId) {
       .from("clientes")
       .select("id")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (clientData) {
       return "CLIENT";
@@ -55,6 +55,7 @@ export async function getRoleFromDatabase(db, userId) {
     return null;
   }
 }
+
 
 /**
  * Verifica se o usuário é ADMIN consultando o banco

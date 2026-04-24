@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Scale, Loader2, AlertCircle } from "lucide-react";
 import styles from "./Login.module.css";
@@ -13,6 +13,14 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "true";
+
+  useEffect(() => {
+    // Limpar o flag do popup de Advogado do Mês ao carregar a tela de login
+    // Isso garante que ele apareça novamente após o login ser efetuado.
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("advogadoMesShown");
+    }
+  }, []);
 
   const [formData, setFormData] = useState({
     email: "",

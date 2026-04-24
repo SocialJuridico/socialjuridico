@@ -165,7 +165,7 @@ export default function AdminAnunciantesPage() {
   useEffect(() => {
     if (showChatModal && activeChatAnunciante) {
       fetchMessages();
-      const interval = setInterval(fetchMessages, 5000);
+      const interval = setInterval(fetchMessages, 30000);
       return () => clearInterval(interval);
     }
   }, [showChatModal, activeChatAnunciante, fetchMessages]);

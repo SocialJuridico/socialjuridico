@@ -85,7 +85,7 @@ export default function AnuncianteDashboard() {
   useEffect(() => {
     if (showChatModal) {
       fetchMessages();
-      const interval = setInterval(fetchMessages, 5000);
+      const interval = setInterval(fetchMessages, 30000);
       return () => clearInterval(interval);
     }
   }, [showChatModal, fetchMessages]);

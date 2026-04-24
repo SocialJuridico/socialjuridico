@@ -204,6 +204,12 @@ export default function AdminDashboardPage() {
                   <strong>Gerenciar</strong>
                 </article>
               </Link>
+              <Link href="/dashboard/admin/advogado-mes" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid var(--color-gold)" }}>
+                  <div className={styles.cardTop}><Star size={16} color="var(--color-gold)" /> Advogado do Mês</div>
+                  <strong>Gerenciar Popup</strong>
+                </article>
+              </Link>
               <Link href="/dashboard/admin/cupons" className={styles.cardLink}>
                 <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #10b981" }}>
                   <div className={styles.cardTop}><Ticket size={16} color="#10b981" /> Gestão de Cupons</div>

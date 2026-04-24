@@ -40,13 +40,13 @@ export async function signUpAction(formData) {
       }
     }
 
-    // 1. Criar o usuário no Auth (confirmar imediatamente para permitir login)
+    // 1. Criar o usuário no Auth (sem confirmar automaticamente para permitir a geração do link)
     let user;
     const { data: authData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email: normalizedEmail,
         password,
-        email_confirm: true, // Confirma automaticamente para permitir login
+        email_confirm: false, // DEVE ser false para o generateLink('signup') funcionar e o email disparar
         user_metadata: {
           full_name: name,
           role: role,

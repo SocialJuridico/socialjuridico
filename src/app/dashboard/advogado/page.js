@@ -8,6 +8,7 @@ import Image from "next/image";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
 import {
   PlusCircle,
   Bell,
@@ -619,10 +620,10 @@ export default function AdvogadoDashboard() {
   }, [loadDataFull, fetchAvisos, fetchHighlightedAd]);
 
   useEffect(() => {
-    if (!profileData?.id) return;
-    const intervalId = setInterval(syncNotificacoes, 30000); // Polling 30s
-    return () => clearInterval(intervalId);
-  }, [syncNotificacoes, profileData?.id]);
+    if (activeTab === "notificacoes") {
+      syncNotificacoes();
+    }
+  }, [activeTab, syncNotificacoes]);
 
   useEffect(() => {
     if (!profileData?.id) return;
@@ -7842,6 +7843,7 @@ export default function AdvogadoDashboard() {
       {renderMessageContentModal()}
       {renderAgendaModal()}
       {renderNotifDeleteConfirmModal()}
+      <AdvogadoMesPopup />
     </div>
   );
 }

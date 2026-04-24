@@ -24,7 +24,7 @@ import PWAInstallPrompt from "@/components/PWA/PWAInstallPrompt";
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#D4AF37" />

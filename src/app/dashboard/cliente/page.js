@@ -37,8 +37,8 @@ import {
   deleteAccountAction,
 } from "@/app/actions/authActions";
 import { supabase } from "@/lib/supabase";
-import { formatPhone } from "@/lib/securityUtils";
 import toast from "react-hot-toast";
+import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
 
 const FACEBOOK_GROUP_URL = "https://www.facebook.com/groups/1667675480204134";
 
@@ -471,13 +471,10 @@ export default function ClienteDashboard() {
 
   useEffect(() => {
     if (!profileData?.id) return;
-    let intervalId;
     const start = async () => {
       await syncNotificacoes(true);
-      intervalId = setInterval(() => syncNotificacoes(true), 15000);
     };
     start();
-    return () => clearInterval(intervalId);
   }, [syncNotificacoes, profileData?.id]);
 
   const handleResponderInteresse = async (interestId, action) => {
@@ -2547,6 +2544,7 @@ export default function ClienteDashboard() {
           </div>
         </div>
       )}
+      <AdvogadoMesPopup />
     </div>
 
   );

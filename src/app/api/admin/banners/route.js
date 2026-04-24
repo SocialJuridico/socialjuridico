@@ -110,6 +110,7 @@ export async function POST(request) {
     }
 
     const payload = {
+      id: crypto.randomUUID(),
       name: String(name).trim(),
       image_url: String(image_url).trim(),
       link_url: link_url ? String(link_url).trim() : null,

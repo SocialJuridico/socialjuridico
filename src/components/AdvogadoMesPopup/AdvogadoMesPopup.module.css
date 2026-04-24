@@ -1,0 +1,77 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999; /* Garante que fica por cima de tudo no dashboard */
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal {
+  position: relative;
+  max-width: 500px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  animation: scaleUp 0.3s ease;
+  background-color: transparent;
+}
+
+.closeBtn {
+  position: absolute;
+  top: -40px; /* Para ficar pra fora da imagem se preferir, ou dentro */
+  right: 0px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.closeBtn:hover {
+  opacity: 0.7;
+}
+
+/* Ajuste para garantir que o botão fechar fica visível mesmo sobreposto à imagem, vamos colocar o botão dentro da div da imagem ou ajustar o modal */
+.modal {
+  background-color: #121212;
+  padding: 40px 10px 10px 10px; /* Espaço para o botão em cima */
+}
+
+.closeBtn {
+  top: 5px;
+  right: 5px;
+  color: var(--color-gold, #d4af37);
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+}
+
+.image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  max-height: 85vh; /* Evita ficar maior que a tela */
+  object-fit: contain;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

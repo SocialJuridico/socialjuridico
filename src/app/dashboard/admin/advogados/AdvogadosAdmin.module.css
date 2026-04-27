@@ -291,6 +291,78 @@
   background: rgba(212, 175, 55, 0.2);
 }
 
+.verifiedBadge {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.errorBadge {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.pendingBadge {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+.statusSelect {
+  width: 100%;
+  background: #12151b;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #e5e7eb;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.statusSelect:focus {
+  border-color: #d4af37;
+}
+
+.statusSelect option {
+  background: #171a21;
+  color: #e5e7eb;
+}
+
+.miniSelect {
+  background: #12151b;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #e5e7eb;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+  min-width: 80px;
+}
+
+.miniSelect:focus {
+  border-color: #d4af37;
+}
+
+.miniSelect option {
+  background: #171a21;
+  color: #e5e7eb;
+}
+
 @media (max-width: 760px) {
   .tableWrap {
     overflow-x: auto;

@@ -595,6 +595,34 @@
   gap: 2px;
 }
 
+.oabStatusBadge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin: 8px 0;
+  width: fit-content;
+}
+
+.oabStatusVerified {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.oabStatusPending {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+.verifiedIcon {
+  color: #10b981;
+}
+
 .statValue {
   font-size: 0.9rem;
   font-weight: 800;

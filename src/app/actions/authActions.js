@@ -181,6 +181,18 @@ export async function signUpAction(formData) {
               <h1 style="color: #d4af37; text-align: center;">Bem-vindo ao Social Jurídico!</h1>
               <p style="font-size: 16px; line-height: 1.6;">Olá, <strong>${name}</strong>!</p>
               <p style="font-size: 16px; line-height: 1.6;">Obrigado por se juntar à nossa plataforma dedicada a conectar talentos jurídicos e soluções práticas.</p>
+              
+              ${role === "LAWYER" ? `
+              <div style="background: rgba(212,175,55,0.1); border: 1px solid #d4af37; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <p style="margin-top: 0; font-weight: bold; color: #d4af37;">Atenção Advogado:</p>
+                <p style="font-size: 14px; line-height: 1.5; margin-bottom: 0;">
+                  Para que seu perfil seja verificado e ganhe visibilidade total na plataforma, após confirmar seu email, entre em contato com nosso suporte jurídico pelo WhatsApp: 
+                  <a href="https://wa.me/5515981657317" style="color: #d4af37; font-weight: bold;">(15) 98165-7317</a> 
+                  solicitando a verificação manual da sua OAB.
+                </p>
+              </div>
+              ` : ""}
+
               <p style="font-size: 16px; line-height: 1.6; text-align: center; margin: 30px 0;">
                 Para começar, por favor confirme seu endereço de email clicando no botão abaixo:
               </p>

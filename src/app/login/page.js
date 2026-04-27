@@ -13,6 +13,7 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "true";
+  const [oabError, setOabError] = useState(false);
 
   useEffect(() => {
     // Limpar o flag do popup de Advogado do Mês ao carregar a tela de login
@@ -59,10 +60,14 @@ function LoginContent() {
         }
       }, 1500);
     } else {
-      setErrorMsg(
-        response.message ||
-          "Erro ao realizar login. Verifique suas credenciais.",
-      );
+      if (response.type === "OAB_ERROR") {
+        setOabError(true);
+      } else {
+        setErrorMsg(
+          response.message ||
+            "Erro ao realizar login. Verifique suas credenciais.",
+        );
+      }
       setLoading(false);
     }
   };
@@ -251,6 +256,35 @@ function LoginContent() {
           </form>
         </div>
       </div>
+
+      {/* OAB ERROR MODAL */}
+      {oabError && (
+        <div className={styles.oabModalOverlay}>
+          <div className={styles.oabModalCard}>
+            <AlertCircle size={48} color="#ef4444" />
+            <h3>Acesso Restrito</h3>
+            <p>
+              Sua verificação de OAB apresentou inconsistências. Para sua segurança e conformidade da plataforma, seu acesso foi temporariamente suspenso.
+            </p>
+            <p className={styles.oabModalSub}>
+              Clique no botão abaixo para falar com nosso suporte e regularizar sua situação.
+            </p>
+            
+            <a 
+              href="https://wa.me/5515981657317?text=Olá, tive um problema com a verificação da minha OAB no SocialJurídico e gostaria de regularizar." 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className={styles.supportBtn}
+            >
+              Falar com Suporte no WhatsApp
+            </a>
+            
+            <button onClick={() => setOabError(false)} className={styles.closeBtn}>
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

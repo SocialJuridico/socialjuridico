@@ -41,7 +41,7 @@ export async function GET() {
 
     const { data, error } = await db
       .from("advogados")
-      .select("id, name, email, phone, oab, is_premium, premium_expires_at, balance, created_at")
+      .select("id, name, email, phone, oab, estado, is_premium, premium_expires_at, balance, created_at, oab_verification_status")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -275,6 +275,24 @@ export async function PUT(request) {
     } else if (action === "REMOVE_PRO") {
       updates.is_premium = false;
       updates.premium_expires_at = null;
+    } else if (action === "SET_OAB_STATUS") {
+      if (!["PENDING", "VERIFIED", "ERROR"].includes(value)) {
+        return NextResponse.json(
+          { success: false, message: "Status de OAB inválido" },
+          { status: 400 },
+        );
+      }
+      updates.oab_verification_status = value;
+    } else if (action === "UPDATE_OAB") {
+      const { oab, estado } = value;
+      if (!oab || !estado) {
+        return NextResponse.json(
+          { success: false, message: "OAB e Estado são obrigatórios" },
+          { status: 400 },
+        );
+      }
+      updates.oab = oab;
+      updates.estado = estado;
     }
 
     const { error: updateError } = await db

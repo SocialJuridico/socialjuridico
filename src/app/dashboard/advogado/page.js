@@ -170,6 +170,7 @@ export default function AdvogadoDashboard() {
   const [calcResult, setCalcResult] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [showProfileReminder, setShowProfileReminder] = useState(false);
+  const [showPendingOABModal, setShowPendingOABModal] = useState(false);
 
   // JURISPRUDENCIA STATE
   const [jurisSearchQuery, setJurisSearchQuery] = useState("");
@@ -210,6 +211,7 @@ export default function AdvogadoDashboard() {
     valor: 0,
     avatar: "",
     password: "",
+    estado: "",
   });
 
   // DOCUMENTAÇÃO STATE
@@ -491,6 +493,10 @@ export default function AdvogadoDashboard() {
         const profile = data.data;
         setProfileData(profile);
         setUserName(profile.name);
+
+        if (profile.oab_verification_status === "PENDING") {
+          setShowPendingOABModal(true);
+        }
         setProfileForm({
           name: profile.name || "",
           phone: profile.phone || "",
@@ -502,6 +508,7 @@ export default function AdvogadoDashboard() {
           valor: profile.valor || 0,
           avatar: profile.avatar || "",
           password: "",
+          estado: profile.estado || "",
         });
         const isIncomplete =
           !profile.avatar || !profile.bio || !profile.specialties;
@@ -4290,9 +4297,17 @@ export default function AdvogadoDashboard() {
                     <Zap size={14} /> Advogado Premium
                   </span>
                 )}
-                {profileData.verified && (
+                {profileData.oab_verification_status === "VERIFIED" ? (
                   <span className={styles.verifiedSeal}>
                     <UserCheck size={14} /> Verificado
+                  </span>
+                ) : profileData.oab_verification_status === "ERROR" ? (
+                  <span className={styles.errorSeal} style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.3)", padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px" }}>
+                    <X size={14} /> Erro na OAB
+                  </span>
+                ) : (
+                  <span className={styles.pendingSeal} style={{ background: "rgba(234, 179, 8, 0.1)", color: "#eab308", border: "1px solid rgba(234, 179, 8, 0.3)", padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px" }}>
+                    <Clock size={14} /> Verificação Pendente
                   </span>
                 )}
               </div>
@@ -4436,6 +4451,26 @@ export default function AdvogadoDashboard() {
                       readOnly
                     />
                   </div>
+                  <div className={styles.formItem}>
+                    <label className={styles.formLabel}>
+                      Estado (UF){" "}
+                      <Lock size={12} style={{ opacity: 0.5, marginLeft: 5 }} />
+                    </label>
+                    <input
+                      type="text"
+                      className={styles.formInput}
+                      style={{
+                        opacity: 0.7,
+                        cursor: "not-allowed",
+                        backgroundColor: "rgba(255,255,255,0.02)",
+                      }}
+                      value={profileForm.estado || "---"}
+                      readOnly
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.formGrid} style={{ marginTop: 20 }}>
                   <div className={styles.formItem}>
                     <label className={styles.formLabel}>Atualizar Senha</label>
                     <input
@@ -7844,6 +7879,35 @@ export default function AdvogadoDashboard() {
       {renderAgendaModal()}
       {renderNotifDeleteConfirmModal()}
       <AdvogadoMesPopup />
+
+      {/* PENDING OAB MODAL */}
+      {showPendingOABModal && (
+        <div className={styles.oabModalOverlay}>
+          <div className={styles.oabModalCard}>
+            <AlertTriangle size={48} color="#eab308" />
+            <h3>Verificação de OAB Pendente</h3>
+            <p>
+              Identificamos que sua OAB ainda não foi verificada manualmente por nossa equipe jurídica.
+            </p>
+            <p className={styles.oabModalSub}>
+              Para garantir a segurança de todos os usuários e a sua visibilidade plena na plataforma, entre em contato conosco para validar seus dados.
+            </p>
+            
+            <a 
+              href="https://wa.me/5515981657317?text=Olá, gostaria de solicitar a verificação manual da minha OAB no SocialJurídico. Meu nome é " 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className={styles.supportBtn}
+            >
+              Verificar agora pelo WhatsApp
+            </a>
+            
+            <button onClick={() => setShowPendingOABModal(false)} className={styles.closeBtn}>
+              Vou fazer isso mais tarde
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

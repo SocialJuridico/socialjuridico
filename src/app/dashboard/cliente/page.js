@@ -157,6 +157,9 @@ export default function ClienteDashboard() {
   // Filtra advogados com especialidade preenchida
   const advogadosComEspecialidade = useMemo(() => {
     return advogados.filter((adv) => {
+      // Ocultar advogados com erro de verificação
+      if (adv.oab_verification_status === "ERROR") return false;
+
       const specs = String(adv.specialties || "").trim();
       return specs && specs !== "Clínico Geral" && specs.length > 0;
     });
@@ -980,20 +983,18 @@ export default function ClienteDashboard() {
 
       <div className={styles.lawyerInfo}>
         <h3 className={styles.lawyerName}>{adv.name}</h3>
-        {/* OAB - Comentado pois ainda não há verificação oficial no site */}
-        {/* <div
-          className={`${styles.oabStatusBadge} ${adv.verified ? styles.oabStatusVerified : styles.oabStatusPending}`}
+        <div
+          className={`${styles.oabStatusBadge} ${adv.oab_verification_status === "VERIFIED" ? styles.oabStatusVerified : styles.oabStatusPending}`}
         >
-          {adv.verified ? (
-            <ShieldCheck
-              size={14}
-              className={styles.verifiedIcon}
-            />
-          ) : null}
-          {adv.verified
-            ? "OAB verificada"
-            : "OAB não verificada"}
-        </div> */}
+          {adv.oab_verification_status === "VERIFIED" ? (
+            <>
+              <ShieldCheck size={14} className={styles.verifiedIcon} />
+              OAB Verificada
+            </>
+          ) : (
+            "Verificação Pendente"
+          )}
+        </div>
         <p className={styles.lawyerOab}>
           {adv.oab ? `OAB ${adv.oab}` : "OAB não informada"}
         </p>

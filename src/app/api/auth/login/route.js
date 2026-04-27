@@ -211,13 +211,26 @@ export async function POST(request) {
     for (const table of tables) {
       const { data } = await db
         .from(table)
-        .select("id, name, email, role, phone, avatar")
+        .select(`id, name, email, role, phone, avatar${table === "advogados" ? ", oab_verification_status" : ""}`)
         .eq("id", user.id)
         .maybeSingle();
       if (data) {
         profile = data;
         break;
       }
+    }
+
+    // Bloqueio de OAB com Erro
+    if (profile?.role === "LAWYER" && profile?.oab_verification_status === "ERROR") {
+      await supabase.auth.signOut(); // Revoga a sessão
+      return NextResponse.json(
+        { 
+          success: false, 
+          type: "OAB_ERROR",
+          message: "Sua verificação de OAB apresentou inconsistências e seu acesso foi restrito." 
+        },
+        { status: 403 },
+      );
     }
 
     // 3. Criar perfil padrão se não existir

@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 const PROFILE_SELECT_FIELDS = {
   clientes: "id, name, email, role, phone, avatar, bio, created_at",
   advogados:
-    "id, name, email, role, phone, avatar, bio, oab, specialties, verified, created_at, is_premium, balance, badges, avg_rating, total_ratings, consulta, tempo, valor",
+    "id, name, email, role, phone, avatar, bio, oab, estado, specialties, verified, created_at, is_premium, balance, badges, avg_rating, total_ratings, consulta, tempo, valor, oab_verification_status",
   admins: "id, name, email, role, phone, avatar, created_at",
 };
 

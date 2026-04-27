@@ -7,7 +7,7 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("advogados")
       .select(
-        "id, name, avatar, oab, estado, avg_rating, total_ratings, verified, specialties, is_premium, consulta, tempo, valor",
+        "id, name, avatar, oab, estado, avg_rating, total_ratings, verified, specialties, is_premium, consulta, tempo, valor, oab_verification_status",
       )
       .order("is_premium", { ascending: false })
       .order("name", { ascending: true });

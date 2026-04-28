@@ -341,7 +341,7 @@ export default function AdvogadoDashboard() {
         console.error("Erro fetchAgenda API:", err);
       }
     },
-    [profileData?.id],
+    [],
   );
 
   const fetchAllDocuments = useCallback(
@@ -358,7 +358,7 @@ export default function AdvogadoDashboard() {
         setLoadingAllDocs(false);
       }
     },
-    [profileData?.id],
+    [],
   );
 
   const fetchMyInterests = useCallback(
@@ -375,7 +375,7 @@ export default function AdvogadoDashboard() {
         setLoadingMyInterests(false);
       }
     },
-    [profileData?.id],
+    [],
   );
 
   const fetchIndicacoes = useCallback(
@@ -394,7 +394,7 @@ export default function AdvogadoDashboard() {
         setLoadingIndicacoes(false);
       }
     },
-    [profileData?.id],
+    [],
   );
 
   const fetchCasos = useCallback(
@@ -411,7 +411,7 @@ export default function AdvogadoDashboard() {
         setLoadingCasos(false);
       }
     },
-    [profileData?.id],
+    [],
   );
 
   const fetchCrmClients = useCallback(
@@ -428,7 +428,7 @@ export default function AdvogadoDashboard() {
         setLoadingCrm(false);
       }
     },
-    [profileData?.id],
+    [],
   );
 
   const syncNotificacoes = useCallback(
@@ -446,7 +446,7 @@ export default function AdvogadoDashboard() {
         console.error("Erro ao sincronizar notificações:", error);
       }
     },
-    [profileData?.id],
+    [],
   );
 
   const fetchNotificacoes = useCallback(async () => {

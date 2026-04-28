@@ -184,7 +184,8 @@ export async function GET(request) {
         .or(
           `advogado_id.eq.${user.id},and(status.eq.ABERTO,advogado_id.is.null),and(status.eq.NEGOCIANDO,advogado_id.is.null)`,
         )
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       if (error) throw error;
       return NextResponse.json({ success: true, data: data || [] });
@@ -194,7 +195,8 @@ export async function GET(request) {
         .from("casos")
         .select("*")
         .eq("cliente_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(200);
 
       if (error) throw error;
 

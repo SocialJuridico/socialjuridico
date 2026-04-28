@@ -465,8 +465,13 @@ export default function ClienteDashboard() {
     };
   }, []);
 
+  const isInitialTabMount = useRef(true);
   // Monitorar mudança de Tab
   useEffect(() => {
+    if (isInitialTabMount.current) {
+      isInitialTabMount.current = false;
+      return;
+    }
     if (activeTab === "painel") loadCasos();
     if (activeTab === "notificacoes") loadNotificacoes();
     if (activeTab === "perfil") loadProfile();

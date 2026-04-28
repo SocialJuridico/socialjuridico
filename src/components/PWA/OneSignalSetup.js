@@ -78,11 +78,17 @@ export default function OneSignalSetup() {
 
         // Verifica a sessão todas as vezes que mudar de tela (lendo a fonte verdadeira de cookies via API)
         try {
-          const res = await fetch("/api/perfil");
-          if (res.ok) {
-            const result = await res.json();
-            if (result.success && result.data?.id) {
-              await bindUserAndPrompt(result.data);
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            const res = await fetch("/api/perfil");
+            if (res.ok) {
+              const result = await res.json();
+              if (result.success && result.data?.id) {
+                await bindUserAndPrompt(result.data);
+              } else {
+                await OneSignal.logout();
+              }
             } else {
               await OneSignal.logout();
             }

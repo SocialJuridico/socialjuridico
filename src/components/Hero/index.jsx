@@ -76,7 +76,7 @@ export default async function Hero() {
 
         {/* Action Area */}
         <div className={styles.ctaWrapper}>
-          <Link href="/cadastro" style={{ textDecoration: 'none' }}>
+          <Link prefetch={false} href="/cadastro" style={{ textDecoration: 'none' }}>
             <Button variant="primary" className={styles.ctaButton}>
               Cadastre-se agora
               <ArrowRight size={20} />

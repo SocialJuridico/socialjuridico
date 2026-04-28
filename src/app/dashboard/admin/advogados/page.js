@@ -21,7 +21,33 @@ export default function AdminAdvogadosPage() {
   const [editEstado, setEditEstado] = useState("");
 
   const ESTADOS = [
-    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
+    "AC",
+    "AL",
+    "AP",
+    "AM",
+    "BA",
+    "CE",
+    "DF",
+    "ES",
+    "GO",
+    "MA",
+    "MT",
+    "MS",
+    "MG",
+    "PA",
+    "PB",
+    "PR",
+    "PE",
+    "PI",
+    "RJ",
+    "RN",
+    "RS",
+    "RO",
+    "RR",
+    "SC",
+    "SP",
+    "SE",
+    "TO",
   ];
 
   useEffect(() => {
@@ -125,23 +151,37 @@ export default function AdminAdvogadosPage() {
       }
 
       toast.success(data.message);
-      
+
       // Atualizar lista local
-      setAdvogados(prev => prev.map(a => {
-        if (a.id === advogado.id) {
-          if (action === "GIVE_PRO") {
-            const exp = new Date();
-            exp.setDate(exp.getDate() + 30);
-            return { ...a, is_premium: true, premium_expires_at: exp.toISOString() };
+      setAdvogados((prev) =>
+        prev.map((a) => {
+          if (a.id === advogado.id) {
+            if (action === "GIVE_PRO") {
+              const exp = new Date();
+              exp.setDate(exp.getDate() + 30);
+              return {
+                ...a,
+                is_premium: true,
+                premium_expires_at: exp.toISOString(),
+              };
+            }
+            if (action === "REMOVE_PRO")
+              return { ...a, is_premium: false, premium_expires_at: null };
+            if (action === "ADD_JURIS")
+              return { ...a, balance: (a.balance || 0) + Number(value) };
+            if (action === "REMOVE_JURIS")
+              return {
+                ...a,
+                balance: Math.max(0, (a.balance || 0) - Number(value)),
+              };
+            if (action === "SET_OAB_STATUS")
+              return { ...a, oab_verification_status: value };
+            if (action === "UPDATE_OAB")
+              return { ...a, oab: value.oab, estado: value.estado };
           }
-          if (action === "REMOVE_PRO") return { ...a, is_premium: false, premium_expires_at: null };
-          if (action === "ADD_JURIS") return { ...a, balance: (a.balance || 0) + Number(value) };
-          if (action === "REMOVE_JURIS") return { ...a, balance: Math.max(0, (a.balance || 0) - Number(value)) };
-          if (action === "SET_OAB_STATUS") return { ...a, oab_verification_status: value };
-          if (action === "UPDATE_OAB") return { ...a, oab: value.oab, estado: value.estado };
-        }
-        return a;
-      }));
+          return a;
+        }),
+      );
     } catch (error) {
       console.error("Erro ao atualizar advogado:", error);
       toast.error("Erro ao atualizar advogado.");
@@ -209,28 +249,43 @@ export default function AdminAdvogadosPage() {
                     </span>
                   </td>
                   <td>
-                    <span className={advogado.is_premium ? styles.proBadge : styles.freeBadge}>
+                    <span
+                      className={
+                        advogado.is_premium ? styles.proBadge : styles.freeBadge
+                      }
+                    >
                       {advogado.is_premium ? "PRO" : "FREE"}
                     </span>
                   </td>
                   <td>
-                    <span className={
-                      advogado.oab_verification_status === "VERIFIED" ? styles.verifiedBadge :
-                      advogado.oab_verification_status === "ERROR" ? styles.errorBadge :
-                      styles.pendingBadge
-                    }>
-                      {advogado.oab_verification_status === "VERIFIED" ? "Verificado" :
-                       advogado.oab_verification_status === "ERROR" ? "Erro" : "Pendente"}
+                    <span
+                      className={
+                        advogado.oab_verification_status === "VERIFIED"
+                          ? styles.verifiedBadge
+                          : advogado.oab_verification_status === "ERROR"
+                            ? styles.errorBadge
+                            : styles.pendingBadge
+                      }
+                    >
+                      {advogado.oab_verification_status === "VERIFIED"
+                        ? "Verificado"
+                        : advogado.oab_verification_status === "ERROR"
+                          ? "Erro"
+                          : "Pendente"}
                     </span>
                   </td>
                   <td>
                     {advogado.is_premium && advogado.premium_expires_at
-                      ? new Date(advogado.premium_expires_at).toLocaleDateString("pt-BR")
+                      ? new Date(
+                          advogado.premium_expires_at,
+                        ).toLocaleDateString("pt-BR")
                       : "-"}
                   </td>
                   <td>
                     {advogado.created_at
-                      ? new Date(advogado.created_at).toLocaleDateString("pt-BR")
+                      ? new Date(advogado.created_at).toLocaleDateString(
+                          "pt-BR",
+                        )
                       : "-"}
                   </td>
                   <td>
@@ -245,7 +300,7 @@ export default function AdminAdvogadosPage() {
                         }}
                         disabled={updatingId === advogado.id}
                       >
-                        <RotateCcw size={14} style={{ display: 'none' }} />
+                        <RotateCcw size={14} style={{ display: "none" }} />
                         Gerenciar
                       </button>
                       <button
@@ -279,7 +334,7 @@ export default function AdminAdvogadosPage() {
         )}
       </div>
 
-       {modalAction && (
+      {modalAction && (
         <div
           className={styles.modalOverlay}
           onClick={() => setModalAction(null)}
@@ -292,30 +347,38 @@ export default function AdminAdvogadosPage() {
               {modalAction.type === "delete"
                 ? "Excluir advogado"
                 : modalAction.type === "reset"
-                ? "Resetar senha"
-                : "Gerenciar Advogado"}
+                  ? "Resetar senha"
+                  : "Gerenciar Advogado"}
             </h3>
-            
+
             <div className={styles.modalContent}>
               {modalAction.type === "manage" ? (
                 <div className={styles.manageOptions}>
-                  <p>Advogado: <strong>{modalAction.item.name}</strong></p>
-                  
+                  <p>
+                    Advogado: <strong>{modalAction.item.name}</strong>
+                  </p>
+
                   <div className={styles.manageSection}>
                     <h4>Plano PRO</h4>
-                    <p className={styles.manageDesc}>Concede status PRO e validade por 30 dias.</p>
+                    <p className={styles.manageDesc}>
+                      Concede status PRO e validade por 30 dias.
+                    </p>
                     {modalAction.item.is_premium ? (
-                      <button 
+                      <button
                         className={styles.removeProBtn}
-                        onClick={() => confirmUpdate(modalAction.item, "REMOVE_PRO")}
+                        onClick={() =>
+                          confirmUpdate(modalAction.item, "REMOVE_PRO")
+                        }
                         disabled={updatingId === modalAction.item.id}
                       >
                         Remover PRO
                       </button>
                     ) : (
-                      <button 
+                      <button
                         className={styles.giveProBtn}
-                        onClick={() => confirmUpdate(modalAction.item, "GIVE_PRO")}
+                        onClick={() =>
+                          confirmUpdate(modalAction.item, "GIVE_PRO")
+                        }
                         disabled={updatingId === modalAction.item.id}
                       >
                         Conceder 30 dias de PRO
@@ -325,89 +388,167 @@ export default function AdminAdvogadosPage() {
 
                   <div className={styles.manageSection}>
                     <h4>Saldo de Juris</h4>
-                    <p className={styles.manageDesc}>Adicione uma quantia de Juris ao saldo atual ({modalAction.item.balance || 0}).</p>
+                    <p className={styles.manageDesc}>
+                      Adicione uma quantia de Juris ao saldo atual (
+                      {modalAction.item.balance || 0}).
+                    </p>
                     <div className={styles.jurisInputRow}>
-                      <input 
-                        type="number" 
-                        value={jurisAmount} 
+                      <input
+                        type="number"
+                        value={jurisAmount}
                         onChange={(e) => setJurisAmount(e.target.value)}
                         className={styles.numberInput}
                       />
-                      <button 
+                      <button
                         className={styles.addJurisBtn}
-                        onClick={() => confirmUpdate(modalAction.item, "ADD_JURIS", jurisAmount)}
+                        onClick={() =>
+                          confirmUpdate(
+                            modalAction.item,
+                            "ADD_JURIS",
+                            jurisAmount,
+                          )
+                        }
                         disabled={updatingId === modalAction.item.id}
                       >
                         Adicionar
                       </button>
-                      <button 
+                      <button
                         className={styles.removeJurisBtn}
-                        onClick={() => confirmUpdate(modalAction.item, "REMOVE_JURIS", jurisAmount)}
+                        onClick={() =>
+                          confirmUpdate(
+                            modalAction.item,
+                            "REMOVE_JURIS",
+                            jurisAmount,
+                          )
+                        }
                         disabled={updatingId === modalAction.item.id}
-                        style={{ background: "#ef4444", color: "#fff", border: "none", padding: "8px 12px", borderRadius: "8px", cursor: "pointer", fontSize: "0.85rem", fontWeight: 600 }}
+                        style={{
+                          background: "#ef4444",
+                          color: "#fff",
+                          border: "none",
+                          padding: "8px 12px",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          fontSize: "0.85rem",
+                          fontWeight: 600,
+                        }}
                       >
                         Remover
                       </button>
                     </div>
                     <div className={styles.manageSection}>
-                    <h4>Verificação de OAB</h4>
-                    <p className={styles.manageDesc}>Alterar o status de verificação da OAB do advogado.</p>
-                    <select 
-                      className={styles.statusSelect}
-                      value={modalAction.item.oab_verification_status || "PENDING"}
-                      onChange={(e) => confirmUpdate(modalAction.item, "SET_OAB_STATUS", e.target.value)}
-                      disabled={updatingId === modalAction.item.id}
-                    >
-                      <option value="PENDING" style={{ background: "#171a21", color: "#e5e7eb" }}>🕒 Pendente</option>
-                      <option value="VERIFIED" style={{ background: "#171a21", color: "#e5e7eb" }}>✅ Verificado</option>
-                      <option value="ERROR" style={{ background: "#171a21", color: "#e5e7eb" }}>❌ Erro de Verificação</option>
-                    </select>
-                  </div>
-
-                  <div className={styles.manageSection}>
-                    <h4>Dados Profissionais (OAB)</h4>
-                    <p className={styles.manageDesc}>Atualizar número da OAB e Estado de registro.</p>
-                    <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                      <input 
-                        type="text" 
-                        placeholder="Nº OAB"
-                        value={editOAB} 
-                        onChange={(e) => setEditOAB(e.target.value)}
-                        className={styles.numberInput}
-                        style={{ width: "120px" }}
-                      />
-                      <select 
-                        value={editEstado} 
-                        onChange={(e) => setEditEstado(e.target.value)}
-                        className={styles.miniSelect}
+                      <h4>Verificação de OAB</h4>
+                      <p className={styles.manageDesc}>
+                        Alterar o status de verificação da OAB do advogado.
+                      </p>
+                      <select
+                        className={styles.statusSelect}
+                        value={
+                          modalAction.item.oab_verification_status || "PENDING"
+                        }
+                        onChange={(e) =>
+                          confirmUpdate(
+                            modalAction.item,
+                            "SET_OAB_STATUS",
+                            e.target.value,
+                          )
+                        }
+                        disabled={updatingId === modalAction.item.id}
                       >
-                        <option value="">UF</option>
-                        {ESTADOS.map(uf => <option key={uf} value={uf} style={{ background: "#171a21", color: "#e5e7eb" }}>{uf}</option>)}
+                        <option
+                          value="PENDING"
+                          style={{ background: "#171a21", color: "#e5e7eb" }}
+                        >
+                          🕒 Pendente
+                        </option>
+                        <option
+                          value="VERIFIED"
+                          style={{ background: "#171a21", color: "#e5e7eb" }}
+                        >
+                          ✅ Verificado
+                        </option>
+                        <option
+                          value="ERROR"
+                          style={{ background: "#171a21", color: "#e5e7eb" }}
+                        >
+                          ❌ Erro de Verificação
+                        </option>
                       </select>
-                      <button 
-                        className={styles.giveProBtn}
-                        onClick={() => confirmUpdate(modalAction.item, "UPDATE_OAB", { oab: editOAB, estado: editEstado })}
-                        disabled={updatingId === modalAction.item.id || !editOAB || !editEstado}
-                        style={{ margin: 0, flex: 1 }}
+                    </div>
+
+                    <div className={styles.manageSection}>
+                      <h4>Dados Profissionais (OAB)</h4>
+                      <p className={styles.manageDesc}>
+                        Atualizar número da OAB e Estado de registro.
+                      </p>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "10px",
+                          marginTop: "10px",
+                        }}
                       >
-                        Salvar OAB
-                      </button>
+                        <input
+                          type="text"
+                          placeholder="Nº OAB"
+                          value={editOAB}
+                          onChange={(e) => setEditOAB(e.target.value)}
+                          className={styles.numberInput}
+                          style={{ width: "120px" }}
+                        />
+                        <select
+                          value={editEstado}
+                          onChange={(e) => setEditEstado(e.target.value)}
+                          className={styles.miniSelect}
+                        >
+                          <option value="">UF</option>
+                          {ESTADOS.map((uf) => (
+                            <option
+                              key={uf}
+                              value={uf}
+                              style={{
+                                background: "#171a21",
+                                color: "#e5e7eb",
+                              }}
+                            >
+                              {uf}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          className={styles.giveProBtn}
+                          onClick={() =>
+                            confirmUpdate(modalAction.item, "UPDATE_OAB", {
+                              oab: editOAB,
+                              estado: editEstado,
+                            })
+                          }
+                          disabled={
+                            updatingId === modalAction.item.id ||
+                            !editOAB ||
+                            !editEstado
+                          }
+                          style={{ margin: 0, flex: 1 }}
+                        >
+                          Salvar OAB
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
                 </div>
               ) : (
                 <p>
                   {modalAction.type === "delete" ? (
                     <>
                       Confirma a exclusão de{" "}
-                      <strong>{modalAction.item.name || "advogado"}</strong>? Esta
-                      ação é irreversível.
+                      <strong>{modalAction.item.name || "advogado"}</strong>?
+                      Esta ação é irreversível.
                     </>
                   ) : (
                     <>
                       Confirma resetar a senha de{" "}
-                      <strong>{modalAction.item.name || "advogado"}</strong> para
+                      <strong>{modalAction.item.name || "advogado"}</strong>{" "}
+                      para
                       <strong> socialjuridico1!</strong>?
                     </>
                   )}
@@ -423,7 +564,7 @@ export default function AdminAdvogadosPage() {
               >
                 {modalAction.type === "manage" ? "Fechar" : "Cancelar"}
               </button>
-              
+
               {modalAction.type !== "manage" && (
                 <button
                   type="button"

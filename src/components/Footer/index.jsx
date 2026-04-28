@@ -11,7 +11,7 @@ export default function Footer() {
         
         {/* Coluna 1: Logo e Descrição */}
         <div className={styles.brandColumn}>
-          <Link href="/" className={styles.logoWrapper}>
+          <Link prefetch={false} href="/" className={styles.logoWrapper}>
             <Scale size={28} strokeWidth={2.5} />
             SocialJurídico
           </Link>
@@ -36,9 +36,9 @@ export default function Footer() {
         <div className={styles.linkColumn}>
           <h4 className={styles.columnTitle}>Plataforma</h4>
           <ul className={styles.linkList}>
-            <li><Link href="/clientes" className={styles.navLink}>Para Clientes</Link></li>
-            <li><Link href="/advogados" className={styles.navLink}>Para Advogados</Link></li>
-            <li><Link href="/seguranca" className={styles.navLink}>Segurança</Link></li>
+            <li><Link prefetch={false} href="/clientes" className={styles.navLink}>Para Clientes</Link></li>
+            <li><Link prefetch={false} href="/advogados" className={styles.navLink}>Para Advogados</Link></li>
+            <li><Link prefetch={false} href="/seguranca" className={styles.navLink}>Segurança</Link></li>
           </ul>
         </div>
 
@@ -46,8 +46,8 @@ export default function Footer() {
         <div className={styles.linkColumn}>
           <h4 className={styles.columnTitle}>Empresa</h4>
           <ul className={styles.linkList}>
-            <li><Link href="/sobre" className={styles.navLink}>Sobre Nós</Link></li>
-            <li><Link href="/contato" className={styles.navLink}>Contato</Link></li>
+            <li><Link prefetch={false} href="/sobre" className={styles.navLink}>Sobre Nós</Link></li>
+            <li><Link prefetch={false} href="/contato" className={styles.navLink}>Contato</Link></li>
           </ul>
         </div>
 
@@ -55,12 +55,12 @@ export default function Footer() {
         <div className={styles.linkColumn}>
           <h4 className={styles.columnTitle}>Legal</h4>
           <ul className={styles.linkList}>
-            <li><Link href="/termos" className={styles.navLink}>Termos de Uso</Link></li>
-            <li><Link href="/privacidade" className={styles.navLink}>Política de Privacidade</Link></li>
-            <li><Link href="/exclusao-de-dados" className={styles.navLink}>Exclusão de Dados</Link></li>
+            <li><Link prefetch={false} href="/termos" className={styles.navLink}>Termos de Uso</Link></li>
+            <li><Link prefetch={false} href="/privacidade" className={styles.navLink}>Política de Privacidade</Link></li>
+            <li><Link prefetch={false} href="/exclusao-de-dados" className={styles.navLink}>Exclusão de Dados</Link></li>
           </ul>
 
-          <Link href="/admin" className={styles.adminBtn}>
+          <Link prefetch={false} href="/admin" className={styles.adminBtn}>
             <Lock size={16} /> Área Administrativa
           </Link>
         </div>

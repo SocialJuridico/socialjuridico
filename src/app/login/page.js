@@ -78,7 +78,7 @@ function LoginContent() {
       <div className={styles.leftSide}>
         <div className={styles.leftPattern}></div>
 
-        <Link href="/" className={styles.backButton}>
+        <Link prefetch={false} href="/" className={styles.backButton}>
           <ArrowLeft size={20} />
           Voltar a Home
         </Link>
@@ -107,7 +107,7 @@ function LoginContent() {
       {/* LADO DIREITO: Formulario de Login */}
       <div className={styles.rightSide}>
         <div className={styles.formContainer}>
-          <Link href="/" className={styles.logoMobileOnly}>
+          <Link prefetch={false} href="/" className={styles.logoMobileOnly}>
             <Scale size={28} />
             SocialJurídico
           </Link>
@@ -203,7 +203,7 @@ function LoginContent() {
                 </label>
               </div>
 
-              <Link href="/login/esqueci-senha" className={styles.forgotPassword}>
+              <Link prefetch={false} href="/login/esqueci-senha" className={styles.forgotPassword}>
                 Esqueceu sua senha?
               </Link>
             </div>
@@ -249,7 +249,7 @@ function LoginContent() {
 
             <div className={styles.loginHint}>
               Ainda não tem uma conta?{" "}
-              <Link href="/cadastro" className={styles.linkTag}>
+              <Link prefetch={false} href="/cadastro" className={styles.linkTag}>
                 Cadastre-se grátis
               </Link>
             </div>

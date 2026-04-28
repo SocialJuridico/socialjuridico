@@ -38,7 +38,7 @@ export default function EsqueciSenha() {
       <div className={styles.leftSide}>
         <div className={styles.leftPattern}></div>
 
-        <Link href="/login" className={styles.backButton}>
+        <Link prefetch={false} href="/login" className={styles.backButton}>
           <ArrowLeft size={20} />
           Voltar ao Login
         </Link>
@@ -58,7 +58,7 @@ export default function EsqueciSenha() {
       {/* LADO DIREITO: Formulario */}
       <div className={styles.rightSide}>
         <div className={styles.formContainer}>
-          <Link href="/" className={styles.logoMobileOnly}>
+          <Link prefetch={false} href="/" className={styles.logoMobileOnly}>
             <Scale size={28} />
             SocialJurídico
           </Link>
@@ -103,7 +103,7 @@ export default function EsqueciSenha() {
                 </button>
 
                 <div className={styles.loginHint}>
-                  Lembrou a senha? <Link href="/login" className={styles.linkTag}>Fazer login</Link>
+                  Lembrou a senha? <Link prefetch={false} href="/login" className={styles.linkTag}>Fazer login</Link>
                 </div>
               </form>
             </>
@@ -116,7 +116,7 @@ export default function EsqueciSenha() {
               <p className={styles.formSubtitle} style={{ marginBottom: '32px' }}>
                 {successMsg}
               </p>
-              <Link href="/login" className={styles.submitBtn} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Link prefetch={false} href="/login" className={styles.submitBtn} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                 Voltar para o Login
               </Link>
               <p className={styles.loginHint} style={{ marginTop: '32px' }}>

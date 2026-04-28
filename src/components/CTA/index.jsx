@@ -12,10 +12,10 @@ export default function CTA() {
         </p>
 
         <div className={styles.buttonsWrapper}>
-          <Link href="/cadastro" style={{ textDecoration: 'none' }}>
+          <Link prefetch={false} href="/cadastro" style={{ textDecoration: 'none' }}>
             <Button variant="primary">Criar Conta e Publicar</Button>
           </Link>
-          <Link href="/advogados" style={{ textDecoration: 'none' }}>
+          <Link prefetch={false} href="/advogados" style={{ textDecoration: 'none' }}>
             <Button variant="secondary">Sou Advogado</Button>
           </Link>
         </div>

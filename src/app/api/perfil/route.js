@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 const PROFILE_SELECT_FIELDS = {
   clientes: "id, name, email, role, phone, avatar, bio, created_at",
   advogados:
-    "id, name, email, role, phone, avatar, bio, oab, estado, specialties, verified, created_at, is_premium, balance, badges, avg_rating, total_ratings, consulta, tempo, valor, oab_verification_status",
+    "id, name, email, role, phone, avatar, bio, oab, estado, specialties, verified, created_at, is_premium, balance, badges, avg_rating, total_ratings, consulta, tempo, valor, oab_verification_status, oab_warning_started_at",
   admins: "id, name, email, role, phone, avatar, created_at",
 };
 
@@ -124,6 +124,38 @@ export async function GET(request) {
         },
         { status: 404 },
       );
+    }
+
+    // -- Lógica de Contagem de Verificação da OAB --
+    if (profile.role === "LAWYER" && profile.oab_verification_status === "PENDING") {
+      const now = new Date();
+      if (!profile.oab_warning_started_at) {
+        // Inicia o contador no primeiro login com status PENDING
+        const startedAt = now.toISOString();
+        const { error: updateError } = await db
+          .from("advogados")
+          .update({ oab_warning_started_at: startedAt })
+          .eq("id", profile.id);
+        
+        if (!updateError) {
+          profile.oab_warning_started_at = startedAt;
+        }
+      } else {
+        // Verifica se já passaram 7 dias
+        const startedDate = new Date(profile.oab_warning_started_at);
+        const diffMs = now.getTime() - startedDate.getTime();
+        const daysPassed = diffMs / (1000 * 60 * 60 * 24);
+        
+        if (daysPassed >= 7) {
+          // Prazo estourou, suspende a conta
+          await db
+            .from("advogados")
+            .update({ oab_verification_status: "ERROR" })
+            .eq("id", profile.id);
+          
+          profile.oab_verification_status = "ERROR";
+        }
+      }
     }
 
     return NextResponse.json({ success: true, data: profile });

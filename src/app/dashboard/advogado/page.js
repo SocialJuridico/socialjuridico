@@ -7889,6 +7889,19 @@ export default function AdvogadoDashboard() {
             <p>
               Identificamos que sua OAB ainda não foi verificada manualmente por nossa equipe jurídica.
             </p>
+            {profileData?.oab_warning_started_at && (
+              <div style={{ backgroundColor: "rgba(234, 179, 8, 0.1)", border: "1px solid #eab308", padding: "12px", borderRadius: "8px", margin: "15px 0", textAlign: "center" }}>
+                <p style={{ margin: 0, fontWeight: "bold", color: "#854d0e", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Clock size={16} /> Atenção: Prazo de Verificação
+                </p>
+                <p style={{ margin: "8px 0 0 0", color: "#854d0e", fontSize: "1.1rem" }}>
+                  Tempo restante: <strong>{Math.max(0, 7 - Math.floor((new Date() - new Date(profileData.oab_warning_started_at)) / (1000 * 60 * 60 * 24)))} dias</strong>
+                </p>
+                <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#a16207" }}>
+                  Sua conta será suspensa automaticamente após este período.
+                </p>
+              </div>
+            )}
             <p className={styles.oabModalSub}>
               Para garantir a segurança de todos os usuários e a sua visibilidade plena na plataforma, entre em contato conosco para validar seus dados.
             </p>

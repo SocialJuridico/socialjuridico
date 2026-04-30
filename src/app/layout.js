@@ -28,6 +28,7 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#D4AF37" />
+        <meta name="google-site-verification" content="Y2-JflZUZY1EhRahBox6UlsanmZnHHA7o3HpVVx2Ma4" />
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>

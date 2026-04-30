@@ -7,7 +7,7 @@ function normalizeMeetLink(rawUrl) {
   try {
     const parsed = new URL(String(rawUrl || "").trim());
     if (parsed.protocol !== "https:") return null;
-    if (parsed.hostname !== "meet.google.com") return null;
+    if (parsed.hostname !== "meet.google.com" && parsed.hostname !== "meet.jit.si") return null;
     if (
       !parsed.pathname ||
       parsed.pathname === "/" ||
@@ -64,7 +64,7 @@ export async function POST(request) {
         {
           success: false,
           message:
-            "Link inválido. Cole um link válido do Google Meet (ex: https://meet.google.com/abc-defg-hij).",
+            "Link inválido. Cole um link válido de videochamada (ex: Google Meet ou Jitsi).",
         },
         { status: 400 },
       );
@@ -93,7 +93,9 @@ export async function POST(request) {
       );
     }
 
-    const meetMessage = `📹 Convite de videochamada (Google Meet): ${safeMeetLink}`;
+    const isJitsi = safeMeetLink.includes('meet.jit.si');
+    const provider = isJitsi ? 'Nativa' : 'Google Meet';
+    const meetMessage = `📹 Convite de videochamada (${provider}): ${safeMeetLink}`;
 
     const now = new Date().toISOString();
     const [{ error: msgError }, { error: notifError }] = await Promise.all([

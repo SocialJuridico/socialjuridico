@@ -231,7 +231,7 @@ function ChatContent() {
   const isNegotiationChat = !!interestId;
 
   const renderMessageContent = (content) => {
-    const meetRegex = /(https:\/\/meet\.google\.com\/[^\s]+)/i;
+    const meetRegex = /(https:\/\/(meet\.google\.com|meet\.jit\.si)\/[^\s]+)/i;
     const match = String(content || "").match(meetRegex);
 
     if (!match) {
@@ -239,6 +239,7 @@ function ChatContent() {
     }
 
     const meetLink = match[1];
+    const isJitsi = meetLink.includes("meet.jit.si");
     const prefixText = String(content || "")
       .replace(meetLink, "")
       .trim();
@@ -246,16 +247,68 @@ function ChatContent() {
     return (
       <div className={styles.messageTextBlock}>
         {prefixText && <p className={styles.messageText}>{prefixText}</p>}
-        <a
-          href={meetLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.meetLink}
-        >
-          Entrar na videochamada (Google Meet)
-        </a>
+        {isJitsi ? (
+          <a
+            href={meetLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.meetLink}
+          >
+            <Video size={14} style={{ display: "inline", marginRight: "4px" }} />
+            Entrar na videochamada (Nativa)
+          </a>
+        ) : (
+          <a
+            href={meetLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.meetLink}
+          >
+            <Video size={14} style={{ display: "inline", marginRight: "4px" }} />
+            Entrar no Google Meet
+          </a>
+        )}
       </div>
     );
+  };
+
+  const handleStartJitsi = async () => {
+    if (!isLawyer || sendingMeetInvite) return;
+    setSendingMeetInvite(true);
+    
+    // Gera um nome de sala único
+    const roomName = `SJ-Caso-${casoId}-${Date.now().toString().slice(-6)}`;
+    const jitsiLink = `https://meet.jit.si/${roomName}`;
+
+    try {
+      const res = await fetch("/api/casos/meet-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ casoId, meetLink: jitsiLink }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(
+          data.message || "Não foi possível criar a sala de vídeo.",
+        );
+        return;
+      }
+
+      toast.success("Sala de vídeo criada com sucesso!");
+      isAtBottomRef.current = true;
+      await loadMensagens();
+      
+      // Abre a sala para o próprio advogado em nova aba automaticamente
+      window.open(jitsiLink, "_blank");
+
+    } catch (error) {
+      console.error("Erro ao iniciar Jitsi:", error);
+      toast.error("Erro de conexão ao criar videochamada.");
+    } finally {
+      setSendingMeetInvite(false);
+    }
   };
 
   const handleShareMeet = () => {
@@ -367,15 +420,17 @@ function ChatContent() {
         </div>
         <div className={styles.headerRight}>
           {isLawyer && !isNegotiationChat && (
-            <button
-              type="button"
-              className={styles.meetBtn}
-              onClick={handleShareMeet}
-              disabled={sendingMeetInvite}
-            >
-              <Video size={16} />
-              {sendingMeetInvite ? "Enviando..." : "Enviar Meet"}
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className={styles.meetBtn}
+                onClick={handleStartJitsi}
+                disabled={sendingMeetInvite}
+              >
+                <Video size={16} />
+                {sendingMeetInvite ? "Iniciando..." : "Iniciar Videochamada"}
+              </button>
+            </div>
           )}
           <span className={styles.statusChip} style={isNegotiationChat ? { background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000' } : {}}>
             {isNegotiationChat ? "NEGOCIANDO" : caso?.status || "ABERTO"}

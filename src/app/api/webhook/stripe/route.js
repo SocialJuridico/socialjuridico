@@ -98,6 +98,11 @@ export async function POST(request) {
       await handleCheckoutCompleted(session);
       break;
 
+    case "payment_intent.succeeded":
+      const paymentIntent = event.data.object;
+      await handlePaymentIntentSucceeded(paymentIntent);
+      break;
+
     case "customer.subscription.deleted":
       const subscription = event.data.object;
       await handleSubscriptionDeleted(subscription);
@@ -421,3 +426,47 @@ async function handleSubscriptionDeleted(subscription) {
     console.error(`❌ [SubDeleted] Erro ao processar cancelamento:`, err.message);
   }
 }
+
+/**
+ * Trata pagamentos vindos do Checkout Transparente (Stripe Elements / PaymentIntent).
+ * Reutiliza a mesma lógica do processCheckout para manter consistência.
+ */
+async function handlePaymentIntentSucceeded(paymentIntent) {
+  const userId = paymentIntent.metadata?.userId;
+  const type = paymentIntent.metadata?.type;
+  const cupomId = paymentIntent.metadata?.cupomId;
+  const priceId = paymentIntent.metadata?.priceId;
+
+  console.log(`💳 [PaymentIntent] ${paymentIntent.id} | tipo: ${type} | userId: ${userId}`);
+
+  if (!userId || !type) {
+    console.warn(`⚠️ [PaymentIntent] Ignorando: metadata incompleto (userId: ${userId}, type: ${type})`);
+    return;
+  }
+
+  // Verificar se já foi processado via checkout.session.completed (evitar crédito duplo)
+  const { data: existingTx } = await supabaseAdmin
+    .from("transacoes")
+    .select("id")
+    .eq("advogado_id", userId)
+    .eq("stripe_session_id", paymentIntent.id)
+    .maybeSingle();
+
+  if (existingTx) {
+    console.log(`ℹ️ [PaymentIntent] Já processado anteriormente (tx: ${existingTx.id}). Pulando.`);
+    return;
+  }
+
+  // Montar objeto compatível com processCheckout
+  const sessionLike = {
+    id: paymentIntent.id,
+    amount_total: paymentIntent.amount,
+    currency: paymentIntent.currency,
+    customer_email: paymentIntent.receipt_email,
+    customer_details: { email: paymentIntent.receipt_email },
+    metadata: paymentIntent.metadata,
+  };
+
+  await processCheckout(sessionLike, userId, type, cupomId);
+}
+

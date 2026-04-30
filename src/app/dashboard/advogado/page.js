@@ -77,6 +77,7 @@ import styles from "./Dashboard.module.css";
 import { supabase } from "@/lib/supabase";
 import { maskCPFCNPJ, formatPhone, maskPhone } from "@/lib/securityUtils";
 import PWAInlineBanner from "@/components/PWA/PWAInlineBanner";
+import TransparentCheckoutModal from "@/components/TransparentCheckout/TransparentCheckoutModal";
 
 import {
   createJurisCheckout,
@@ -97,6 +98,9 @@ export default function AdvogadoDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [showProModal, setShowProModal] = useState(false);
+  const [showTransparentCheckout, setShowTransparentCheckout] = useState(false);
+  const [transparentCheckoutAmount, setTransparentCheckoutAmount] = useState(null);
+  const [transparentCheckoutCoupon, setTransparentCheckoutCoupon] = useState(null);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [crmClients, setCrmClients] = useState([]);
   const [loadingCrm, setLoadingCrm] = useState(false);
@@ -5749,13 +5753,11 @@ export default function AdvogadoDashboard() {
   };
 
   const handleBuyJuris = async (amount = 20, couponData = null) => {
-    try {
-      toast.loading("Iniciando pagamento...");
-      await createJurisCheckout(amount, couponData);
-    } catch (err) {
-      toast.dismiss();
-      toast.error("Erro ao iniciar compra: " + err.message);
-    }
+    // Checkout Transparente: abre modal inline ao invés de redirecionar
+    setTransparentCheckoutAmount(amount);
+    setTransparentCheckoutCoupon(couponData);
+    setShowBuyModal(false);
+    setShowTransparentCheckout(true);
   };
 
   const handleBecomePro = async (couponData = null) => {
@@ -7921,6 +7923,23 @@ export default function AdvogadoDashboard() {
           </div>
         </div>
       )}
+      {/* CHECKOUT TRANSPARENTE */}
+      <TransparentCheckoutModal
+        isOpen={showTransparentCheckout}
+        onClose={() => setShowTransparentCheckout(false)}
+        jurisAmount={transparentCheckoutAmount}
+        couponData={transparentCheckoutCoupon}
+        onPaymentSuccess={async () => {
+          // Recarregar perfil para atualizar saldo
+          try {
+            const res = await fetch("/api/perfil", { cache: "no-store" });
+            const data = await res.json();
+            if (data.success) setProfileData(data.data);
+          } catch (e) {
+            console.error("Erro ao atualizar perfil após pagamento:", e);
+          }
+        }}
+      />
     </div>
   );
 }

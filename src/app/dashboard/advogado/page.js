@@ -101,6 +101,7 @@ export default function AdvogadoDashboard() {
   const [showTransparentCheckout, setShowTransparentCheckout] = useState(false);
   const [transparentCheckoutAmount, setTransparentCheckoutAmount] = useState(null);
   const [transparentCheckoutCoupon, setTransparentCheckoutCoupon] = useState(null);
+  const [isProCheckout, setIsProCheckout] = useState(false);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [crmClients, setCrmClients] = useState([]);
   const [loadingCrm, setLoadingCrm] = useState(false);
@@ -590,6 +591,16 @@ export default function AdvogadoDashboard() {
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const paymentStatus = urlParams.get("payment_status");
+      const googleSync = urlParams.get("google_sync");
+
+      if (googleSync === "success") {
+        toast.success("✅ Google Calendar sincronizado com sucesso!", { duration: 4000 });
+        // Limpar URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (googleSync === "error") {
+        toast.error("❌ Falha ao sincronizar com Google. Tente novamente.", { duration: 4000 });
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
       
       if (paymentStatus === "success") {
         toast.success("Pagamento aprovado! Atualizando sua carteira...", { duration: 4000 });
@@ -3757,6 +3768,25 @@ export default function AdvogadoDashboard() {
             >
               <Plus size={16} /> Novo
             </button>
+            {!profileData?.google_sync_enabled ? (
+              <button
+                className={styles.actionBtn}
+                style={{
+                  background: "rgba(66, 133, 244, 0.1)",
+                  color: "#4285F4",
+                  border: "1px solid rgba(66, 133, 244, 0.3)",
+                }}
+                onClick={() => {
+                  window.location.href = "/api/auth/google";
+                }}
+              >
+                <Calendar size={16} /> Conectar Google Agenda
+              </button>
+            ) : (
+              <span style={{ fontSize: "0.8rem", color: "#10b981", display: "flex", alignItems: "center", gap: "5px" }}>
+                <CheckCircle2 size={14} /> Google Sincronizado
+              </span>
+            )}
           </div>
         </div>
 
@@ -7374,7 +7404,13 @@ export default function AdvogadoDashboard() {
               <div className={styles.bonusValue}>+20 Juris todo mês</div>
             </div>
 
-            <button className={styles.subscribeBtn} onClick={() => handleBecomePro(appliedCoupon?.tipo_internal === 'PLANO_PRO' ? appliedCoupon : null)}>
+            <button className={styles.subscribeBtn} onClick={() => {
+              setIsProCheckout(true);
+              setTransparentCheckoutAmount(null);
+              setTransparentCheckoutCoupon(appliedCoupon?.tipo_internal === 'PLANO_PRO' ? appliedCoupon : null);
+              setShowProModal(false);
+              setShowTransparentCheckout(true);
+            }}>
               Assinar Agora <ChevronRight size={20} />
             </button>
           </div>
@@ -7926,8 +7962,12 @@ export default function AdvogadoDashboard() {
       {/* CHECKOUT TRANSPARENTE */}
       <TransparentCheckoutModal
         isOpen={showTransparentCheckout}
-        onClose={() => setShowTransparentCheckout(false)}
+        onClose={() => {
+          setShowTransparentCheckout(false);
+          setIsProCheckout(false);
+        }}
         jurisAmount={transparentCheckoutAmount}
+        isPro={isProCheckout}
         couponData={transparentCheckoutCoupon}
         onPaymentSuccess={async () => {
           // Recarregar perfil para atualizar saldo

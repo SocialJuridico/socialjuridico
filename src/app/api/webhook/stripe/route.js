@@ -99,8 +99,9 @@ export async function POST(request) {
       break;
 
     case "payment_intent.succeeded":
-      const paymentIntent = event.data.object;
-      await handlePaymentIntentSucceeded(paymentIntent);
+    case "setup_intent.succeeded":
+      const intent = event.data.object;
+      await handlePaymentIntentSucceeded(intent);
       break;
 
     case "customer.subscription.deleted":
@@ -308,7 +309,7 @@ async function handleProSubscription(session, userId, cupomId) {
     .from("advogados")
     .update({
       is_premium: true,
-      premium_until: new Date(
+      premium_expires_at: new Date(
         Date.now() + 30 * 24 * 60 * 60 * 1000,
       ).toISOString(),
       balance: newBalance,
@@ -431,25 +432,25 @@ async function handleSubscriptionDeleted(subscription) {
  * Trata pagamentos vindos do Checkout Transparente (Stripe Elements / PaymentIntent).
  * Reutiliza a mesma lógica do processCheckout para manter consistência.
  */
-async function handlePaymentIntentSucceeded(paymentIntent) {
-  const userId = paymentIntent.metadata?.userId;
-  const type = paymentIntent.metadata?.type;
-  const cupomId = paymentIntent.metadata?.cupomId;
-  const priceId = paymentIntent.metadata?.priceId;
+async function handlePaymentIntentSucceeded(intent) {
+  const userId = intent.metadata?.userId;
+  const type = intent.metadata?.type;
+  const cupomId = intent.metadata?.cupomId;
+  const priceId = intent.metadata?.priceId;
 
-  console.log(`💳 [PaymentIntent] ${paymentIntent.id} | tipo: ${type} | userId: ${userId}`);
+  console.log(`💳 [Intent Succeeded] ${intent.id} | tipo: ${type} | userId: ${userId}`);
 
   if (!userId || !type) {
-    console.warn(`⚠️ [PaymentIntent] Ignorando: metadata incompleto (userId: ${userId}, type: ${type})`);
+    console.warn(`⚠️ [Intent Succeeded] Ignorando: metadata incompleto (userId: ${userId}, type: ${type})`);
     return;
   }
 
-  // Verificar se já foi processado via checkout.session.completed (evitar crédito duplo)
+  // Verificar se já foi processado via confirm-payment
   const { data: existingTx } = await supabaseAdmin
     .from("transacoes")
     .select("id")
     .eq("advogado_id", userId)
-    .eq("stripe_session_id", paymentIntent.id)
+    .eq("stripe_session_id", intent.id)
     .maybeSingle();
 
   if (existingTx) {
@@ -459,12 +460,12 @@ async function handlePaymentIntentSucceeded(paymentIntent) {
 
   // Montar objeto compatível com processCheckout
   const sessionLike = {
-    id: paymentIntent.id,
-    amount_total: paymentIntent.amount,
-    currency: paymentIntent.currency,
-    customer_email: paymentIntent.receipt_email,
-    customer_details: { email: paymentIntent.receipt_email },
-    metadata: paymentIntent.metadata,
+    id: intent.id,
+    amount_total: intent.amount || 0,
+    currency: intent.currency || 'brl',
+    customer_email: intent.receipt_email || null,
+    customer_details: { email: intent.receipt_email || null },
+    metadata: intent.metadata,
   };
 
   await processCheckout(sessionLike, userId, type, cupomId);

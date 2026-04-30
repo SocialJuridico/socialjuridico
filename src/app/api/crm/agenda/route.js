@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { google } from 'googleapis';
 
 // GET /api/crm/agenda -> Lista compromissos do advogado logado
 export async function GET(request) {
@@ -60,7 +61,72 @@ export async function POST(request) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data: data[0] });
+    const savedEvent = data[0];
+
+    // ==========================================
+    // SINCRONIZAÇÃO COM GOOGLE CALENDAR
+    // ==========================================
+    try {
+      // 1. Buscar preferências do advogado
+      const { data: profile } = await supabaseAdmin
+        .from('advogados')
+        .select('google_refresh_token, google_sync_enabled')
+        .eq('id', user.id)
+        .single();
+
+      if (profile && profile.google_sync_enabled && profile.google_refresh_token) {
+        
+        // 2. Configurar cliente do Google
+        const oauth2Client = new google.auth.OAuth2(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
+        );
+        
+        oauth2Client.setCredentials({ refresh_token: profile.google_refresh_token });
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+        // 3. Montar o objeto do evento (Google Calendar Format)
+        // Precisamos converter a data (ex: '2023-12-01T14:30') para o fuso horário correto
+        const startDate = new Date(body.date);
+        
+        // Vamos presumir que a reunião dure 1 hora por padrão (pois não temos end_time no form)
+        const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); 
+
+        const googleEvent = {
+          summary: body.title,
+          description: `${body.description || ''}\n\nTipo: ${body.type}\nUrgência: ${body.urgency}\n\n*Criado via SocialJurídico CRM*`,
+          start: {
+            dateTime: startDate.toISOString(),
+            timeZone: 'America/Sao_Paulo',
+          },
+          end: {
+            dateTime: endDate.toISOString(),
+            timeZone: 'America/Sao_Paulo',
+          },
+          colorId: body.urgency === 'HIGH' ? '11' : (body.urgency === 'MEDIUM' ? '5' : '9'), // Cores: Vermelho, Amarelo, Azul
+        };
+
+        // 4. Inserir no Google
+        const googleRes = await calendar.events.insert({
+          calendarId: 'primary',
+          resource: googleEvent,
+        });
+
+        console.log(`✅ [Calendar] Evento sincronizado: ${googleRes.data.htmlLink}`);
+        
+        // Opcional: Salvar o ID do evento do Google no nosso banco se precisarmos deletar depois
+        await supabaseAdmin
+          .from('agenda_items')
+          .update({ google_event_id: googleRes.data.id })
+          .eq('id', savedEvent.id);
+      }
+    } catch (calendarError) {
+      // Falhas no Google não devem quebrar o salvamento do CRM
+      console.error("⚠️ Erro ao sincronizar com Google Calendar:", calendarError.message);
+    }
+
+    return NextResponse.json({ success: true, data: savedEvent });
 
   } catch (error) {
     console.error("Erro POST /api/crm/agenda:", error);

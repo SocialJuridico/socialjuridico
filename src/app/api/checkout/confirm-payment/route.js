@@ -24,20 +24,28 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "PaymentIntent ID é obrigatório" }, { status: 400 });
     }
 
-    // 1. Verificar o PaymentIntent diretamente no Stripe
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    // 1. Verificar o Intent diretamente no Stripe
+    let intent;
+    let isSetup = false;
+    
+    if (paymentIntentId.startsWith('seti_')) {
+      intent = await stripe.setupIntents.retrieve(paymentIntentId);
+      isSetup = true;
+    } else {
+      intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    }
 
-    if (paymentIntent.status !== 'succeeded') {
+    if (intent.status !== 'succeeded') {
       return NextResponse.json({ 
         success: false, 
-        message: `Pagamento não confirmado. Status: ${paymentIntent.status}` 
+        message: `Transação não confirmada. Status: ${intent.status}` 
       }, { status: 400 });
     }
 
     // 2. Verificar que o userId nos metadata bate com o usuário logado
-    const metaUserId = paymentIntent.metadata?.userId;
+    const metaUserId = intent.metadata?.userId;
     if (metaUserId !== user.id) {
-      return NextResponse.json({ success: false, message: "Pagamento não pertence a este usuário" }, { status: 403 });
+      return NextResponse.json({ success: false, message: "Transação não pertence a este usuário" }, { status: 403 });
     }
 
     // 3. Verificar se já foi creditado (proteção contra crédito duplo)
@@ -54,9 +62,67 @@ export async function POST(request) {
     }
 
     // 4. Resolver quantidade de Juris pelo priceId
-    const priceId = paymentIntent.metadata?.priceId;
-    const cupomId = paymentIntent.metadata?.cupomId;
+    const type = intent.metadata?.type || 'JURIS_PURCHASE';
+    const priceId = intent.metadata?.priceId;
+    const cupomId = intent.metadata?.cupomId;
     
+    // Processamento específico para Plano PRO
+    if (type === 'PRO_SUBSCRIPTION') {
+      const { data: profile } = await supabaseAdmin
+        .from("advogados")
+        .select("balance")
+        .eq("id", user.id)
+        .single();
+
+      const currentBalance = profile?.balance || 0;
+      const newBalance = currentBalance + 20;
+
+      const { error: updateError } = await supabaseAdmin
+        .from("advogados")
+        .update({
+          is_premium: true,
+          premium_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          balance: newBalance,
+        })
+        .eq("id", user.id);
+
+      if (updateError) {
+        console.error(`❌ [confirm-payment] Erro ao ativar PRO:`, updateError);
+        return NextResponse.json({ success: false, message: "Erro ao ativar plano PRO" }, { status: 500 });
+      }
+
+      await supabaseAdmin.from('transacoes').insert([{
+        advogado_id: user.id,
+        tipo: 'PRO_SUBSCRIPTION',
+        valor: isSetup ? 0 : ((intent.amount || 0) / 100),
+        moeda: intent.currency || 'BRL',
+        status: 'succeeded',
+        juris_amount: 20,
+        stripe_session_id: paymentIntentId,
+        cupom_id: (cupomId && cupomId !== 'null') ? cupomId : null,
+        created_at: new Date().toISOString()
+      }]);
+
+      if (cupomId && cupomId !== 'null') {
+        await supabaseAdmin.from('cupom_usos').insert([{
+          cupom_id: cupomId,
+          advogado_id: user.id,
+          checkout_session_id: paymentIntentId
+        }]);
+      }
+
+      console.log(`✅ [confirm-payment] PRO ativado e +20 Juris para ${user.id} (${currentBalance} → ${newBalance})`);
+
+      return NextResponse.json({ 
+        success: true, 
+        jurisAmount: 20, 
+        newBalance,
+        isPro: true,
+        message: "Plano PRO ativado com sucesso e 20 Juris adicionados!" 
+      });
+    }
+
+    // Processamento para compra avulsa de Juris
     const priceMap = {
       [process.env.PRICE_JURIS_10 || process.env.NEXT_PUBLIC_PRICE_JURIS_10]: 10,
       [process.env.PRICE_JURIS_20 || process.env.NEXT_PUBLIC_PRICE_JURIS_20]: 20,
@@ -94,8 +160,8 @@ export async function POST(request) {
     await supabaseAdmin.from('transacoes').insert([{
       advogado_id: user.id,
       tipo: 'JURIS_PURCHASE',
-      valor: (paymentIntent.amount || 0) / 100,
-      moeda: paymentIntent.currency || 'BRL',
+      valor: isSetup ? 0 : ((intent.amount || 0) / 100),
+      moeda: intent.currency || 'BRL',
       status: 'succeeded',
       juris_amount: jurisAmount,
       stripe_session_id: paymentIntentId,
@@ -122,7 +188,12 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error("❌ [confirm-payment] Erro:", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    console.error("❌ [confirm-payment] Erro CRITICO:", error);
+    return NextResponse.json({ 
+      success: false, 
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    }, { status: 500 });
   }
 }

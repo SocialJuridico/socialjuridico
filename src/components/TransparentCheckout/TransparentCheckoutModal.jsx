@@ -10,7 +10,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { CreditCard, ShieldCheck, Lock, X, CheckCircle2, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
-import { createJurisCheckout } from "@/services/stripeCheckoutService";
+import { createJurisCheckout, createProSubscription } from "@/services/stripeCheckoutService";
 
 // Carregar Stripe uma única vez (singleton)
 const stripePromise = loadStripe(
@@ -20,12 +20,12 @@ const stripePromise = loadStripe(
 /* ═══════════════════════════════════════════════
    FORMULÁRIO DE PAGAMENTO (Filho do Elements)
    ═══════════════════════════════════════════════ */
-function CheckoutForm({ amount, currency, onSuccess, onCancel }) {
+function CheckoutForm({ amount, currency, onCancel, onSuccess, clientSecret }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState(null); // null | 'success' | 'error'
   const [errorMessage, setErrorMessage] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState("idle");
   const [elementsReady, setElementsReady] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -36,34 +36,55 @@ function CheckoutForm({ amount, currency, onSuccess, onCancel }) {
     setErrorMessage("");
 
     try {
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/dashboard/advogado?payment_status=success`,
-        },
-        redirect: "if_required",
-      });
+      const confirmParams = {
+        return_url: `${window.location.origin}/dashboard/advogado?payment_status=success`,
+      };
+
+      const isSetup = clientSecret && clientSecret.startsWith("seti_");
+
+      const confirmResult = isSetup
+        ? await stripe.confirmSetup({
+            elements,
+            confirmParams,
+            redirect: "if_required",
+          })
+        : await stripe.confirmPayment({
+            elements,
+            confirmParams,
+            redirect: "if_required",
+          });
+
+      const error = confirmResult.error;
+      const intent = confirmResult.paymentIntent || confirmResult.setupIntent;
 
       if (error) {
         setErrorMessage(error.message || "Erro ao processar pagamento.");
         setPaymentStatus("error");
-      } else if (paymentIntent && paymentIntent.status === "succeeded") {
+      } else if (intent && intent.status === "succeeded") {
         setPaymentStatus("success");
-        toast.success("Pagamento aprovado! Creditando seus Juris...");
+        toast.success("Pagamento aprovado!");
         
-        // Confirmar créditos diretamente via API (sem depender do webhook)
-        try {
-          const confirmRes = await fetch("/api/checkout/confirm-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
-          });
-          const confirmData = await confirmRes.json();
-          if (confirmData.success) {
-            toast.success(`${confirmData.jurisAmount || ''} Juris adicionados com sucesso!`);
+        // Confirmar créditos diretamente via API
+        if (intent && intent.id) {
+          try {
+            const confirmRes = await fetch("/api/checkout/confirm-payment", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ paymentIntentId: intent.id }),
+            });
+            const confirmData = await confirmRes.json();
+            if (confirmData.success) {
+              if (confirmData.isPro) {
+                toast.success(confirmData.message || "Plano PRO ativado com sucesso!");
+              } else if (confirmData.isSetup) {
+                toast.success(confirmData.message || "Configuração concluída! A ativação ocorrerá em instantes.");
+              } else {
+                toast.success(`${confirmData.jurisAmount || ''} Juris adicionados com sucesso!`);
+              }
+            }
+          } catch (confirmErr) {
+            console.warn("[TransparentCheckout] Confirmação direta falhou, webhook irá processar:", confirmErr);
           }
-        } catch (confirmErr) {
-          console.warn("[TransparentCheckout] Confirmação direta falhou, webhook irá processar:", confirmErr);
         }
         
         setTimeout(() => {
@@ -71,7 +92,8 @@ function CheckoutForm({ amount, currency, onSuccess, onCancel }) {
         }, 1500);
       }
     } catch (err) {
-      setErrorMessage("Erro inesperado. Tente novamente.");
+      console.error("[TransparentCheckout] Erro inesperado:", err);
+      setErrorMessage(err.message || "Erro inesperado. Tente novamente.");
       setPaymentStatus("error");
     } finally {
       setIsProcessing(false);
@@ -91,7 +113,7 @@ function CheckoutForm({ amount, currency, onSuccess, onCancel }) {
         <CheckCircle2 size={56} color="#10b981" />
         <h3 style={successStyles.title}>Pagamento Aprovado!</h3>
         <p style={successStyles.text}>
-          Seus créditos Juris serão adicionados automaticamente em instantes.
+          Seu pedido foi processado com sucesso. As atualizações serão refletidas em sua conta em instantes.
         </p>
       </div>
     );
@@ -175,6 +197,7 @@ export default function TransparentCheckoutModal({
   isOpen,
   onClose,
   jurisAmount,
+  isPro = false,
   couponData,
   onPaymentSuccess,
 }) {
@@ -195,15 +218,19 @@ export default function TransparentCheckoutModal({
   const fallbackToRedirect = useCallback(async () => {
     try {
       toast.loading("Redirecionando para pagamento seguro...");
-      await createJurisCheckout(jurisAmount, couponData);
+      if (isPro) {
+        await createProSubscription(couponData);
+      } else {
+        await createJurisCheckout(jurisAmount, couponData);
+      }
     } catch (err) {
       toast.dismiss();
       toast.error("Erro ao iniciar pagamento: " + err.message);
     }
-  }, [jurisAmount, couponData]);
+  }, [jurisAmount, isPro, couponData]);
 
   useEffect(() => {
-    if (!isOpen || !jurisAmount) return;
+    if (!isOpen || (!jurisAmount && !isPro)) return;
 
     const createIntent = async () => {
       setLoading(true);
@@ -211,10 +238,20 @@ export default function TransparentCheckoutModal({
       setClientSecret(null);
 
       try {
-        const priceId = priceMap[jurisAmount];
-        if (!priceId) throw new Error("Pacote de Juris inválido");
+        let endpoint = "";
+        let priceId = "";
 
-        const res = await fetch("/api/checkout/create-payment-intent", {
+        if (isPro) {
+          endpoint = "/api/checkout/create-subscription-intent";
+          priceId = process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY;
+          if (!priceId) throw new Error("Plano PRO não configurado");
+        } else {
+          endpoint = "/api/checkout/create-payment-intent";
+          priceId = priceMap[jurisAmount];
+          if (!priceId) throw new Error("Pacote de Juris inválido");
+        }
+
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -245,15 +282,9 @@ export default function TransparentCheckoutModal({
     };
 
     createIntent();
-  }, [isOpen, jurisAmount]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, jurisAmount, isPro]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isOpen) return null;
-
-  const handleSuccess = () => {
-    setClientSecret(null);
-    onPaymentSuccess?.();
-    onClose();
-  };
 
   const priceLabel = { 10: "R$ 9,90", 20: "R$ 16,90", 50: "R$ 39,90" };
 
@@ -343,11 +374,15 @@ export default function TransparentCheckoutModal({
                 locale: "pt-BR",
               }}
             >
-              <CheckoutForm
-                amount={paymentAmount}
-                currency={paymentCurrency}
-                onSuccess={handleSuccess}
-                onCancel={onClose}
+              <CheckoutForm 
+                amount={paymentAmount} 
+                currency={paymentCurrency} 
+                onCancel={onClose} 
+                onSuccess={() => {
+                  onPaymentSuccess?.();
+                  onClose();
+                }}
+                clientSecret={clientSecret}
               />
             </Elements>
           )}

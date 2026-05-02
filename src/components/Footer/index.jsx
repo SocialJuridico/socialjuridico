@@ -1,9 +1,15 @@
+'use client';
 import Link from 'next/link';
 import { Scale, Facebook, Instagram, Linkedin, Lock } from 'lucide-react';
 import styles from './Footer.module.css';
+import { usePathname } from 'next/navigation';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const pathname = usePathname();
+
+  // Esconder footer nas páginas de dashboard para evitar sobreposição
+  if (pathname?.startsWith('/dashboard')) return null;
 
   return (
     <footer className={styles.footer}>

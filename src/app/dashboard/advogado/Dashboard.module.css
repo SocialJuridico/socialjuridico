@@ -133,9 +133,27 @@
   width: 5%;
 }
 
-.nav {
+.sidebarScroll {
   flex: 1;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarScroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebarScroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.sidebarScroll::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.2);
+  border-radius: 10px;
+}
+
+.nav {
   padding: 10px 16px;
 }
 

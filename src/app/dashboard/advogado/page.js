@@ -7819,9 +7819,9 @@ export default function AdvogadoDashboard() {
             Seja Premium
           </button>
         )}
-
-        {/* CONSUMO DO PLANO */}
-        <div className={styles.usageSection}>
+        <div className={styles.sidebarScroll}>
+          {/* CONSUMO DO PLANO */}
+          <div className={styles.usageSection}>
           <div className={styles.navGroupLabel}>Uso do Plano ({profileData?.plan_type || 'FREE'})</div>
           
           {/* IA Generator Usage */}
@@ -8146,6 +8146,7 @@ export default function AdvogadoDashboard() {
             <Eye size={18} /> <span>Cartão Digital</span>
           </div>
         </nav>
+      </div>
 
         <div className={styles.sidebarFooter}>
           <div

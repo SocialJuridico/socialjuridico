@@ -72,44 +72,22 @@ export async function POST(request) {
       });
     }
 
-    const DEFAULT_PASSWORD = "socialjuridico1!";
-
-    // Se o erro for "Email not confirmed", auto-confirmar e re-tentar
+    // Se o erro for "Email not confirmed", retornar erro amigável orientando a confirmação
     if (authError && (
       authError.message?.toLowerCase().includes("email not confirmed") ||
       authError.message?.toLowerCase().includes("email_not_confirmed") ||
       authError.code === "email_not_confirmed"
     )) {
-      console.log("[LOGIN] Email não confirmado, auto-confirmando...");
-      
-      // Buscar o user pelo email
-      const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
-      const targetUser = userList?.users?.find(
-        (u) => u.email === email.trim().toLowerCase()
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Seu e-mail ainda não foi confirmado. Por favor, verifique sua caixa de entrada (e a pasta de spam) e clique no link de confirmação enviado.",
+        },
+        { status: 401 },
       );
-      
-      if (targetUser) {
-        // Confirmar o email
-        await supabaseAdmin.auth.admin.updateUserById(targetUser.id, {
-          email_confirm: true,
-        });
-        
-        // Tentar login novamente
-        const { data: retryData, error: retryError } =
-          await supabase.auth.signInWithPassword({
-            email: email.trim().toLowerCase(),
-            password,
-          });
-          
-        if (!retryError) {
-          authData = retryData;
-          authError = null;
-          console.log("[LOGIN] Auto-confirmação bem sucedida, login OK");
-        } else {
-          authError = retryError;
-        }
-      }
     }
+
+    const DEFAULT_PASSWORD = "socialjuridico1!";
 
     // Se falhar, vamos tentar o "Lazy Sync" para usuários antigos/migrados
     if (
@@ -203,6 +181,19 @@ export async function POST(request) {
     }
 
     const user = authData.user;
+
+    // BLOQUEIO ADICIONAL: Mesmo que o Supabase permita o login, nós verificamos se o email foi confirmado
+    if (!user.email_confirmed_at) {
+       await supabase.auth.signOut(); // Revoga a sessão criada
+       return NextResponse.json(
+         {
+           success: false,
+           message: "Seu e-mail ainda não foi confirmado. Por favor, verifique sua caixa de entrada e clique no link de confirmação.",
+         },
+         { status: 401 },
+       );
+    }
+
     const db = supabaseAdmin || supabase;
 
     // 2. Buscar perfil — select('*') para compatibilidade entre tabelas

@@ -7771,7 +7771,11 @@ export default function AdvogadoDashboard() {
                           console.log('Selecionando plano:', key, 'Preço:', rawPriceInfo);
                           setIsProCheckout(true);
                           setTransparentCheckoutAmount(totalValue);
-                          window.localStorage.setItem('sj_selected_price_id', rawPriceInfo.priceId);
+                          if (rawPriceInfo.priceId) {
+                            window.localStorage.setItem('sj_selected_price_id', rawPriceInfo.priceId);
+                          } else {
+                            window.localStorage.removeItem('sj_selected_price_id');
+                          }
                           window.localStorage.setItem('sj_selected_plan_type', key);
                           window.localStorage.setItem('sj_selected_billing', billingCycle);
                           setShowProModal(false);
@@ -7942,8 +7946,9 @@ export default function AdvogadoDashboard() {
               </div>
             );
           })()}
-        </div>
+        </div> {/* Fecha usageSection */}
 
+        {/* NAVEGAÇÃO INTERNA AO SCROLL */}
         <nav className={styles.nav}>
           <div className={styles.navGroupLabel}>Navegação</div>
           <div
@@ -8000,50 +8005,25 @@ export default function AdvogadoDashboard() {
                 className={`${styles.subNavItem} ${activeTab === "anuncios-DILIGENCIAS" ? styles.activeSubNav : ""}`}
                 onClick={() => handleTabChange("anuncios-DILIGENCIAS")}
               >
-                <MapPin size={14} />
+                <Briefcase size={14} />
                 <span>DILIGÊNCIAS</span>
               </div>
               <div 
-                className={`${styles.subNavItem} ${activeTab === "anuncios-OUTROS" ? styles.activeSubNav : ""}`}
-                onClick={() => handleTabChange("anuncios-OUTROS")}
+                className={`${styles.subNavItem} ${activeTab === "anuncios-AUDIENCIAS" ? styles.activeSubNav : ""}`}
+                onClick={() => handleTabChange("anuncios-AUDIENCIAS")}
               >
-                <PlusCircle size={14} />
-                <span>OUTROS</span>
+                <Gavel size={14} />
+                <span>AUDIÊNCIAS</span>
               </div>
             </div>
           )}
 
-          <div
-            className={`${styles.navItem} ${activeTab === "quero-site" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("quero-site")}
-            style={{ border: '1px solid rgba(212, 175, 55, 0.3)', background: 'rgba(212, 175, 55, 0.05)' }}
-          >
-            <Globe size={18} color="var(--color-gold)" /> <span style={{ color: 'var(--color-gold)', fontWeight: '800' }}>QUERO UM SITE</span>
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "meus-casos" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("meus-casos")}
-          >
-            <Briefcase size={18} /> <span>Meus Casos</span>
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "declarei-interesse" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("declarei-interesse")}
-          >
-            <Check size={18} /> <span>Declarei Interesse</span>
-          </div>
-
-          <div className={styles.navGroupLabel}>Ferramentas PRO</div>
+          <div className={styles.navGroupLabel}>Ferramentas Premium</div>
           <div
             className={`${styles.navItem} ${activeTab === "crm" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("crm")}
-            title={
-              !profileData?.is_premium
-                ? "Exclusivo para advogados PRO"
-                : undefined
-            }
           >
-            <Users size={18} /> <span>CRM & KYC</span>
+            <Users size={18} /> <span>Meus Clientes (CRM)</span>
             {!profileData?.is_premium && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
@@ -8051,13 +8031,8 @@ export default function AdvogadoDashboard() {
           <div
             className={`${styles.navItem} ${activeTab === "docs" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("docs")}
-            title={
-              !profileData?.is_premium
-                ? "Exclusivo para advogados PRO"
-                : undefined
-            }
           >
-            <FileText size={18} /> <span>Smart Docs</span>
+            <FileText size={18} /> <span>IA Smart Docs</span>
             {!profileData?.is_premium && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
@@ -8065,11 +8040,6 @@ export default function AdvogadoDashboard() {
           <div
             className={`${styles.navItem} ${activeTab === "redator" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("redator")}
-            title={
-              !profileData?.is_premium
-                ? "Exclusivo para advogados PRO"
-                : undefined
-            }
           >
             <Sparkles size={18} /> <span>Redator IA</span>
             {!profileData?.is_premium && (
@@ -8077,13 +8047,28 @@ export default function AdvogadoDashboard() {
             )}
           </div>
           <div
+            className={`${styles.navItem} ${activeTab === "agenda" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("agenda")}
+          >
+            <Calendar size={18} /> <span>Agenda & Prazos</span>
+            {!profileData?.is_premium && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            )}
+          </div>
+          <div
+            className={`${styles.navItem} ${activeTab === "triagem" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("triagem")}
+          >
+            <Search size={18} /> <span>Triagem de Casos</span>
+            {!profileData?.is_premium && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            )}
+          </div>
+
+          {/* CALCULADORA E JURIS - EXCLUSIVO PRO */}
+          <div
             className={`${styles.navItem} ${activeTab === "calculadora" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("calculadora")}
-            title={
-              profileData?.plan_type !== 'PRO'
-                ? "Exclusivo para advogados PRO"
-                : undefined
-            }
           >
             <Calculator size={18} /> <span>Calculadora</span>
             {profileData?.plan_type !== 'PRO' && (
@@ -8093,80 +8078,33 @@ export default function AdvogadoDashboard() {
           <div
             className={`${styles.navItem} ${activeTab === "juris" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("juris")}
-            title={
-              profileData?.plan_type !== 'PRO'
-                ? "Exclusivo para advogados PRO"
-                : undefined
-            }
           >
-            <Scale size={18} /> <span>Jurisprudência</span>
+            <BookOpen size={18} /> <span>Jurisprudência</span>
             {profileData?.plan_type !== 'PRO' && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "agenda" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("agenda")}
-            title={
-              !profileData?.is_premium
-                ? "Exclusivo para advogados PRO"
-                : undefined
-            }
-          >
-            <Calendar size={18} /> <span>Agenda</span>
-            {!profileData?.is_premium && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "triagem" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("triagem")}
-            title={
-              !profileData?.is_premium
-                ? "Exclusivo para advogados PRO"
-                : undefined
-            }
-          >
-            <Filter size={18} /> <span>Triagem</span>
-            {!profileData?.is_premium && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-          </div>
-
-          <div className={styles.navGroupLabel}>Sistema</div>
-          <div
-            className={`${styles.navItem} ${activeTab === "documentacao" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("documentacao")}
-          >
-            <BookOpen size={18} /> <span>Documentação</span>
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "cartao-visitas" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("cartao-visitas")}
-          >
-            <Eye size={18} /> <span>Cartão Digital</span>
-          </div>
         </nav>
-      </div>
+      </div> {/* Fecha sidebarScroll */}
 
-        <div className={styles.sidebarFooter}>
-          <div
-            className={`${styles.navItem} ${activeTab === "perfil" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("perfil")}
-          >
-            <User size={18} /> <span>Meu Perfil</span>
-          </div>
-          <div
-            className={`${styles.navItem} ${styles.footerLogout}`}
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST" });
-              window.location.href = "/login";
-            }}
-          >
-            <LogOut size={18} /> <span>Sair</span>
-          </div>
+      <div className={styles.sidebarFooter}>
+        <div
+          className={`${styles.navItem} ${activeTab === "perfil" ? styles.activeNavItem : ""}`}
+          onClick={() => handleTabChange("perfil")}
+        >
+          <User size={18} /> <span>Meu Perfil</span>
         </div>
-      </aside>
+        <div
+          className={`${styles.navItem} ${styles.footerLogout}`}
+          onClick={async () => {
+            await fetch("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+          }}
+        >
+          <LogOut size={18} /> <span>Sair</span>
+        </div>
+      </div>
+    </aside>
 
       {/* MAIN */}
       <main className={styles.mainContent}>

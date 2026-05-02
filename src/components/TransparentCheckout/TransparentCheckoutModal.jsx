@@ -250,19 +250,28 @@ export default function TransparentCheckoutModal({
         const planType = window.localStorage.getItem('sj_selected_plan_type');
         const billingCycle = window.localStorage.getItem('sj_selected_billing');
         const addOnType = window.localStorage.getItem('sj_selected_addon_type');
+        let storedPriceId = window.localStorage.getItem('sj_selected_price_id');
+        
+        // Limpeza de valores inválidos
+        if (storedPriceId === 'undefined' || storedPriceId === 'null') storedPriceId = null;
+
+        console.log(`💳 [Checkout] Iniciando intent. isPro: ${isPro}, planType: ${planType}, cycle: ${billingCycle}`);
 
         if (isPro && billingCycle !== 'AVULSO') {
           endpoint = "/api/checkout/create-subscription-intent";
           // Tentar pegar do localStorage o Price ID específico (Start/Pro Mensal/Anual)
-          priceId = window.localStorage.getItem('sj_selected_price_id') || process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY;
+          priceId = storedPriceId || process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MENSAL || process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY;
           
-          if (!priceId) throw new Error("Plano não configurado corretamente");
+          console.log(`📈 [Checkout] Assinatura: usando priceId ${priceId}`);
+          if (!priceId) throw new Error("Plano não configurado corretamente no ambiente.");
         } else {
           endpoint = "/api/checkout/create-payment-intent";
           if (isPro && billingCycle === 'AVULSO') {
-            priceId = window.localStorage.getItem('sj_selected_price_id');
+            priceId = storedPriceId;
+            console.log(`💰 [Checkout] Avulso PRO: usando priceId ${priceId}`);
           } else {
             priceId = priceMap[jurisAmount];
+            console.log(`⚖️ [Checkout] Juris: usando priceId ${priceId} para quantidade ${jurisAmount}`);
           }
           
           if (!priceId) throw new Error("Plano ou pacote inválido");
@@ -291,9 +300,13 @@ export default function TransparentCheckoutModal({
           throw new Error(data.message || "Erro ao criar pagamento");
         }
 
-        setClientSecret(data.clientSecret);
-        setPaymentAmount(data.amount);
-        setPaymentCurrency(data.currency);
+        if (data.clientSecret) {
+          setClientSecret(data.clientSecret);
+          setPaymentAmount(data.amount);
+          setPaymentCurrency(data.currency);
+        } else {
+          throw new Error("Não foi possível carregar o checkout transparente. Contate o suporte.");
+        }
       } catch (err) {
         console.error("Erro ao criar PaymentIntent:", err);
         setError(err.message || "Erro ao carregar checkout transparente.");

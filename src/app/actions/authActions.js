@@ -184,11 +184,16 @@ export async function signUpAction(formData) {
               
               ${role === "LAWYER" ? `
               <div style="background: rgba(212,175,55,0.1); border: 1px solid #d4af37; padding: 20px; border-radius: 10px; margin: 20px 0;">
-                <p style="margin-top: 0; font-weight: bold; color: #d4af37;">Atenção Advogado:</p>
+                <p style="margin-top: 0; font-weight: bold; color: #d4af37;">⚠️ Ação Necessária: Verificação de OAB</p>
+                <p style="font-size: 14px; line-height: 1.5;">
+                  Olá Dr(a). Para garantir a segurança da nossa comunidade, todos os perfis de advogados devem passar por uma verificação manual.
+                </p>
+                <p style="font-size: 14px; line-height: 1.5; font-weight: bold; color: #ff4d4d; margin: 10px 0;">
+                  IMPORTANTE: Você tem 7 dias para realizar a verificação da sua OAB, caso contrário, sua conta será suspensa temporariamente por segurança.
+                </p>
                 <p style="font-size: 14px; line-height: 1.5; margin-bottom: 0;">
-                  Para que seu perfil seja verificado e ganhe visibilidade total na plataforma, após confirmar seu email, entre em contato com nosso suporte jurídico pelo WhatsApp: 
-                  <a href="https://wa.me/5515981657317" style="color: #d4af37; font-weight: bold;">(15) 98165-7317</a> 
-                  solicitando a verificação manual da sua OAB.
+                  Após confirmar seu email, clique no link abaixo para falar com nosso suporte jurídico e validar seus dados: <br><br>
+                  <a href="https://wa.me/5515981657317?text=Olá, acabei de criar minha conta e gostaria de verificar minha OAB. Nome: ${name}" style="background-color: #25d366; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">Verificar OAB via WhatsApp</a>
                 </p>
               </div>
               ` : ""}

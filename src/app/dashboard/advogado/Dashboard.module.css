@@ -23,6 +23,7 @@
   z-index: 1000;
   border-right: 1px solid rgba(212, 175, 55, 0.1);
   transition: width 0.3s ease;
+  overflow: hidden; /* Garante que nada saia da sidebar */
 }
 
 .sidebarHeader {
@@ -136,8 +137,10 @@
 .sidebarScroll {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 0; /* Crucial para flexbox scrolling */
 }
 
 .sidebarScroll::-webkit-scrollbar {

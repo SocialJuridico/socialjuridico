@@ -291,7 +291,33 @@ async function handleJurisPurchase(session, userId, cupomId) {
 }
 
 async function handleProSubscription(session, userId, cupomId) {
+  let finalUserId = userId;
+  console.log(`🚀 [handleProSubscription] Processando upgrade. userId inicial: ${finalUserId}`);
+  console.log(`📦 [handleProSubscription] Session ID: ${session.id}`);
+  console.log(`🏷️ [handleProSubscription] Metadata:`, JSON.stringify(session.metadata));
+
+  // Fallback para userId via email se estiver vindo vazio
+  if (!finalUserId) {
+    const email = session.customer_email || session.customer_details?.email;
+    console.warn(`⚠️ [handleProSubscription] userId ausente. Tentando recuperar por email: ${email}`);
+    if (email) {
+      const { data: adv } = await supabaseAdmin.from("advogados").select("id").eq("email", email).single();
+      if (adv) {
+        finalUserId = adv.id;
+        console.log(`✅ [handleProSubscription] userId recuperado via email: ${finalUserId}`);
+      }
+    }
+  }
+
+  if (!finalUserId) {
+    console.error(`❌ [handleProSubscription] Falha crítica: userId não identificado para a sessão ${session.id}`);
+    return;
+  }
+
   const planType = session.metadata?.planType || 'PRO';
+  const billingCycle = session.metadata?.billingCycle || 'MONTHLY';
+
+  console.log(`💎 [handleProSubscription] Plano: ${planType} | Ciclo: ${billingCycle}`);
   const jurisBonus = planType === 'PRO' ? 20 : 7;
 
   console.log(`👑 Ativando Plano ${planType} para o usuário ${userId}. Bônus: ${jurisBonus} Juris.`);
@@ -302,13 +328,19 @@ async function handleProSubscription(session, userId, cupomId) {
     .select("balance")
     .eq("id", userId)
     .single();
+  console.log(`👑 Ativando Plano ${planType} para o usuário ${finalUserId}. Bônus: ${jurisBonus} Juris.`);
+
+  const { data: advogado, error: fetchError } = await supabaseAdmin
+    .from("advogados")
+    .select("balance")
+    .eq("id", finalUserId)
+    .single();
 
   if (fetchError) {
-    console.error(`❌ [PRO] Erro ao buscar perfil ${userId}:`, fetchError);
+    console.error(`❌ [PRO] Erro ao buscar perfil ${finalUserId}:`, fetchError);
   }
 
-  const currentBalance = advProfile?.balance || 0;
-  const newBalance = currentBalance + jurisBonus;
+  const newBalance = (advogado?.balance || 0) + jurisBonus;
 
   const { error: updateError } = await supabaseAdmin
     .from("advogados")
@@ -320,17 +352,17 @@ async function handleProSubscription(session, userId, cupomId) {
       ).toISOString(),
       balance: newBalance,
     })
-    .eq("id", userId);
+    .eq("id", finalUserId);
 
   if (updateError) {
-    console.error(`❌ [PRO] ERRO FATAL ao ativar ${planType} para ${userId}:`, updateError);
+    console.error(`❌ [PRO] ERRO FATAL ao ativar ${planType} para ${finalUserId}:`, updateError);
   } else {
-    console.log(`✅ ${planType} ativado. +${jurisBonus} Juris (${currentBalance} → ${newBalance}) para ${userId}`);
+    console.log(`✅ ${planType} ativado. +${jurisBonus} Juris para ${finalUserId}`);
   }
 
   // Registrar log de transação Real para PRO
   const { error: transError } = await supabaseAdmin.from('transacoes').insert([{
-    advogado_id: userId,
+    advogado_id: finalUserId,
     tipo: 'PRO_SUBSCRIPTION',
     valor: (session.amount_total || 0) / 100,
     moeda: session.currency || 'BRL',

@@ -19,7 +19,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const { priceId, stripeCouponId, internalCouponId, addOnType } = await request.json();
+    const { priceId, stripeCouponId, internalCouponId, addOnType, planType, billingCycle } = await request.json();
 
     if (!priceId) {
       return NextResponse.json({ success: false, message: "Price ID é obrigatório" }, { status: 400 });
@@ -59,14 +59,17 @@ export async function POST(request) {
     }
 
     // Criar o PaymentIntent
+    // Criar o PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: price.currency || 'brl',
       payment_method_types: ['card'],
       metadata: {
         userId: user.id,
-        type: addOnType ? 'ADDON_PURCHASE' : 'JURIS_PURCHASE',
+        type: (planType || addOnType) ? (addOnType ? 'ADDON_PURCHASE' : 'PRO_SUBSCRIPTION') : 'JURIS_PURCHASE',
         priceId: priceId,
+        planType: planType || null,
+        billingCycle: billingCycle || 'AVULSO',
         addOnType: addOnType || null,
         cupomId: internalCouponId || null,
       },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
@@ -206,6 +206,7 @@ export default function TransparentCheckoutModal({
   const [paymentCurrency, setPaymentCurrency] = useState("brl");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const lastFetchedPriceId = useRef(null);
 
   // Mapear quantidade de Juris para Price ID
   const priceMap = {
@@ -230,7 +231,11 @@ export default function TransparentCheckoutModal({
   }, [jurisAmount, isPro, couponData]);
 
   useEffect(() => {
-    if (!isOpen || (!jurisAmount && !isPro)) return;
+    if (!isOpen) {
+      lastFetchedPriceId.current = null;
+      return;
+    }
+    if (!jurisAmount && !isPro) return;
 
     const createIntent = async () => {
       setLoading(true);
@@ -241,7 +246,12 @@ export default function TransparentCheckoutModal({
         let endpoint = "";
         let priceId = "";
 
-        if (isPro) {
+        // Carregar metadados do localStorage se for assinatura de plano
+        const planType = window.localStorage.getItem('sj_selected_plan_type');
+        const billingCycle = window.localStorage.getItem('sj_selected_billing');
+        const addOnType = window.localStorage.getItem('sj_selected_addon_type');
+
+        if (isPro && billingCycle !== 'AVULSO') {
           endpoint = "/api/checkout/create-subscription-intent";
           // Tentar pegar do localStorage o Price ID específico (Start/Pro Mensal/Anual)
           priceId = window.localStorage.getItem('sj_selected_price_id') || process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY;
@@ -249,14 +259,18 @@ export default function TransparentCheckoutModal({
           if (!priceId) throw new Error("Plano não configurado corretamente");
         } else {
           endpoint = "/api/checkout/create-payment-intent";
-          priceId = priceMap[jurisAmount];
-          if (!priceId) throw new Error("Pacote de Juris inválido");
+          if (isPro && billingCycle === 'AVULSO') {
+            priceId = window.localStorage.getItem('sj_selected_price_id');
+          } else {
+            priceId = priceMap[jurisAmount];
+          }
+          
+          if (!priceId) throw new Error("Plano ou pacote inválido");
         }
 
-        // Carregar metadados do localStorage se for assinatura de plano
-        const planType = window.localStorage.getItem('sj_selected_plan_type');
-        const billingCycle = window.localStorage.getItem('sj_selected_billing');
-        const addOnType = window.localStorage.getItem('sj_selected_addon_type');
+        // Evitar chamadas duplicadas se o preço não mudou
+        if (lastFetchedPriceId.current === priceId + (couponData?.id || '')) return;
+        lastFetchedPriceId.current = priceId + (couponData?.id || '');
 
         const res = await fetch(endpoint, {
           method: "POST",
@@ -282,6 +296,8 @@ export default function TransparentCheckoutModal({
         setPaymentCurrency(data.currency);
       } catch (err) {
         console.error("Erro ao criar PaymentIntent:", err);
+        setError(err.message || "Erro ao carregar checkout transparente.");
+        toast.error("Erro no checkout transparente: " + (err.message || "Tente novamente. Redirecionando..."));
         // Se falhar (ex: chave test vs live), fallback para redirect
         console.warn("[TransparentCheckout] Fallback para checkout redirect...");
         onClose();

@@ -7768,9 +7768,10 @@ export default function AdvogadoDashboard() {
                       <button 
                         className={`${styles.selectPlanBtn} ${key === 'PRO' ? styles.selectPlanBtnPro : ''}`}
                         onClick={() => {
+                          console.log('Selecionando plano:', key, 'Preço:', rawPriceInfo);
                           setIsProCheckout(true);
                           setTransparentCheckoutAmount(totalValue);
-                          window.localStorage.setItem('sj_selected_price_id', priceInfo.priceId);
+                          window.localStorage.setItem('sj_selected_price_id', rawPriceInfo.priceId);
                           window.localStorage.setItem('sj_selected_plan_type', key);
                           window.localStorage.setItem('sj_selected_billing', billingCycle);
                           setShowProModal(false);

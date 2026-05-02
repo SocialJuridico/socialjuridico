@@ -19,6 +19,8 @@ export default function AdminAdvogadosPage() {
   const [jurisAmount, setJurisAmount] = useState(10);
   const [editOAB, setEditOAB] = useState("");
   const [editEstado, setEditEstado] = useState("");
+  const [selectedPlan, setSelectedPlan] = useState("PRO");
+  const [selectedDuration, setSelectedDuration] = useState(30);
 
   const ESTADOS = [
     "AC",
@@ -156,17 +158,20 @@ export default function AdminAdvogadosPage() {
       setAdvogados((prev) =>
         prev.map((a) => {
           if (a.id === advogado.id) {
-            if (action === "GIVE_PRO") {
+            if (action === "GIVE_PRO" || action === "GIVE_PLAN") {
+              const days = Number(value?.days || 30);
+              const planType = value?.planType || 'PRO';
               const exp = new Date();
-              exp.setDate(exp.getDate() + 30);
+              exp.setDate(exp.getDate() + days);
               return {
                 ...a,
                 is_premium: true,
+                plan_type: planType,
                 premium_expires_at: exp.toISOString(),
               };
             }
             if (action === "REMOVE_PRO")
-              return { ...a, is_premium: false, premium_expires_at: null };
+              return { ...a, is_premium: false, plan_type: 'FREE', premium_expires_at: null };
             if (action === "ADD_JURIS")
               return { ...a, balance: (a.balance || 0) + Number(value) };
             if (action === "REMOVE_JURIS")
@@ -254,7 +259,7 @@ export default function AdminAdvogadosPage() {
                         advogado.is_premium ? styles.proBadge : styles.freeBadge
                       }
                     >
-                      {advogado.is_premium ? "PRO" : "FREE"}
+                      {advogado.plan_type || (advogado.is_premium ? "PRO" : "FREE")}
                     </span>
                   </td>
                   <td>
@@ -359,31 +364,59 @@ export default function AdminAdvogadosPage() {
                   </p>
 
                   <div className={styles.manageSection}>
-                    <h4>Plano PRO</h4>
+                    <h4>Gestão de Assinatura</h4>
                     <p className={styles.manageDesc}>
-                      Concede status PRO e validade por 30 dias.
+                      Conceda acesso START ou PRO por um período determinado.
                     </p>
-                    {modalAction.item.is_premium ? (
-                      <button
-                        className={styles.removeProBtn}
-                        onClick={() =>
-                          confirmUpdate(modalAction.item, "REMOVE_PRO")
-                        }
-                        disabled={updatingId === modalAction.item.id}
+                    
+                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                      <select 
+                        className={styles.miniSelect}
+                        value={selectedPlan}
+                        onChange={(e) => setSelectedPlan(e.target.value)}
+                        style={{ flex: 1 }}
                       >
-                        Remover PRO
-                      </button>
-                    ) : (
+                        <option value="START">Plano START</option>
+                        <option value="PRO">Plano PRO</option>
+                      </select>
+
+                      <select 
+                        className={styles.miniSelect}
+                        value={selectedDuration}
+                        onChange={(e) => setSelectedDuration(Number(e.target.value))}
+                        style={{ flex: 1 }}
+                      >
+                        <option value={7}>7 dias</option>
+                        <option value={15}>15 dias</option>
+                        <option value={30}>30 dias</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
                       <button
                         className={styles.giveProBtn}
                         onClick={() =>
-                          confirmUpdate(modalAction.item, "GIVE_PRO")
+                          confirmUpdate(modalAction.item, "GIVE_PLAN", { planType: selectedPlan, days: selectedDuration })
                         }
                         disabled={updatingId === modalAction.item.id}
+                        style={{ flex: 2 }}
                       >
-                        Conceder 30 dias de PRO
+                        Conceder {selectedDuration} dias de {selectedPlan}
                       </button>
-                    )}
+
+                      {modalAction.item.is_premium && (
+                        <button
+                          className={styles.removeProBtn}
+                          onClick={() =>
+                            confirmUpdate(modalAction.item, "REMOVE_PRO")
+                          }
+                          disabled={updatingId === modalAction.item.id}
+                          style={{ flex: 1, backgroundColor: '#ef4444', color: '#fff', border: 'none' }}
+                        >
+                          Remover
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className={styles.manageSection}>

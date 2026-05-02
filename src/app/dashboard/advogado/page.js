@@ -1,5 +1,49 @@
 "use client";
-// DUMMY COMMENT FOR GIT SYNC TEST
+
+import PlanLock from "@/components/PlanLock/PlanLock";
+
+const PLANS_DATA = {
+  START: {
+    name: "START",
+    tag: "Essencial",
+    description: "Para advogados autônomos e iniciantes.",
+    features: [
+      { text: "CRM: Até 10 Clientes", included: true },
+      { text: "Docs: 500MB de espaço", included: true },
+      { text: "Redator IA: 20 minutas/mês", included: true },
+      { text: "Agenda: 30 registros/mês", included: true },
+      { text: "Triagem IA: 10 diagnósticos/mês", included: true },
+      { text: "Calculadoras Jurídicas", included: false },
+      { text: "Análise de Jurisprudência", included: false },
+    ],
+    juris: 7,
+    prices: {
+      AVULSO: { value: 49.90, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_AVULSO },
+      MONTHLY: { value: 40.99, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_MENSAL },
+      ANNUAL: { value: 431.88, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_ANUAL, monthly: 35.99 },
+    }
+  },
+  PRO: {
+    name: "PRO",
+    tag: "Profissional",
+    description: "Poder total para escritórios de elite.",
+    features: [
+      { text: "CRM: Clientes Ilimitados", included: true },
+      { text: "Docs: 10GB de espaço", included: true },
+      { text: "Redator IA: 200 minutas/mês", included: true },
+      { text: "Agenda: Ilimitada", included: true },
+      { text: "Triagem IA: 200 diagnósticos/mês", included: true },
+      { text: "Calculadoras: ILIMITADO", included: true },
+      { text: "Jurisprudência: ILIMITADO", included: true },
+    ],
+    juris: 20,
+    prices: {
+      AVULSO: { value: 97.90, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_AVULSO },
+      MONTHLY: { value: 87.90, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MENSAL },
+      ANNUAL: { value: 911.88, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANUAL, monthly: 75.99 },
+    }
+  }
+};
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import * as htmlToImage from "html-to-image";
@@ -100,7 +144,7 @@ export default function AdvogadoDashboard() {
   const [showProModal, setShowProModal] = useState(false);
   const [showTransparentCheckout, setShowTransparentCheckout] = useState(false);
   const [transparentCheckoutAmount, setTransparentCheckoutAmount] = useState(null);
-  const [transparentCheckoutCoupon, setTransparentCheckoutCoupon] = useState(null);
+  const [appliedCouponData, setAppliedCouponData] = useState(null);
   const [isProCheckout, setIsProCheckout] = useState(false);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
   const [crmClients, setCrmClients] = useState([]);
@@ -131,6 +175,7 @@ export default function AdvogadoDashboard() {
   const [chatMessages, setChatMessages] = useState([]);
   const [viewedOAB, setViewedOAB] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [billingCycle, setBillingCycle] = useState('MONTHLY'); // AVULSO, MONTHLY, ANNUAL
   const [chatInput, setChatInput] = useState("");
   const [isTypingAI, setIsTypingAI] = useState(false);
   const [couponCode, setCouponCode] = useState("");
@@ -201,6 +246,9 @@ export default function AdvogadoDashboard() {
   const [agendaItems, setAgendaItems] = useState([]);
   const [showAgendaModal, setShowAgendaModal] = useState(false);
   const [isAiSuggesting, setIsAiSuggesting] = useState(false);
+  const [agendaAnalysis, setAgendaAnalysis] = useState("");
+  const [isAnalyzingAgenda, setIsAnalyzingAgenda] = useState(false);
+  const [showAgendaAnalysisModal, setShowAgendaAnalysisModal] = useState(false);
 
   // PERFIL STATE
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
@@ -285,25 +333,45 @@ export default function AdvogadoDashboard() {
   }, [notificacoes]);
 
   const handleApplyCoupon = async (tipo) => {
-    if (!couponCode.trim()) return;
+    let code = "";
+    if (tipo === 'PLANO_PRO') {
+      code = document.getElementById('plan_coupon_input')?.value;
+    } else {
+      code = couponCode;
+    }
+
+    if (!code?.trim()) return;
     setIsValidatingCoupon(true);
     try {
       const res = await fetch('/api/checkout/validate-coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          codigo: couponCode,
+          codigo: code,
           tipo,
           advogado_id: profileData?.id
         })
       });
       const data = await res.json();
       if (data.success) {
-        setAppliedCoupon({ ...data, tipo_internal: tipo, status: 'success' });
+        if (tipo === 'PLANO_PRO') {
+          // Formato esperado pelo TransparentCheckoutModal
+          const proCoupon = {
+            status: 'success',
+            id: code,
+            percent_off: data.desconto_tipo === 'PERCENTUAL' ? data.valor : 0,
+            amount_off: data.desconto_tipo === 'FIXO' ? data.valor * 100 : 0,
+            stripe_coupon_id: data.stripe_coupon_id
+          };
+          setAppliedCouponData(proCoupon);
+        } else {
+          setAppliedCoupon({ ...data, tipo_internal: tipo, status: 'success' });
+        }
         toast.success("Cupom aplicado com sucesso!");
       } else {
-        toast.error(data.error);
-        setAppliedCoupon(null);
+        toast.error(data.error || "Cupom inválido");
+        if (tipo === 'PLANO_PRO') setAppliedCouponData(null);
+        else setAppliedCoupon(null);
       }
     } catch (err) {
       toast.error("Erro ao validar cupom.");
@@ -488,6 +556,18 @@ export default function AdvogadoDashboard() {
     }
   };
 
+
+  const reloadPlanUsage = useCallback(async () => {
+    try {
+      const res = await fetch("/api/perfil");
+      const data = await res.json();
+      if (data.success) {
+        setProfileData(data.data);
+      }
+    } catch (e) {
+      console.error("Erro ao recarregar limites:", e);
+    }
+  }, []);
 
   const loadDataFull = useCallback(async () => {
     setLoadingProfile(true);
@@ -686,6 +766,8 @@ export default function AdvogadoDashboard() {
     };
   }, [profileData?.id]);
 
+
+
   const parseNotificationMeta = (notification) => {
     const rawMeta = notification?.meta;
     if (!rawMeta) return {};
@@ -861,9 +943,22 @@ export default function AdvogadoDashboard() {
     if (tab === "indicacoes") {
       fetchIndicacoes();
     }
-    if (PRO_TABS.includes(tab) && !profileData?.is_premium) {
-      setShowProModal(true);
-      return;
+    const planType = profileData?.plan_type || 'FREE';
+    const restrictedToPro = ["calculadora", "juris"];
+
+    if (PRO_TABS.includes(tab)) {
+      // Bloqueio Total se não for Premium (START ou PRO)
+      if (!profileData?.is_premium) {
+        setShowProModal(true);
+        return;
+      }
+      
+      // Bloqueio Específico de Ferramentas para o plano START
+      if (planType === 'START' && restrictedToPro.includes(tab)) {
+         toast.error("Esta ferramenta é exclusiva para o plano PRO.");
+         setShowProModal(true);
+         return;
+      }
     }
     if (tab.startsWith("anuncios-")) {
        const cat = tab.split("-")[1];
@@ -2133,6 +2228,7 @@ export default function AdvogadoDashboard() {
       if (data.success) {
         toast.success("Documento processado com IA!");
         fetchAllDocuments();
+        reloadPlanUsage(); // Atualizar contadores de uso
         setSelectedClientForSmartUpload("");
       } else {
         toast.error(data.message || "Erro no upload");
@@ -2538,6 +2634,7 @@ export default function AdvogadoDashboard() {
       if (data.success) {
         setDraftResult(data.draft);
         toast.success("Minuta gerada com sucesso!");
+        reloadPlanUsage(); // Atualizar contadores de uso
       } else {
         toast.error(data.message || "Erro ao gerar minuta");
       }
@@ -2830,6 +2927,18 @@ export default function AdvogadoDashboard() {
   };
 
   const renderCalculadora = () => {
+    const isStart = profileData?.plan_type === 'START';
+    const isFree = !profileData?.is_premium && profileData?.plan_type !== 'START' && profileData?.plan_type !== 'PRO';
+    
+    if (isStart || isFree) {
+      return (
+        <PlanLock 
+          title="Calculadora Jurídica" 
+          description="Acesso exclusivo para membros do Plano PRO. No Plano START, você tem acesso às ferramentas de CRM e IA básica."
+          onUpgrade={() => setShowProModal(true)}
+        />
+      );
+    }
     const categories = [
       {
         title: "Trabalhista",
@@ -3687,12 +3796,90 @@ export default function AdvogadoDashboard() {
                 className={styles.actionBtn}
                 onClick={() => {
                   const doc = new jsPDF();
-                  doc.setFontSize(16);
-                  doc.text("Relatório de Jurisprudência AI", 14, 20);
+                  const pageWidth = doc.internal.pageSize.getWidth();
+                  const pageHeight = doc.internal.pageSize.getHeight();
+                  
+                  // HEADER
+                  doc.setFillColor(11, 11, 14); // Dark background
+                  doc.rect(0, 0, pageWidth, 45, 'F');
+                  
+                  doc.setTextColor(212, 175, 55); // Gold
+                  doc.setFont("helvetica", "bold");
+                  doc.setFontSize(24);
+                  doc.text("SocialJurídico", 14, 22);
+                  
+                  doc.setTextColor(255, 255, 255);
+                  doc.setFontSize(12);
+                  doc.setFont("helvetica", "normal");
+                  doc.text("Relatório de Pesquisa e Análise Jurisprudencial IA", 14, 32);
+                  
                   doc.setFontSize(10);
-                  const splitText = doc.splitTextToSize(jurisResult, 180);
-                  doc.text(splitText, 14, 30);
-                  doc.save("Jurisprudencia_AI.pdf");
+                  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 32, { align: 'right' });
+
+                  // PESQUISA REALIZADA
+                  doc.setTextColor(40, 40, 40);
+                  doc.setFontSize(12);
+                  doc.setFont("helvetica", "bold");
+                  doc.text("Consulta Realizada:", 14, 58);
+                  doc.setFont("helvetica", "italic");
+                  doc.setFontSize(10);
+                  const splitSearch = doc.splitTextToSize(jurisSearchQuery || "Pesquisa geral", pageWidth - 28);
+                  doc.text(splitSearch, 14, 65);
+                  
+                  let currentY = 65 + (splitSearch.length * 5) + 15;
+
+                  // RESULTADOS
+                  doc.setTextColor(40, 40, 40);
+                  doc.setFontSize(14);
+                  doc.setFont("helvetica", "bold");
+                  doc.text("Análise de Precedentes e Teses", 14, currentY);
+                  
+                  doc.setDrawColor(212, 175, 55);
+                  doc.setLineWidth(0.5);
+                  doc.line(14, currentY + 3, 60, currentY + 3);
+
+                  doc.setFont("helvetica", "normal");
+                  doc.setFontSize(11);
+                  doc.setTextColor(60, 60, 60);
+                  
+                  currentY += 15;
+                  const cleanResult = jurisResult.replace(/\*\*/g, ''); // Remove asteriscos de negrito do Markdown
+                  const splitResult = doc.splitTextToSize(cleanResult, pageWidth - 28);
+                  
+                  splitResult.forEach(line => {
+                    if (currentY > pageHeight - 30) {
+                      doc.addPage();
+                      currentY = 20;
+                    }
+                    
+                    // Se a linha começar com número ou marcador, dar destaque
+                    if (/^\d+\./.test(line.trim())) {
+                      doc.setFont("helvetica", "bold");
+                    } else {
+                      doc.setFont("helvetica", "normal");
+                    }
+
+                    doc.text(line, 14, currentY);
+                    currentY += 6;
+                  });
+
+                  // FOOTER
+                  const pageCount = doc.internal.getNumberOfPages();
+                  for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(9);
+                    doc.setTextColor(150, 150, 150);
+                    doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+                    doc.text(
+                      `SocialJurídico PRO - Inteligência Jurisprudencial | Página ${i} de ${pageCount}`,
+                      pageWidth / 2,
+                      pageHeight - 12,
+                      { align: "center" }
+                    );
+                  }
+
+                  doc.save(`Jurisprudencia_SJ_${new Date().getTime()}.pdf`);
+                  toast.success("Relatório de Jurisprudência gerado!");
                 }}
               >
                 <FileDown size={18} /> Baixar Relatório
@@ -3756,11 +3943,19 @@ export default function AdvogadoDashboard() {
             </p>
           </div>
           <div className={styles.redatorActions}>
-            <button className={styles.actionBtn}>
-              <AlertTriangle size={16} /> Analisar
+            <button 
+              className={styles.actionBtn}
+              onClick={handleAnalyseAgenda}
+              disabled={isAnalyzingAgenda}
+            >
+              <AlertTriangle size={16} /> {isAnalyzingAgenda ? "Analisando..." : "Analisar"}
             </button>
-            <button className={styles.actionBtn}>
-              <BarChart3 size={16} /> Resumo
+            <button 
+              className={styles.actionBtn}
+              onClick={handleSummarizeAgenda}
+              disabled={isAnalyzingAgenda}
+            >
+              <BarChart3 size={16} /> {isAnalyzingAgenda ? "Resumindo..." : "Resumo"}
             </button>
             <button
               className={styles.redatorGenerateBtn}
@@ -3939,6 +4134,7 @@ export default function AdvogadoDashboard() {
           setTriagemCaseValue(result.estimatedValue);
           setTriagemViability(result.viability);
           setTriagemStep(2);
+          reloadPlanUsage(); // Atualizar contadores de uso
         } else {
           toast.error("Erro ao formatar diagnóstico da IA");
         }
@@ -4186,22 +4382,123 @@ export default function AdvogadoDashboard() {
               className={styles.actionBtn}
               onClick={() => {
                 const doc = new jsPDF();
-                doc.setFontSize(18);
-                doc.text("Relatório de Triagem Inteligente", 14, 20);
+                const pageWidth = doc.internal.pageSize.getWidth();
+                
+                // HEADER
+                doc.setFillColor(11, 11, 14); // Cor de fundo do site
+                doc.rect(0, 0, pageWidth, 40, 'F');
+                
+                doc.setTextColor(212, 175, 55); // Cor Gold
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(24);
+                doc.text("SocialJurídico", 14, 20);
+                
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "normal");
+                doc.text("Relatório de Triagem Inteligente IA", 14, 30);
+                
                 doc.setFontSize(10);
-                doc.text(`Data: ${new Date().toLocaleDateString()}`, 14, 28);
+                doc.text(`Gerado em: ${new Date().toLocaleString()}`, pageWidth - 60, 30);
+
+                // RELATO ORIGINAL
+                doc.setTextColor(0, 0, 0);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.text("1. Relato do Cliente (Original)", 14, 55);
+                
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                const splitRelato = doc.splitTextToSize(triagemAnswers || "Não informado", pageWidth - 28);
+                doc.text(splitRelato, 14, 65);
+                
+                let currentY = 65 + (splitRelato.length * 5) + 10;
+
+                // TABELA DE DIAGNÓSTICO
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.text("2. Diagnóstico Estratégico", 14, currentY);
+                
                 autoTable(doc, {
-                  startY: 35,
-                  head: [["Campo", "Informação"]],
+                  startY: currentY + 5,
+                  theme: 'grid',
+                  headStyles: { fillColor: [212, 175, 55], textColor: [0, 0, 0] },
                   body: [
-                    ["Área Jurídica", triagemDiagnosis?.area],
-                    ["Urgência", triagemDiagnosis?.urgency],
-                    ["Viabilidade", triagemViability?.level],
-                    ["Valor da Causa", triagemCaseValue?.range],
-                    ["Ação Recomendada", triagemDiagnosis?.suggestedAction],
+                    ["Área Jurídica", triagemDiagnosis?.area || "N/A"],
+                    ["Urgência", triagemDiagnosis?.urgency || "N/A"],
+                    ["Nível de Viabilidade", triagemViability?.level || "N/A"],
+                    ["Valor Estimado da Causa", triagemCaseValue?.range || "Consultivo"],
+                    ["Ação Recomendada", triagemDiagnosis?.suggestedAction || "N/A"],
                   ],
+                  margin: { left: 14, right: 14 }
                 });
-                doc.save("Triagem_SocialJuridico.pdf");
+
+                currentY = doc.lastAutoTable.finalY + 15;
+
+                // JUSTIFICATIVA DE VIABILIDADE
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.text("3. Análise de Viabilidade", 14, currentY);
+                
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(10);
+                const splitReasoning = doc.splitTextToSize(triagemViability?.reasoning || "Sem justificativa detalhada.", pageWidth - 28);
+                doc.text(splitReasoning, 14, currentY + 8);
+                
+                currentY += 8 + (splitReasoning.length * 5) + 15;
+
+                // DOCUMENTOS NECESSÁRIOS
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.text("4. Documentos Necessários", 14, currentY);
+                
+                const docsList = triagemDiagnosis?.requiredDocuments?.map(d => [d]) || [];
+                autoTable(doc, {
+                  startY: currentY + 5,
+                  theme: 'plain',
+                  body: docsList,
+                  bodyStyles: { fontSize: 10 },
+                  columnStyles: { 0: { cellWidth: pageWidth - 28 } },
+                  margin: { left: 14 }
+                });
+
+                currentY = doc.lastAutoTable.finalY + 15;
+
+                // PRÓXIMOS PASSOS
+                if (currentY > doc.internal.pageSize.getHeight() - 40) {
+                  doc.addPage();
+                  currentY = 20;
+                }
+
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(14);
+                doc.text("5. Próximos Passos Recomendados", 14, currentY);
+                
+                const stepsList = triagemDiagnosis?.nextSteps?.map((s, i) => [`Passo ${i+1}`, s]) || [];
+                autoTable(doc, {
+                  startY: currentY + 5,
+                  theme: 'striped',
+                  head: [["Ordem", "Ação"]],
+                  headStyles: { fillColor: [40, 40, 40] },
+                  body: stepsList,
+                  margin: { left: 14 }
+                });
+
+                // FOOTER
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                  doc.setPage(i);
+                  doc.setFontSize(8);
+                  doc.setTextColor(150, 150, 150);
+                  doc.text(
+                    `SocialJurídico - Inteligência Artificial para Advogados | Página ${i} de ${pageCount}`,
+                    pageWidth / 2,
+                    doc.internal.pageSize.getHeight() - 10,
+                    { align: "center" }
+                  );
+                }
+
+                doc.save(`Triagem_SJ_${new Date().getTime()}.pdf`);
               }}
             >
               <FileDown size={18} /> Baixar Relatório
@@ -6221,11 +6518,78 @@ export default function AdvogadoDashboard() {
           preparationDays: 3,
         });
         toast.success("Prazo sugerido pela IA!");
+        reloadPlanUsage(); // Atualizar contadores de uso
       }
     } catch (err) {
       toast.error("Erro na consulta IA");
     } finally {
       setIsAiSuggesting(false);
+    }
+  };
+
+  const handleAnalyseAgenda = async () => {
+    if (agendaItems.length === 0) return toast.error("Sua agenda está vazia!");
+    setIsAnalyzingAgenda(true);
+    setAgendaAnalysis("");
+    setShowAgendaAnalysisModal(true);
+
+    const agendaSummary = agendaItems.map(i => `- ${i.title} (${new Date(i.date).toLocaleString('pt-BR')}): ${i.description || 'Sem descrição'}`).join('\n');
+
+    try {
+      const res = await fetch("/api/crm/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Analise minha agenda jurídica atual e identifique possíveis conflitos, prazos críticos e sugestões de priorização:\n\n${agendaSummary}\n\nForneça uma análise técnica e profissional.`,
+          clientData: { name: "Análise de Agenda" },
+          history: [],
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setAgendaAnalysis(data.response);
+        reloadPlanUsage();
+      } else {
+        toast.error(data.message || "Erro na análise IA");
+      }
+    } catch (err) {
+      toast.error("Erro na conexão");
+    } finally {
+      setIsAnalyzingAgenda(false);
+    }
+  };
+
+  const handleSummarizeAgenda = async () => {
+    if (agendaItems.length === 0) return toast.error("Sua agenda está vazia!");
+    setIsAnalyzingAgenda(true);
+    setAgendaAnalysis("");
+    setShowAgendaAnalysisModal(true);
+
+    const agendaSummary = agendaItems.map(i => `- ${i.title} (${new Date(i.date).toLocaleString('pt-BR')})`).join('\n');
+
+    try {
+      const res = await fetch("/api/crm/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Gere um resumo executivo e estratégico da minha agenda jurídica para os próximos dias:\n\n${agendaSummary}\n\nDestaque os pontos focais e o que exige mais atenção do advogado.`,
+          clientData: { name: "Resumo de Agenda" },
+          history: [],
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setAgendaAnalysis(data.response);
+        reloadPlanUsage();
+      } else {
+        toast.error(data.message || "Erro no resumo IA");
+      }
+    } catch (err) {
+      toast.error("Erro na conexão");
+    } finally {
+      setIsAnalyzingAgenda(false);
     }
   };
 
@@ -7281,138 +7645,145 @@ export default function AdvogadoDashboard() {
     if (!showProModal) return null;
 
     return (
-      <div
-        className={styles.premiumModalOverlay}
-        onClick={() => setShowProModal(false)}
-      >
-        <div
-          className={styles.premiumModalContent}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className={styles.modalLeft}>
-            <div className={styles.proBadge}>
-              <Sparkles size={14} /> SocialJurídicoPRO
-            </div>
-            <div className={styles.proMainInfo}>
-              <h1 className={styles.proTitle}>
-                Desbloqueie o poder máximo da advocacia.
-              </h1>
-              <p className={styles.proSubline}>
-                Ferramentas de IA e gestão para quem joga em outro nível.
-              </p>
-            </div>
-            <div className={styles.priceContainer}>
-              <div className={styles.priceLarge}>
-                {appliedCoupon && appliedCoupon.stripe_coupon_id && appliedCoupon.tipo_internal === 'PLANO_PRO' ? (
-                  <>
-                    <span style={{ textDecoration: 'line-through', opacity: 0.4, fontSize: '1.5rem', marginRight: '10px' }}>R$ 69,90</span>
-                    R$ {(69.90 * (appliedCoupon.desconto_tipo === 'PERCENTUAL' ? (1 - appliedCoupon.valor / 100) : 1) - (appliedCoupon.desconto_tipo === 'FIXO' ? appliedCoupon.valor : 0)).toFixed(2).replace('.', ',')}
-                  </>
-                ) : "R$ 69,90"}
-              </div>
-              <div className={styles.pricePeriod}>cobrado mensalmente</div>
-            </div>
+      <div className={styles.premiumModalOverlay} onClick={() => setShowProModal(false)}>
+        <div className={styles.premiumModalContent} onClick={(e) => e.stopPropagation()}>
+          <button className={styles.closeIconBtn} onClick={() => setShowProModal(false)}>
+            <X size={24} />
+          </button>
 
-            <div className={styles.proCouponArea}>
-                <div className={styles.proCouponRow}>
+          <div className={styles.modalLayout}>
+            {/* LADO ESQUERDO: TEXTO E TOGGLE */}
+            <div className={styles.modalInfoSide}>
+              <h1 className={styles.modalTitle}>Escolha o plano ideal para seu momento</h1>
+              <p className={styles.modalSubtitle}>Maximize sua produtividade com Inteligência Artificial Jurídica.</p>
+              
+              <div className={styles.billingToggle}>
+                <button 
+                  className={`${styles.toggleBtn} ${billingCycle === 'AVULSO' ? styles.toggleBtnActive : ''}`}
+                  onClick={() => setBillingCycle('AVULSO')}
+                >
+                  Avulso
+                </button>
+                <button 
+                  className={`${styles.toggleBtn} ${billingCycle === 'MONTHLY' ? styles.toggleBtnActive : ''}`}
+                  onClick={() => setBillingCycle('MONTHLY')}
+                >
+                  Mensal
+                </button>
+                <button 
+                  className={`${styles.toggleBtn} ${billingCycle === 'ANNUAL' ? styles.toggleBtnActive : ''}`}
+                  onClick={() => setBillingCycle('ANNUAL')}
+                >
+                  Anual <span className={styles.discountBadge}>-25%</span>
+                </button>
+              </div>
+
+              {/* CUPOM DE DESCONTO */}
+              <div className={styles.couponWrapper}>
+                <div className={styles.couponLabel}>Possui um cupom?</div>
+                <div className={styles.couponInputGroup}>
                   <input 
                     type="text" 
-                    placeholder="CUPOM DE DESCONTO" 
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    className={styles.proCouponInput}
+                    placeholder="CÓDIGO" 
+                    className={styles.couponInput}
+                    id="plan_coupon_input"
                   />
                   <button 
-                    className={styles.proApplyBtn}
+                    className={styles.couponApplyBtn}
                     onClick={() => handleApplyCoupon('PLANO_PRO')}
-                    disabled={isValidatingCoupon || appliedCoupon}
                   >
-                    {isValidatingCoupon ? "..." : "APLICAR"}
+                    Aplicar
                   </button>
                 </div>
-                {appliedCoupon && appliedCoupon.tipo_internal === 'PLANO_PRO' && <p style={{ color: '#10b981', fontSize: '0.8rem', marginTop: '5px' }}>✓ Desconto aplicado com sucesso!</p>}
-            </div>
-          </div>
-
-          <div className={styles.modalRight}>
-            <button
-              className={styles.closeIconBtn}
-              onClick={() => setShowProModal(false)}
-            >
-              <X size={18} />
-            </button>
-            <h3 className={styles.rightHeader}>O que está incluído:</h3>
-
-            <div className={styles.featureList}>
-              <div className={styles.featureItem}>
-                <div className={styles.featureIconBox}>
-                  <Users size={20} />
-                </div>
-                <div className={styles.featureText}>
-                  <h4>CRM & KYC Avançado</h4>
-                  <p>
-                    Gestão de clientes com análise de risco e dossiê completo.
-                  </p>
-                </div>
-              </div>
-
-              <div className={styles.featureItem}>
-                <div className={styles.featureIconBox}>
-                  <FileText size={20} />
-                </div>
-                <div className={styles.featureText}>
-                  <h4>Smart Docs</h4>
-                  <p>Organização automática e vinculação de arquivos.</p>
-                </div>
-              </div>
-
-              <div className={styles.featureItem}>
-                <div className={styles.featureIconBox}>
-                  <Sparkles size={20} />
-                </div>
-                <div className={styles.featureText}>
-                  <h4>Redator IA</h4>
-                  <p>Geração de minutas com um clique usando dados do CRM.</p>
-                </div>
-              </div>
-
-              <div className={styles.featureItem}>
-                <div className={styles.featureIconBox}>
-                  <Calculator size={20} />
-                </div>
-                <div className={styles.featureText}>
-                  <h4>Calculadoras Jurídicas</h4>
-                  <p>Trabalhista, Cível, Penal, Família e mais.</p>
-                </div>
-              </div>
-
-              <div className={styles.featureItem}>
-                <div className={styles.featureIconBox}>
-                  <Scale size={20} />
-                </div>
-                <div className={styles.featureText}>
-                  <h4>Inteligência Estratégica</h4>
-                  <p>Análise de jurisprudência e triagem automática.</p>
-                </div>
+                {appliedCouponData && (
+                  <div className={styles.couponStatus}>
+                    ✓ Cupom {appliedCouponData.id} aplicado ({appliedCouponData.percent_off}% OFF)
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className={styles.bonusBox}>
-              <div className={styles.bonusLabel}>
-                <Coins size={16} /> BÔNUS EXCLUSIVO
-              </div>
-              <div className={styles.bonusValue}>+20 Juris todo mês</div>
-            </div>
+            {/* LADO DIREITO: CARDS */}
+            <div className={styles.modalPlansSide}>
+              <div className={styles.plansGrid}>
+                {Object.entries(PLANS_DATA).map(([key, plan]) => {
+                  const rawPriceInfo = plan.prices[billingCycle];
+                  
+                  // Aplicar desconto do cupom se existir
+                  let displayValue = billingCycle === 'ANNUAL' ? rawPriceInfo.monthly : rawPriceInfo.value;
+                  let totalValue = rawPriceInfo.value;
 
-            <button className={styles.subscribeBtn} onClick={() => {
-              setIsProCheckout(true);
-              setTransparentCheckoutAmount(null);
-              setTransparentCheckoutCoupon(appliedCoupon?.tipo_internal === 'PLANO_PRO' ? appliedCoupon : null);
-              setShowProModal(false);
-              setShowTransparentCheckout(true);
-            }}>
-              Assinar Agora <ChevronRight size={20} />
-            </button>
+                  if (appliedCouponData && appliedCouponData.status === 'success') {
+                    if (appliedCouponData.percent_off) {
+                      displayValue = displayValue * (1 - appliedCouponData.percent_off / 100);
+                      totalValue = totalValue * (1 - appliedCouponData.percent_off / 100);
+                    } else if (appliedCouponData.amount_off) {
+                      const discount = appliedCouponData.amount_off / 100;
+                      // No anual, o desconto geralmente é no total, então rateamos para o mensal se for anual
+                      if (billingCycle === 'ANNUAL') {
+                        displayValue = Math.max(0, displayValue - (discount / 12));
+                      } else {
+                        displayValue = Math.max(0, displayValue - discount);
+                      }
+                      totalValue = Math.max(0, totalValue - discount);
+                    }
+                  }
+
+                  const formattedPrice = displayValue.toFixed(2).replace('.', ',');
+                  const [priceInteiro, priceCentavos] = formattedPrice.split(',');
+
+                  return (
+                    <div key={key} className={`${styles.planCard} ${key === 'PRO' ? styles.planCardPro : ''}`}>
+                      {key === 'PRO' && <div className={styles.mostPopular}>RECOMENDADO</div>}
+                      <div className={styles.planName}>{plan.name}</div>
+                      
+                      <div className={styles.planPrice}>
+                        <span className={styles.currency}>R$</span>
+                        <span className={styles.amount}>{priceInteiro}</span>
+                        <div className={styles.priceSub}>
+                          <span className={styles.cents}>,{priceCentavos}</span>
+                          <span className={styles.period}>/mês</span>
+                        </div>
+                      </div>
+                      
+                      <div className={styles.jurisBonus}>
+                        <Zap size={14} /> <span>Ganhe <strong>{plan.juris} Juris</strong> imediato</span>
+                      </div>
+
+                      {billingCycle === 'ANNUAL' ? (
+                        <div className={styles.annualTotal}>Cobrado anualmente (R$ {totalValue.toFixed(2).replace('.', ',')})</div>
+                      ) : (
+                        <div className={styles.planDesc}>{plan.description}</div>
+                      )}
+                      
+                      <div className={styles.planFeatures}>
+                        {plan.features.map((feat, i) => (
+                          <div key={i} className={`${styles.featItem} ${!feat.included ? styles.featDisabled : ''}`}>
+                            {feat.included ? <Check size={16} color="#10b981" /> : <X size={16} color="#4b5563" />}
+                            {feat.text}
+                          </div>
+                        ))}
+                      </div>
+
+                      <button 
+                        className={`${styles.selectPlanBtn} ${key === 'PRO' ? styles.selectPlanBtnPro : ''}`}
+                        onClick={() => {
+                          setIsProCheckout(true);
+                          setTransparentCheckoutAmount(totalValue);
+                          window.localStorage.setItem('sj_selected_price_id', priceInfo.priceId);
+                          window.localStorage.setItem('sj_selected_plan_type', key);
+                          window.localStorage.setItem('sj_selected_billing', billingCycle);
+                          setShowProModal(false);
+                          setShowTransparentCheckout(true);
+                        }}
+                      >
+                        Selecionar {plan.name}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -7436,9 +7807,9 @@ export default function AdvogadoDashboard() {
           </div>
         </div>
 
-        {profileData?.is_premium ? (
-          <div className={styles.premiumActiveBadge}>
-            <Sparkles size={14} /> Plano PRO Ativo
+        {profileData?.is_premium || profileData?.plan_type === 'START' ? (
+          <div className={`${styles.premiumActiveBadge} ${profileData?.plan_type === 'START' ? styles.startActiveBadge : ''}`}>
+            <Sparkles size={14} /> Plano {profileData?.plan_type === 'START' ? 'START' : 'PRO'} Ativo
           </div>
         ) : (
           <button
@@ -7449,14 +7820,127 @@ export default function AdvogadoDashboard() {
           </button>
         )}
 
-        <div className={styles.quotaContainer}>
-          <div className={styles.quotaLabel}>
-            <span>0 / 5.000</span>
-            <span className={styles.quotaValue}>5.000 restantes</span>
-          </div>
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill}></div>
-          </div>
+        {/* CONSUMO DO PLANO */}
+        <div className={styles.usageSection}>
+          <div className={styles.navGroupLabel}>Uso do Plano ({profileData?.plan_type || 'FREE'})</div>
+          
+          {/* IA Generator Usage */}
+          {(() => {
+            const planType = profileData?.plan_type || 'FREE';
+            const baseLimit = planType === 'PRO' ? 200 : (planType === 'START' ? 20 : 0);
+            const totalLimit = baseLimit + (profileData?.extra_redator_ia || 0);
+            const usage = profileData?.uso_redator_ia || 0;
+            const percent = totalLimit > 0 ? (usage / totalLimit) * 100 : 0;
+            
+            return (
+              <div className={styles.usageItem}>
+                <div className={styles.usageHeader}>
+                  <span>Redator IA</span>
+                  <span>{usage} / {totalLimit}</span>
+                </div>
+                <div className={styles.usageBarBg}>
+                  <div 
+                    className={styles.usageBarFill} 
+                    style={{ width: `${Math.min(100, percent)}%` }}
+                  ></div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* CRM Usage */}
+          {(() => {
+            const planType = profileData?.plan_type || 'FREE';
+            const totalLimit = planType === 'PRO' ? Infinity : (planType === 'START' ? 10 : 0);
+            const usage = profileData?.crm_count || 0;
+            const percent = totalLimit > 0 ? (usage / (totalLimit === Infinity ? 1000 : totalLimit)) * 100 : 0;
+            
+            return (
+              <div className={styles.usageItem}>
+                <div className={styles.usageHeader}>
+                  <span>Clientes CRM</span>
+                  <span>{usage} / {totalLimit === Infinity ? '∞' : totalLimit}</span>
+                </div>
+                <div className={styles.usageBarBg}>
+                  <div 
+                    className={styles.usageBarFill} 
+                    style={{ width: `${Math.min(100, percent)}%` }}
+                  ></div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Triagem Usage */}
+          {(() => {
+            const planType = profileData?.plan_type || 'FREE';
+            const baseLimit = planType === 'PRO' ? 200 : (planType === 'START' ? 10 : 0);
+            const totalLimit = baseLimit + (profileData?.extra_triagem || 0);
+            const usage = profileData?.uso_triagem || 0;
+            const percent = totalLimit > 0 ? (usage / totalLimit) * 100 : 0;
+            
+            return (
+              <div className={styles.usageItem}>
+                <div className={styles.usageHeader}>
+                  <span>Triagem IA</span>
+                  <span>{usage} / {totalLimit}</span>
+                </div>
+                <div className={styles.usageBarBg}>
+                  <div 
+                    className={styles.usageBarFill} 
+                    style={{ width: `${Math.min(100, percent)}%` }}
+                  ></div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Agenda Usage */}
+          {(() => {
+            const planType = profileData?.plan_type || 'FREE';
+            const totalLimit = planType === 'PRO' ? Infinity : (planType === 'START' ? 30 : 0);
+            const usage = profileData?.uso_agenda || 0;
+            const percent = totalLimit > 0 ? (usage / (totalLimit === Infinity ? 1000 : totalLimit)) * 100 : 0;
+            
+            return (
+              <div className={styles.usageItem}>
+                <div className={styles.usageHeader}>
+                  <span>Agenda</span>
+                  <span>{usage} / {totalLimit === Infinity ? '∞' : totalLimit}</span>
+                </div>
+                <div className={styles.usageBarBg}>
+                  <div 
+                    className={styles.usageBarFill} 
+                    style={{ width: `${Math.min(100, percent)}%` }}
+                  ></div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Storage Usage (Smart Docs) */}
+          {(() => {
+            const planType = profileData?.plan_type || 'FREE';
+            const baseLimit = planType === 'PRO' ? 10240 : (planType === 'START' ? 500 : 0); // 10GB vs 500MB
+            const totalLimit = baseLimit + (profileData?.extra_storage_mb || 0);
+            const usage = profileData?.uso_storage_mb || 0;
+            const percent = totalLimit > 0 ? (usage / totalLimit) * 100 : 0;
+            
+            return (
+              <div className={styles.usageItem}>
+                <div className={styles.usageHeader}>
+                  <span>Armazenamento (IA)</span>
+                  <span>{usage >= 1024 ? (usage/1024).toFixed(1) + 'GB' : usage + 'MB'} / {totalLimit >= 1024 ? (totalLimit/1024).toFixed(0) + 'GB' : totalLimit + 'MB'}</span>
+                </div>
+                <div className={styles.usageBarBg}>
+                  <div 
+                    className={styles.usageBarFill} 
+                    style={{ width: `${Math.min(100, percent)}%` }}
+                  ></div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <nav className={styles.nav}>
@@ -7595,13 +8079,13 @@ export default function AdvogadoDashboard() {
             className={`${styles.navItem} ${activeTab === "calculadora" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("calculadora")}
             title={
-              !profileData?.is_premium
+              profileData?.plan_type !== 'PRO'
                 ? "Exclusivo para advogados PRO"
                 : undefined
             }
           >
             <Calculator size={18} /> <span>Calculadora</span>
-            {!profileData?.is_premium && (
+            {profileData?.plan_type !== 'PRO' && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>
@@ -7609,13 +8093,13 @@ export default function AdvogadoDashboard() {
             className={`${styles.navItem} ${activeTab === "juris" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("juris")}
             title={
-              !profileData?.is_premium
+              profileData?.plan_type !== 'PRO'
                 ? "Exclusivo para advogados PRO"
                 : undefined
             }
           >
             <Scale size={18} /> <span>Jurisprudência</span>
-            {!profileData?.is_premium && (
+            {profileData?.plan_type !== 'PRO' && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>
@@ -7916,6 +8400,128 @@ export default function AdvogadoDashboard() {
       {renderMessageContentModal()}
       {renderAgendaModal()}
       {renderNotifDeleteConfirmModal()}
+      {/* MODAL DE ANÁLISE/RESUMO DA AGENDA */}
+      {showAgendaAnalysisModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowAgendaAnalysisModal(false)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '800px' }}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>✨ Inteligência de Agenda IA</h2>
+              <p className={styles.modalSubtitle}>Insights estratégicos para sua gestão de prazos</p>
+            </div>
+            
+            <div style={{ 
+              padding: '20px', 
+              background: 'rgba(255,255,255,0.02)', 
+              borderRadius: '12px',
+              minHeight: '200px',
+              maxHeight: '60vh',
+              overflowY: 'auto',
+              lineHeight: '1.6',
+              whiteSpace: 'pre-wrap'
+            }}>
+              {isAnalyzingAgenda ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', gap: '15px' }}>
+                  <Sparkles size={40} className={styles.spin} color="var(--color-gold)" />
+                  <p>A IA está processando sua agenda...</p>
+                </div>
+              ) : (
+                <div className={styles.jurisAIContent}>
+                  {agendaAnalysis || "Nenhum insight gerado."}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+              <button 
+                className={styles.redatorGenerateBtn}
+                style={{ flex: 1 }}
+                onClick={() => {
+                  const doc = new jsPDF();
+                  const pageWidth = doc.internal.pageSize.getWidth();
+                  const pageHeight = doc.internal.pageSize.getHeight();
+                  
+                  // HEADER
+                  doc.setFillColor(11, 11, 14); // Cor de fundo do site (Dark)
+                  doc.rect(0, 0, pageWidth, 45, 'F');
+                  
+                  doc.setTextColor(212, 175, 55); // Cor Gold
+                  doc.setFont("helvetica", "bold");
+                  doc.setFontSize(24);
+                  doc.text("SocialJurídico", 14, 22);
+                  
+                  doc.setTextColor(255, 255, 255);
+                  doc.setFontSize(12);
+                  doc.setFont("helvetica", "normal");
+                  doc.text("Inteligência de Agenda IA - Relatório Estratégico", 14, 32);
+                  
+                  doc.setFontSize(10);
+                  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 32, { align: 'right' });
+
+                  // CORPO DO RELATÓRIO
+                  doc.setTextColor(40, 40, 40);
+                  doc.setFontSize(14);
+                  doc.setFont("helvetica", "bold");
+                  doc.text("Análise e Insights da IA", 14, 60);
+                  
+                  doc.setDrawColor(212, 175, 55);
+                  doc.setLineWidth(0.5);
+                  doc.line(14, 63, 60, 63);
+
+                  doc.setFont("helvetica", "normal");
+                  doc.setFontSize(11);
+                  doc.setTextColor(60, 60, 60);
+                  
+                  const cleanAnalysis = agendaAnalysis.replace(/\*\*/g, ''); // Remove asteriscos
+                  const splitText = doc.splitTextToSize(cleanAnalysis, pageWidth - 28);
+                  
+                  // Verificação de quebra de página
+                  let currentY = 75;
+                  splitText.forEach(line => {
+                    if (currentY > pageHeight - 30) {
+                      doc.addPage();
+                      currentY = 20;
+                    }
+
+                    // Destacar títulos numéricos
+                    if (/^\d+\./.test(line.trim())) {
+                      doc.setFont("helvetica", "bold");
+                    } else {
+                      doc.setFont("helvetica", "normal");
+                    }
+
+                    doc.text(line, 14, currentY);
+                    currentY += 6;
+                  });
+
+                  // FOOTER
+                  const pageCount = doc.internal.getNumberOfPages();
+                  for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(9);
+                    doc.setTextColor(150, 150, 150);
+                    doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+                    doc.text(
+                      `SocialJurídico PRO - Inteligência Artificial para Advogados | Página ${i} de ${pageCount}`,
+                      pageWidth / 2,
+                      pageHeight - 12,
+                      { align: "center" }
+                    );
+                  }
+
+                  doc.save(`Analise_Agenda_SJ_${new Date().getTime()}.pdf`);
+                  toast.success("Relatório da Agenda gerado!");
+                }}
+                disabled={!agendaAnalysis || isAnalyzingAgenda}
+              >
+                <FileDown size={18} /> Baixar PDF
+              </button>
+              <button className={styles.closeModalBtn} onClick={() => setShowAgendaAnalysisModal(false)} style={{ margin: 0 }}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <AdvogadoMesPopup />
 
       {/* PENDING OAB MODAL */}
@@ -7968,7 +8574,7 @@ export default function AdvogadoDashboard() {
         }}
         jurisAmount={transparentCheckoutAmount}
         isPro={isProCheckout}
-        couponData={transparentCheckoutCoupon}
+        couponData={appliedCouponData}
         onPaymentSuccess={async () => {
           // Recarregar perfil para atualizar saldo
           try {

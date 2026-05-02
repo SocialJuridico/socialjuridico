@@ -291,7 +291,12 @@ async function handleJurisPurchase(session, userId, cupomId) {
 }
 
 async function handleProSubscription(session, userId, cupomId) {
-  // Buscar saldo atual para somar os 20 Juris de bônus
+  const planType = session.metadata?.planType || 'PRO';
+  const jurisBonus = planType === 'PRO' ? 20 : 7;
+
+  console.log(`👑 Ativando Plano ${planType} para o usuário ${userId}. Bônus: ${jurisBonus} Juris.`);
+
+  // Buscar saldo atual para somar os Juris de bônus
   const { data: advProfile, error: fetchError } = await supabaseAdmin
     .from("advogados")
     .select("balance")
@@ -303,12 +308,13 @@ async function handleProSubscription(session, userId, cupomId) {
   }
 
   const currentBalance = advProfile?.balance || 0;
-  const newBalance = currentBalance + 20;
+  const newBalance = currentBalance + jurisBonus;
 
   const { error: updateError } = await supabaseAdmin
     .from("advogados")
     .update({
       is_premium: true,
+      plan_type: planType,
       premium_expires_at: new Date(
         Date.now() + 30 * 24 * 60 * 60 * 1000,
       ).toISOString(),
@@ -317,9 +323,9 @@ async function handleProSubscription(session, userId, cupomId) {
     .eq("id", userId);
 
   if (updateError) {
-    console.error(`❌ [PRO] ERRO FATAL ao ativar PRO para ${userId}:`, updateError);
+    console.error(`❌ [PRO] ERRO FATAL ao ativar ${planType} para ${userId}:`, updateError);
   } else {
-    console.log(`✅ PRO ativado. +20 Juris (${currentBalance} → ${newBalance}) para ${userId}`);
+    console.log(`✅ ${planType} ativado. +${jurisBonus} Juris (${currentBalance} → ${newBalance}) para ${userId}`);
   }
 
   // Registrar log de transação Real para PRO
@@ -329,7 +335,7 @@ async function handleProSubscription(session, userId, cupomId) {
     valor: (session.amount_total || 0) / 100,
     moeda: session.currency || 'BRL',
     status: updateError ? 'error_updating_balance' : 'succeeded',
-    juris_amount: 20,
+    juris_amount: jurisBonus,
     stripe_session_id: session.id,
     cupom_id: cupomId || null,
     created_at: new Date().toISOString()
@@ -414,13 +420,16 @@ async function handleSubscriptionDeleted(subscription) {
     if (email) {
       const { error } = await supabaseAdmin
         .from("advogados")
-        .update({ is_premium: false })
+        .update({ 
+          is_premium: false,
+          plan_type: 'FREE'
+        })
         .eq("email", email);
       
       if (error) {
         console.error(`❌ [SubDeleted] Erro ao desativar PRO para ${email}:`, error);
       } else {
-        console.log(`✅ [SubDeleted] PRO desativado para ${email}`);
+        console.log(`✅ [SubDeleted] Plano desativado (FREE) para ${email}`);
       }
     }
   } catch (err) {

@@ -41,7 +41,7 @@ export async function GET() {
 
     const { data, error } = await db
       .from("advogados")
-      .select("id, name, email, phone, oab, estado, is_premium, premium_expires_at, balance, created_at, oab_verification_status")
+      .select("id, name, email, phone, oab, estado, is_premium, premium_expires_at, balance, created_at, oab_verification_status, plan_type")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -246,12 +246,15 @@ export async function PUT(request) {
 
     const updates = {};
 
-    if (action === "GIVE_PRO") {
-      // PRO por 30 dias
+    if (action === "GIVE_PRO" || action === "GIVE_PLAN") {
+      const planType = value?.planType || 'PRO';
+      const days = Number(value?.days || 30);
+
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 30);
+      expiresAt.setDate(expiresAt.getDate() + days);
       
       updates.is_premium = true;
+      updates.plan_type = planType;
       updates.premium_expires_at = expiresAt.toISOString();
     } else if (action === "ADD_JURIS") {
       const amountToAdd = Number(value);
@@ -274,6 +277,7 @@ export async function PUT(request) {
       updates.balance = Math.max(0, (lawyer.balance || 0) - amountToRemove);
     } else if (action === "REMOVE_PRO") {
       updates.is_premium = false;
+      updates.plan_type = 'FREE';
       updates.premium_expires_at = null;
     } else if (action === "SET_OAB_STATUS") {
       if (!["PENDING", "VERIFIED", "ERROR"].includes(value)) {

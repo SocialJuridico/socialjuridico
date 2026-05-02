@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { getUserPlanLimits } from "@/lib/planUtils";
 
 // GET /api/crm -> lista clientes do advogado logado
 export async function GET(request) {
@@ -39,6 +40,26 @@ export async function POST(request) {
     }
 
     const body = await request.json();
+
+    // Verificação de Limites do Plano
+    const planLimits = await getUserPlanLimits(supabaseAdmin || supabase, user.id);
+    if (!planLimits) {
+      return NextResponse.json({ success: false, message: "Erro ao ler limites do plano." }, { status: 400 });
+    }
+
+    // Contar quantos clientes o advogado já tem
+    const { count: currentClients } = await supabaseAdmin
+      .from('crm_clients')
+      .select('*', { count: 'exact', head: true })
+      .eq('lawyer_id', user.id);
+
+    if ((currentClients || 0) >= planLimits.maxCrmClients) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "LIMIT_REACHED", 
+        error_type: "QUOTA_EXCEEDED" 
+      }, { status: 403 });
+    }
     
     // Mapeamento dos campos do frontend para o banco
     const clientData = {

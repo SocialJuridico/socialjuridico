@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 
 // GET /api/crm/agenda -> Lista compromissos do advogado logado
 export async function GET(request) {
@@ -40,6 +41,20 @@ export async function POST(request) {
     }
 
     const body = await request.json();
+
+    // Verificação de Limites do Plano
+    const planLimits = await getUserPlanLimits(supabaseAdmin || supabase, user.id);
+    if (!planLimits) {
+      return NextResponse.json({ success: false, message: "Erro ao ler limites do plano." }, { status: 400 });
+    }
+
+    if (!planLimits.canUseAgenda()) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "LIMIT_REACHED", 
+        error_type: "QUOTA_EXCEEDED" 
+      }, { status: 403 });
+    }
     
     const payload = {
       id: crypto.randomUUID(), // Garantir ID se não houver default no banco
@@ -60,6 +75,9 @@ export async function POST(request) {
       .select();
 
     if (error) throw error;
+
+    // Incrementar uso após salvamento de sucesso
+    await incrementUsage(supabaseAdmin || supabase, user.id, 'uso_agenda', 1);
 
     const savedEvent = data[0];
 

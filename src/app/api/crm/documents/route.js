@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -86,6 +87,22 @@ export async function POST(request) {
       );
     }
 
+    const fileSizeMb = file.size / (1024 * 1024);
+
+    // Verificação de Limites do Plano
+    const planLimits = await getUserPlanLimits(supabaseAdmin || supabase, user.id);
+    if (!planLimits) {
+      return NextResponse.json({ success: false, message: "Erro ao ler limites do plano." }, { status: 400 });
+    }
+
+    if (!planLimits.canUploadDocs(fileSizeMb)) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "LIMIT_REACHED", 
+        error_type: "STORAGE_FULL" 
+      }, { status: 403 });
+    }
+
     // ⚠️ SEGURANÇA: Logar nível seguro (sem dados sensíveis)
     const fileExt = file.name.split(".").pop();
     const folder = clientId ? clientId : `lawyer_${user.id}`;
@@ -145,6 +162,7 @@ export async function POST(request) {
       file_url: publicUrl,
       doc_type: aiData.type,
       tags: aiData.tags,
+      // file_size_mb removido pois a coluna não existe no banco
       created_at: new Date().toISOString(),
     };
 
@@ -159,6 +177,9 @@ export async function POST(request) {
       await supabaseAdmin.storage.from("crm_documents").remove([filePath]);
       throw insertError;
     }
+
+    // Incrementar uso de armazenamento
+    await incrementUsage(supabaseAdmin || supabase, user.id, 'uso_storage_mb', fileSizeMb);
 
     return NextResponse.json({ success: true, data: insertedDoc[0] });
   } catch (error) {
@@ -197,6 +218,26 @@ export async function DELETE(request) {
       );
     }
 
+    // Buscar o documento antes de deletar para saber o tamanho (via URL)
+    const { data: docData } = await supabaseAdmin
+      .from("crm_documents")
+      .select("file_url")
+      .eq("id", docId)
+      .single();
+
+    let fileSizeMb = 0;
+    if (docData?.file_url) {
+      try {
+        const headRes = await fetch(docData.file_url, { method: 'HEAD' });
+        const sizeBytes = headRes.headers.get('content-length');
+        if (sizeBytes) {
+          fileSizeMb = parseInt(sizeBytes) / (1024 * 1024);
+        }
+      } catch (e) {
+        console.warn("Não foi possível detectar o tamanho do arquivo via HEAD:", e);
+      }
+    }
+
     // 1. Remover do Storage
     const { error: storageError } = await supabaseAdmin.storage
       .from("crm_documents")
@@ -204,13 +245,18 @@ export async function DELETE(request) {
 
     if (storageError) throw storageError;
 
-    // 2. Remover da Tabela
+    // 2. Remover do Banco
     const { error: dbError } = await supabaseAdmin
       .from("crm_documents")
       .delete()
       .eq("id", docId);
 
     if (dbError) throw dbError;
+
+    // Decrementar uso de armazenamento do advogado
+    if (fileSizeMb > 0) {
+      await incrementUsage(supabaseAdmin || supabase, user.id, 'uso_storage_mb', -fileSizeMb);
+    }
 
     return NextResponse.json({ success: true, message: "Documento excluído" });
   } catch (error) {

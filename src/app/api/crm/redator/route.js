@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -23,6 +25,19 @@ export async function POST(request) {
 
     const { type, clientName, facts, tone, clientData, advocateData } =
       await request.json();
+
+    const planLimits = await getUserPlanLimits(supabaseAdmin || supabase, user.id);
+    if (!planLimits) {
+      return NextResponse.json({ success: false, message: "Erro ao ler limites do plano." }, { status: 400 });
+    }
+
+    if (!planLimits.canUseRedatorIa()) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "LIMIT_REACHED", 
+        error_type: "QUOTA_EXCEEDED" 
+      }, { status: 403 });
+    }
 
     if (!type || !facts) {
       return NextResponse.json(
@@ -86,6 +101,9 @@ export async function POST(request) {
     });
 
     const draft = completion.choices[0].message.content;
+
+    // Incrementar uso após geração de sucesso
+    await incrementUsage(supabaseAdmin || supabase, user.id, 'uso_redator_ia', 1);
 
     return NextResponse.json({ success: true, draft });
   } catch (error) {

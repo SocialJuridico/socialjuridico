@@ -66,7 +66,7 @@ export async function POST(request) {
     const priceId = intent.metadata?.priceId;
     const cupomId = intent.metadata?.cupomId;
     
-    // Processamento específico para Plano PRO
+    // Processamento específico para Plano (START/PRO)
     if (type === 'PRO_SUBSCRIPTION') {
       const { data: profile } = await supabaseAdmin
         .from("advogados")
@@ -75,20 +75,28 @@ export async function POST(request) {
         .single();
 
       const currentBalance = profile?.balance || 0;
-      const newBalance = currentBalance + 20;
+      const planType = intent.metadata?.planType || 'PRO';
+      const billingCycle = intent.metadata?.billingCycle || 'MONTHLY';
 
       const { error: updateError } = await supabaseAdmin
         .from("advogados")
         .update({
-          is_premium: true,
-          premium_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          balance: newBalance,
+          is_premium: planType === 'PRO',
+          plan_type: planType,
+          plan_billing_cycle: billingCycle,
+          premium_expires_at: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString(),
+          // Resetar uso no novo ciclo/ativação
+          uso_redator_ia: 0,
+          uso_triagem: 0,
+          uso_agenda: 0,
+          // Se for PRO, ganha 20 Juris de bônus (legacy feature maintained)
+          balance: planType === 'PRO' ? (currentBalance + 20) : currentBalance,
         })
         .eq("id", user.id);
 
       if (updateError) {
-        console.error(`❌ [confirm-payment] Erro ao ativar PRO:`, updateError);
-        return NextResponse.json({ success: false, message: "Erro ao ativar plano PRO" }, { status: 500 });
+        console.error(`❌ [confirm-payment] Erro ao ativar plano:`, updateError);
+        return NextResponse.json({ success: false, message: "Erro ao ativar plano" }, { status: 500 });
       }
 
       await supabaseAdmin.from('transacoes').insert([{
@@ -97,7 +105,7 @@ export async function POST(request) {
         valor: isSetup ? 0 : ((intent.amount || 0) / 100),
         moeda: intent.currency || 'BRL',
         status: 'succeeded',
-        juris_amount: 20,
+        juris_amount: planType === 'PRO' ? 20 : 0,
         stripe_session_id: paymentIntentId,
         cupom_id: (cupomId && cupomId !== 'null') ? cupomId : null,
         created_at: new Date().toISOString()
@@ -111,15 +119,45 @@ export async function POST(request) {
         }]);
       }
 
-      console.log(`✅ [confirm-payment] PRO ativado e +20 Juris para ${user.id} (${currentBalance} → ${newBalance})`);
+      console.log(`✅ [confirm-payment] Plano ${planType} (${billingCycle}) ativado para ${user.id}`);
 
       return NextResponse.json({ 
         success: true, 
-        jurisAmount: 20, 
-        newBalance,
-        isPro: true,
-        message: "Plano PRO ativado com sucesso e 20 Juris adicionados!" 
+        isPro: planType === 'PRO',
+        planType,
+        message: `Plano ${planType} ativado com sucesso!` 
       });
+    }
+
+    // Processamento específico para Add-ons (Expansões)
+    if (type === 'ADDON_PURCHASE') {
+      const addOnType = intent.metadata?.addOnType;
+      let field = "";
+      let amount = 0;
+      let label = "";
+
+      if (addOnType === 'EXTRA_DOCS') { field = 'extra_storage_mb'; amount = 1024; label = "1GB de Armazenamento"; }
+      if (addOnType === 'EXTRA_IA') { field = 'extra_redator_ia'; amount = 10; label = "10 gerações de IA"; }
+      if (addOnType === 'EXTRA_TRIAGEM') { field = 'extra_triagem'; amount = 5; label = "5 diagnósticos de Triagem"; }
+
+      if (field) {
+        const { data: currentAddons } = await supabaseAdmin.from('advogados').select(field).eq('id', user.id).single();
+        const newValue = (currentAddons?.[field] || 0) + amount;
+        
+        await supabaseAdmin.from('advogados').update({ [field]: newValue }).eq('id', user.id);
+        
+        await supabaseAdmin.from('transacoes').insert([{
+          advogado_id: user.id,
+          tipo: 'ADDON_PURCHASE',
+          valor: (intent.amount || 0) / 100,
+          moeda: intent.currency || 'BRL',
+          status: 'succeeded',
+          stripe_session_id: paymentIntentId,
+          created_at: new Date().toISOString()
+        }]);
+
+        return NextResponse.json({ success: true, message: `Expansão de ${label} ativada!` });
+      }
     }
 
     // Processamento para compra avulsa de Juris

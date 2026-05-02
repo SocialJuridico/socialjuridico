@@ -92,6 +92,16 @@
   font-size: 0.8rem;
 }
 
+.startActiveBadge {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.15) 0%,
+    rgba(59, 130, 246, 0.05) 100%
+  ) !important;
+  border: 1px solid rgba(59, 130, 246, 0.4) !important;
+  color: #60a5fa !important;
+}
+
 .quotaContainer {
   padding: 0 24px 20px;
 }
@@ -925,12 +935,6 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.95);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  backdrop-filter: blur(15px);
   animation: fadeIn 0.4s ease;
 }
 
@@ -5467,4 +5471,469 @@
 .closeBtn:hover {
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
+}
+.premiumModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease-out;
+  padding: 20px;
+}
+
+.closeIconBtn {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 2010;
+}
+
+.closeIconBtn:hover {
+  background: #ff4d4d;
+  border-color: #ff4d4d;
+  transform: rotate(90deg);
+}
+
+/* NEW PREMIUM MODAL STYLES */
+.premiumModalContent {
+  width: 95%;
+  max-width: 1200px;
+  background: radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.2) 0%, #0a0a0c 40%), 
+              radial-gradient(circle at 80% 80%, rgba(212, 175, 55, 0.1) 0%, #0a0a0c 40%),
+              linear-gradient(135deg, #0f0f11 0%, #050505 100%);
+  background-color: #0a0a0c;
+  border-radius: 32px;
+  padding: 60px;
+  position: relative;
+  overflow-y: auto;
+  max-height: 90vh;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 50px 100px rgba(0, 0, 0, 0.9), 
+              0 0 80px rgba(212, 175, 55, 0.08);
+}
+
+.modalLayout {
+  display: flex;
+  gap: 60px;
+  align-items: center;
+}
+
+.modalInfoSide {
+  flex: 0 0 350px;
+}
+
+.modalTitle {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  letter-spacing: -1px;
+}
+
+.modalSubtitle {
+  color: #94a3b8;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 40px;
+}
+
+.billingToggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px;
+  border-radius: 18px;
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.toggleBtn {
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.discountBadge {
+  font-size: 0.7rem;
+  background: #10b981;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 800;
+}
+
+.toggleBtnActive {
+  background: #fff;
+  color: #000;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modalPlansSide {
+  flex: 1;
+}
+
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 25px;
+}
+
+.planCard {
+  background: #121214;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 28px;
+  padding: 40px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 600px;
+}
+
+.planCard:hover {
+  transform: translateY(-8px);
+  border-color: rgba(212, 175, 55, 0.2);
+  background: #161618;
+}
+
+.planCardPro {
+  border: 2px solid #d4af37;
+  background: #121214;
+  box-shadow: 0 0 40px rgba(212, 175, 55, 0.1);
+}
+
+.mostPopular {
+  position: absolute;
+  top: -14px;
+  right: 40px;
+  background: #d4af37;
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 6px 14px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+}
+
+.planName {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #fff;
+  margin-bottom: 30px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.planPrice {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  margin-bottom: 5px;
+}
+
+.currency {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 10px;
+}
+
+.amount {
+  font-size: 5.5rem;
+  font-weight: 950;
+  color: #fff;
+  line-height: 0.9;
+  letter-spacing: -2px;
+}
+
+.priceSub {
+  display: flex;
+  flex-direction: column;
+  margin-top: 10px;
+}
+
+.cents {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.period {
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.annualTotal {
+  font-size: 0.9rem;
+  color: #10b981;
+  font-weight: 700;
+  margin-bottom: 30px;
+}
+
+.planDesc {
+  color: #94a3b8;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  min-height: 48px;
+}
+
+.planFeatures {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 40px;
+  flex: 1;
+}
+
+.featItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.featDisabled {
+  opacity: 0.3;
+}
+
+.selectPlanBtn {
+  width: 100%;
+  background: #1e1e20;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 20px;
+  border-radius: 18px;
+  font-weight: 900;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.selectPlanBtn:hover {
+  background: #252528;
+  border-color: #fff;
+}
+
+.selectPlanBtnPro {
+  background: #d4af37;
+  color: #000;
+  border: none;
+}
+
+.selectPlanBtnPro:hover {
+  filter: brightness(1.1);
+  transform: scale(1.02);
+  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
+}
+
+@media (max-width: 1100px) {
+  .modalLayout {
+    flex-direction: column;
+    gap: 40px;
+  }
+  .modalInfoSide {
+    flex: none;
+    width: 100%;
+    text-align: center;
+  }
+  .modalTitle { font-size: 2.2rem; }
+  .billingToggle { margin: 0 auto; }
+}
+
+@media (max-width: 768px) {
+  .premiumModalContent { 
+    padding: 40px 20px; 
+    border-radius: 20px;
+    width: 98%;
+  }
+  .modalLayout {
+    gap: 30px;
+  }
+  .modalTitle { 
+    font-size: 1.8rem; 
+    margin-bottom: 15px;
+  }
+  .modalSubtitle {
+    font-size: 1rem;
+    margin-bottom: 25px;
+  }
+  .plansGrid { 
+    grid-template-columns: 1fr; 
+    gap: 20px;
+  }
+  .planCard {
+    padding: 25px;
+    min-height: auto;
+  }
+  .amount { font-size: 3.5rem; }
+  .closeIconBtn {
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* SIDEBAR USAGE BARS */
+.usageSection {
+  padding: 0 24px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 20px;
+}
+
+.usageItem {
+  margin-top: 15px;
+}
+
+.usageHeader {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-silver-dark);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.usageBarBg {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.usageBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #d4af37 0%, #b8860b 100%);
+  border-radius: 10px;
+  transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* COUPON SECTION IN MODAL */
+.couponWrapper {
+  margin-top: 40px;
+  padding-top: 30px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.couponLabel {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.couponInputGroup {
+  display: flex;
+  gap: 10px;
+}
+
+.couponInput {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.couponInput:focus {
+  border-color: #d4af37;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.couponApplyBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 0 20px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+}
+
+.couponApplyBtn:hover {
+  background: #fff;
+  color: #000;
+}
+
+.couponStatus {
+  margin-top: 10px;
+  color: #10b981;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.jurisBonus {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #d4af37;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 15px;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.jurisBonus span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.jurisBonus strong {
+  font-weight: 800;
+  color: #fff;
+  font-size: 0.8rem;
 }

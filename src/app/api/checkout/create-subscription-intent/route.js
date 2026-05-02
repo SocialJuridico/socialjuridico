@@ -11,7 +11,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const { priceId, stripeCouponId, internalCouponId } = await request.json();
+    const { priceId, stripeCouponId, internalCouponId, planType, billingCycle } = await request.json();
 
     if (!priceId) {
       return NextResponse.json({ success: false, message: "Price ID é obrigatório" }, { status: 400 });
@@ -40,6 +40,8 @@ export async function POST(request) {
       userId: user.id,
       type: 'PRO_SUBSCRIPTION',
       priceId: priceId,
+      planType: planType || 'PRO',
+      billingCycle: billingCycle || 'MONTHLY',
     };
     if (internalCouponId) {
       metadata.cupomId = String(internalCouponId);

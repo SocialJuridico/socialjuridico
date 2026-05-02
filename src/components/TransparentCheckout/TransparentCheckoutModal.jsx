@@ -243,13 +243,20 @@ export default function TransparentCheckoutModal({
 
         if (isPro) {
           endpoint = "/api/checkout/create-subscription-intent";
-          priceId = process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY;
-          if (!priceId) throw new Error("Plano PRO não configurado");
+          // Tentar pegar do localStorage o Price ID específico (Start/Pro Mensal/Anual)
+          priceId = window.localStorage.getItem('sj_selected_price_id') || process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY;
+          
+          if (!priceId) throw new Error("Plano não configurado corretamente");
         } else {
           endpoint = "/api/checkout/create-payment-intent";
           priceId = priceMap[jurisAmount];
           if (!priceId) throw new Error("Pacote de Juris inválido");
         }
+
+        // Carregar metadados do localStorage se for assinatura de plano
+        const planType = window.localStorage.getItem('sj_selected_plan_type');
+        const billingCycle = window.localStorage.getItem('sj_selected_billing');
+        const addOnType = window.localStorage.getItem('sj_selected_addon_type');
 
         const res = await fetch(endpoint, {
           method: "POST",
@@ -258,6 +265,9 @@ export default function TransparentCheckoutModal({
             priceId,
             stripeCouponId: couponData?.stripe_coupon_id,
             internalCouponId: couponData?.id,
+            planType,
+            billingCycle,
+            addOnType,
           }),
         });
 
@@ -298,7 +308,11 @@ export default function TransparentCheckoutModal({
               <CreditCard size={22} /> Finalizar Compra
             </h2>
             <p style={modalStyles.subtitle}>
-              {jurisAmount} Juris • {priceLabel[jurisAmount] || ""}
+              {isPro ? (
+                <>Plano {window.localStorage.getItem('sj_selected_plan_type') || 'PRO'} • {window.localStorage.getItem('sj_selected_billing') || ''}</>
+              ) : (
+                <>{jurisAmount} Juris • {priceLabel[jurisAmount] || ""}</>
+              )}
               {couponData?.status === "success" && (
                 <span style={modalStyles.couponTag}> • Cupom aplicado ✓</span>
               )}

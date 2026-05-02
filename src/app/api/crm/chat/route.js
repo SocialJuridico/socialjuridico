@@ -1,6 +1,8 @@
 import OpenAI from "openai";
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabaseServer';
+import { supabaseAdmin } from '@/lib/supabase';
+import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -15,11 +17,34 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const { message, clientData, history } = await request.json();
+    const { message, clientData, history, useType } = await request.json();
 
     if (!message || !clientData) {
       return NextResponse.json({ success: false, message: "Dados insuficientes" }, { status: 400 });
     }
+
+    const planLimits = await getUserPlanLimits(supabaseAdmin || supabase, user.id);
+    if (!planLimits) {
+      return NextResponse.json({ success: false, message: "Erro ao ler limites do plano." }, { status: 400 });
+    }
+
+    // 1. Bloqueio de Jurisprudência para START
+    const isJuris = useType === 'JURIS' || clientData.name === "Análise Jurisprudencial Geral";
+    if (isJuris && !planLimits.hasJurisprudencia) {
+      return NextResponse.json({ success: false, message: "Funcionalidade disponível apenas no Plano PRO", error_type: "UPGRADE_REQUIRED" }, { status: 403 });
+    }
+
+    // 2. Limite de Triagem para START
+    const isTriagem = useType === 'TRIAGEM' || clientData.name === "Triagem Rápida";
+    if (isTriagem) {
+      if (!planLimits.canUseTriagem()) {
+        return NextResponse.json({ success: false, message: "LIMIT_REACHED", error_type: "QUOTA_EXCEEDED" }, { status: 403 });
+      }
+    }
+
+    // 3. Outros usos de IA no CRM (Agenda, Chat com Cliente)
+    // Por enquanto não limitamos severamente além do Redator IA, 
+    // mas se quiser limitar o chat geral, faríamos aqui.
 
     const systemPrompt = `Você é um especialista sênior em direito brasileiro (SocialJurídico AI). 
     Analise estrategicamente o caso para o cliente: ${clientData.name}.
@@ -40,6 +65,11 @@ export async function POST(request) {
     });
 
     const responseText = completion.choices[0].message.content || "Sem resposta da IA.";
+
+    // Incrementar uso se for Triagem
+    if (isTriagem) {
+      await incrementUsage(supabaseAdmin || supabase, user.id, 'uso_triagem', 1);
+    }
 
     return NextResponse.json({ 
       success: true, 

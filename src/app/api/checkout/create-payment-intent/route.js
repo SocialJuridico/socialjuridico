@@ -19,7 +19,7 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const { priceId, stripeCouponId, internalCouponId } = await request.json();
+    const { priceId, stripeCouponId, internalCouponId, addOnType } = await request.json();
 
     if (!priceId) {
       return NextResponse.json({ success: false, message: "Price ID é obrigatório" }, { status: 400 });
@@ -65,8 +65,9 @@ export async function POST(request) {
       payment_method_types: ['card'],
       metadata: {
         userId: user.id,
-        type: 'JURIS_PURCHASE',
+        type: addOnType ? 'ADDON_PURCHASE' : 'JURIS_PURCHASE',
         priceId: priceId,
+        addOnType: addOnType || null,
         cupomId: internalCouponId || null,
       },
       receipt_email: user.email,

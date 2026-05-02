@@ -7979,6 +7979,26 @@ export default function AdvogadoDashboard() {
             )}
           </div>
 
+          <div
+            className={`${styles.navItem} ${activeTab === "quero-site" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("quero-site")}
+            style={{ border: '1px solid rgba(212, 175, 55, 0.3)', background: 'rgba(212, 175, 55, 0.05)' }}
+          >
+            <Globe size={18} color="var(--color-gold)" /> <span style={{ color: 'var(--color-gold)', fontWeight: '800' }}>QUERO UM SITE</span>
+          </div>
+          <div
+            className={`${styles.navItem} ${activeTab === "meus-casos" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("meus-casos")}
+          >
+            <Briefcase size={18} /> <span>Meus Casos</span>
+          </div>
+          <div
+            className={`${styles.navItem} ${activeTab === "declarei-interesse" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("declarei-interesse")}
+          >
+            <Check size={18} /> <span>Declarei Interesse</span>
+          </div>
+
           {/* ANUNCIOS DE SERVICOS MENU */}
           <div
             className={`${styles.anunciosNav}`}
@@ -8009,11 +8029,11 @@ export default function AdvogadoDashboard() {
                 <span>DILIGÊNCIAS</span>
               </div>
               <div 
-                className={`${styles.subNavItem} ${activeTab === "anuncios-AUDIENCIAS" ? styles.activeSubNav : ""}`}
-                onClick={() => handleTabChange("anuncios-AUDIENCIAS")}
+                className={`${styles.subNavItem} ${activeTab === "anuncios-OUTROS" ? styles.activeSubNav : ""}`}
+                onClick={() => handleTabChange("anuncios-OUTROS")}
               >
-                <Gavel size={14} />
-                <span>AUDIÊNCIAS</span>
+                <PlusCircle size={14} />
+                <span>OUTROS</span>
               </div>
             </div>
           )}
@@ -8083,8 +8103,21 @@ export default function AdvogadoDashboard() {
             {profileData?.plan_type !== 'PRO' && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
-          </div>
-        </nav>
+            </div>
+            <div className={styles.navGroupLabel}>Sistema</div>
+            <div
+              className={`${styles.navItem} ${activeTab === "documentacao" ? styles.activeNavItem : ""}`}
+              onClick={() => handleTabChange("documentacao")}
+            >
+              <BookOpen size={18} /> <span>Documentação</span>
+            </div>
+            <div
+              className={`${styles.navItem} ${activeTab === "cartao-visitas" ? styles.activeNavItem : ""}`}
+              onClick={() => handleTabChange("cartao-visitas")}
+            >
+              <Eye size={18} /> <span>Cartão Digital</span>
+            </div>
+          </nav>
       </div> {/* Fecha sidebarScroll */}
 
       <div className={styles.sidebarFooter}>

@@ -320,16 +320,9 @@ async function handleProSubscription(session, userId, cupomId) {
   console.log(`💎 [handleProSubscription] Plano: ${planType} | Ciclo: ${billingCycle}`);
   const jurisBonus = planType === 'PRO' ? 20 : 7;
 
-  console.log(`👑 Ativando Plano ${planType} para o usuário ${userId}. Bônus: ${jurisBonus} Juris.`);
-
-  // Buscar saldo atual para somar os Juris de bônus
-  const { data: advProfile, error: fetchError } = await supabaseAdmin
-    .from("advogados")
-    .select("balance")
-    .eq("id", userId)
-    .single();
   console.log(`👑 Ativando Plano ${planType} para o usuário ${finalUserId}. Bônus: ${jurisBonus} Juris.`);
 
+  // Buscar saldo atual para somar os Juris de bônus
   const { data: advogado, error: fetchError } = await supabaseAdmin
     .from("advogados")
     .select("balance")

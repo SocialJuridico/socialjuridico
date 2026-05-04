@@ -81,7 +81,7 @@ export async function POST(request) {
       const { error: updateError } = await supabaseAdmin
         .from("advogados")
         .update({
-          is_premium: planType === 'PRO',
+          is_premium: true, // Ambos START e PRO são premium
           plan_type: planType,
           plan_billing_cycle: billingCycle,
           premium_expires_at: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString(),

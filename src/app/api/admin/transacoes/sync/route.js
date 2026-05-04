@@ -38,82 +38,85 @@ export async function POST() {
       );
     }
 
-    // 1. Listar sessões de checkout do Stripe (últimas 100 finalizadas)
-    const sessions = await stripe.checkout.sessions.list({
-      limit: 100,
-      status: 'complete',
-      expand: ['data.line_items']
-    });
-
-    const results = {
-      imported: 0,
-      skipped: 0,
-      errors: []
-    };
-
-    for (const session of sessions.data) {
-      try {
-        const userId = session.metadata?.userId;
-        const type = session.metadata?.type || 'JURIS_PURCHASE'; // Default se não tiver
-        const cupomId = session.metadata?.cupomId || null;
-        
-        let advogadoId = userId;
-        
-        // Se não tiver userId no metadata, vamos tentar achar pelo email do cliente do Stripe
-        if (!advogadoId && session.customer_details?.email) {
-          const { data: adv } = await supabaseAdmin
-            .from('advogados')
-            .select('id')
-            .eq('email', session.customer_details.email)
-            .single();
-          
-          if (adv) advogadoId = adv.id;
-        }
-
-        if (!advogadoId) {
-          results.skipped++;
-          continue; // Não conseguimos vincular a nenhum advogado
-        }
-
-        // Tentar inserir na tabela de transações
-        // Usamos upsert ou conferimos se já existe pelo stripe_session_id
-        const { error: insertError } = await supabaseAdmin
-          .from('transacoes')
-          .insert([{
-            advogado_id: advogadoId,
-            tipo: type,
-            valor: (session.amount_total || 0) / 100,
-            moeda: (session.currency || 'BRL').toUpperCase(),
-            status: 'succeeded',
-            juris_amount: type === 'PRO_SUBSCRIPTION' ? 20 : 0, // Estimativa se não especificado
-            stripe_session_id: session.id,
-            cupom_id: cupomId,
-            created_at: new Date(session.created * 1000).toISOString()
-          }], { onConflict: 'stripe_session_id' });
-
-        if (insertError) {
-          // Se for erro de duplicidade, só pulamos
-          if (insertError.code === '23505') {
-            results.skipped++;
-          } else {
-            results.errors.push(`Erro na sessão ${session.id}: ${insertError.message}`);
-          }
-        } else {
-          results.imported++;
-        }
-
-      } catch (err) {
-        results.errors.push(`Erro processando sessão ${session.id}: ${err.message}`);
-      }
+    const { imported, skipped, errors } = await syncStripeTransactions();
+    
+    if (errors.length > 0) {
+      console.warn("⚠️ Sincronização concluída com avisos:", errors);
     }
 
-    return NextResponse.json({ success: true, ...results });
-
+    return NextResponse.json({ 
+      success: true, 
+      imported, 
+      skipped, 
+      errors: errors.slice(0, 10) 
+    });
   } catch (error) {
     console.error("Erro na sincronização de transações:", error);
     return NextResponse.json(
-      { success: false, message: "Erro interno no servidor" },
+      { success: false, message: "Erro interno no servidor: " + error.message },
       { status: 500 },
     );
+  }
+}
+
+async function syncStripeTransactions() {
+  const results = { imported: 0, skipped: 0, errors: [] };
+
+  // 1. Sincronizar Checkout Sessions (Fluxo Antigo)
+  try {
+    const sessions = await stripe.checkout.sessions.list({ limit: 50, status: 'complete' });
+    for (const session of sessions.data) {
+      const res = await processGenericTransaction(session, 'SESSION');
+      if (res.success) results.imported++; else results.skipped++;
+    }
+  } catch (e) { results.errors.push("Erro ao listar sessões: " + e.message); }
+
+  // 2. Sincronizar Payment Intents (Checkout Transparente)
+  try {
+    const intents = await stripe.paymentIntents.list({ limit: 50 });
+    for (const intent of intents.data.filter(i => i.status === 'succeeded')) {
+      const res = await processGenericTransaction(intent, 'INTENT');
+      if (res.success) results.imported++; else results.skipped++;
+    }
+  } catch (e) { results.errors.push("Erro ao listar intents: " + e.message); }
+
+  return results;
+}
+
+async function processGenericTransaction(obj, source) {
+  try {
+    const userId = obj.metadata?.userId;
+    const email = obj.customer_email || obj.receipt_email || obj.customer_details?.email;
+    
+    let finalUserId = userId;
+    if (!finalUserId && email) {
+      const { data: adv } = await supabaseAdmin.from('advogados').select('id').eq('email', email).maybeSingle();
+      if (adv) finalUserId = adv.id;
+    }
+
+    if (!finalUserId) return { success: false, reason: 'no_user' };
+
+    const type = obj.metadata?.type || 'JURIS_PURCHASE';
+    const amount = (obj.amount_total || obj.amount || 0) / 100;
+
+    const { error } = await supabaseAdmin
+      .from('transacoes')
+      .insert([{
+        advogado_id: finalUserId,
+        tipo: type,
+        valor: amount,
+        moeda: (obj.currency || 'BRL').toUpperCase(),
+        status: 'succeeded',
+        juris_amount: type === 'PRO_SUBSCRIPTION' ? (obj.metadata?.planType === 'PRO' ? 20 : 0) : 0,
+        stripe_session_id: obj.id,
+        cupom_id: obj.metadata?.cupomId || null,
+        created_at: new Date((obj.created) * 1000).toISOString()
+      }]);
+
+    // Ignorar erro de duplicidade (já importado)
+    if (error && error.code !== '23505') return { success: false, reason: error.message };
+    return { success: true };
+  } catch (e) {
+    return { success: false, reason: e.message };
   }
 }

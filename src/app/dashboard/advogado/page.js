@@ -6082,7 +6082,7 @@ export default function AdvogadoDashboard() {
   const handleBuyJuris = async (amount = 20, couponData = null) => {
     // Checkout Transparente: abre modal inline ao invés de redirecionar
     setTransparentCheckoutAmount(amount);
-    setTransparentCheckoutCoupon(couponData);
+    setAppliedCouponData(couponData);
     setShowBuyModal(false);
     setShowTransparentCheckout(true);
   };

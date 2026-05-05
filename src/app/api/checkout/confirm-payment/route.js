@@ -89,8 +89,8 @@ export async function POST(request) {
           uso_redator_ia: 0,
           uso_triagem: 0,
           uso_agenda: 0,
-          // Se for PRO, ganha 20 Juris de bônus (legacy feature maintained)
-          balance: planType === 'PRO' ? (currentBalance + 20) : currentBalance,
+          // Bônus de Juris: 20 para PRO, 7 para START
+          balance: planType === 'PRO' ? (currentBalance + 20) : (currentBalance + 7),
         })
         .eq("id", user.id);
 
@@ -105,7 +105,7 @@ export async function POST(request) {
         valor: isSetup ? 0 : ((intent.amount || 0) / 100),
         moeda: intent.currency || 'BRL',
         status: 'succeeded',
-        juris_amount: planType === 'PRO' ? 20 : 0,
+        juris_amount: planType === 'PRO' ? 20 : 7,
         stripe_session_id: paymentIntentId,
         cupom_id: (cupomId && cupomId !== 'null') ? cupomId : null,
         created_at: new Date().toISOString()

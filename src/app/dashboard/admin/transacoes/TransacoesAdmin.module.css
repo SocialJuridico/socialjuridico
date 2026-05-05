@@ -266,6 +266,15 @@
   border-radius: 6px;
 }
 
+.typeStart {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  background: #7c3aed;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
 .jurisBonus {
   font-size: 0.7rem;
   color: #10b981;

@@ -101,20 +101,22 @@ async function processGenericTransaction(obj, source) {
 
     const { error } = await supabaseAdmin
       .from('transacoes')
-      .insert([{
+      .upsert({
         advogado_id: finalUserId,
         tipo: type,
         valor: amount,
         moeda: (obj.currency || 'BRL').toUpperCase(),
         status: 'succeeded',
-        juris_amount: type === 'PRO_SUBSCRIPTION' ? (obj.metadata?.planType === 'PRO' ? 20 : 0) : 0,
+        juris_amount: type === 'PRO_SUBSCRIPTION' ? (obj.metadata?.planType === 'PRO' ? 20 : 7) : 0,
         stripe_session_id: obj.id,
         cupom_id: obj.metadata?.cupomId || null,
         created_at: new Date((obj.created) * 1000).toISOString()
-      }]);
+      }, { 
+        onConflict: 'stripe_session_id',
+        ignoreDuplicates: false // Permitir atualização de registros existentes
+      });
 
-    // Ignorar erro de duplicidade (já importado)
-    if (error && error.code !== '23505') return { success: false, reason: error.message };
+    if (error) return { success: false, reason: error.message };
     return { success: true };
   } catch (e) {
     return { success: false, reason: e.message };

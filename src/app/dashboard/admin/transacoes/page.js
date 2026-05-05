@@ -75,8 +75,9 @@ export default function AdminTransacoesPage() {
   const stats = useMemo(() => {
     const total = filteredTransacoes.reduce((acc, t) => acc + Number(t.valor || 0), 0);
     const juris = filteredTransacoes.filter(t => t.tipo === "JURIS_PURCHASE").length;
-    const pro = filteredTransacoes.filter(t => t.tipo === "PRO_SUBSCRIPTION").length;
-    return { total, juris, pro };
+    const pro = filteredTransacoes.filter(t => t.tipo === "PRO_SUBSCRIPTION" && t.juris_amount !== 7).length;
+    const start = filteredTransacoes.filter(t => t.tipo === "PRO_SUBSCRIPTION" && t.juris_amount === 7).length;
+    return { total, juris, pro, start };
   }, [filteredTransacoes]);
 
   const handleExportPDF = () => {
@@ -179,11 +180,20 @@ export default function AdminTransacoesPage() {
           </div>
         </div>
         <div className={styles.statCard}>
+          <div className={styles.statIcon} style={{ background: 'rgba(124, 58, 237, 0.1)', color: '#7c3aed' }}>
+            <DollarSign size={20} />
+          </div>
+          <div className={styles.statInfo}>
+            <span className={styles.statLabel}>Planos START</span>
+            <strong className={styles.statValue}>{stats.start}</strong>
+          </div>
+        </div>
+        <div className={styles.statCard}>
           <div className={styles.statIcon} style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>
             <DollarSign size={20} />
           </div>
           <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Planos PRO Ativos</span>
+            <span className={styles.statLabel}>Planos PRO</span>
             <strong className={styles.statValue}>{stats.pro}</strong>
           </div>
         </div>
@@ -244,8 +254,8 @@ export default function AdminTransacoesPage() {
                     </div>
                   </td>
                   <td>
-                    <span className={t.tipo === "JURIS_PURCHASE" ? styles.typeJuris : styles.typePro}>
-                      {t.tipo === "JURIS_PURCHASE" ? "PACOTE DE JURIS" : "PLANO MENSAL PRO"}
+                    <span className={t.tipo === "JURIS_PURCHASE" ? styles.typeJuris : (t.juris_amount === 7 ? styles.typeStart : styles.typePro)}>
+                      {t.tipo === "JURIS_PURCHASE" ? "PACOTE DE JURIS" : (t.juris_amount === 7 ? "PLANO MENSAL START" : "PLANO MENSAL PRO")}
                     </span>
                     {Number(t.juris_amount) > 0 && <div className={styles.jurisBonus}>+{t.juris_amount} Juris</div>}
                   </td>

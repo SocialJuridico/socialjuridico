@@ -1,6 +1,7 @@
 "use client";
 
 import PlanLock from "@/components/PlanLock/PlanLock";
+import VerifiedBadge from "@/components/VerifiedBadge/VerifiedBadge";
 
 const PLANS_DATA = {
   START: {
@@ -8236,7 +8237,10 @@ export default function AdvogadoDashboard() {
             </div>
 
             <div className={styles.userInfo}>
-              <span className={styles.userName}>{userName}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className={styles.userName} style={{ margin: 0 }}>{userName}</span>
+                {profileData?.oab_verification_status === "VERIFIED" && <VerifiedBadge size={16} />}
+              </div>
               <span className={styles.userOAB}>
                 {profileData?.oab || "OAB Pendente"}
               </span>

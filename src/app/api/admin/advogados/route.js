@@ -233,7 +233,7 @@ export async function PUT(request) {
     // 1. Buscar o advogado
     const { data: lawyer, error: lError } = await db
       .from("advogados")
-      .select("id, is_premium, balance")
+      .select("id, is_premium, balance, name, email, oab_verification_status")
       .eq("id", lawyerId)
       .single();
 
@@ -287,6 +287,36 @@ export async function PUT(request) {
         );
       }
       updates.oab_verification_status = value;
+
+      // Disparar e-mail de parabéns apenas se o status mudar para VERIFIED
+      if (value === "VERIFIED" && lawyer.oab_verification_status !== "VERIFIED") {
+        try {
+          const { resend } = await import("@/lib/resend");
+          await resend.emails.send({
+            from: "SocialJurídico <contato@socialjuridico.com.br>",
+            to: lawyer.email,
+            subject: "🎉 Parabéns! Sua OAB foi verificada no SocialJurídico",
+            html: `
+              <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #d4af37;">Parabéns, ${lawyer.name}! 🎓</h2>
+                <p style="font-size: 16px;">Sua documentação foi aprovada com sucesso e sua OAB acaba de ser verificada em nossa plataforma.</p>
+                <div style="background-color: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981;">
+                  <p style="margin-top: 0; font-weight: bold; font-size: 16px;">O que isso significa para você?</p>
+                  <ul style="margin-bottom: 0; padding-left: 20px;">
+                    <li style="margin-bottom: 8px;">Seu perfil e seus chats agora exibem o <strong style="color: #10b981;">Selo Verde de Confiança</strong> (OAB Verificada).</li>
+                    <li>Você transmite muito mais segurança aos cidadãos, <strong>aumentando em até 3x</strong> suas chances de ser contratado.</li>
+                  </ul>
+                </div>
+                <p style="font-size: 16px;">Acesse o seu painel agora mesmo para conferir o seu novo selo de destaque nas buscas e em seu perfil.</p>
+                <br/>
+                <a href="https://socialjuridico.com.br/login" style="display: inline-block; padding: 14px 28px; background-color: #d4af37; color: #000; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">Acessar meu Painel</a>
+              </div>
+            `,
+          });
+        } catch (emailErr) {
+          console.error("Erro ao disparar email de OAB Verificada:", emailErr);
+        }
+      }
     } else if (action === "UPDATE_OAB") {
       const { oab, estado } = value;
       if (!oab || !estado) {

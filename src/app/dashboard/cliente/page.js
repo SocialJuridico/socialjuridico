@@ -1,5 +1,6 @@
 "use client";
 
+import VerifiedBadge from "@/components/VerifiedBadge/VerifiedBadge";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -951,8 +952,13 @@ export default function ClienteDashboard() {
       key={adv.id}
       className={`${styles.lawyerCard} ${adv.is_premium ? styles.lawyerCardPro : ""}`}
       onClick={() => handleOpenLawyerProfile(adv)}
-      style={{ cursor: "pointer" }}
+      style={{ cursor: "pointer", position: "relative" }}
     >
+      {adv.oab_verification_status === "VERIFIED" && (
+        <div style={{ position: "absolute", top: "8px", left: "8px", zIndex: 10 }}>
+          <VerifiedBadge size={68} />
+        </div>
+      )}
       {adv.is_premium && (
         <div className={styles.proLawyerBadge}>
           <Sparkles size={11} /> PRO
@@ -987,7 +993,9 @@ export default function ClienteDashboard() {
       )}
 
       <div className={styles.lawyerInfo}>
-        <h3 className={styles.lawyerName}>{adv.name}</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', justifyContent: 'center' }}>
+          <h3 className={styles.lawyerName} style={{ margin: 0 }}>{adv.name}</h3>
+        </div>
         <div
           className={`${styles.oabStatusBadge} ${adv.oab_verification_status === "VERIFIED" ? styles.oabStatusVerified : styles.oabStatusPending}`}
         >
@@ -2249,7 +2257,10 @@ export default function ClienteDashboard() {
                 </div>
               )}
               <div className={styles.lpModalMainInfo}>
-                <h2>{selectedLawyer.name}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <h2 style={{ margin: 0 }}>{selectedLawyer.name}</h2>
+                  {selectedLawyer.oab_verification_status === "VERIFIED" && <VerifiedBadge size={50} />}
+                </div>
                 <p className={styles.lpModalOab}>
                   OAB: {selectedLawyer.oab || "Não informada"}
                 </p>

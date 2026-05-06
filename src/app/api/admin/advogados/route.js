@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 
 async function ensureAdmin(db, userId) {
   const { data: admin, error } = await db
@@ -335,6 +336,11 @@ export async function PUT(request) {
       .eq("id", lawyerId);
 
     if (updateError) throw updateError;
+
+    // Se o saldo foi reduzido manualmente pelo Admin, também acionamos o alerta de estoque baixo se necessário
+    if (action === "REMOVE_JURIS" && updates.balance !== undefined) {
+      await checkAndNotifyLowBalance(lawyerId, lawyer.balance || 0, updates.balance);
+    }
 
     return NextResponse.json({
       success: true,

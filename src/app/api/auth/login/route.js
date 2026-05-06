@@ -202,7 +202,7 @@ export async function POST(request) {
     for (const table of tables) {
       const { data } = await db
         .from(table)
-        .select(`id, name, email, role, phone, avatar${table === "advogados" ? ", oab_verification_status" : ""}`)
+        .select(`id, name, email, role, phone, avatar${table === "advogados" ? ", oab_verification_status, oab_warning_started_at" : ""}`)
         .eq("id", user.id)
         .maybeSingle();
       if (data) {
@@ -211,17 +211,33 @@ export async function POST(request) {
       }
     }
 
-    // Bloqueio de OAB com Erro
-    if (profile?.role === "LAWYER" && profile?.oab_verification_status === "ERROR") {
-      await supabase.auth.signOut(); // Revoga a sessão
-      return NextResponse.json(
-        { 
-          success: false, 
-          type: "OAB_ERROR",
-          message: "Sua verificação de OAB apresentou inconsistências e seu acesso foi restrito." 
-        },
-        { status: 403 },
-      );
+    // Verificação de bloqueio de OAB
+    if (profile?.role === "LAWYER") {
+      let isError = profile.oab_verification_status === "ERROR";
+
+      // Se estiver pendente, verifica se o prazo de 7 dias já estourou enquanto estava offline
+      if (!isError && profile.oab_verification_status === "PENDING" && profile.oab_warning_started_at) {
+        const startedDate = new Date(profile.oab_warning_started_at);
+        const daysPassed = (new Date().getTime() - startedDate.getTime()) / (1000 * 60 * 60 * 24);
+        
+        if (daysPassed >= 7) {
+          isError = true;
+          // Suspende a conta imediatamente no banco
+          await db.from("advogados").update({ oab_verification_status: "ERROR" }).eq("id", profile.id);
+        }
+      }
+
+      if (isError) {
+        await supabase.auth.signOut(); // Revoga a sessão
+        return NextResponse.json(
+          { 
+            success: false, 
+            type: "OAB_ERROR",
+            message: "Sua verificação de OAB apresentou inconsistências ou o prazo de envio expirou, e seu acesso foi restrito." 
+          },
+          { status: 403 },
+        );
+      }
     }
 
     // 3. Criar perfil padrão se não existir

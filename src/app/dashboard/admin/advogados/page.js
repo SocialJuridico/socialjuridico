@@ -237,6 +237,7 @@ export default function AdminAdvogadosPage() {
                 <th>Plano</th>
                 <th>OAB Status</th>
                 <th>Expira em</th>
+                <th>Último Login</th>
                 <th>Cadastro</th>
                 <th>Ações</th>
               </tr>
@@ -284,6 +285,11 @@ export default function AdminAdvogadosPage() {
                       ? new Date(
                           advogado.premium_expires_at,
                         ).toLocaleDateString("pt-BR")
+                      : "-"}
+                  </td>
+                  <td>
+                    {advogado.last_sign_in_at
+                      ? new Date(advogado.last_sign_in_at).toLocaleString("pt-BR")
                       : "-"}
                   </td>
                   <td>

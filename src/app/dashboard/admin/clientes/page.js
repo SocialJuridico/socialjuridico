@@ -133,6 +133,7 @@ export default function AdminClientesPage() {
                 <th>Nome</th>
                 <th>Email</th>
                 <th>Telefone</th>
+                <th>Último Login</th>
                 <th>Cadastro</th>
                 <th>Ações</th>
               </tr>
@@ -143,6 +144,11 @@ export default function AdminClientesPage() {
                   <td>{cliente.name || "-"}</td>
                   <td>{cliente.email || "-"}</td>
                   <td>{cliente.phone || "-"}</td>
+                  <td>
+                    {cliente.last_sign_in_at
+                      ? new Date(cliente.last_sign_in_at).toLocaleString("pt-BR")
+                      : "-"}
+                  </td>
                   <td>
                     {cliente.created_at
                       ? new Date(cliente.created_at).toLocaleDateString("pt-BR")

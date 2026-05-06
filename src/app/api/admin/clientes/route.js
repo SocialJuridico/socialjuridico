@@ -46,7 +46,21 @@ export async function GET() {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data: data || [] });
+    let authUsers = [];
+    if (supabaseAdmin) {
+      const { data: { users }, error: authError } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+      if (!authError) authUsers = users || [];
+    }
+
+    const formattedData = (data || []).map(cli => {
+      const authUser = authUsers.find(u => u.id === cli.id);
+      return {
+        ...cli,
+        last_sign_in_at: authUser ? authUser.last_sign_in_at : null
+      };
+    });
+
+    return NextResponse.json({ success: true, data: formattedData });
   } catch (error) {
     console.error("Erro na API GET /api/admin/clientes:", error);
     return NextResponse.json(

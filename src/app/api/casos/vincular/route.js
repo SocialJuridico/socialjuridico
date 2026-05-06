@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
 import { interesseCasoTemplate } from "@/lib/emailTemplates";
+import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 
 export async function POST(request) {
   try {
@@ -134,12 +135,16 @@ export async function POST(request) {
     if (interestError) throw interestError;
 
     // 6. Debitar 1 Juri do saldo do advogado
+    const newBalance = advogado.balance - 1;
     const { error: balanceError } = await db
       .from("advogados")
-      .update({ balance: advogado.balance - 1 })
+      .update({ balance: newBalance })
       .eq("id", user.id);
 
     if (balanceError) throw balanceError;
+
+    // Verificar e notificar estoque baixo de Juris
+    await checkAndNotifyLowBalance(user.id, advogado.balance, newBalance);
 
     // 7. Notificar o cliente
     const notifBase = {
@@ -190,7 +195,7 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       message: "Interesse manifestado com sucesso! O cliente foi notificado.",
-      newBalance: advogado.balance - 1,
+      newBalance: newBalance,
     });
   } catch (error) {
     console.error("Erro ao manifestar interesse:", error);

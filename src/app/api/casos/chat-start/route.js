@@ -2,10 +2,11 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isLawyer } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
+import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 
 // POST /api/casos/chat-start
 // Body: { casoId }
-// Cobra 4 Juris do advogado ao iniciar atendimento via chat pela primeira vez.
+// Cobra 1 Juri do advogado ao iniciar atendimento via chat pela primeira vez.
 export async function POST(request) {
   try {
     const supabase = createClient();
@@ -114,7 +115,7 @@ export async function POST(request) {
       });
     }
 
-    // 3. Verificar saldo do advogado (precisa de 4 Juris)
+    // 3. Verificar saldo do advogado (precisa de 1 Juri)
     const { data: advogado, error: advError } = await db
       .from("advogados")
       .select("balance")
@@ -128,29 +129,32 @@ export async function POST(request) {
       );
     }
 
-    if ((advogado.balance || 0) < 4) {
+    if ((advogado.balance || 0) < 1) {
       return NextResponse.json(
         {
           success: false,
-          message: `Saldo insuficiente. Você precisa de 4 Juris para iniciar o atendimento. Saldo atual: ${advogado.balance || 0} Juri(s).`,
+          message: `Saldo insuficiente. Você precisa de 1 Juri para iniciar o atendimento. Saldo atual: ${advogado.balance || 0} Juri(s).`,
           balance: advogado.balance || 0,
         },
         { status: 402 },
       );
     }
 
-    // 4. Debitar 4 Juris e marcar chat_started
-    const newBalance = advogado.balance - 4;
+    // 4. Debitar 1 Juri e marcar chat_started
+    const newBalance = advogado.balance - 1;
 
     await Promise.all([
       db.from("advogados").update({ balance: newBalance }).eq("id", user.id),
       db.from("casos").update({ chat_started: true }).eq("id", casoId),
     ]);
 
+    // Verificar e notificar estoque baixo de Juris
+    await checkAndNotifyLowBalance(user.id, advogado.balance, newBalance);
+
     return NextResponse.json({
       success: true,
       alreadyStarted: false,
-      message: "Chat iniciado! 4 Juris debitados.",
+      message: "Chat iniciado! 1 Juri debitado.",
       newBalance,
     });
   } catch (error) {

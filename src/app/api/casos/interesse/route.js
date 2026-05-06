@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
 import { interesseRecusadoTemplate, interesseAceitoTemplate, advogadoContratadoTemplate, casoEncerradoTemplate } from "@/lib/emailTemplates";
+import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 
 // POST /api/casos/interesse
 // Body: { interestId, action: 'ACCEPT' | 'DECLINE' | 'HIRE' }
@@ -222,6 +223,9 @@ export async function POST(request) {
       // Debitar 3 Juris do advogado
       const newBalance = advogado.balance - 3;
       await db.from("advogados").update({ balance: newBalance }).eq("id", interest.lawyer_id);
+
+      // Verificar e notificar estoque baixo de Juris
+      await checkAndNotifyLowBalance(interest.lawyer_id, advogado.balance, newBalance);
 
 
       // Mudar interest status para HIRED

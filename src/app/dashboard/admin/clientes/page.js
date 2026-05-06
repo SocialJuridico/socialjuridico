@@ -12,6 +12,7 @@ export default function AdminClientesPage() {
   const [loading, setLoading] = useState(true);
   const [clientes, setClientes] = useState([]);
   const [search, setSearch] = useState("");
+  const [inactivityFilter, setInactivityFilter] = useState("ALL");
   const [deletingId, setDeletingId] = useState(null);
   const [resettingId, setResettingId] = useState(null);
   const [modalAction, setModalAction] = useState(null);
@@ -41,14 +42,33 @@ export default function AdminClientesPage() {
   }, [router]);
 
   const filteredClientes = useMemo(() => {
+    let result = clientes;
+
+    if (inactivityFilter !== "ALL") {
+      const now = new Date();
+      result = result.filter((c) => {
+        const lastLogin = new Date(c.last_sign_in_at || c.created_at);
+        const diffDays = Math.floor((now - lastLogin) / (1000 * 60 * 60 * 24));
+
+        if (inactivityFilter === "7DAYS") return diffDays >= 7;
+        if (inactivityFilter === "15DAYS") return diffDays >= 15;
+        if (inactivityFilter === "30DAYS") return diffDays >= 30;
+
+        return true;
+      });
+    }
+
     const term = search.trim().toLowerCase();
-    if (!term) return clientes;
-    return clientes.filter((c) => {
-      const name = String(c.name || "").toLowerCase();
-      const email = String(c.email || "").toLowerCase();
-      return name.includes(term) || email.includes(term);
-    });
-  }, [clientes, search]);
+    if (term) {
+      result = result.filter((c) => {
+        const name = String(c.name || "").toLowerCase();
+        const email = String(c.email || "").toLowerCase();
+        return name.includes(term) || email.includes(term);
+      });
+    }
+
+    return result;
+  }, [clientes, search, inactivityFilter]);
 
   const confirmDelete = async (cliente) => {
     setDeletingId(cliente.id);
@@ -112,15 +132,28 @@ export default function AdminClientesPage() {
         </h1>
       </header>
 
-      <div className={styles.searchWrap}>
-        <Search size={16} className={styles.searchIcon} />
-        <input
+      <div className={styles.searchWrap} style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+          <Search size={16} className={styles.searchIcon} />
+          <input
+            className={styles.searchInput}
+            type="text"
+            placeholder="Buscar por nome ou email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <select
           className={styles.searchInput}
-          type="text"
-          placeholder="Buscar por nome ou email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+          style={{ paddingLeft: '1rem', width: 'auto', flex: 'none', appearance: 'auto', background: '#1e293b' }}
+          value={inactivityFilter}
+          onChange={(e) => setInactivityFilter(e.target.value)}
+        >
+          <option value="ALL">Todos os clientes</option>
+          <option value="7DAYS">Inativos há +7 dias</option>
+          <option value="15DAYS">Inativos há +15 dias</option>
+          <option value="30DAYS">Inativos há +30 dias</option>
+        </select>
       </div>
 
       <div className={styles.tableWrap}>
@@ -147,7 +180,9 @@ export default function AdminClientesPage() {
                   <td>
                     {cliente.last_sign_in_at
                       ? new Date(cliente.last_sign_in_at).toLocaleString("pt-BR")
-                      : "-"}
+                      : cliente.created_at
+                        ? new Date(cliente.created_at).toLocaleString("pt-BR")
+                        : "-"}
                   </td>
                   <td>
                     {cliente.created_at

@@ -12,6 +12,7 @@ export default function AdminAdvogadosPage() {
   const [loading, setLoading] = useState(true);
   const [advogados, setAdvogados] = useState([]);
   const [search, setSearch] = useState("");
+  const [inactivityFilter, setInactivityFilter] = useState("ALL");
   const [deletingId, setDeletingId] = useState(null);
   const [resettingId, setResettingId] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
@@ -77,14 +78,33 @@ export default function AdminAdvogadosPage() {
   }, [router]);
 
   const filteredAdvogados = useMemo(() => {
+    let result = advogados;
+
+    if (inactivityFilter !== "ALL") {
+      const now = new Date();
+      result = result.filter((a) => {
+        const lastLogin = new Date(a.last_sign_in_at || a.created_at);
+        const diffDays = Math.floor((now - lastLogin) / (1000 * 60 * 60 * 24));
+
+        if (inactivityFilter === "7DAYS") return diffDays >= 7;
+        if (inactivityFilter === "15DAYS") return diffDays >= 15;
+        if (inactivityFilter === "30DAYS") return diffDays >= 30;
+
+        return true;
+      });
+    }
+
     const term = search.trim().toLowerCase();
-    if (!term) return advogados;
-    return advogados.filter((a) => {
-      const name = String(a.name || "").toLowerCase();
-      const email = String(a.email || "").toLowerCase();
-      return name.includes(term) || email.includes(term);
-    });
-  }, [advogados, search]);
+    if (term) {
+      result = result.filter((a) => {
+        const name = String(a.name || "").toLowerCase();
+        const email = String(a.email || "").toLowerCase();
+        return name.includes(term) || email.includes(term);
+      });
+    }
+
+    return result;
+  }, [advogados, search, inactivityFilter]);
 
   const confirmDelete = async (advogado) => {
     setDeletingId(advogado.id);
@@ -211,15 +231,28 @@ export default function AdminAdvogadosPage() {
         </h1>
       </header>
 
-      <div className={styles.searchWrap}>
-        <Search size={16} className={styles.searchIcon} />
-        <input
+      <div className={styles.searchWrap} style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+          <Search size={16} className={styles.searchIcon} />
+          <input
+            className={styles.searchInput}
+            type="text"
+            placeholder="Buscar por nome ou email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <select
           className={styles.searchInput}
-          type="text"
-          placeholder="Buscar por nome ou email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+          style={{ paddingLeft: '1rem', width: 'auto', flex: 'none', appearance: 'auto', background: '#1e293b' }}
+          value={inactivityFilter}
+          onChange={(e) => setInactivityFilter(e.target.value)}
+        >
+          <option value="ALL">Todos os advogados</option>
+          <option value="7DAYS">Inativos há +7 dias</option>
+          <option value="15DAYS">Inativos há +15 dias</option>
+          <option value="30DAYS">Inativos há +30 dias</option>
+        </select>
       </div>
 
       <div className={styles.tableWrap}>
@@ -290,7 +323,9 @@ export default function AdminAdvogadosPage() {
                   <td>
                     {advogado.last_sign_in_at
                       ? new Date(advogado.last_sign_in_at).toLocaleString("pt-BR")
-                      : "-"}
+                      : advogado.created_at
+                        ? new Date(advogado.created_at).toLocaleString("pt-BR")
+                        : "-"}
                   </td>
                   <td>
                     {advogado.created_at

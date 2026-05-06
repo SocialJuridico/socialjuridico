@@ -148,6 +148,7 @@ export default function AdvogadoDashboard() {
   const [appliedCouponData, setAppliedCouponData] = useState(null);
   const [isProCheckout, setIsProCheckout] = useState(false);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
+  const [isBlindarProva, setIsBlindarProva] = useState(false);
   const [crmClients, setCrmClients] = useState([]);
   const [loadingCrm, setLoadingCrm] = useState(false);
   const [isSubmittingClient, setIsSubmittingClient] = useState(false);
@@ -6190,10 +6191,20 @@ export default function AdvogadoDashboard() {
     const file = e.target.files[0];
     if (!file || !selectedClient) return;
 
+    if (isBlindarProva && profileData?.plan_type === 'START' && (profileData?.balance || 0) < 3) {
+      toast.error("Saldo insuficiente. A certificação requer 3 Juris.");
+      setShowBuyModal(true);
+      e.target.value = "";
+      return;
+    }
+
     setIsUploading(true);
     const formData = new FormData();
     formData.append("file", file);
     formData.append("client_id", selectedClient.id);
+    if (isBlindarProva) {
+      formData.append("blindar_prova", "true");
+    }
 
     try {
       const res = await fetch("/api/crm/documents", {
@@ -6202,8 +6213,11 @@ export default function AdvogadoDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("Documento anexado!");
+        toast.success(isBlindarProva ? "Documento blindado e anexado!" : "Documento anexado!");
         fetchClientDocuments(selectedClient.id);
+        if (isBlindarProva && profileData?.plan_type === 'START') {
+           reloadPlanUsage();
+        }
       } else {
         toast.error(data.message || "Erro no upload");
       }
@@ -6340,6 +6354,158 @@ export default function AdvogadoDashboard() {
       toast.error("Erro ao gerar PDF");
     } finally {
       setIsGeneratingReport(false);
+    }
+  };
+
+  const handleDownloadCertificate = (docFile) => {
+    try {
+      const doc = new jsPDF();
+      
+      // Page Border
+      doc.setDrawColor(16, 185, 129);
+      doc.setLineWidth(1);
+      doc.rect(5, 5, 200, 287);
+
+      // Header Banner
+      doc.setFillColor(16, 185, 129);
+      doc.rect(5, 5, 200, 25, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.text("CERTIFICADO DE CADEIA DE CUSTÓDIA", 105, 16, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text("REGISTRO DE IMUTABILIDADE DE PROVA DIGITAL", 105, 23, { align: 'center' });
+
+      let currentY = 40;
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      const emitidoEm = new Date().toLocaleString("pt-BR");
+      const dataUpload = new Date(docFile.created_at).toLocaleString("pt-BR");
+      const protocolo = docFile.id ? docFile.id.split('-')[0].toUpperCase() : "DOC-PROVA-DIGITAL";
+
+      const introText = `Certificamos, para os devidos fins de direito, que o arquivo digital individualizado neste documento foi submetido a procedimento de registro de metadados e ancoragem criptográfica, estabelecendo um marco temporal fidedigno e garantindo a sua imutabilidade técnica desde o momento de sua custódia.`;
+      const splitIntro = doc.splitTextToSize(introText, 180);
+      doc.text(splitIntro, 14, currentY);
+      currentY += (splitIntro.length * 5) + 10;
+
+      // Section I
+      doc.setFillColor(240, 245, 240);
+      doc.rect(10, currentY, 190, 8, 'F');
+      doc.setDrawColor(16, 185, 129);
+      doc.setLineWidth(0.5);
+      doc.rect(10, currentY, 190, 32);
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("I. IDENTIFICAÇÃO DA PROVA E PROPRIETÁRIO", 14, currentY + 6);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      currentY += 14;
+      doc.text(`NOME DO ARQUIVO: ${docFile.file_name}`, 14, currentY);
+      doc.text(`PROTOCOLO INTERNO: ${protocolo}`, 120, currentY);
+      currentY += 6;
+      doc.text(`PROPRIETÁRIO / CUSTODIANTE: ${profileData?.name || "Advogado(a)"} (OAB: ${profileData?.oab || "N/I"})`, 14, currentY);
+      currentY += 6;
+      doc.text(`DATA / HORA DO CARREGAMENTO (UTC-3): ${dataUpload}`, 14, currentY);
+      
+      currentY += 12;
+
+      // Section II
+      doc.setFillColor(240, 245, 240);
+      doc.rect(10, currentY, 190, 8, 'F');
+      
+      const hashText = docFile.hash_sha512 || "HASH_NÃO_PROCESSADO_CONTATE_O_SUPORTE";
+      doc.setFont("courier", "bold");
+      doc.setFontSize(8);
+      const splitHash = doc.splitTextToSize(hashText, 180);
+      
+      doc.rect(10, currentY, 190, 30 + (splitHash.length * 4)); // Outline
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("II. ANCORAGEM CRIPTOGRÁFICA (HASH)", 14, currentY + 6);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      currentY += 14;
+      doc.text("ALGORITMO UTILIZADO: SHA-512 (Secure Hash Algorithm 512-bit)", 14, currentY);
+      currentY += 6;
+      doc.setFont("helvetica", "bold");
+      doc.text("ASSINATURA DIGITAL (IMPRESSÃO DIGITAL DO ARQUIVO):", 14, currentY);
+      currentY += 5;
+      
+      doc.setFont("courier", "bold");
+      doc.setFontSize(8);
+      doc.text(splitHash, 14, currentY);
+      
+      currentY += (splitHash.length * 4) + 5;
+
+      // Section III
+      doc.setFillColor(240, 245, 240);
+      doc.rect(10, currentY, 190, 8, 'F');
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      const uaStr = `DISPOSITIVO/AGENTE: ${docFile.user_agent || "N/A"}`;
+      const splitUa = doc.splitTextToSize(uaStr, 180);
+      
+      doc.rect(10, currentY, 190, 24 + (splitUa.length * 4)); // Outline
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("III. RASTREABILIDADE TÉCNICA", 14, currentY + 6);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      currentY += 14;
+      doc.text(`ENDEREÇO IP REGISTRADO NO UPLOAD: ${docFile.upload_ip || "N/A"}`, 14, currentY);
+      currentY += 6;
+      doc.text(splitUa, 14, currentY);
+      
+      currentY += (splitUa.length * 4) + 8;
+
+      // Section IV
+      doc.setFillColor(240, 245, 240);
+      doc.rect(10, currentY, 190, 8, 'F');
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      const disclaimer = "1. INTEGRIDADE: O Hash SHA-512 listado na Seção II é o identificador matemático único deste arquivo. Qualquer alteração no conteúdo digital original (como a mudança de 1 byte ou pixel) resultará em um Hash completamente distinto.\n\n2. LEGALIDADE: Este documento visa dar suporte à observância do Art. 158-A do Código de Processo Penal (Cadeia de Custódia) e ao Art. 369 do Código de Processo Civil, provendo meios técnicos idôneos para atestar o momento do registro e a não-adulteração da prova após este instante.\n\n3. TERCEIRO DE CONFIANÇA: O SocialJurídico atua apenas como agente técnico neutro (terceira parte confiável) fornecendo a plataforma para extração e guarda segura dos metadados e da impressão digital do arquivo no exato momento da operação realizada pelo usuário.";
+      const splitDisclaimer = doc.splitTextToSize(disclaimer, 180);
+      
+      doc.rect(10, currentY, 190, 12 + (splitDisclaimer.length * 3.5));
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("IV. EMBASAMENTO LEGAL E DECLARAÇÃO", 14, currentY + 6);
+      
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      currentY += 14;
+      doc.text(splitDisclaimer, 14, currentY);
+
+      currentY += (splitDisclaimer.length * 3.5) + 16;
+
+      // Signatures / Footers
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text("SOCIALJURÍDICO - PLATAFORMA DE TECNOLOGIA JURÍDICA", 105, currentY, { align: "center" });
+      currentY += 4;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text(`Certificado gerado e autenticado pelo sistema em ${emitidoEm}`, 105, currentY, { align: "center" });
+      currentY += 4;
+      doc.text(`Código de Validação: SJ-CERT-${protocolo}`, 105, currentY, { align: "center" });
+
+      doc.save(`Certificado_Blindagem_${docFile.file_name}.pdf`);
+      toast.success("Certificado baixado com sucesso!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao gerar PDF do certificado");
     }
   };
 
@@ -7017,12 +7183,23 @@ export default function AdvogadoDashboard() {
 
               <div className={styles.dossierSection}>
                 <div className={styles.documentsSectionHeader}>
-                  <span
-                    className={styles.dossierSectionTitle}
-                    style={{ margin: 0 }}
-                  >
-                    Documentos Vinculados
-                  </span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span
+                      className={styles.dossierSectionTitle}
+                      style={{ margin: 0 }}
+                    >
+                      Documentos Vinculados
+                    </span>
+                    <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", background: "rgba(16,185,129,0.1)", padding: "4px 8px", borderRadius: "8px", border: "1px solid rgba(16,185,129,0.2)" }}>
+                      <input 
+                        type="checkbox" 
+                        checked={isBlindarProva} 
+                        onChange={(e) => setIsBlindarProva(e.target.checked)} 
+                        style={{ accentColor: "#10b981", cursor: "pointer" }}
+                      />
+                      <span style={{ fontSize: "0.75rem", color: "#10b981", fontWeight: 700 }}>🛡️ Blindar Prova {profileData?.plan_type === 'START' ? "(3 Juris)" : "(Grátis PRO)"}</span>
+                    </label>
+                  </div>
                   <button
                     className={styles.attachBtn}
                     onClick={handleAttachClick}
@@ -7064,8 +7241,13 @@ export default function AdvogadoDashboard() {
                             }}
                           >
                             <FileText size={16} color="var(--color-gold)" />
-                            <span style={{ fontSize: "0.8rem" }}>
+                            <span style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "6px" }}>
                               {doc.file_name}
+                              {doc.is_blindado && (
+                                <span title="Prova Blindada" style={{ color: "#10b981", display: "flex", alignItems: "center", background: "rgba(16,185,129,0.1)", padding: "2px 6px", borderRadius: "12px", fontSize: "0.6rem", fontWeight: 800 }}>
+                                  🛡️ BLINDADO
+                                </span>
+                              )}
                             </span>
                           </div>
                           <div
@@ -7075,6 +7257,26 @@ export default function AdvogadoDashboard() {
                               alignItems: "center",
                             }}
                           >
+                            {doc.is_blindado && (
+                              <button
+                                onClick={() => handleDownloadCertificate(doc)}
+                                style={{
+                                  background: "rgba(16,185,129,0.1)",
+                                  border: "1px solid #10b981",
+                                  padding: "4px 8px",
+                                  borderRadius: "6px",
+                                  color: "#10b981",
+                                  fontSize: "0.7rem",
+                                  fontWeight: 800,
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                <FileDown size={12} /> Certificado
+                              </button>
+                            )}
                             <a
                               href={doc.file_url}
                               target="_blank"

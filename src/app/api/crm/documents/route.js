@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
+import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
+import crypto from "crypto";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -79,6 +81,7 @@ export async function POST(request) {
     const formData = await request.formData();
     const file = formData.get("file");
     const clientId = formData.get("client_id"); // Opcional no Smart Docs
+    const blindarProva = formData.get("blindar_prova") === "true";
 
     if (!file) {
       return NextResponse.json(
@@ -103,11 +106,47 @@ export async function POST(request) {
       }, { status: 403 });
     }
 
+    // Verificação de Juris para Blindagem de Prova
+    let lawyerProfile = null;
+    if (blindarProva) {
+      const { data: adv } = await supabaseAdmin
+        .from("advogados")
+        .select("is_premium, plan_type, balance")
+        .eq("id", user.id)
+        .single();
+        
+      lawyerProfile = adv;
+
+      if (!adv.is_premium || adv.plan_type !== "PRO") {
+        if ((adv.balance || 0) < 3) {
+          return NextResponse.json({
+            success: false,
+            message: "Saldo insuficiente. Você precisa de 3 Juris para blindar a prova.",
+            error_type: "INSUFFICIENT_JURIS"
+          }, { status: 402 });
+        }
+      }
+    }
+
     // ⚠️ SEGURANÇA: Logar nível seguro (sem dados sensíveis)
     const fileExt = file.name.split(".").pop();
     const folder = clientId ? clientId : `lawyer_${user.id}`;
     const fileName = `${folder}/${crypto.randomUUID()}.${fileExt}`;
     const filePath = `${fileName}`;
+
+    // Gerar Hash e Metadados se blindarProva for ativado
+    let fileHash = null;
+    let uploadIp = null;
+    let userAgent = null;
+
+    if (blindarProva) {
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      fileHash = crypto.createHash("sha512").update(buffer).digest("hex");
+      
+      uploadIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Desconhecido";
+      userAgent = request.headers.get("user-agent") || "Navegador Desconhecido";
+    }
 
     // 1. Upload para o Storage
     // ⚠️ SEGURANÇA: Não logar caminhos de arquivos
@@ -162,7 +201,10 @@ export async function POST(request) {
       file_url: publicUrl,
       doc_type: aiData.type,
       tags: aiData.tags,
-      // file_size_mb removido pois a coluna não existe no banco
+      is_blindado: blindarProva,
+      hash_sha512: fileHash,
+      upload_ip: uploadIp,
+      user_agent: userAgent,
       created_at: new Date().toISOString(),
     };
 
@@ -180,6 +222,17 @@ export async function POST(request) {
 
     // Incrementar uso de armazenamento
     await incrementUsage(supabaseAdmin || supabase, user.id, 'uso_storage_mb', fileSizeMb);
+
+    // Cobrar Juris caso não seja PRO e tenha blindado
+    if (blindarProva && lawyerProfile && (!lawyerProfile.is_premium || lawyerProfile.plan_type !== "PRO")) {
+      const newBalance = lawyerProfile.balance - 3;
+      await supabaseAdmin
+        .from("advogados")
+        .update({ balance: newBalance })
+        .eq("id", user.id);
+        
+      await checkAndNotifyLowBalance(user.id, lawyerProfile.balance, newBalance);
+    }
 
     return NextResponse.json({ success: true, data: insertedDoc[0] });
   } catch (error) {

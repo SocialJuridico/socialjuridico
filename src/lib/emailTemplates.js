@@ -674,5 +674,115 @@ export function comunicadoAdminTemplate({ recipientName, titulo, mensagem }) {
     </tr>
   </table>
 </body>
-</html>`;
+</html>\`;
+}
+
+/**
+ * Template de notificação LOCAL de novo caso para advogados no mesmo ESTADO
+ */
+export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado, lawyerName }) {
+  const dashboardUrl = 'https://socialjuridico.com.br/dashboard/advogado';
+
+  return \`
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #08090b; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #08090b; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background: linear-gradient(145deg, #0d0f14 0%, #12151c 100%); border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.3); overflow: hidden; max-width: 600px;">
+          
+          <!-- HEADER LOCAL -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #d4af37 0%, #b8962e 50%, #a07928 100%); padding: 32px 40px; text-align: center;">
+              <h1 style="margin: 0; color: #0d0f12; font-size: 22px; font-weight: 800; letter-spacing: 1px;">📍 OPORTUNIDADE NA SUA REGIÃO</h1>
+              <p style="margin: 6px 0 0; color: rgba(13, 15, 18, 0.7); font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">SOCIAL JURÍDICO</p>
+            </td>
+          </tr>
+
+          <!-- SAUDAÇÃO -->
+          <tr>
+            <td style="padding: 36px 40px 16px;">
+              <p style="margin: 0; color: #ffffff; font-size: 17px; line-height: 1.6;">
+                Olá, <strong style="color: #d4af37;">\${lawyerName}</strong>!
+              </p>
+              <p style="margin: 12px 0 0; color: rgba(255, 255, 255, 0.75); font-size: 15px; line-height: 1.7;">
+                Temos uma grande novidade pertinho de você! Um cliente no estado de <strong style="color: #d4af37;">\${estado}</strong> publicou um novo caso e acreditamos que é a oportunidade perfeita para o seu escritório.
+              </p>
+            </td>
+          </tr>
+
+          <!-- CARD DO CASO -->
+          <tr>
+            <td style="padding: 8px 40px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.03) 100%); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 12px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 24px 24px 16px;">
+                    <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Título do Caso</p>
+                    <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; line-height: 1.4;">\${titulo}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 24px;">
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.15);"></div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 16px 24px 20px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="50%" style="vertical-align: top;">
+                          <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">📋 Área de Atuação</p>
+                          <p style="margin: 0; color: #d4af37; font-size: 15px; font-weight: 600;">\${area_atuacao}</p>
+                        </td>
+                        <td width="50%" style="vertical-align: top;">
+                          <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">📍 Localização</p>
+                          <p style="margin: 0; color: #d4af37; font-size: 15px; font-weight: 600;">\${cidade} / \${estado}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- BOTÃO CTA -->
+          <tr>
+            <td style="padding: 8px 40px 16px; text-align: center;">
+              <a href="\${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #0d0f12; padding: 16px 40px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
+                Garantir Oportunidade
+              </a>
+            </td>
+          </tr>
+
+          <!-- TEXTO MOTIVACIONAL -->
+          <tr>
+            <td style="padding: 8px 40px 32px; text-align: center;">
+              <p style="margin: 0; color: rgba(255, 255, 255, 0.5); font-size: 13px; line-height: 1.6;">
+                Casos próximos a você tendem a fechar contrato muito mais rápido.<br>
+                Demonstre interesse agora mesmo antes que outro colega assuma!
+              </p>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color: rgba(0,0,0,0.3); padding: 24px 40px; border-top: 1px solid rgba(212, 175, 55, 0.1);">
+              <p style="margin: 0; color: rgba(255,255,255,0.35); font-size: 12px; text-align: center; line-height: 1.6;">
+                Social Jurídico — Conectando o direito ao futuro.<br>
+                <a href="https://socialjuridico.com.br" style="color: rgba(212, 175, 55, 0.5); text-decoration: none;">socialjuridico.com.br</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>\`;
 }

@@ -4,7 +4,7 @@ import { getRoleFromDatabase } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
-import { novoCasoTemplate, casoCanceladoTemplate } from "@/lib/emailTemplates";
+import { novoCasoTemplate, casoCanceladoTemplate, oportunidadeLocalTemplate } from "@/lib/emailTemplates";
 
 export async function POST(request) {
   try {
@@ -78,7 +78,7 @@ export async function POST(request) {
     try {
       const { data: advogados, error: advError } = await db
         .from("advogados")
-        .select("name, email")
+        .select("name, email, estado")
         .not("email", "is", null);
 
       if (!advError && advogados && advogados.length > 0) {
@@ -91,18 +91,57 @@ export async function POST(request) {
           return true;
         });
 
-        console.log(`📧 Enviando email de novo caso para ${uniqueAdvogados.length} advogado(s) (${advogados.length - uniqueAdvogados.length} duplicados removidos)...`);
+        const localAdvogados = uniqueAdvogados.filter(a => a.estado === estado);
+        const otherAdvogados = uniqueAdvogados.filter(a => a.estado !== estado);
+
+        console.log(`📧 Enviando email de novo caso: ${localAdvogados.length} locais (${estado}) e ${otherAdvogados.length} de outros estados...`);
 
         // Usar Resend Batch API: até 100 emails por chamada, com delay entre lotes
         const BATCH_SIZE = 100;
         const DELAY_BETWEEN_BATCHES_MS = 1500; // 1.5s entre lotes para respeitar rate limit
 
-        for (let i = 0; i < uniqueAdvogados.length; i += BATCH_SIZE) {
-          const batch = uniqueAdvogados.slice(i, i + BATCH_SIZE);
-          const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
-          const totalBatches = Math.ceil(uniqueAdvogados.length / BATCH_SIZE);
+        // ============================================
+        // 1. ENVIAR EMAILS LOCAIS (TEMPLATE ESPECÍFICO)
+        // ============================================
+        for (let i = 0; i < localAdvogados.length; i += BATCH_SIZE) {
+          const batch = localAdvogados.slice(i, i + BATCH_SIZE);
+          
+          const emailPayloads = batch.map((adv) => ({
+            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            to: [adv.email.trim()],
+            subject: `📍 Oportunidade Exclusiva: Novo caso em ${cidade} / ${estado}`,
+            html: oportunidadeLocalTemplate({
+              titulo: titulo.trim(),
+              area_atuacao: area_atuacao.trim(),
+              cidade: cidade.trim(),
+              estado: estado.trim(),
+              lawyerName: adv.name || 'Advogado(a)',
+            }),
+          }));
 
-          // Montar array de emails para a Batch API
+          try {
+            const { error: batchError } = await resend.batch.send(emailPayloads);
+            if (batchError) console.error(`⚠️ Erro no lote local:`, batchError);
+          } catch (batchErr) {
+            console.error(`❌ Falha no lote local:`, batchErr.message);
+          }
+
+          if (i + BATCH_SIZE < localAdvogados.length) {
+            await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+          }
+        }
+
+        // Delay antes de iniciar os envios gerais
+        if (localAdvogados.length > 0 && otherAdvogados.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+        }
+
+        // ============================================
+        // 2. ENVIAR EMAILS GERAIS (TEMPLATE PADRÃO)
+        // ============================================
+        for (let i = 0; i < otherAdvogados.length; i += BATCH_SIZE) {
+          const batch = otherAdvogados.slice(i, i + BATCH_SIZE);
+          
           const emailPayloads = batch.map((adv) => ({
             from: 'Social Jurídico <contato@socialjuridico.com.br>',
             to: [adv.email.trim()],
@@ -117,19 +156,13 @@ export async function POST(request) {
           }));
 
           try {
-            const { data: batchResult, error: batchError } = await resend.batch.send(emailPayloads);
-            
-            if (batchError) {
-              console.error(`⚠️ Erro no lote ${batchNumber}/${totalBatches}:`, batchError);
-            } else {
-              console.log(`✅ Lote ${batchNumber}/${totalBatches}: ${batch.length} emails enviados`);
-            }
+            const { error: batchError } = await resend.batch.send(emailPayloads);
+            if (batchError) console.error(`⚠️ Erro no lote geral:`, batchError);
           } catch (batchErr) {
-            console.error(`❌ Falha no lote ${batchNumber}/${totalBatches}:`, batchErr.message);
+            console.error(`❌ Falha no lote geral:`, batchErr.message);
           }
 
-          // Delay entre lotes para respeitar rate limit do Resend
-          if (i + BATCH_SIZE < uniqueAdvogados.length) {
+          if (i + BATCH_SIZE < otherAdvogados.length) {
             await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
           }
         }

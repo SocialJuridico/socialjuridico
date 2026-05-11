@@ -674,7 +674,7 @@ export function comunicadoAdminTemplate({ recipientName, titulo, mensagem }) {
     </tr>
   </table>
 </body>
-</html>\`;
+</html>`;
 }
 
 /**
@@ -683,7 +683,7 @@ export function comunicadoAdminTemplate({ recipientName, titulo, mensagem }) {
 export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado, lawyerName }) {
   const dashboardUrl = 'https://socialjuridico.com.br/dashboard/advogado';
 
-  return \`
+  return `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -708,10 +708,10 @@ export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado
           <tr>
             <td style="padding: 36px 40px 16px;">
               <p style="margin: 0; color: #ffffff; font-size: 17px; line-height: 1.6;">
-                Olá, <strong style="color: #d4af37;">\${lawyerName}</strong>!
+                Olá, <strong style="color: #d4af37;">${lawyerName}</strong>!
               </p>
               <p style="margin: 12px 0 0; color: rgba(255, 255, 255, 0.75); font-size: 15px; line-height: 1.7;">
-                Temos uma grande novidade pertinho de você! Um cliente no estado de <strong style="color: #d4af37;">\${estado}</strong> publicou um novo caso e acreditamos que é a oportunidade perfeita para o seu escritório.
+                Temos uma grande novidade pertinho de você! Um cliente no estado de <strong style="color: #d4af37;">${estado}</strong> publicou um novo caso e acreditamos que é a oportunidade perfeita para o seu escritório.
               </p>
             </td>
           </tr>
@@ -723,7 +723,7 @@ export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado
                 <tr>
                   <td style="padding: 24px 24px 16px;">
                     <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Título do Caso</p>
-                    <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; line-height: 1.4;">\${titulo}</p>
+                    <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; line-height: 1.4;">${titulo}</p>
                   </td>
                 </tr>
                 <tr>
@@ -737,11 +737,11 @@ export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado
                       <tr>
                         <td width="50%" style="vertical-align: top;">
                           <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">📋 Área de Atuação</p>
-                          <p style="margin: 0; color: #d4af37; font-size: 15px; font-weight: 600;">\${area_atuacao}</p>
+                          <p style="margin: 0; color: #d4af37; font-size: 15px; font-weight: 600;">${area_atuacao}</p>
                         </td>
                         <td width="50%" style="vertical-align: top;">
                           <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">📍 Localização</p>
-                          <p style="margin: 0; color: #d4af37; font-size: 15px; font-weight: 600;">\${cidade} / \${estado}</p>
+                          <p style="margin: 0; color: #d4af37; font-size: 15px; font-weight: 600;">${cidade} / ${estado}</p>
                         </td>
                       </tr>
                     </table>
@@ -754,7 +754,7 @@ export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado
           <!-- BOTÃO CTA -->
           <tr>
             <td style="padding: 8px 40px 16px; text-align: center;">
-              <a href="\${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #0d0f12; padding: 16px 40px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
+              <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #0d0f12; padding: 16px 40px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
                 Garantir Oportunidade
               </a>
             </td>
@@ -784,5 +784,6 @@ export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado
     </tr>
   </table>
 </body>
-</html>\`;
+</html>`;
 }
+

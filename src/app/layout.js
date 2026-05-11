@@ -14,6 +14,24 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "SocialJurídico",
   description: "A sua plataforma jurídica de confiança.",
+  openGraph: {
+    title: "SocialJurídico",
+    description: "A sua plataforma jurídica de confiança.",
+    images: [
+      {
+        url: "/image.png",
+        width: 1200,
+        height: 630,
+        alt: "SocialJurídico",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SocialJurídico",
+    description: "A sua plataforma jurídica de confiança.",
+    images: ["/image.png"],
+  },
 };
 
 import Footer from "@/components/Footer";

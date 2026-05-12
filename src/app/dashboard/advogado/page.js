@@ -54,6 +54,7 @@ import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
+import PesquisaSatisfacaoPopup from "@/components/PesquisaSatisfacaoPopup/PesquisaSatisfacaoPopup";
 import {
   PlusCircle,
   Bell,
@@ -8702,6 +8703,7 @@ export default function AdvogadoDashboard() {
         </div>
       )}
       <AdvogadoMesPopup />
+      <PesquisaSatisfacaoPopup />
 
       {/* PENDING OAB MODAL */}
       {showPendingOABModal && (

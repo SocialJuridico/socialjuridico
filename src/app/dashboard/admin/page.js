@@ -128,8 +128,14 @@ export default function AdminDashboardPage() {
               </Link>
               <Link href="/dashboard/admin/avaliacoes" className={styles.cardLink}>
                 <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: `4px solid #d4af37` }}>
-                  <div className={styles.cardTop}><Star size={16} fill="#d4af37" color="#d4af37" /> Avaliações</div>
+                  <div className={styles.cardTop}><Star size={16} fill="#d4af37" color="#d4af37" /> Avaliações (Casos)</div>
                   <strong>Ver Notas</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/pesquisas" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: `4px solid #d4af37` }}>
+                  <div className={styles.cardTop}><Star size={16} fill="transparent" color="#d4af37" /> Pesquisas (Plataforma)</div>
+                  <strong>Gerenciar</strong>
                 </article>
               </Link>
             </div>

@@ -40,6 +40,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
+import PesquisaSatisfacaoClientePopup from "@/components/PesquisaSatisfacaoClientePopup/PesquisaSatisfacaoClientePopup";
 
 const FACEBOOK_GROUP_URL = "https://www.facebook.com/groups/1667675480204134";
 
@@ -2562,6 +2563,7 @@ export default function ClienteDashboard() {
         </div>
       )}
       <AdvogadoMesPopup />
+      <PesquisaSatisfacaoClientePopup />
     </div>
 
   );

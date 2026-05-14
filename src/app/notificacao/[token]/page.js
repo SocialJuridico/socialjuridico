@@ -32,7 +32,7 @@ export default async function NotificacaoPage({ params }) {
   }
 
   // 2. Capturar IP e User-Agent no Servidor
-  const headersList = headers();
+  const headersList = await headers();
   const ip = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "Desconhecido";
   const ua = headersList.get("user-agent") || "Desconhecido";
 

@@ -4,7 +4,9 @@ import Link from "next/link";
 import GeoTracker from "./GeoTracker"; // Vamos criar este componente cliente
 
 export default async function NotificacaoPage({ params }) {
-  const { token } = params;
+  const { token } = await params;
+
+  console.log("Token recebido na rota:", token);
 
   if (!token) {
     return (

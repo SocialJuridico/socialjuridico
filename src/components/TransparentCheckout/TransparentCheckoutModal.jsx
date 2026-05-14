@@ -199,6 +199,7 @@ export default function TransparentCheckoutModal({
   jurisAmount,
   isPro = false,
   couponData,
+  profileData,
   onPaymentSuccess,
 }) {
   const [clientSecret, setClientSecret] = useState(null);
@@ -207,6 +208,10 @@ export default function TransparentCheckoutModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const lastFetchedPriceId = useRef(null);
+  const [paymentMethod, setPaymentMethod] = useState("stripe"); // 'stripe' ou 'greenn'
+  const [pixData, setPixData] = useState(null);
+  const [loadingPix, setLoadingPix] = useState(false);
+  const [showAwaitingMessage, setShowAwaitingMessage] = useState(false);
 
   // Mapear quantidade de Juris para Price ID
   const priceMap = {
@@ -229,6 +234,33 @@ export default function TransparentCheckoutModal({
       toast.error("Erro ao iniciar pagamento: " + err.message);
     }
   }, [jurisAmount, isPro, couponData]);
+
+  const handleGeneratePix = async () => {
+    setLoadingPix(true);
+    try {
+      const res = await fetch("/api/checkout/greenn", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profileData,
+          planType: window.localStorage.getItem('sj_selected_plan_type'),
+          billingCycle: window.localStorage.getItem('sj_selected_billing'),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPixData(data.data);
+        toast.success(data.message);
+      } else {
+        toast.error(data.message || "Erro ao gerar Pix.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro de conexão ao gerar Pix.");
+    } finally {
+      setLoadingPix(false);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -354,6 +386,33 @@ export default function TransparentCheckoutModal({
 
         {/* Body */}
         <div style={modalStyles.body}>
+          {/* Métodos de Pagamento */}
+          <div style={modalStyles.paymentMethods}>
+            <button 
+              style={{
+                ...modalStyles.methodBtn,
+                borderColor: paymentMethod === 'stripe' ? '#d4af37' : 'rgba(255,255,255,0.1)',
+                backgroundColor: paymentMethod === 'stripe' ? 'rgba(212, 175, 55, 0.1)' : 'transparent',
+                color: paymentMethod === 'stripe' ? '#d4af37' : '#888'
+              }}
+              onClick={() => setPaymentMethod('stripe')}
+            >
+              <CreditCard size={16} />
+              <span>Cartão de Crédito</span>
+            </button>
+            <button 
+              style={{
+                ...modalStyles.methodBtn,
+                borderColor: paymentMethod === 'greenn' ? '#00e676' : 'rgba(255,255,255,0.1)',
+                backgroundColor: paymentMethod === 'greenn' ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                color: paymentMethod === 'greenn' ? '#00e676' : '#888'
+              }}
+              onClick={() => setPaymentMethod('greenn')}
+            >
+              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>PIX</span>
+              <span>Pagamento via Pix</span>
+            </button>
+          </div>
           {loading && (
             <div style={modalStyles.loadingBox}>
               <Loader2 size={32} style={{ animation: "spin 1s linear infinite" }} />
@@ -373,7 +432,7 @@ export default function TransparentCheckoutModal({
             </div>
           )}
 
-          {clientSecret && (
+          {paymentMethod === 'stripe' && clientSecret && (
             <Elements
               stripe={stripePromise}
               options={{
@@ -428,6 +487,92 @@ export default function TransparentCheckoutModal({
                 clientSecret={clientSecret}
               />
             </Elements>
+          )}
+
+          {paymentMethod === 'greenn' && (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#a0a0a0' }}>
+              {!showAwaitingMessage ? (
+                <>
+                  <div style={{ marginBottom: '20px' }}>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#00e676' }}>Pagar com PIX</span>
+                    <p style={{ fontSize: '0.9rem', marginTop: '5px' }}>Você será redirecionado para a página segura da Greenn para concluir o pagamento via Pix.</p>
+                  </div>
+                  
+                  {/* Determinar link correto */}
+                  {(() => {
+                    const planType = typeof window !== 'undefined' ? window.localStorage.getItem('sj_selected_plan_type') : 'START';
+                    const isPromo = couponData?.id === 'START_MES1_1099' || couponData?.id === 'PRO_MES1_1099';
+                    
+                    let greennLink = "";
+                    if (planType === 'PRO') {
+                      greennLink = isPromo ? "https://payfast.greenn.com.br/krmm54f?cupom=PRIMEIROMESPRO" : "https://payfast.greenn.com.br/krmm54f";
+                    } else {
+                      greennLink = isPromo ? "https://payfast.greenn.com.br/vb3mmaq?cupom=PRIMEIROMES" : "https://payfast.greenn.com.br/vb3mmaq";
+                    }
+                    
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                        {isPromo && (
+                          <div style={{ color: '#00e676', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '10px' }}>
+                            ★ O desconto de R$ 10,99 já está embutido no link! ★
+                          </div>
+                        )}
+                        
+                        <a
+                          href={greennLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            ...formStyles.payButton,
+                            background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)',
+                            color: '#fff',
+                            boxShadow: '0 4px 15px rgba(0, 230, 118, 0.3)',
+                            textDecoration: 'none',
+                            width: '100%'
+                          }}
+                          onClick={() => {
+                            toast.success("Redirecionando para o checkout...");
+                            setShowAwaitingMessage(true);
+                          }}
+                        >
+                          Ir para Pagamento Greenn
+                        </a>
+                      </div>
+                    );
+                  })()}
+
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    style={{ ...formStyles.cancelButton, marginTop: '15px' }}
+                  >
+                    Voltar
+                  </button>
+                </>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                  <div style={{ color: '#d4af37', fontSize: '3rem', marginBottom: '10px' }}>⏳</div>
+                  <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' }}>Aguardando Confirmação</span>
+                  <p style={{ fontSize: '0.95rem', color: '#a0a0a0', lineHeight: '1.5' }}>
+                    O Social Jurídico está aguardando a confirmação do seu pagamento.
+                  </p>
+                  <p style={{ fontSize: '0.95rem', color: '#a0a0a0', lineHeight: '1.5' }}>
+                    Assim que o pagamento for confirmado por nossa equipe, seu plano será liberado juntamente com os seus Juris!
+                  </p>
+                  <p style={{ fontSize: '0.9rem', color: '#00e676', fontWeight: 'bold', marginTop: '10px' }}>
+                    Agradecemos a confiança e credibilidade!
+                  </p>
+                  
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    style={{ ...formStyles.payButton, marginTop: '20px' }}
+                  >
+                    Fechar
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -522,6 +667,23 @@ const modalStyles = {
     textAlign: "center",
     padding: "30px 0",
     color: "#ef4444",
+  },
+  paymentMethods: {
+    display: "flex",
+    gap: "10px",
+    marginBottom: "20px",
+  },
+  methodBtn: {
+    flex: 1,
+    padding: "12px",
+    borderRadius: "8px",
+    border: "1px solid",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "5px",
+    transition: "all 0.2s ease",
   },
 };
 

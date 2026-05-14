@@ -7913,9 +7913,33 @@ export default function AdvogadoDashboard() {
                 {Object.entries(PLANS_DATA).map(([key, plan]) => {
                   const rawPriceInfo = plan.prices[billingCycle];
                   
+                  // Lógica de Promoção R$ 10,99 no primeiro mês
+                  const currentPlan = profileData?.plan_type || 'FREE';
+                  const isPremium = profileData?.is_premium || false;
+                  
+                  let showPromoStart = false;
+                  let showPromoPro = false;
+                  
+                  if (billingCycle === 'MONTHLY') {
+                    if (currentPlan === 'START' && isPremium) {
+                      showPromoPro = true;
+                    } else if (currentPlan === 'PRO' && isPremium) {
+                      // Sem promo
+                    } else {
+                      showPromoStart = true;
+                      showPromoPro = true;
+                    }
+                  }
+                  
+                  const isPromoApplied = (key === 'START' && showPromoStart) || (key === 'PRO' && showPromoPro);
+                  
                   // Aplicar desconto do cupom se existir
                   let displayValue = billingCycle === 'ANNUAL' ? rawPriceInfo.monthly : rawPriceInfo.value;
                   let totalValue = rawPriceInfo.value;
+
+                  if (isPromoApplied) {
+                    displayValue = 10.99;
+                  }
 
                   if (appliedCouponData && appliedCouponData.status === 'success') {
                     if (appliedCouponData.percent_off) {
@@ -7950,6 +7974,12 @@ export default function AdvogadoDashboard() {
                         </div>
                       </div>
                       
+                      {isPromoApplied && (
+                        <div style={{ color: '#00e676', fontSize: '0.85rem', fontWeight: 'bold', marginTop: '5px', marginBottom: '10px', textAlign: 'center' }}>
+                          ★ 1º MÊS POR R$ 10,99 ★
+                        </div>
+                      )}
+                      
                       <div className={styles.jurisBonus}>
                         <Zap size={14} /> <span>Ganhe <strong>{plan.juris} Juris</strong> imediato</span>
                       </div>
@@ -7982,6 +8012,20 @@ export default function AdvogadoDashboard() {
                           }
                           window.localStorage.setItem('sj_selected_plan_type', key);
                           window.localStorage.setItem('sj_selected_billing', billingCycle);
+                          
+                          // Auto-aplicar cupom de promoção se elegível no primeiro mês
+                          if (isPromoApplied) {
+                            const promoCouponId = key === 'START' ? 'START_MES1_1099' : 'PRO_MES1_1099';
+                            const proCoupon = {
+                              status: 'success',
+                              id: promoCouponId,
+                              percent_off: 0,
+                              amount_off: key === 'START' ? 3000 : 7691, // Desconto em centavos
+                              stripe_coupon_id: promoCouponId
+                            };
+                            setAppliedCouponData(proCoupon);
+                          }
+                          
                           setShowProModal(false);
                           setShowTransparentCheckout(true);
                         }}
@@ -8756,6 +8800,7 @@ export default function AdvogadoDashboard() {
         jurisAmount={transparentCheckoutAmount}
         isPro={isProCheckout}
         couponData={appliedCouponData}
+        profileData={profileData}
         onPaymentSuccess={async () => {
           // Recarregar perfil para atualizar saldo
           try {

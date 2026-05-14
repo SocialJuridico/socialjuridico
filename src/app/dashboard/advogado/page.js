@@ -9019,16 +9019,31 @@ export default function AdvogadoDashboard() {
           <div className={styles.modalBody} style={{ padding: '20px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <div>
-                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Caso / Cliente</label>
+                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Caso / Cliente (Opcional)</label>
                 <select
                   style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
                   value={notificacaoForm.caso}
                   onChange={(e) => setNotificacaoForm({ ...notificacaoForm, caso: e.target.value })}
                 >
-                  <option value="">Selecione um caso...</option>
-                  {casos.filter(caso => caso.advogado_id === profileData?.id).map(caso => (
-                    <option key={caso.id} value={caso.id}>{caso.titulo || `Caso #${caso.id.substring(0,8)}`} ({caso.cliente_nome || "S/N"})</option>
-                  ))}
+                  <option value="">Selecione um caso ou cliente...</option>
+                  {casos && casos.filter(caso => caso.advogado_id === profileData?.id).length > 0 && (
+                    <optgroup label="Casos Contratados" style={{ background: '#222', color: '#fff' }}>
+                      {casos.filter(caso => caso.advogado_id === profileData?.id).map(caso => (
+                        <option key={caso.id} value={`caso_\${caso.id}`} style={{ background: '#333', color: '#fff' }}>
+                          {caso.titulo || `Caso #\${caso.id.substring(0,8)}`} ({caso.cliente_nome || "S/N"})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {crmClients && crmClients.length > 0 && (
+                    <optgroup label="Clientes do CRM" style={{ background: '#222', color: '#fff' }}>
+                      {crmClients.map(client => (
+                        <option key={client.id} value={`client_\${client.id}`} style={{ background: '#333', color: '#fff' }}>
+                          {client.name || client.nome_completo || "Sem Nome"}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
 
@@ -9185,10 +9200,12 @@ export default function AdvogadoDashboard() {
                 <button
                   style={{ width: '100%', padding: '12px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}
                   onClick={async () => {
-                    if (!notificacaoForm.caso) { toast.error("Selecione um caso!"); return; }
+                    // Remoção da obrigatoriedade do caso/cliente a pedido do usuário
                     setIsGeneratingNotificacao(true);
                     try {
-                      const selectedCaso = casos.find(c => c.id === notificacaoForm.caso);
+                      const selectedCaso = (notificacaoForm.caso && notificacaoForm.caso.startsWith("caso_")) 
+                        ? casos.find(c => c.id === notificacaoForm.caso.replace("caso_", "")) 
+                        : null;
                       const payload = {
                         type: "Notificação Extrajudicial",
                         tone: notificacaoForm.tom,
@@ -9331,7 +9348,13 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                           formData.append("file", file);
                           formData.append("destinatario_email", notificacaoForm.destinatario_email);
                           formData.append("tone", notificacaoForm.tom);
-                          formData.append("case_id", notificacaoForm.caso);
+                          
+                          const selectedValue = notificacaoForm.caso;
+                          if (selectedValue && selectedValue.startsWith("client_")) {
+                            formData.append("client_id", selectedValue.replace("client_", ""));
+                          } else if (selectedValue && selectedValue.startsWith("caso_")) {
+                            formData.append("case_id", selectedValue.replace("caso_", ""));
+                          }
                           
                           const res = await fetch("/api/crm/notificacoes", {
                             method: "POST",

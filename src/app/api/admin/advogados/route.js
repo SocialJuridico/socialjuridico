@@ -351,6 +351,46 @@ export async function PUT(request) {
 
     if (updateError) throw updateError;
 
+    // 📧 ENVIAR EMAIL PARA O ADVOGADO (Ação Manual do Admin)
+    try {
+      const { resend } = await import("@/lib/resend");
+      const { jurisCreditadoTemplate, boasVindasPlanoTemplate } = await import("@/lib/emailTemplates");
+      
+      const lawyerName = lawyer.name || 'Advogado';
+      const email = lawyer.email;
+      
+      if (action === "ADD_JURIS" && email) {
+        await resend.emails.send({
+          from: 'Social Jurídico <contato@socialjuridico.com.br>',
+          to: [email],
+          subject: '💰 Seus Juris foram creditados!',
+          html: jurisCreditadoTemplate({
+            lawyerName,
+            amount: Number(value),
+            balance: updates.balance
+          })
+        });
+        console.log(`📧 Email de crédito de Juris enviado para \${email}`);
+      } else if ((action === "GIVE_PRO" || action === "GIVE_PLAN") && email) {
+        const planType = value?.planType || 'PRO';
+        const jurisBonus = planType === 'PRO' ? 20 : 7;
+        
+        await resend.emails.send({
+          from: 'Social Jurídico <contato@socialjuridico.com.br>',
+          to: [email],
+          subject: `👑 Bem-vindo ao Plano \${planType}!`,
+          html: boasVindasPlanoTemplate({
+            lawyerName,
+            planType,
+            jurisBonus
+          })
+        });
+        console.log(`📧 Email de boas-vindas do plano \${planType} enviado para \${email}`);
+      }
+    } catch (emailErr) {
+      console.error("⚠️ Erro ao enviar email para o advogado (não-fatal):", emailErr);
+    }
+
     // Se o saldo foi reduzido manualmente pelo Admin, também acionamos o alerta de estoque baixo se necessário
     if (action === "REMOVE_JURIS" && updates.balance !== undefined) {
       await checkAndNotifyLowBalance(lawyerId, lawyer.balance || 0, updates.balance);

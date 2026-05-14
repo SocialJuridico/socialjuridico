@@ -35,12 +35,13 @@ export async function POST(request) {
     }
 
     // Mapeamento de valores (em centavos ou valor real dependendo de como a InfinitePay envia)
-    // A documentação mostra "amount": 1000 para R$ 10.00. Então dividimos por 100 ou comparamos em centavos.
-    // Vamos assumir que vem em centavos baseando-se no padrão de APIs de pagamento.
-    
-    const amountInCents = amount; 
+    // Se vier com ponto (ex: 16.90), multiplicamos por 100 para converter em centavos.
+    // Se vier inteiro (ex: 1690), usamos direto.
+    const amountInCents = amount.toString().includes('.') 
+      ? Math.round(Number(amount) * 100) 
+      : Number(amount);
 
-    console.log(`💰 [Webhook InfinitePay] Valor recebido: ${amountInCents} centavos para ${email}`);
+    console.log(`💰 [Webhook InfinitePay] Valor processado: ${amountInCents} centavos para ${email} (Original: ${amount})`);
 
     let updateData = {};
     let message = "";

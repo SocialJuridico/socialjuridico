@@ -301,6 +301,10 @@ export default function TransparentCheckoutModal({
           if (isPro && billingCycle === 'AVULSO') {
             priceId = storedPriceId;
             console.log(`💰 [Checkout] Avulso PRO: usando priceId ${priceId}`);
+          } else if (!isPro && jurisAmount !== 10 && jurisAmount !== 20 && jurisAmount !== 50) {
+            // Se for o plano START (ou qualquer coisa que não seja Juris)
+            priceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_START_MENSAL;
+            console.log(`💰 [Checkout] Plano START: usando priceId ${priceId}`);
           } else {
             priceId = priceMap[jurisAmount];
             console.log(`⚖️ [Checkout] Juris: usando priceId ${priceId} para quantidade ${jurisAmount}`);
@@ -403,11 +407,11 @@ export default function TransparentCheckoutModal({
             <button 
               style={{
                 ...modalStyles.methodBtn,
-                borderColor: paymentMethod === 'greenn' ? '#00e676' : 'rgba(255,255,255,0.1)',
-                backgroundColor: paymentMethod === 'greenn' ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
-                color: paymentMethod === 'greenn' ? '#00e676' : '#888'
+                borderColor: paymentMethod === 'infinitepay' ? '#00e676' : 'rgba(255,255,255,0.1)',
+                backgroundColor: paymentMethod === 'infinitepay' ? 'rgba(0, 230, 118, 0.1)' : 'transparent',
+                color: paymentMethod === 'infinitepay' ? '#00e676' : '#888'
               }}
-              onClick={() => setPaymentMethod('greenn')}
+              onClick={() => setPaymentMethod('infinitepay')}
             >
               <span style={{ fontSize: '14px', fontWeight: 'bold' }}>PIX</span>
               <span>Pagamento via Pix</span>
@@ -489,89 +493,123 @@ export default function TransparentCheckoutModal({
             </Elements>
           )}
 
-          {paymentMethod === 'greenn' && (
+          {paymentMethod === 'infinitepay' && (
             <div style={{ textAlign: 'center', padding: '20px', color: '#a0a0a0' }}>
-              {!showAwaitingMessage ? (
-                <>
-                  <div style={{ marginBottom: '20px' }}>
-                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#00e676' }}>Pagar com PIX</span>
-                    <p style={{ fontSize: '0.9rem', marginTop: '5px' }}>Você será redirecionado para a página segura da Greenn para concluir o pagamento via Pix.</p>
+              <div style={{ marginBottom: '20px' }}>
+                <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#00e676' }}>Pagar com PIX</span>
+                <p style={{ fontSize: '0.9rem', marginTop: '5px' }}>Você será redirecionado para a página segura da InfinitePay para concluir o pagamento via Pix.</p>
+              </div>
+              
+              {showAwaitingMessage ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', padding: '20px' }}>
+                  <Loader2 size={48} style={{ animation: "spin 1s linear infinite", color: '#00e676' }} />
+                  <div style={{ textAlign: 'center' }}>
+                    <p style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '5px' }}>Aguardando confirmação do pagamento...</p>
+                    <p style={{ color: '#a0a0a0', fontSize: '0.9rem' }}>Conclua o pagamento no site da InfinitePay. Assim que recebermos a confirmação, sua conta será atualizada.</p>
                   </div>
-                  
-                  {/* Determinar link correto */}
-                  {(() => {
-                    const planType = typeof window !== 'undefined' ? window.localStorage.getItem('sj_selected_plan_type') : 'START';
-                    const isPromo = couponData?.id === 'START_MES1_1099' || couponData?.id === 'PRO_MES1_1099';
-                    
-                    let greennLink = "";
-                    if (planType === 'PRO') {
-                      greennLink = isPromo ? "https://payfast.greenn.com.br/krmm54f?cupom=PRIMEIROMESPRO" : "https://payfast.greenn.com.br/krmm54f";
-                    } else {
-                      greennLink = isPromo ? "https://payfast.greenn.com.br/vb3mmaq?cupom=PRIMEIROMES" : "https://payfast.greenn.com.br/vb3mmaq";
-                    }
-                    
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-                        {isPromo && (
-                          <div style={{ color: '#00e676', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '10px' }}>
-                            ★ O desconto de R$ 10,99 já está embutido no link! ★
-                          </div>
-                        )}
-                        
-                        <a
-                          href={greennLink}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            ...formStyles.payButton,
-                            background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)',
-                            color: '#fff',
-                            boxShadow: '0 4px 15px rgba(0, 230, 118, 0.3)',
-                            textDecoration: 'none',
-                            width: '100%'
-                          }}
-                          onClick={() => {
-                            toast.success("Redirecionando para o checkout...");
-                            setShowAwaitingMessage(true);
-                          }}
-                        >
-                          Ir para Pagamento Greenn
-                        </a>
-                      </div>
-                    );
-                  })()}
-
-                  <button
+                  <button 
                     type="button"
-                    onClick={onClose}
-                    style={{ ...formStyles.cancelButton, marginTop: '15px' }}
+                    style={{ 
+                      ...formStyles.payButton, 
+                      background: 'rgba(255, 255, 255, 0.05)', 
+                      color: '#fff', 
+                      width: 'auto',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      fontSize: '0.9rem',
+                      padding: '10px 20px'
+                    }}
+                    onClick={() => setShowAwaitingMessage(false)}
                   >
-                    Voltar
-                  </button>
-                </>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-                  <div style={{ color: '#d4af37', fontSize: '3rem', marginBottom: '10px' }}>⏳</div>
-                  <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' }}>Aguardando Confirmação</span>
-                  <p style={{ fontSize: '0.95rem', color: '#a0a0a0', lineHeight: '1.5' }}>
-                    O Social Jurídico está aguardando a confirmação do seu pagamento.
-                  </p>
-                  <p style={{ fontSize: '0.95rem', color: '#a0a0a0', lineHeight: '1.5' }}>
-                    Assim que o pagamento for confirmado por nossa equipe, seu plano será liberado juntamente com os seus Juris!
-                  </p>
-                  <p style={{ fontSize: '0.9rem', color: '#00e676', fontWeight: 'bold', marginTop: '10px' }}>
-                    Agradecemos a confiança e credibilidade!
-                  </p>
-                  
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    style={{ ...formStyles.payButton, marginTop: '20px' }}
-                  >
-                    Fechar
+                    Voltar / Gerar novo link
                   </button>
                 </div>
-              )}
+              ) : (() => {
+                const isPromoEligible = isPro 
+                  ? (profileData?.promo_pro_used === false && profileData?.plan_type !== 'PRO') 
+                  : (profileData?.promo_start_used === false && profileData?.plan_type !== 'START');
+                
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+                    {isPromoEligible && !jurisAmount && (
+                      <div style={{ color: '#00e676', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '10px' }}>
+                        ★ Você está aproveitando o desconto do 1º mês! ★
+                      </div>
+                    )}
+                    
+                    <button
+                      type="button"
+                      disabled={loadingPix}
+                      style={{
+                        ...formStyles.payButton,
+                        background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)',
+                        color: '#fff',
+                        boxShadow: '0 4px 15px rgba(0, 230, 118, 0.3)',
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: loadingPix ? 0.7 : 1,
+                        cursor: loadingPix ? 'not-allowed' : 'pointer'
+                      }}
+                      onClick={async () => {
+                        setLoadingPix(true);
+                        toast.loading("Gerando link de pagamento...");
+                        
+                        try {
+                          const response = await fetch("/api/checkout/infinitepay", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              planType: isPro ? "PRO" : "START",
+                              jurisAmount,
+                              isPromoEligible,
+                              customer: {
+                                name: profileData?.name,
+                                email: profileData?.email,
+                                phone: profileData?.phone
+                              }
+                            })
+                          });
+                          
+                          const data = await response.json();
+                          toast.dismiss();
+                          
+                          if (data.success && data.url) {
+                            toast.success("Redirecionando...");
+                            window.open(data.url, '_blank');
+                            setShowAwaitingMessage(true);
+                          } else {
+                            toast.error(data.message || "Erro ao gerar link.");
+                          }
+                        } catch (err) {
+                          toast.dismiss();
+                          toast.error("Erro de conexão.");
+                          console.error(err);
+                        } finally {
+                          setLoadingPix(false);
+                        }
+                      }}
+                    >
+                      {loadingPix ? (
+                        <>
+                          <Loader2 size={16} style={{ animation: "spin 1s linear infinite", marginRight: '8px' }} />
+                          Gerando Link...
+                        </>
+                      ) : (
+                        "Ir para Pagamento InfinitePay"
+                      )}
+                    </button>
+                  </div>
+                );
+              })()}
+
+              <button
+                type="button"
+                onClick={onClose}
+                style={{ ...formStyles.cancelButton, marginTop: '15px' }}
+              >
+                Voltar
+              </button>
             </div>
           )}
         </div>

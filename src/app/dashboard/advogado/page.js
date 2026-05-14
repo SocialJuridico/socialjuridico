@@ -8003,7 +8003,7 @@ export default function AdvogadoDashboard() {
                         className={`${styles.selectPlanBtn} ${key === 'PRO' ? styles.selectPlanBtnPro : ''}`}
                         onClick={() => {
                           console.log('Selecionando plano:', key, 'Preço:', rawPriceInfo);
-                          setIsProCheckout(true);
+                          setIsProCheckout(key === 'PRO');
                           setTransparentCheckoutAmount(totalValue);
                           if (rawPriceInfo.priceId) {
                             window.localStorage.setItem('sj_selected_price_id', rawPriceInfo.priceId);

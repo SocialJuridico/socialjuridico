@@ -1,0 +1,161 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+// Usando a chave service_role para contornar RLS no webhook
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+export async function POST(request) {
+  try {
+    const payload = await request.json();
+    console.log("📥 [Webhook InfinitePay] Payload recebido:", JSON.stringify(payload, null, 2));
+
+    const { amount, customer, items, order_nsu } = payload;
+    
+    // O email do cliente é crucial para identificarmos quem comprou
+    const email = customer?.email;
+    
+    if (!email) {
+      console.error("❌ [Webhook InfinitePay] Email do cliente não encontrado no payload.");
+      return NextResponse.json({ success: false, message: "Email não encontrado" }, { status: 400 });
+    }
+
+    // Buscar usuário no Supabase pelo email
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from("advogados")
+      .select("id, plan_type, promo_used, balance")
+      .eq("email", email)
+      .single();
+
+    if (userError || !userData) {
+      console.error("❌ [Webhook InfinitePay] Usuário não encontrado no Supabase:", email);
+      return NextResponse.json({ success: false, message: "Usuário não encontrado" }, { status: 404 });
+    }
+
+    // Mapeamento de valores (em centavos ou valor real dependendo de como a InfinitePay envia)
+    // A documentação mostra "amount": 1000 para R$ 10.00. Então dividimos por 100 ou comparamos em centavos.
+    // Vamos assumir que vem em centavos baseando-se no padrão de APIs de pagamento.
+    
+    const amountInCents = amount; 
+
+    console.log(`💰 [Webhook InfinitePay] Valor recebido: ${amountInCents} centavos para ${email}`);
+
+    let updateData = {};
+    let message = "";
+    let bonusJuris = 0;
+
+    // 1. Planos Promocionais (R$ 10,99)
+    if (amountInCents === 1099) {
+      const itemDesc = items?.[0]?.description?.toLowerCase() || "";
+      let planType = "START";
+      
+      if (itemDesc.includes("pro")) {
+        planType = "PRO";
+      }
+
+      bonusJuris = planType === "PRO" ? 20 : 7;
+
+      updateData = {
+        plan_type: planType,
+        is_premium: true,
+        balance: (userData.balance || 0) + bonusJuris,
+        [planType === "PRO" ? "promo_pro_used" : "promo_start_used"]: true
+      };
+      message = `Plano Promocional ${planType} ativado! Adicionados ${bonusJuris} Juris de bônus.`;
+    }
+    // 2. Plano Start Normal (R$ 40,99)
+    else if (amountInCents === 4099) {
+      bonusJuris = 7;
+      updateData = {
+        plan_type: "START",
+        is_premium: true,
+        balance: (userData.balance || 0) + bonusJuris
+      };
+      message = "Plano Start ativado! Adicionados 7 Juris de bônus.";
+    }
+    // 3. Plano Pro Normal (R$ 87,90)
+    else if (amountInCents === 8790) {
+      bonusJuris = 20;
+      updateData = {
+        plan_type: "PRO",
+        is_premium: true,
+        balance: (userData.balance || 0) + bonusJuris
+      };
+      message = "Plano Pro ativado! Adicionados 20 Juris de bônus.";
+    }
+    // 4. Pacotes de Juris
+    else if (amountInCents === 990) {
+      bonusJuris = 10;
+      updateData = { balance: (userData.balance || 0) + bonusJuris };
+      message = "Adicionados 10 Juris!";
+    }
+    else if (amountInCents === 1690) {
+      bonusJuris = 20;
+      updateData = { balance: (userData.balance || 0) + bonusJuris };
+      message = "Adicionados 20 Juris!";
+    }
+    else if (amountInCents === 3990) {
+      bonusJuris = 50;
+      updateData = { balance: (userData.balance || 0) + bonusJuris };
+      message = "Adicionados 50 Juris!";
+    }
+    // Planos Anuais (Fallback caso usem)
+    else if (amountInCents === 43188) {
+      bonusJuris = 7;
+      updateData = { plan_type: "START", is_premium: true, balance: (userData.balance || 0) + bonusJuris };
+      message = "Plano Start Anual ativado! Adicionados 7 Juris de bônus.";
+    }
+    else if (amountInCents === 91188) {
+      bonusJuris = 20;
+      updateData = { plan_type: "PRO", is_premium: true, balance: (userData.balance || 0) + bonusJuris };
+      message = "Plano Pro Anual ativado! Adicionados 20 Juris de bônus.";
+    }
+    else {
+      console.warn("⚠️ [Webhook InfinitePay] Valor não mapeado:", amountInCents);
+      return NextResponse.json({ success: true, message: "Valor não mapeado, ignorando" });
+    }
+
+    // Atualizar no banco
+    const { error: updateError } = await supabaseAdmin
+      .from("advogados")
+      .update(updateData)
+      .eq("id", userData.id);
+
+    if (updateError) {
+      console.error("❌ [Webhook InfinitePay] Erro ao atualizar banco:", updateError);
+      return NextResponse.json({ success: false, message: "Erro ao atualizar dados" }, { status: 500 });
+    }
+
+    // Inserir registro na tabela de transações para o admin ver!
+    const { error: txError } = await supabaseAdmin
+      .from('transacoes')
+      .upsert({
+        advogado_id: userData.id,
+        tipo: amountInCents === 990 || amountInCents === 1690 || amountInCents === 3990 ? 'JURIS_PURCHASE' : 'PRO_SUBSCRIPTION',
+        valor: amountInCents / 100,
+        moeda: 'BRL',
+        status: 'succeeded',
+        juris_amount: bonusJuris,
+        stripe_session_id: order_nsu || `inf_${Date.now()}`, // Usando NSU ou fallback
+        created_at: new Date().toISOString()
+      }, { 
+        onConflict: 'stripe_session_id',
+        ignoreDuplicates: false 
+      });
+
+    if (txError) {
+      console.error("⚠️ [Webhook InfinitePay] Erro ao criar registro de transação:", txError);
+    } else {
+      console.log("✅ [Webhook InfinitePay] Registro de transação criado para o admin.");
+    }
+
+    console.log(`✅ [Webhook InfinitePay] ${message} para ${email}`);
+    return NextResponse.json({ success: true, message });
+
+  } catch (error) {
+    console.error("💥 [Webhook InfinitePay] Erro crítico:", error);
+    return NextResponse.json({ success: false, message: "Erro interno no servidor" }, { status: 500 });
+  }
+}

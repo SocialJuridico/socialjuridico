@@ -484,7 +484,13 @@ export default function AdvogadoDashboard() {
           name: doc.file_name || `${doc.type}: ${doc.protocol}`,
           protocol: doc.protocol,
           date: new Date(doc.created_at).toLocaleString(),
-          hash: doc.hash_sha512 || doc.hash
+          hash: doc.hash_sha512 || doc.hash,
+          type: doc.type,
+          status: doc.status,
+          read_at: doc.read_at,
+          read_ip: doc.read_ip,
+          read_user_agent: doc.read_user_agent,
+          read_geo: doc.read_geo
         }));
         setBlindadosDocuments(mapped);
       }
@@ -608,6 +614,97 @@ export default function AdvogadoDashboard() {
     docPdf.text(`Código de Validação: SJ-CERT-${docData.protocol}`, pageWidth / 2, pageHeight - 7, { align: "center" });
 
     docPdf.save(`certificado_${docData.protocol}.pdf`);
+  }, []);
+
+  const generateDeliveryCertificatePDF = useCallback((docData) => {
+    const docPdf = new jsPDF();
+    const pageWidth = docPdf.internal.pageSize.getWidth();
+    const pageHeight = docPdf.internal.pageSize.getHeight();
+
+    const greenHeader = [0, 200, 117];
+    const greenBorder = [0, 200, 117];
+    const grayBg = [240, 245, 240];
+
+    docPdf.setFillColor(greenHeader[0], greenHeader[1], greenHeader[2]);
+    docPdf.rect(10, 10, pageWidth - 20, 25, 'F');
+    
+    docPdf.setFont("helvetica", "bold");
+    docPdf.setFontSize(16);
+    docPdf.setTextColor(255, 255, 255);
+    docPdf.text("CERTIFICADO DE ENTREGA DIGITAL", pageWidth / 2, 22, { align: "center" });
+    
+    docPdf.setFontSize(9);
+    docPdf.text("COMPROVAÇÃO DE LEITURA E RASTREAMENTO", pageWidth / 2, 29, { align: "center" });
+
+    docPdf.setFont("helvetica", "normal");
+    docPdf.setFontSize(9);
+    docPdf.setTextColor(50, 50, 50);
+    const introText = "Certificamos, para os devidos fins de direito, que a Notificação Extrajudicial individualizada neste documento foi acessada e lida pelo destinatário, tendo sido registrados os metadados de acesso para fins de comprovação de entrega.";
+    const splitIntro = docPdf.splitTextToSize(introText, pageWidth - 40);
+    docPdf.text(splitIntro, 20, 45);
+
+    let y = 45 + (splitIntro.length * 5) + 5;
+
+    const drawSection = (title, contentLines) => {
+      const boxWidth = pageWidth - 40;
+      const splitLines = [];
+      contentLines.forEach(line => {
+        const split = docPdf.splitTextToSize(line, boxWidth - 10);
+        split.forEach(s => splitLines.push(s));
+      });
+      const boxHeight = (splitLines.length * 5) + 12;
+      
+      docPdf.setDrawColor(greenBorder[0], greenBorder[1], greenBorder[2]);
+      docPdf.setLineWidth(0.5);
+      docPdf.rect(20, y, boxWidth, boxHeight);
+      
+      docPdf.setFillColor(grayBg[0], grayBg[1], grayBg[2]);
+      docPdf.rect(20, y, boxWidth, 6, 'F');
+      
+      docPdf.setFont("helvetica", "bold");
+      docPdf.setFontSize(8);
+      docPdf.setTextColor(0, 0, 0);
+      docPdf.text(title, 25, y + 4.5);
+      
+      docPdf.setFont("helvetica", "normal");
+      docPdf.setFontSize(8);
+      let textY = y + 11;
+      splitLines.forEach(line => {
+        docPdf.text(line, 25, textY);
+        textY += 5;
+      });
+      
+      y += boxHeight + 5;
+    };
+
+    const sec1 = [
+      `DOCUMENTO NOTIFICADO: ${docData.fileName || "N/I"}`,
+      `PROTOCOLO DE RASTREIO: ${docData.protocol}`,
+      `NOTIFICANTE: ${docData.owner || "Social Jurídico"}`,
+      `DATA DE EMISSÃO: ${docData.date}`
+    ];
+    drawSection("I. IDENTIFICAÇÃO DA NOTIFICAÇÃO", sec1);
+
+    const sec2 = [
+      `DATA / HORA DA LEITURA: ${docData.readAt || "N/I"}`,
+      `ENDEREÇO IP DO DESTINATÁRIO: ${docData.readIp || "N/I"}`,
+      `DISPOSITIVO / NAVEGADOR: ${docData.readAgent || "N/I"}`,
+      `GEOLOCALIZAÇÃO (LAT, LONG): ${docData.readGeo || "N/I"}`
+    ];
+    drawSection("II. RASTREAMENTO DE ENTREGA", sec2);
+
+    const sec3 = [
+      "1. VALIDADE JURÍDICA: Este certificado atesta que o destinatário acessou o link exclusivo enviado, gerando o registro dos metadados acima.",
+      "2. IMUTABILIDADE: Os dados aqui registrados estão vinculados ao hash do documento original, garantindo que a notificação lida é exatamente a mesma que foi gerada."
+    ];
+    drawSection("III. NOTAS LEGAIS", sec3);
+
+    docPdf.setFont("helvetica", "normal");
+    docPdf.setFontSize(7);
+    docPdf.text(`Certificado gerado e autenticado pelo sistema em ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 11, { align: "center" });
+    docPdf.text(`Código de Validação: SJ-CERT-${docData.protocol}`, pageWidth / 2, pageHeight - 7, { align: "center" });
+
+    docPdf.save(`Certificado_Entrega_${docData.protocol}.pdf`);
   }, []);
 
   useEffect(() => {
@@ -1591,13 +1688,20 @@ export default function AdvogadoDashboard() {
                 <tbody>
                   {blindadosDocuments.map((doc) => (
                     <tr key={doc.id} style={{ borderBottom: '1px solid #222' }}>
-                      <td style={{ padding: '10px', color: '#fff' }}>{doc.name}</td>
+                      <td style={{ padding: '10px', color: '#fff' }}>
+                        {doc.name}
+                        {doc.type === 'Notificação' && (
+                          <span style={{ marginLeft: '10px', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', background: doc.status === 'lido' ? '#00e676' : '#ffc107', color: '#000', fontWeight: 'bold' }}>
+                            {doc.status === 'lido' ? 'LIDO' : 'ENVIADO'}
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '10px', color: '#00e676' }}>{doc.protocol}</td>
                       <td style={{ padding: '10px', color: '#ccc' }}>{doc.date}</td>
                       <td style={{ padding: '10px', color: '#aaa', fontSize: '0.8rem', fontFamily: 'monospace' }}>
-                        {doc.hash.substring(0, 20)}...
+                        {doc.hash ? doc.hash.substring(0, 20) + '...' : 'N/I'}
                       </td>
-                      <td style={{ padding: '10px' }}>
+                      <td style={{ padding: '10px', display: 'flex', gap: '10px' }}>
                         <button
                           type="button"
                           style={{ background: 'none', border: 'none', color: 'var(--color-gold)', cursor: 'pointer', fontSize: '0.9rem' }}
@@ -1617,6 +1721,30 @@ export default function AdvogadoDashboard() {
                         >
                           Baixar Certificado
                         </button>
+
+                        {doc.type === 'Notificação' && doc.status === 'lido' && (
+                          <button
+                            type="button"
+                            style={{ background: 'none', border: 'none', color: '#00e676', cursor: 'pointer', fontSize: '0.9rem' }}
+                            onClick={() => {
+                              toast.success("Gerando certificado de entrega...");
+                              
+                              generateDeliveryCertificatePDF({
+                                fileName: doc.name,
+                                protocol: doc.protocol,
+                                owner: `${profileData?.name || "Advogado"} (OAB: ${profileData?.oab || "N/I"})`,
+                                date: doc.date,
+                                hash: doc.hash,
+                                readAt: doc.read_at,
+                                readIp: doc.read_ip,
+                                readAgent: doc.read_user_agent,
+                                readGeo: doc.read_geo
+                              });
+                            }}
+                          >
+                            Certificado de Entrega
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

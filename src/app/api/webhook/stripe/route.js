@@ -2,7 +2,7 @@ import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { resend } from "@/lib/resend";
-import { novaVendaAdminTemplate } from "@/lib/emailTemplates";
+import { novaVendaAdminTemplate, jurisCreditadoTemplate, boasVindasPlanoTemplate } from "@/lib/emailTemplates";
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -225,7 +225,7 @@ async function handleJurisPurchase(session, userId, cupomId) {
   // Buscar saldo atual
   const { data: profile, error: fetchError } = await supabaseAdmin
     .from("advogados")
-    .select("balance")
+    .select("name, balance")
     .eq("id", userId)
     .single();
 
@@ -287,6 +287,25 @@ async function handleJurisPurchase(session, userId, cupomId) {
       valor: ((session.amount_total || 0) / 100).toFixed(2),
       jurisAmount,
     });
+
+    // 📧 ENVIAR EMAIL PARA O ADVOGADO
+    try {
+      if (advEmail) {
+        await resend.emails.send({
+          from: 'Social Jurídico <contato@socialjuridico.com.br>',
+          to: [advEmail],
+          subject: '💰 Seus Juris foram creditados!',
+          html: jurisCreditadoTemplate({
+            lawyerName: profile?.name || 'Advogado',
+            amount: jurisAmount,
+            balance: newBalance
+          })
+        });
+        console.log(`📧 Email de crédito de Juris enviado para \${advEmail}`);
+      }
+    } catch (emailErr) {
+      console.error("⚠️ Erro ao enviar email para o advogado (não-fatal):", emailErr.message);
+    }
   }
 }
 
@@ -325,7 +344,7 @@ async function handleProSubscription(session, userId, cupomId) {
   // Buscar saldo atual para somar os Juris de bônus
   const { data: advogado, error: fetchError } = await supabaseAdmin
     .from("advogados")
-    .select("balance")
+    .select("name, balance")
     .eq("id", finalUserId)
     .single();
 

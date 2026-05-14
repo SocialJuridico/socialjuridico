@@ -787,3 +787,184 @@ export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado
 </html>`;
 }
 
+/**
+ * Template de confirmação de creditamento de Juris
+ */
+export function jurisCreditadoTemplate({ lawyerName, amount, balance }) {
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #08090b; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #08090b; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background: linear-gradient(145deg, #0d0f14 0%, #12151c 100%); border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.3); overflow: hidden; max-width: 600px;">
+          
+          <!-- HEADER -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #d4af37 0%, #b8962e 50%, #a07928 100%); padding: 32px 40px; text-align: center;">
+              <h1 style="margin: 0; color: #0d0f12; font-size: 22px; font-weight: 800; letter-spacing: 1px;">⚖️ SOCIAL JURÍDICO</h1>
+              <p style="margin: 6px 0 0; color: rgba(13, 15, 18, 0.7); font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">JURIS CREDITADOS COM SUCESSO</p>
+            </td>
+          </tr>
+
+          <!-- SAUDAÇÃO -->
+          <tr>
+            <td style="padding: 36px 40px 16px;">
+              <p style="margin: 0; color: #ffffff; font-size: 17px; line-height: 1.6;">
+                Olá, <strong style="color: #d4af37;">${lawyerName}</strong>!
+              </p>
+              <p style="margin: 12px 0 0; color: rgba(255, 255, 255, 0.75); font-size: 15px; line-height: 1.7;">
+                Confirmamos que o seu pacote de Juris foi creditado com sucesso na sua conta!
+              </p>
+            </td>
+          </tr>
+
+          <!-- CARD -->
+          <tr>
+            <td style="padding: 8px 40px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.03) 100%); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 12px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 24px; text-align: center;">
+                    <p style="margin: 0 0 8px; font-size: 32px;">💰</p>
+                    <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Juris Adicionados</p>
+                    <p style="margin: 0 0 16px; color: #d4af37; font-size: 24px; font-weight: 800;">+ ${amount} Juris</p>
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.15); margin: 0 40px 16px;"></div>
+                    <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Seu Saldo Atual</p>
+                    <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700;">${balance} Juris</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- BOTÃO CTA -->
+          <tr>
+            <td style="padding: 8px 40px 32px; text-align: center;">
+              <a href="https://socialjuridico.com.br/dashboard/advogado" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #0d0f12; padding: 16px 40px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
+                Ir para o Painel
+              </a>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color: rgba(0,0,0,0.3); padding: 24px 40px; border-top: 1px solid rgba(212, 175, 55, 0.1);">
+              <p style="margin: 0; color: rgba(255,255,255,0.35); font-size: 12px; text-align: center; line-height: 1.6;">
+                Social Jurídico — Conectando o direito ao futuro.<br>
+                <a href="https://socialjuridico.com.br" style="color: rgba(212, 175, 55, 0.5); text-decoration: none;">socialjuridico.com.br</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Template de boas-vindas para novos planos (Start/Pro)
+ */
+export function boasVindasPlanoTemplate({ lawyerName, planType, jurisBonus }) {
+  const isPro = planType === 'PRO';
+  const planLabel = isPro ? 'Plano PRO' : 'Plano Start';
+  
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #08090b; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #08090b; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background: linear-gradient(145deg, #0d0f14 0%, #12151c 100%); border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.3); overflow: hidden; max-width: 600px;">
+          
+          <!-- HEADER -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #d4af37 0%, #b8962e 50%, #a07928 100%); padding: 32px 40px; text-align: center;">
+              <h1 style="margin: 0; color: #0d0f12; font-size: 22px; font-weight: 800; letter-spacing: 1px;">⚖️ SOCIAL JURÍDICO</h1>
+              <p style="margin: 6px 0 0; color: rgba(13, 15, 18, 0.7); font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">BEM-VINDO AO SEU NOVO PLANO</p>
+            </td>
+          </tr>
+
+          <!-- SAUDAÇÃO -->
+          <tr>
+            <td style="padding: 36px 40px 16px;">
+              <p style="margin: 0; color: #ffffff; font-size: 17px; line-height: 1.6;">
+                Olá, <strong style="color: #d4af37;">${lawyerName}</strong>!
+              </p>
+              <p style="margin: 12px 0 0; color: rgba(255, 255, 255, 0.75); font-size: 15px; line-height: 1.7;">
+                Parabéns! Você acaba de assinar o <strong style="color: #d4af37;">${planLabel}</strong>. Agora seu escritório está em outro nível!
+              </p>
+            </td>
+          </tr>
+
+          <!-- CARD -->
+          <tr>
+            <td style="padding: 8px 40px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.03) 100%); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 12px; overflow: hidden;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <p style="margin: 0 0 8px; font-size: 32px; text-align: center;">👑</p>
+                    <p style="margin: 0 0 12px; color: #d4af37; font-size: 18px; font-weight: 700; text-align: center;">Seu Bônus Exclusivo</p>
+                    <p style="margin: 0 0 20px; color: rgba(255, 255, 255, 0.85); font-size: 15px; text-align: center;">
+                      Você acabou de receber <strong style="color: #d4af37;">${jurisBonus} Juris</strong> de bônus para usar na plataforma!
+                    </p>
+                    
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.15); margin: 0 0 16px;"></div>
+                    
+                    <p style="margin: 0 0 12px; color: #d4af37; font-size: 16px; font-weight: 700;">Funcionalidades do seu Plano:</p>
+                    <ul style="margin: 0; padding-left: 20px; color: rgba(255, 255, 255, 0.8); font-size: 14px; line-height: 1.8;">
+                      <li>Acesso a casos exclusivos na sua região.</li>
+                      <li>Notificações em tempo real via WhatsApp/E-mail.</li>
+                      <li>Painel de gestão de clientes integrado.</li>
+                      ${isPro ? `
+                      <li><strong>Suporte prioritário</strong> via WhatsApp.</li>
+                      <li><strong>Maior visibilidade</strong> no ranking de advogados.</li>
+                      <li><strong>Créditos mensais maiores</strong> para manifestar interesse.</li>
+                      ` : `
+                      <li>Acesso básico ao painel de oportunidades.</li>
+                      <li>Rastreamento de leitura de documentos.</li>
+                      `}
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- BOTÃO CTA -->
+          <tr>
+            <td style="padding: 8px 40px 32px; text-align: center;">
+              <a href="https://socialjuridico.com.br/dashboard/advogado" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #0d0f12; padding: 16px 40px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
+                Acessar Meu Painel
+              </a>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color: rgba(0,0,0,0.3); padding: 24px 40px; border-top: 1px solid rgba(212, 175, 55, 0.1);">
+              <p style="margin: 0; color: rgba(255,255,255,0.35); font-size: 12px; text-align: center; line-height: 1.6;">
+                Social Jurídico — Conectando o direito ao futuro.<br>
+                <a href="https://socialjuridico.com.br" style="color: rgba(212, 175, 55, 0.5); text-decoration: none;">socialjuridico.com.br</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { resend } from "@/lib/resend";
+import { jurisCreditadoTemplate, boasVindasPlanoTemplate } from "@/lib/emailTemplates";
 
 // Usando a chave service_role para contornar RLS no webhook
 const supabaseAdmin = createClient(
@@ -25,7 +27,7 @@ export async function POST(request) {
     // Buscar usuário no Supabase pelo email
     const { data: userData, error: userError } = await supabaseAdmin
       .from("advogados")
-      .select("id, plan_type, promo_used, balance")
+      .select("id, name, plan_type, promo_used, balance")
       .eq("email", email)
       .single();
 
@@ -152,7 +154,51 @@ export async function POST(request) {
       console.log("✅ [Webhook InfinitePay] Registro de transação criado para o admin.");
     }
 
-    console.log(`✅ [Webhook InfinitePay] ${message} para ${email}`);
+    // 📧 ENVIAR EMAIL PARA O ADVOGADO
+    try {
+      const isJuris = amountInCents === 990 || amountInCents === 1690 || amountInCents === 3990;
+      const lawyerName = userData.name || 'Advogado';
+      
+      if (isJuris) {
+        const newBalance = (userData.balance || 0) + bonusJuris;
+        await resend.emails.send({
+          from: 'Social Jurídico <contato@socialjuridico.com.br>',
+          to: [email],
+          subject: '💰 Seus Juris foram creditados!',
+          html: jurisCreditadoTemplate({
+            lawyerName,
+            amount: bonusJuris,
+            balance: newBalance
+          })
+        });
+        console.log(`📧 Email de crédito de Juris enviado para ${email}`);
+      } else {
+        // É plano
+        let planType = "START";
+        if (amountInCents === 1099) {
+          const itemDesc = items?.[0]?.description?.toLowerCase() || "";
+          if (itemDesc.includes("pro")) planType = "PRO";
+        } else if (amountInCents === 8790 || amountInCents === 91188) {
+          planType = "PRO";
+        }
+        
+        await resend.emails.send({
+          from: 'Social Jurídico <contato@socialjuridico.com.br>',
+          to: [email],
+          subject: `👑 Bem-vindo ao Plano ${planType}!`,
+          html: boasVindasPlanoTemplate({
+            lawyerName,
+            planType,
+            jurisBonus
+          })
+        });
+        console.log(`📧 Email de boas-vindas do plano ${planType} enviado para ${email}`);
+      }
+    } catch (emailErr) {
+      console.error("⚠️ Erro ao enviar email para o advogado (não-fatal):", emailErr.message);
+    }
+
+    console.log(`✅ [Webhook InfinitePay] \${message} para \${email}`);
     return NextResponse.json({ success: true, message });
 
   } catch (error) {

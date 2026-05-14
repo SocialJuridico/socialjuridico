@@ -178,6 +178,82 @@ export default function AdvogadoDashboard() {
   const [chatMessages, setChatMessages] = useState([]);
   const [viewedOAB, setViewedOAB] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Estados para Blindagem de Contratos
+  const [showContratoModal, setShowContratoModal] = useState(false);
+  const [contractForm, setContractForm] = useState({
+    tipo: "",
+    parte1: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
+    parte2: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
+    personality: "Técnica",
+    purpose: "",
+    comarca: "",
+    local: "",
+    data: new Date().toISOString().split('T')[0],
+  });
+  const [generatedContract, setGeneratedContract] = useState("");
+  const [isGeneratingContract, setIsGeneratingContract] = useState(false);
+  const [showContractResult, setShowContractResult] = useState(false);
+  const [contractConfirmed, setContractConfirmed] = useState(false);
+  const [uploadedSignedContract, setUploadedSignedContract] = useState(null);
+  const [isShielding, setIsShielding] = useState(false);
+  const [shieldingCertificate, setShieldingCertificate] = useState(null);
+  const [blindadosDocuments, setBlindadosDocuments] = useState([]);
+  
+  // Procuração States
+  const [showProcuracaoModal, setShowProcuracaoModal] = useState(false);
+  const [procuracaoForm, setProcuracaoForm] = useState({
+    outorgante: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
+    outorgado: { nome: "", oab: "", cpf: "", endereco: "" },
+    poderes: "Ad Judicia et Extra",
+    comarca: "",
+    local: "",
+    data: new Date().toISOString().split('T')[0],
+  });
+  const [generatedProcuracao, setGeneratedProcuracao] = useState("");
+  const [isGeneratingProcuracao, setIsGeneratingProcuracao] = useState(false);
+  const [showProcuracaoResult, setShowProcuracaoResult] = useState(false);
+  const [procuracaoConfirmed, setProcuracaoConfirmed] = useState(false);
+  const [uploadedSignedProcuracao, setUploadedSignedProcuracao] = useState(null);
+  const [isShieldingProcuracao, setIsShieldingProcuracao] = useState(false);
+  const [procuracaoCertificate, setProcuracaoCertificate] = useState(null);
+  
+  // Provas Digitais States
+  const [showProvasModal, setShowProvasModal] = useState(false);
+  const [showJurisConfirmModal, setShowJurisConfirmModal] = useState(false);
+  const [jurisConfirmAction, setJurisConfirmAction] = useState(null);
+  const [uploadedProvaFile, setUploadedProvaFile] = useState(null);
+  const [provaAnalysis, setProvaAnalysis] = useState("");
+  const [isAnalyzingProva, setIsAnalyzingProva] = useState(false);
+  const [isShieldingProva, setIsShieldingProva] = useState(false);
+  const [provaCertificate, setProvaCertificate] = useState(null);
+  // Notificação Extrajudicial States
+  const [showNotificacaoModal, setShowNotificacaoModal] = useState(false);
+  const [notificacaoForm, setNotificacaoForm] = useState({
+    cliente: "",
+    caso: "",
+    tom: "Conciliador",
+    destinatario_email: "",
+    destinatario_nome: "",
+    destinatario_endereco: "",
+    destinatario_cep: "",
+    destinatario_cidade_estado: "",
+    notificante_nome: "",
+    notificante_endereco: "",
+    notificante_cep: "",
+    notificante_cidade_estado: "",
+    explicacao: "",
+    conteudo: "",
+    logo: null
+  });
+  const [isGeneratingNotificacao, setIsGeneratingNotificacao] = useState(false);
+  const [draftedNotificacao, setDraftedNotificacao] = useState("");
+  const [showNotificacaoResult, setShowNotificacaoResult] = useState(false);
+  const [isShieldingNotificacao, setIsShieldingNotificacao] = useState(false);
+  const [notificacaoCertificate, setNotificacaoCertificate] = useState(null);
+  const [notificacaoConfirmed, setNotificacaoConfirmed] = useState(false);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+
   const [billingCycle, setBillingCycle] = useState('MONTHLY'); // AVULSO, MONTHLY, ANNUAL
   const [chatInput, setChatInput] = useState("");
   const [isTypingAI, setIsTypingAI] = useState(false);
@@ -396,6 +472,142 @@ export default function AdvogadoDashboard() {
     } finally {
       setLoadingAvisos(false);
     }
+  }, []);
+
+  const fetchBlindados = useCallback(async () => {
+    try {
+      const res = await fetch("/api/crm/blindagem");
+      const data = await res.json();
+      if (data.success) {
+        const mapped = data.data.map(doc => ({
+          id: doc.id,
+          name: doc.file_name || `${doc.type}: ${doc.protocol}`,
+          protocol: doc.protocol,
+          date: new Date(doc.created_at).toLocaleString(),
+          hash: doc.hash_sha512 || doc.hash
+        }));
+        setBlindadosDocuments(mapped);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar blindados:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBlindados();
+  }, [fetchBlindados]);
+
+  const generateCertificatePDF = useCallback((docData) => {
+    const docPdf = new jsPDF();
+    const pageWidth = docPdf.internal.pageSize.getWidth();
+    const pageHeight = docPdf.internal.pageSize.getHeight();
+
+    const greenHeader = [0, 200, 117];
+    const greenBorder = [0, 200, 117];
+    const grayBg = [240, 245, 240];
+
+    docPdf.setFillColor(greenHeader[0], greenHeader[1], greenHeader[2]);
+    docPdf.rect(10, 10, pageWidth - 20, 25, 'F');
+    
+    docPdf.setFont("helvetica", "bold");
+    docPdf.setFontSize(16);
+    docPdf.setTextColor(255, 255, 255);
+    docPdf.text("CERTIFICADO DE CADEIA DE CUSTÓDIA", pageWidth / 2, 22, { align: "center" });
+    
+    docPdf.setFontSize(9);
+    docPdf.text("REGISTRO DE IMUTABILIDADE DE PROVA DIGITAL", pageWidth / 2, 29, { align: "center" });
+
+    docPdf.setFont("helvetica", "normal");
+    docPdf.setFontSize(9);
+    docPdf.setTextColor(50, 50, 50);
+    const introText = "Certificamos, para os devidos fins de direito, que o arquivo digital individualizado neste documento foi submetido a procedimento de registro de metadados e ancoragem criptográfica, estabelecendo um marco temporal fidedigno e garantindo a sua imutabilidade desde o momento de sua custódia.";
+    const splitIntro = docPdf.splitTextToSize(introText, pageWidth - 40);
+    docPdf.text(splitIntro, 20, 45);
+
+    let y = 45 + (splitIntro.length * 5) + 5;
+
+    const drawSection = (title, contentLines) => {
+      const boxWidth = pageWidth - 40;
+      
+      // Dividir linhas que forem muito longas para caber na caixa
+      const splitLines = [];
+      contentLines.forEach(line => {
+        const split = docPdf.splitTextToSize(line, boxWidth - 10);
+        split.forEach(s => splitLines.push(s));
+      });
+      
+      const boxHeight = (splitLines.length * 5) + 12;
+      
+      docPdf.setDrawColor(greenBorder[0], greenBorder[1], greenBorder[2]);
+      docPdf.setLineWidth(0.5);
+      docPdf.rect(20, y, boxWidth, boxHeight);
+      
+      docPdf.setFillColor(grayBg[0], grayBg[1], grayBg[2]);
+      docPdf.rect(20, y, boxWidth, 6, 'F');
+      
+      docPdf.setFont("helvetica", "bold");
+      docPdf.setFontSize(8);
+      docPdf.setTextColor(0, 0, 0);
+      docPdf.text(title, 25, y + 4.5);
+      
+      docPdf.setFont("helvetica", "normal");
+      docPdf.setFontSize(8);
+      let textY = y + 11;
+      splitLines.forEach(line => {
+        docPdf.text(line, 25, textY);
+        textY += 5;
+      });
+      
+      y += boxHeight + 5;
+    };
+
+    const sec1 = [
+      `NOME DO ARQUIVO: ${docData.fileName || "N/I"}`,
+      `PROTOCOLO INTERNO: ${docData.protocol}`,
+      `PROPRIETÁRIO / CUSTODIANTE: ${docData.owner || "Social Jurídico"}`,
+      `DATA / HORA DO CARREGAMENTO: ${docData.date}`
+    ];
+    drawSection("I. IDENTIFICAÇÃO DA PROVA E PROPRIETÁRIO", sec1);
+
+    const hash = docData.hash || "";
+    const hashLine1 = hash.substring(0, 64);
+    const hashLine2 = hash.substring(64);
+    const sec2 = [
+      "ALGORITMO UTILIZADO: SHA-512 (Secure Hash Algorithm 512-bit)",
+      "ASSINATURA DIGITAL (IMPRESSÃO DIGITAL DO ARQUIVO):",
+      hashLine1,
+      hashLine2
+    ];
+    drawSection("II. ANCORAGEM CRIPTOGRÁFICA (HASH)", sec2);
+
+    const sec3 = [
+      `ENDEREÇO IP REGISTRADO NO UPLOAD: ${docData.ip || "::1"}`,
+      `DISPOSITIVO/AGENTE: ${docData.agent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I')}`
+    ];
+    drawSection("III. RASTREABILIDADE TÉCNICA", sec3);
+
+    const sec4 = [
+      "1. INTEGRIDADE: O Hash SHA-512 listado na Seção II é o identificador matemático único deste arquivo. Qualquer alteração no conteúdo digital original (como a mudança de 1 byte ou pixel) resultará em um Hash completamente distinto.",
+      "2. LEGALIDADE: Este documento visa dar suporte à observância do Art. 158-A do Código de Processo Penal (Cadeia de Custódia) e ao Art. 369 do Código de Processo Civil, provendo meios técnicos idôneos para atestar o momento do registro e a não-adulteração da prova após este instante.",
+      "3. TERCEIRO DE CONFIANÇA: O SocialJurídico atua apenas como agente técnico neutro (terceira parte confiável) fornecendo a plataforma para extração e guarda segura dos metadados e da impressão digital do arquivo no exato momento da operação realizada pelo usuário."
+    ];
+    const splitSec4 = [];
+    sec4.forEach(line => {
+      const split = docPdf.splitTextToSize(line, pageWidth - 50);
+      split.forEach(s => splitSec4.push(s));
+    });
+    drawSection("IV. EMBASAMENTO LEGAL E DECLARAÇÃO", splitSec4);
+
+    docPdf.setFont("helvetica", "bold");
+    docPdf.setFontSize(8);
+    docPdf.text("SOCIALJURÍDICO - PLATAFORMA DE TECNOLOGIA JURÍDICA", pageWidth / 2, pageHeight - 15, { align: "center" });
+    
+    docPdf.setFont("helvetica", "normal");
+    docPdf.setFontSize(7);
+    docPdf.text(`Certificado gerado e autenticado pelo sistema em ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 11, { align: "center" });
+    docPdf.text(`Código de Validação: SJ-CERT-${docData.protocol}`, pageWidth / 2, pageHeight - 7, { align: "center" });
+
+    docPdf.save(`certificado_${docData.protocol}.pdf`);
   }, []);
 
   useEffect(() => {
@@ -936,6 +1148,7 @@ export default function AdvogadoDashboard() {
     "juris",
     "agenda",
     "triagem",
+    "blindagem",
   ];
 
   const handleTabChange = async (tab) => {
@@ -1209,8 +1422,217 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const renderBlindagem = () => {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center', color: '#fff' }}>
+        <div style={{ marginBottom: '20px' }}>
+          <Shield size={64} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '10px' }}>Blindagem de Documentos</h2>
+          <p style={{ color: '#a0a0a0', fontSize: '1rem', maxWidth: '600px', margin: '0 auto' }}>
+            Esta ferramenta permite proteger seus documentos jurídicos contra fraudes e adulterações usando tecnologia de ponta.
+          </p>
+        </div>
+        
+        <div style={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+          gap: '20px',
+          maxWidth: '1200px',
+          margin: '30px auto 0 auto',
+          padding: '0 10px'
+        }}>
+          {/* Card 1 */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            padding: '25px',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'transform(0.2s), background 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.transform = 'translateY(-5px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          onClick={() => setShowContratoModal(true)}
+          >
+            <PenTool size={32} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>Blindagem de Contratos</h3>
+            <p style={{ color: '#808080', fontSize: '0.85rem', lineHeight: '1.4' }}>
+              Proteja seus contratos contra alterações não autorizadas e garanta a autenticidade das assinaturas.
+            </p>
+          </div>
+
+          {/* Card 2 */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            padding: '25px',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'transform 0.2s, background 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.transform = 'translateY(-5px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          onClick={() => {
+            setProcuracaoForm(prev => ({
+              ...prev,
+              outorgado: {
+                nome: profileData?.name || "",
+                oab: profileData?.oab || "",
+                cpf: "",
+                endereco: ""
+              }
+            }));
+            setShowProcuracaoModal(true);
+          }}
+          >
+            <ShieldHalf size={32} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>Blindagem de Procuração</h3>
+            <p style={{ color: '#808080', fontSize: '0.85rem', lineHeight: '1.4' }}>
+              Evite fraudes em procurações com registro digital seguro e verificação em tempo real.
+            </p>
+          </div>
+
+          {/* Card 3 */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            padding: '25px',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'transform 0.2s, background 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.transform = 'translateY(-5px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          onClick={() => setShowProvasModal(true)}
+          >
+            <Eye size={32} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>Blindagem de Provas Digitais</h3>
+            <p style={{ color: '#808080', fontSize: '0.85rem', lineHeight: '1.4' }}>
+              Registre prints, áudios e vídeos com validade jurídica e carimbo de tempo.
+            </p>
+          </div>
+
+          {/* Card 4 */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            padding: '25px',
+            textAlign: 'left',
+            cursor: 'pointer',
+            transition: 'transform 0.2s, background 0.2s',
+          }}
+          onClick={() => setShowNotificacaoModal(true)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.transform = 'translateY(-5px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          >
+            <Send size={32} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>Notificação ExtraJudicial</h3>
+            <p style={{ color: '#808080', fontSize: '0.85rem', lineHeight: '1.4' }}>
+              Envie notificações com comprovação de entrega e leitura com validade jurídica.
+            </p>
+          </div>
+        </div>
+
+        {/* Lista de Documentos Blindados */}
+        <div style={{ 
+          marginTop: '40px', 
+          maxWidth: '1200px', 
+          margin: '40px auto 0 auto',
+          padding: '20px',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          borderRadius: '12px',
+          textAlign: 'left'
+        }}>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '15px', color: '#fff' }}>📄 Documentos Blindados</h3>
+          
+          {blindadosDocuments.length === 0 ? (
+            <p style={{ color: '#808080', fontSize: '0.9rem' }}>Nenhum documento blindado ainda.</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #333', textAlign: 'left' }}>
+                    <th style={{ padding: '10px', color: '#aaa' }}>Documento</th>
+                    <th style={{ padding: '10px', color: '#aaa' }}>Protocolo</th>
+                    <th style={{ padding: '10px', color: '#aaa' }}>Data</th>
+                    <th style={{ padding: '10px', color: '#aaa' }}>Hash</th>
+                    <th style={{ padding: '10px', color: '#aaa' }}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {blindadosDocuments.map((doc) => (
+                    <tr key={doc.id} style={{ borderBottom: '1px solid #222' }}>
+                      <td style={{ padding: '10px', color: '#fff' }}>{doc.name}</td>
+                      <td style={{ padding: '10px', color: '#00e676' }}>{doc.protocol}</td>
+                      <td style={{ padding: '10px', color: '#ccc' }}>{doc.date}</td>
+                      <td style={{ padding: '10px', color: '#aaa', fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                        {doc.hash.substring(0, 20)}...
+                      </td>
+                      <td style={{ padding: '10px' }}>
+                        <button
+                          type="button"
+                          style={{ background: 'none', border: 'none', color: 'var(--color-gold)', cursor: 'pointer', fontSize: '0.9rem' }}
+                          onClick={() => {
+                            toast.success("Gerando certificado...");
+                            
+                            generateCertificatePDF({
+                              fileName: doc.name,
+                              protocol: doc.protocol,
+                              owner: `${profileData?.name || "Advogado"} (OAB: ${profileData?.oab || "N/I"})`,
+                              date: doc.date,
+                              hash: doc.hash,
+                              ip: "::1",
+                              agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I'
+                            });
+                          }}
+                        >
+                          Baixar Certificado
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderActiveContent = () => {
     switch (activeTab) {
+      case "blindagem":
+        return renderBlindagem();
       case "oportunidades":
         return renderOportunidades();
       case "meus-casos":
@@ -7539,6 +7961,1336 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const renderContratoModal = () => {
+    if (!showContratoModal) return null;
+
+    return (
+      <div
+        className={styles.modalOverlay}
+        onClick={() => setShowContratoModal(false)}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: "800px", width: "90%" }}
+        >
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle}>🛡️ Blindagem de Contratos</h2>
+            <button
+              className={styles.modalClose}
+              onClick={() => setShowContratoModal(false)}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className={styles.modalBody} style={{ padding: '20px' }}>
+            {!showContractResult ? (
+              /* Passo 1: Formulário */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', color: '#ccc' }}>Tipo de Contrato</label>
+                  <input
+                    type="text"
+                    value={contractForm.tipo}
+                    onChange={(e) => setContractForm({ ...contractForm, tipo: e.target.value })}
+                    placeholder="Ex: Prestação de Serviços, Locação, etc."
+                    style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid #333', borderRadius: '6px', color: '#fff' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '20px' }}>
+                  {/* Parte 1 */}
+                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.01)', padding: '15px', borderRadius: '8px', border: '1px solid #333' }}>
+                    <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: 'var(--color-gold)' }}>Parte 1 (Contratante)</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Nome Completo</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte1.nome}
+                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, nome: e.target.value } })}
+                          placeholder="Nome completo"
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>CPF ou CNPJ</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte1.cpf_cnpj}
+                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, cpf_cnpj: e.target.value } })}
+                          placeholder="000.000.000-00"
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Estado Civil</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte1.estado_civil}
+                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, estado_civil: e.target.value } })}
+                          placeholder="Solteiro, Casado, etc."
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Profissão</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte1.profissao}
+                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, profissao: e.target.value } })}
+                          placeholder="Advogado, Engenheiro, etc."
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Endereço Completo</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte1.endereco}
+                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, endereco: e.target.value } })}
+                          placeholder="Rua, número, bairro, cidade-UF"
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Parte 2 */}
+                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.01)', padding: '15px', borderRadius: '8px', border: '1px solid #333' }}>
+                    <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: 'var(--color-gold)' }}>Parte 2 (Contratado)</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Nome Completo</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte2.nome}
+                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, nome: e.target.value } })}
+                          placeholder="Nome completo"
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>CPF ou CNPJ</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte2.cpf_cnpj}
+                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, cpf_cnpj: e.target.value } })}
+                          placeholder="000.000.000-00"
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Estado Civil</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte2.estado_civil}
+                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, estado_civil: e.target.value } })}
+                          placeholder="Solteiro, Casado, etc."
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Profissão</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte2.profissao}
+                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, profissao: e.target.value } })}
+                          placeholder="Advogado, Engenheiro, etc."
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Endereço Completo</label>
+                        <input
+                          type="text"
+                          value={contractForm.parte2.endereco}
+                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, endereco: e.target.value } })}
+                          placeholder="Rua, número, bairro, cidade-UF"
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', color: '#ccc' }}>Personalidade da IA</label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {['Técnica', 'Formal', 'Conciliadora'].map((p) => (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setContractForm({ ...contractForm, personality: p })}
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          background: contractForm.personality === p ? 'var(--color-gold)' : '#222',
+                          color: contractForm.personality === p ? '#000' : '#fff',
+                          border: '1px solid #333',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '5px', color: '#ccc', fontSize: '0.85rem' }}>Comarca</label>
+                    <input
+                      type="text"
+                      value={contractForm.comarca}
+                      onChange={(e) => setContractForm({ ...contractForm, comarca: e.target.value })}
+                      placeholder="Ex: São Paulo - SP"
+                      style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '5px', color: '#ccc', fontSize: '0.85rem' }}>Local</label>
+                    <input
+                      type="text"
+                      value={contractForm.local}
+                      onChange={(e) => setContractForm({ ...contractForm, local: e.target.value })}
+                      placeholder="Ex: São Paulo"
+                      style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', marginBottom: '5px', color: '#ccc', fontSize: '0.85rem' }}>Data</label>
+                    <input
+                      type="date"
+                      value={contractForm.data}
+                      onChange={(e) => setContractForm({ ...contractForm, data: e.target.value })}
+                      style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '5px', color: '#ccc' }}>Objetivo do Contrato</label>
+                  <textarea
+                    value={contractForm.purpose}
+                    onChange={(e) => setContractForm({ ...contractForm, purpose: e.target.value })}
+                    placeholder="Descreva detalhadamente o que você precisa que conste no contrato..."
+                    style={{ width: '100%', height: '150px', padding: '10px', background: '#222', border: '1px solid #333', borderRadius: '6px', color: '#fff', resize: 'vertical' }}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isGeneratingContract || !contractForm.purpose}
+                  style={{
+                    padding: '12px',
+                    background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    opacity: (isGeneratingContract || !contractForm.purpose) ? 0.7 : 1
+                  }}
+                  onClick={async () => {
+                    setIsGeneratingContract(true);
+                    try {
+                      const payload = {
+                        type: `Contrato de ${contractForm.tipo || 'Prestação de Serviços'}`,
+                        tone: contractForm.personality,
+                        facts: `Objetivo do Contrato: ${contractForm.purpose}\n\nComarca: ${contractForm.comarca}\nLocal: ${contractForm.local}\nData: ${contractForm.data}\n\nParte 1 (Contratante): ${contractForm.parte1.nome}, CPF/CNPJ: ${contractForm.parte1.cpf_cnpj}, Estado Civil: ${contractForm.parte1.estado_civil}, Profissão: ${contractForm.parte1.profissao}, Endereço: ${contractForm.parte1.endereco}\n\nParte 2 (Contratado): ${contractForm.parte2.nome}, CPF/CNPJ: ${contractForm.parte2.cpf_cnpj}, Estado Civil: ${contractForm.parte2.estado_civil}, Profissão: ${contractForm.parte2.profissao}, Endereço: ${contractForm.parte2.endereco}`,
+                        advocateData: profileData,
+                      };
+
+                      const res = await fetch("/api/crm/redator", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                      });
+                      
+                      const data = await res.json();
+                      if (data.success) {
+                        setGeneratedContract(data.draft);
+                        toast.success("Contrato gerado com sucesso!");
+                        setShowContractResult(true);
+                      } else {
+                        toast.error(data.message || "Erro ao gerar contrato");
+                      }
+                    } catch (error) {
+                      console.error("Erro ao gerar contrato:", error);
+                      toast.error("Erro de conexão ao gerar contrato");
+                    } finally {
+                      setIsGeneratingContract(false);
+                    }
+                  }}
+                >
+                  {isGeneratingContract ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                      <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                      Gerando Contrato...
+                    </div>
+                  ) : "Gerar Contrato"}
+                </button>
+              </div>
+            ) : (
+              /* Passo 2: Resultado e Ações */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div style={{ 
+                  background: '#222', 
+                  border: '1px solid #333', 
+                  borderRadius: '6px', 
+                  padding: '15px', 
+                  maxHeight: '300px', 
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  color: '#fff',
+                  fontFamily: 'monospace'
+                }}>
+                  {generatedContract}
+                </div>
+
+                {!contractConfirmed ? (
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      type="button"
+                      style={{ flex: 1, padding: '10px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                      onClick={() => {
+                        setShowContractResult(false);
+                        setContractConfirmed(false);
+                      }}
+                    >
+                      Tentar Novamente
+                    </button>
+                    <button
+                      type="button"
+                      style={{ flex: 1, padding: '10px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                      onClick={() => {
+                        setContractConfirmed(true);
+                        toast.success("Contrato confirmado!");
+                      }}
+                    >
+                      Confirmar e Ir para PDF
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    <button
+                      type="button"
+                      style={{ 
+                        width: '100%', 
+                        padding: '12px', 
+                        background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', 
+                        color: '#000', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        cursor: 'pointer', 
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px'
+                      }}
+                      onClick={() => {
+                        toast.success("Gerando PDF do Contrato...");
+                        
+                        const doc = new jsPDF();
+                        const margin = 20;
+                        const pageWidth = doc.internal.pageSize.getWidth();
+                        const pageHeight = doc.internal.pageSize.getHeight();
+                        const contentWidth = pageWidth - margin * 2;
+                        
+                        let y = margin;
+                        
+                        // Título
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(16);
+                        doc.setTextColor(0, 0, 0);
+                        const title = contractForm.tipo?.toUpperCase() || 'CONTRATO';
+                        const titleWidth = doc.getTextWidth(title);
+                        doc.text(title, (pageWidth - titleWidth) / 2, y);
+                        y += 20;
+                        
+                        // Qualificação
+                        doc.setFont("helvetica", "normal");
+                        doc.setFontSize(11);
+                        const qualifText = `CONTRATANTE: ${contractForm.parte1.nome}, CPF/CNPJ: ${contractForm.parte1.cpf_cnpj}, Estado Civil: ${contractForm.parte1.estado_civil}, Profissão: ${contractForm.parte1.profissao}, residente em ${contractForm.parte1.endereco}.\n\nCONTRATADO: ${contractForm.parte2.nome}, CPF/CNPJ: ${contractForm.parte2.cpf_cnpj}, Estado Civil: ${contractForm.parte2.estado_civil}, Profissão: ${contractForm.parte2.profissao}, residente em ${contractForm.parte2.endereco}.`;
+                        
+                        const splitQualif = doc.splitTextToSize(qualifText, contentWidth);
+                        doc.text(splitQualif, margin, y);
+                        y += splitQualif.length * 5 + 10;
+                        
+                        // Conteúdo do Contrato
+                        const splitContent = doc.splitTextToSize(generatedContract, contentWidth);
+                        
+                        // Loop para adicionar texto e páginas se necessário
+                        for (let i = 0; i < splitContent.length; i++) {
+                          if (y > pageHeight - margin - 10) {
+                            doc.addPage();
+                            y = margin;
+                          }
+                          doc.text(splitContent[i], margin, y);
+                          y += 5;
+                        }
+                        
+                        // Assinaturas
+                        y += 20;
+                        if (y > pageHeight - margin - 30) {
+                          doc.addPage();
+                          y = margin;
+                        }
+                        
+                        const sigWidth = 80;
+                        doc.line(margin, y, margin + sigWidth, y);
+                        doc.line(pageWidth - margin - sigWidth, y, pageWidth - margin, y);
+                        
+                        y += 5;
+                        doc.setFontSize(10);
+                        doc.text(contractForm.parte1.nome || "Contratante", margin, y);
+                        doc.text(contractForm.parte2.nome || "Contratado", pageWidth - margin - sigWidth, y);
+                        
+                        y += 5;
+                        doc.text("CONTRATANTE", margin, y);
+                        doc.text("CONTRATADO", pageWidth - margin - sigWidth, y);
+                        
+                        const fileName = `${contractForm.tipo?.replace(/\s+/g, "_") || "Contrato"}.pdf`;
+                        doc.save(fileName);
+                        toast.success("PDF baixado com sucesso!");
+                      }}
+                    >
+                      <FileDown size={18} /> Imprimir PDF do Contrato
+                    </button>
+                  </div>
+                )}
+
+                {/* Fluxo de Upload e Blindagem - Só aparece após confirmar */}
+                {contractConfirmed && (
+                  <div style={{ 
+                    background: 'rgba(255, 255, 255, 0.02)', 
+                    border: '1px solid rgba(255, 255, 255, 0.05)', 
+                    borderRadius: '12px', 
+                    padding: '20px',
+                    marginTop: '10px'
+                  }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>🛡️ Blindar Contrato Assinado</h3>
+                  <p style={{ color: '#808080', fontSize: '0.85rem', marginBottom: '15px' }}>
+                    Faça o upload do contrato assinado pelas partes para gerar a blindagem digital com Hash SHA-512.
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <input
+                      type="file"
+                      id="signed-contract-upload"
+                      style={{ display: 'none' }}
+                      onChange={(e) => setUploadedSignedContract(e.target.files[0])}
+                    />
+                    <label
+                      htmlFor="signed-contract-upload"
+                      style={{
+                        padding: '10px 15px',
+                        background: '#333',
+                        color: '#fff',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      {uploadedSignedContract ? "Alterar Arquivo" : "Selecionar Arquivo"}
+                    </label>
+                    {uploadedSignedContract && (
+                      <span style={{ color: '#00e676', fontSize: '0.9rem' }}>{uploadedSignedContract.name}</span>
+                    )}
+                  </div>
+
+                  {uploadedSignedContract && (
+                    <button
+                      type="button"
+                      disabled={isShielding}
+                      style={{
+                        marginTop: '15px',
+                        width: '100%',
+                        padding: '12px',
+                        background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        opacity: isShielding ? 0.7 : 1
+                      }}
+                      onClick={async () => {
+                        // VERIFICAR JURIS
+                        const isStart = profileData?.plan_type === 'START';
+                        const currentBalance = profileData?.balance || 0;
+                        
+                        const proceedWithShielding = async () => {
+                          if (isStart && currentBalance < 4) {
+                            toast.error("Saldo de Juris insuficiente! Você precisa de 4 Juris.");
+                            return;
+                          }
+                          setIsShielding(true);
+                          try {
+                            const formData = new FormData();
+                            formData.append("file", uploadedSignedContract);
+                            formData.append("type", "contrato");
+                            
+                            const res = await fetch("/api/crm/blindagem", {
+                              method: "POST",
+                              body: formData,
+                            });
+                            
+                            const data = await res.json();
+                            
+                            if (data.success) {
+                              setShieldingCertificate({
+                                protocol: data.data.protocol,
+                                hash: data.data.hash,
+                                date: new Date(data.data.date).toLocaleString()
+                              });
+                              toast.success("Contrato blindado com sucesso!");
+                              
+                              if (isStart) {
+                                setProfileData(prev => ({ ...prev, balance: (prev.balance || 0) - 4 }));
+                                toast.info("4 Juris deduzidos pelo serviço.");
+                              }
+                            } else {
+                              toast.error(data.message || "Erro ao blindar contrato");
+                            }
+                          } catch (error) {
+                            console.error("Erro ao blindar contrato:", error);
+                            toast.error("Erro de conexão ao blindar contrato");
+                          } finally {
+                            setIsShielding(false);
+                          }
+                        };
+
+                        if (isStart) {
+                          setJurisConfirmAction(() => proceedWithShielding);
+                          setShowJurisConfirmModal(true);
+                        } else {
+                          proceedWithShielding();
+                        }
+                      }}
+                    >
+                      {isShielding ? (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                          <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                          Blindando Documento...
+                        </div>
+                      ) : "Blindar Contrato (Gerar Hash SHA-512)"}
+                    </button>
+                  )}
+
+                  {shieldingCertificate && (
+                    <div style={{ marginTop: '15px', padding: '15px', background: 'rgba(0, 230, 118, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 230, 118, 0.2)' }}>
+                      <p style={{ color: '#00e676', fontWeight: 'bold', marginBottom: '5px' }}>✓ Documento Blindado!</p>
+                      <p style={{ color: '#aaa', fontSize: '0.8rem' }}>Protocolo: {shieldingCertificate.protocol}</p>
+                      <p style={{ color: '#aaa', fontSize: '0.8rem', wordBreak: 'break-all' }}>Hash: {shieldingCertificate.hash}</p>
+                      
+                      <button
+                        type="button"
+                        style={{
+                          marginTop: '10px',
+                          width: '100%',
+                          padding: '10px',
+                          background: 'var(--color-gold)',
+                          color: '#000',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                        }}
+                        onClick={() => {
+                          toast.success("Gerando Certificado...");
+                          
+                          const doc = new jsPDF();
+                          const pageWidth = doc.internal.pageSize.getWidth();
+                          const pageHeight = doc.internal.pageSize.getHeight();
+                          
+                          // Desenhar borda elegante
+                          doc.setDrawColor(212, 175, 55); // Cor Ouro
+                          doc.setLineWidth(2);
+                          doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+                          doc.setLineWidth(0.5);
+                          doc.rect(12, 12, pageWidth - 24, pageHeight - 24);
+                          
+                          generateCertificatePDF({
+                            fileName: `Contrato_${contractForm.tipo}_${contractForm.parte1.nome}_${contractForm.parte2.nome}.pdf`,
+                            protocol: shieldingCertificate.protocol,
+                            owner: `${profileData?.name || "Advogado"} (OAB: ${profileData?.oab || "N/I"})`,
+                            date: shieldingCertificate.date,
+                            hash: shieldingCertificate.hash,
+                            ip: "::1",
+                            agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I'
+                          });
+                          toast.success("Certificado baixado com sucesso!");
+                          
+                          // FECHAR MODAL E LIMPAR DADOS
+                          setTimeout(() => {
+                            setShowContratoModal(false);
+                            setContractForm({
+                              tipo: "",
+                              parte1: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
+                              parte2: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
+                              personality: "Técnica",
+                              purpose: "",
+                            });
+                            setGeneratedContract("");
+                            setShowContractResult(false);
+                            setContractConfirmed(false);
+                            setUploadedSignedContract(null);
+                            setShieldingCertificate(null);
+                            
+                            // Recarregar lista de blindados!
+                            fetchBlindados();
+                          }, 1000);
+                        }}
+                      >
+                        Baixar Certificado de Cadeia de Custódia
+                      </button>
+                    </div>
+                  )}
+                </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderProcuracaoModal = () => {
+    if (!showProcuracaoModal) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setShowProcuracaoModal(false)}>
+        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "800px", width: "90%" }}>
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle}>🛡️ Blindagem de Procuração</h2>
+            <button className={styles.modalClose} onClick={() => setShowProcuracaoModal(false)}><X size={20} /></button>
+          </div>
+          <div className={styles.modalBody} style={{ padding: '20px' }}>
+            {!showProcuracaoResult ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div style={{ display: 'flex', gap: '15px' }}>
+                  {/* Outorgante */}
+                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.01)', padding: '15px', borderRadius: '8px', border: '1px solid #333' }}>
+                    <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: 'var(--color-gold)' }}>Outorgante</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {crmClients.length > 0 && (
+                        <select
+                          onChange={(e) => {
+                            const client = crmClients.find(c => c.id === e.target.value);
+                            if (client) {
+                              setProcuracaoForm({
+                                ...procuracaoForm,
+                                outorgante: {
+                                  nome: client.name || "",
+                                  cpf_cnpj: client.cpf_cnpj || "",
+                                  endereco: "",
+                                  estado_civil: "",
+                                  profissao: ""
+                                }
+                              });
+                            }
+                          }}
+                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem', marginBottom: '5px' }}
+                        >
+                          <option value="">Puxar do CRM (Opcional)</option>
+                          {crmClients.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      )}
+                      <input type="text" placeholder="Nome Completo" value={procuracaoForm.outorgante.nome} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, nome: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                      <input type="text" placeholder="CPF ou CNPJ" value={procuracaoForm.outorgante.cpf_cnpj} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, cpf_cnpj: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                      <input type="text" placeholder="Estado Civil" value={procuracaoForm.outorgante.estado_civil} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, estado_civil: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                      <input type="text" placeholder="Profissão" value={procuracaoForm.outorgante.profissao} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, profissao: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                      <input type="text" placeholder="Endereço Completo" value={procuracaoForm.outorgante.endereco} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, endereco: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                    </div>
+                  </div>
+                  {/* Outorgado */}
+                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.01)', padding: '15px', borderRadius: '8px', border: '1px solid #333' }}>
+                    <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: 'var(--color-gold)' }}>Outorgado</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <input type="text" placeholder="Nome Completo" value={procuracaoForm.outorgado.nome} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgado: {...procuracaoForm.outorgado, nome: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                      <input type="text" placeholder="OAB" value={procuracaoForm.outorgado.oab} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgado: {...procuracaoForm.outorgado, oab: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                      <input type="text" placeholder="CPF" value={procuracaoForm.outorgado.cpf} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgado: {...procuracaoForm.outorgado, cpf: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                      <input type="text" placeholder="Endereço Profissional" value={procuracaoForm.outorgado.endereco} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgado: {...procuracaoForm.outorgado, endereco: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input type="text" placeholder="Comarca" value={procuracaoForm.comarca} onChange={(e) => setProcuracaoForm({...procuracaoForm, comarca: e.target.value})} style={{ flex: 1, padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                  <input type="text" placeholder="Local" value={procuracaoForm.local} onChange={(e) => setProcuracaoForm({...procuracaoForm, local: e.target.value})} style={{ flex: 1, padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                  <input type="date" value={procuracaoForm.data} onChange={(e) => setProcuracaoForm({...procuracaoForm, data: e.target.value})} style={{ flex: 1, padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                </div>
+                <div>
+                  <label style={{ color: '#ccc', fontSize: '0.85rem' }}>Poderes</label>
+                  <textarea value={procuracaoForm.poderes} onChange={(e) => setProcuracaoForm({...procuracaoForm, poderes: e.target.value})} placeholder="Descreva os poderes..." style={{ width: '100%', height: '80px', padding: '10px', background: '#222', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
+                </div>
+                <button
+                  disabled={isGeneratingProcuracao || !procuracaoForm.poderes}
+                  style={{ padding: '12px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', opacity: (isGeneratingProcuracao || !procuracaoForm.poderes) ? 0.7 : 1 }}
+                  onClick={async () => {
+                    setIsGeneratingProcuracao(true);
+                    try {
+                      const payload = {
+                        type: `Procuração`,
+                        tone: "Formal",
+                        facts: `Poderes: ${procuracaoForm.poderes}\n\nComarca: ${procuracaoForm.comarca}\nLocal: ${procuracaoForm.local}\nData: ${procuracaoForm.data}\n\nOutorgante: ${procuracaoForm.outorgante.nome}, CPF/CNPJ: ${procuracaoForm.outorgante.cpf_cnpj}, Estado Civil: ${procuracaoForm.outorgante.estado_civil}, Profissão: ${procuracaoForm.outorgante.profissao}, Endereço: ${procuracaoForm.outorgante.endereco}\n\nOutorgado: ${procuracaoForm.outorgado.nome}, OAB: ${procuracaoForm.outorgado.oab}, CPF: ${procuracaoForm.outorgado.cpf}, Endereço: ${procuracaoForm.outorgado.endereco}`,
+                        advocateData: profileData,
+                      };
+                      const res = await fetch("/api/crm/redator", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                      const data = await res.json();
+                      if (data.success) {
+                        setGeneratedProcuracao(data.draft);
+                        toast.success("Procuração gerada!");
+                        setShowProcuracaoResult(true);
+                      } else { toast.error(data.message || "Erro ao gerar"); }
+                    } catch (error) { toast.error("Erro de conexão"); } finally { setIsGeneratingProcuracao(false); }
+                  }}
+                >
+                  {isGeneratingProcuracao ? "Gerando..." : "Gerar Procuração"}
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', whiteSpace: 'pre-wrap', textAlign: 'left', fontSize: '0.9rem' }}>
+                  {generatedProcuracao}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button style={{ flex: 1, padding: '10px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }} onClick={() => setShowProcuracaoResult(false)}>Voltar</button>
+                  <button
+                    style={{ flex: 1, padding: '10px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                    onClick={() => {
+                      const doc = new jsPDF();
+                      const pageWidth = doc.internal.pageSize.getWidth();
+                      const pageHeight = doc.internal.pageSize.getHeight();
+                      const margin = 20;
+                      const contentWidth = pageWidth - (margin * 2);
+                      let y = 30;
+                      doc.setFont("helvetica", "normal"); doc.setFontSize(11);
+                      const cleanProcuracao = generatedProcuracao.replace(/\*\*/g, '').replace(/\*/g, '');
+                      const splitContent = doc.splitTextToSize(cleanProcuracao, contentWidth);
+                      for (let i = 0; i < splitContent.length; i++) {
+                        if (y > pageHeight - margin - 10) { doc.addPage(); y = margin; }
+                        doc.text(splitContent[i], margin, y); y += 5;
+                      }
+                      doc.save(`procuracao_${procuracaoForm.outorgante.nome.replace(/\s+/g, '_')}.pdf`);
+                      setProcuracaoConfirmed(true);
+                    }}
+                  >
+                    Imprimir PDF
+                  </button>
+                </div>
+                {procuracaoConfirmed && (
+                  <div style={{ marginTop: '10px', borderTop: '1px solid #333', paddingTop: '10px' }}>
+                    <h4 style={{ fontSize: '1rem', color: '#fff', marginBottom: '5px' }}>Blindar Procuração Assinada</h4>
+                    <div style={{ border: '2px dashed #444', borderRadius: '6px', padding: '15px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', cursor: 'pointer' }} onClick={() => document.getElementById('fileUploadProcuracao').click()}>
+                      <input id="fileUploadProcuracao" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => { if (e.target.files && e.target.files[0]) setUploadedSignedProcuracao(e.target.files[0]); }} />
+                      <Upload size={20} color="var(--color-gold)" style={{ marginBottom: '5px' }} />
+                      <p style={{ color: '#fff', fontSize: '0.85rem' }}>{uploadedSignedProcuracao ? uploadedSignedProcuracao.name : "Clique para selecionar"}</p>
+                    </div>
+                    {uploadedSignedProcuracao && (
+                      <button
+                        disabled={isShieldingProcuracao}
+                        style={{ marginTop: '10px', width: '100%', padding: '10px', background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', opacity: isShieldingProcuracao ? 0.7 : 1 }}
+                        onClick={async () => {
+                          const isStart = profileData?.plan_type === 'START';
+                          const proceedWithShielding = async () => {
+                            if (isStart && (profileData?.balance || 0) < 4) { toast.error("Saldo insuficiente!"); return; }
+                            setIsShieldingProcuracao(true);
+                            try {
+                              const formData = new FormData();
+                              formData.append("file", uploadedSignedProcuracao);
+                              formData.append("type", "procuracao");
+                              const res = await fetch("/api/crm/blindagem", { method: "POST", body: formData });
+                              const data = await res.json();
+                              if (data.success) {
+                                setProcuracaoCertificate({ protocol: data.data.protocol, hash: data.data.hash, date: new Date(data.data.date).toLocaleString() });
+                                toast.success("Blindada!");
+                                if (isStart) setProfileData(prev => ({ ...prev, balance: (prev.balance || 0) - 4 }));
+                              } else { toast.error(data.message || "Erro"); }
+                            } catch (error) { toast.error("Erro"); } finally { setIsShieldingProcuracao(false); }
+                          };
+
+                          if (isStart) {
+                            setJurisConfirmAction(() => proceedWithShielding);
+                            setShowJurisConfirmModal(true);
+                          } else {
+                            proceedWithShielding();
+                          }
+                        }}
+                      >
+                        {isShieldingProcuracao ? "Blindando..." : "Blindar Procuração"}
+                      </button>
+                    )}
+                    {procuracaoCertificate && (
+                      <div style={{ marginTop: '10px', background: 'rgba(0, 230, 118, 0.05)', padding: '10px', borderRadius: '6px', border: '1px solid rgba(0, 230, 118, 0.2)' }}>
+                        <p style={{ color: '#fff', fontSize: '0.8rem' }}><strong>Protocolo:</strong> {procuracaoCertificate.protocol}</p>
+                        <button
+                          style={{ marginTop: '10px', width: '100%', padding: '8px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                          onClick={() => {
+                            generateCertificatePDF({
+                              fileName: `Procuracao_${procuracaoForm.outorgante.nome}_${procuracaoForm.outorgado.nome}.pdf`,
+                              protocol: procuracaoCertificate.protocol,
+                              owner: `${profileData?.name || "Advogado"} (OAB: ${profileData?.oab || "N/I"})`,
+                              date: procuracaoCertificate.date,
+                              hash: procuracaoCertificate.hash,
+                              ip: "::1",
+                              agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I'
+                            });
+                            setTimeout(() => {
+                              setShowProcuracaoModal(false);
+                              setProcuracaoForm({ outorgante: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" }, outorgado: { nome: "", oab: "", cpf: "", endereco: "" }, poderes: "Ad Judicia et Extra", comarca: "", local: "", data: new Date().toISOString().split('T')[0] });
+                              setGeneratedProcuracao(""); setShowProcuracaoResult(false); setProcuracaoConfirmed(false); setUploadedSignedProcuracao(null); setProcuracaoCertificate(null);
+                              fetchBlindados();
+                            }, 1000);
+                          }}
+                        >
+                          Baixar Certificado
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderProvasModal = () => {
+    if (!showProvasModal) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setShowProvasModal(false)}>
+        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px", width: "90%" }}>
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle}>🛡️ Blindagem de Provas Digitais</h2>
+            <button className={styles.modalClose} onClick={() => setShowProvasModal(false)}><X size={20} /></button>
+          </div>
+          <div className={styles.modalBody} style={{ padding: '20px' }}>
+            <div style={{ border: '2px dashed #444', borderRadius: '6px', padding: '20px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', cursor: 'pointer' }} onClick={() => document.getElementById('fileUploadProva').click()}>
+              <input id="fileUploadProva" type="file" accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4" style={{ display: 'none' }} onChange={async (e) => {
+                if (e.target.files && e.target.files[0]) {
+                  const file = e.target.files[0];
+                  setUploadedProvaFile(file);
+                  setIsAnalyzingProva(true);
+                  try {
+                    const formData = new FormData();
+                    formData.append("file", file);
+                    const res = await fetch("/api/crm/analisador", { method: "POST", body: formData });
+                    const data = await res.json();
+                    if (data.success) {
+                      setProvaAnalysis(data.analysis);
+                      toast.success("Análise concluída!");
+                    } else { toast.error("Erro ao analisar"); }
+                  } catch (error) { toast.error("Erro de conexão"); } finally { setIsAnalyzingProva(false); }
+                }
+              }} />
+              <Upload size={32} color="var(--color-gold)" style={{ marginBottom: '10px' }} />
+              <p style={{ color: '#fff' }}>{uploadedProvaFile ? uploadedProvaFile.name : "Clique para selecionar arquivo ou imagem"}</p>
+              <p style={{ color: '#808080', fontSize: '0.8rem', marginTop: '5px' }}>Suporta PDF, Imagens, Áudio e Vídeo</p>
+            </div>
+            {isAnalyzingProva && (
+              <div style={{ marginTop: '15px', textAlign: 'center', color: '#aaa' }}>
+                <Loader2 size={20} style={{ animation: "spin 1s linear infinite", marginBottom: '5px' }} />
+                <p>IA analisando o documento...</p>
+              </div>
+            )}
+            {provaAnalysis && !isAnalyzingProva && (
+              <div style={{ marginTop: '15px', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '6px' }}>
+                <h4 style={{ color: 'var(--color-gold)', marginBottom: '5px', fontSize: '0.9rem' }}>Análise da IA:</h4>
+                <p style={{ color: '#fff', fontSize: '0.85rem', lineHeight: '1.4', whiteSpace: 'pre-line' }}>
+                  {provaAnalysis.replace(/\*\*/g, '').replace(/###/g, '').replace(/#/g, '')}
+                </p>
+              </div>
+            )}
+            {uploadedProvaFile && provaAnalysis && !isAnalyzingProva && (
+              <button
+                disabled={isShieldingProva}
+                style={{ marginTop: '15px', width: '100%', padding: '12px', background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', opacity: isShieldingProva ? 0.7 : 1 }}
+                onClick={async () => {
+                  const isStart = profileData?.plan_type === 'START';
+                  const proceedWithShielding = async () => {
+                    if (isStart && (profileData?.balance || 0) < 4) { toast.error("Saldo insuficiente!"); return; }
+                    setIsShieldingProva(true);
+                    try {
+                      const formData = new FormData();
+                      formData.append("file", uploadedProvaFile);
+                      formData.append("type", "prova");
+                      formData.append("analysis", provaAnalysis);
+                      const res = await fetch("/api/crm/blindagem", { method: "POST", body: formData });
+                      const data = await res.json();
+                      if (data.success) {
+                        setProvaCertificate({ protocol: data.data.protocol, hash: data.data.hash, date: new Date(data.data.date).toLocaleString() });
+                        toast.success("Prova Blindada!");
+                        if (isStart) setProfileData(prev => ({ ...prev, balance: (prev.balance || 0) - 4 }));
+                      } else { toast.error(data.message || "Erro"); }
+                    } catch (error) { toast.error("Erro"); } finally { setIsShieldingProva(false); }
+                  };
+
+                  if (isStart) {
+                    setJurisConfirmAction(() => proceedWithShielding);
+                    setShowJurisConfirmModal(true);
+                  } else {
+                    proceedWithShielding();
+                  }
+                }}
+              >
+                {isShieldingProva ? "Blindando..." : "Blindar Prova Digital"}
+              </button>
+            )}
+            {provaCertificate && (
+              <div style={{ marginTop: '15px', background: 'rgba(0, 230, 118, 0.05)', padding: '15px', borderRadius: '6px', border: '1px solid rgba(0, 230, 118, 0.2)' }}>
+                <p style={{ color: '#fff', fontSize: '0.85rem' }}><strong>Protocolo:</strong> {provaCertificate.protocol}</p>
+                <button
+                  style={{ marginTop: '10px', width: '100%', padding: '10px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  onClick={() => {
+                    generateCertificatePDF({
+                      fileName: uploadedProvaFile?.name,
+                      protocol: provaCertificate.protocol,
+                      owner: `${profileData?.name || "Advogado"} (OAB: ${profileData?.oab || "N/I"})`,
+                      date: provaCertificate.date,
+                      hash: provaCertificate.hash,
+                      ip: "::1",
+                      agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I'
+                    });
+                    setTimeout(() => {
+                      setShowProvasModal(false);
+                      setUploadedProvaFile(null);
+                      setProvaAnalysis("");
+                      setProvaCertificate(null);
+                      fetchBlindados();
+                    }, 1000);
+                  }}
+                >
+                  Baixar Certificado
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderNotificacaoModal = () => {
+    if (!showNotificacaoModal) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setShowNotificacaoModal(false)}>
+        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px", width: "90%" }}>
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle}>📝 Nova Notificação Extrajudicial</h2>
+            <button className={styles.modalClose} onClick={() => setShowNotificacaoModal(false)}><X size={20} /></button>
+          </div>
+          <div className={styles.modalBody} style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Caso / Cliente</label>
+                <select
+                  style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                  value={notificacaoForm.caso}
+                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, caso: e.target.value })}
+                >
+                  <option value="">Selecione um caso...</option>
+                  {casos.filter(caso => caso.advogado_id === profileData?.id).map(caso => (
+                    <option key={caso.id} value={caso.id}>{caso.titulo || `Caso #${caso.id.substring(0,8)}`} ({caso.cliente_nome || "S/N"})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Nome do Notificado</label>
+                <input
+                  type="text"
+                  placeholder="Nome completo do destinatário"
+                  style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                  value={notificacaoForm.destinatario_nome}
+                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_nome: e.target.value })}
+                />
+              </div>
+
+              {/* DADOS DO NOTIFICADO */}
+              <div style={{ borderTop: '1px solid #444', paddingTop: '10px', marginTop: '10px' }}>
+                <h4 style={{ color: 'var(--color-gold)', marginBottom: '10px' }}>Dados do Notificado (Destinatário)</h4>
+                
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{ flex: 2 }}>
+                    <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Endereço</label>
+                    <input
+                      type="text"
+                      placeholder="Rua, Número, Bairro"
+                      style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      value={notificacaoForm.destinatario_endereco}
+                      onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_endereco: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>CEP</label>
+                    <input
+                      type="text"
+                      placeholder="00000-000"
+                      style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      value={notificacaoForm.destinatario_cep}
+                      onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_cep: e.target.value })}
+                    />
+                  </div>
+                </div>
+                
+                <div style={{ marginBottom: '10px' }}>
+                  <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Cidade - Estado</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: São Paulo - SP"
+                    style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                    value={notificacaoForm.destinatario_cidade_estado}
+                    onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_cidade_estado: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* DADOS DO NOTIFICANTE */}
+              <div style={{ borderTop: '1px solid #444', paddingTop: '10px', marginTop: '10px' }}>
+                <h4 style={{ color: 'var(--color-gold)', marginBottom: '10px' }}>Dados do Notificante (Remetente)</h4>
+                
+                <div style={{ marginBottom: '10px' }}>
+                  <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Nome ou Razão Social</label>
+                  <input
+                    type="text"
+                    placeholder="Seu nome ou nome do seu cliente"
+                    style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                    value={notificacaoForm.notificante_nome}
+                    onChange={(e) => setNotificacaoForm({ ...notificacaoForm, notificante_nome: e.target.value })}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{ flex: 2 }}>
+                    <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Endereço</label>
+                    <input
+                      type="text"
+                      placeholder="Rua, Número, Bairro"
+                      style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      value={notificacaoForm.notificante_endereco}
+                      onChange={(e) => setNotificacaoForm({ ...notificacaoForm, notificante_endereco: e.target.value })}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>CEP</label>
+                    <input
+                      type="text"
+                      placeholder="00000-000"
+                      style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      value={notificacaoForm.notificante_cep}
+                      onChange={(e) => setNotificacaoForm({ ...notificacaoForm, notificante_cep: e.target.value })}
+                    />
+                  </div>
+                </div>
+                
+                <div style={{ marginBottom: '10px' }}>
+                  <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Cidade - Estado</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: São Paulo - SP"
+                    style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                    value={notificacaoForm.notificante_cidade_estado}
+                    onChange={(e) => setNotificacaoForm({ ...notificacaoForm, notificante_cidade_estado: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ borderTop: '1px solid #444', paddingTop: '10px', marginTop: '10px' }}>
+                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>O que está acontecendo? (Explique para a IA)</label>
+                <textarea
+                  placeholder="Explique os fatos para que a IA redija a notificação adequada..."
+                  style={{ width: '100%', height: '100px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px', padding: '10px' }}
+                  value={notificacaoForm.explicacao}
+                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, explicacao: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Tom da Notificação</label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    style={{ flex: 1, padding: '10px', background: notificacaoForm.tom === 'Conciliador' ? 'var(--color-gold)' : '#333', color: notificacaoForm.tom === 'Conciliador' ? '#000' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                    onClick={() => setNotificacaoForm({ ...notificacaoForm, tom: 'Conciliador' })}
+                  >
+                    🤝 Conciliador
+                  </button>
+                  <button
+                    style={{ flex: 1, padding: '10px', background: notificacaoForm.tom === 'Agressivo' ? '#d32f2f' : '#333', color: notificacaoForm.tom === 'Agressivo' ? '#fff' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                    onClick={() => setNotificacaoForm({ ...notificacaoForm, tom: 'Agressivo' })}
+                  >
+                    🔥 Assertivo / Agressivo
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>E-mail do Destinatário</label>
+                <input
+                  type="email"
+                  placeholder="email@destino.com"
+                  style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                  value={notificacaoForm.destinatario_email}
+                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_email: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Logotipo (Opcional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, logo: e.target.files[0] })}
+                />
+              </div>
+
+              {!showNotificacaoResult ? (
+                <button
+                  style={{ width: '100%', padding: '12px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}
+                  onClick={async () => {
+                    if (!notificacaoForm.caso) { toast.error("Selecione um caso!"); return; }
+                    setIsGeneratingNotificacao(true);
+                    try {
+                      const selectedCaso = casos.find(c => c.id === notificacaoForm.caso);
+                      const payload = {
+                        type: "Notificação Extrajudicial",
+                        tone: notificacaoForm.tom,
+                        facts: `DADOS DO NOTIFICANTE (REMETENTE):
+Nome: ${notificacaoForm.notificante_nome || "N/I"}
+Endereço: ${notificacaoForm.notificante_endereco || "N/I"}
+CEP: ${notificacaoForm.notificante_cep || "N/I"}
+Cidade/Estado: ${notificacaoForm.notificante_cidade_estado || "N/I"}
+
+DADOS DO NOTIFICADO (DESTINATÁRIO):
+Nome: ${notificacaoForm.destinatario_nome || "N/I"}
+Endereço: ${notificacaoForm.destinatario_endereco || "N/I"}
+CEP: ${notificacaoForm.destinatario_cep || "N/I"}
+Cidade/Estado: ${notificacaoForm.destinatario_cidade_estado || "N/I"}
+
+DATA DE EMISSÃO: ${new Date().toLocaleDateString('pt-BR')}
+
+CONTEXTO E FATOS:
+${notificacaoForm.explicacao || "N/I"}
+
+INSTRUÇÕES IMPORTANTES PARA A IA:
+1. Use a data de emissão fornecida acima para datar o documento.
+2. NÃO inclua nenhuma observação ou recomendação de envio por correios, carta registrada, AR ou meios físicos. Esta notificação será enviada de forma 100% digital com certificação de entrega pela plataforma. Remova qualquer texto padrão que sugira o contrário.`,
+                        advocateData: profileData,
+                      };
+                      const res = await fetch("/api/crm/redator", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        setDraftedNotificacao(data.draft);
+                        setShowNotificacaoResult(true);
+                        toast.success("Minuta gerada!");
+                      } else {
+                        toast.error(data.message || "Erro ao gerar minuta");
+                      }
+                    } catch (error) {
+                      toast.error("Erro na requisição");
+                    } finally {
+                      setIsGeneratingNotificacao(false);
+                    }
+                  }}
+                  disabled={isGeneratingNotificacao}
+                >
+                  {isGeneratingNotificacao ? "Gerando..." : "Gerar Notificação com IA"}
+                </button>
+              ) : (
+                <>
+                  <div style={{ marginTop: '15px', background: '#222', padding: '15px', borderRadius: '6px', border: '1px solid #444' }}>
+                    <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Minuta Gerada</label>
+                    <textarea
+                      style={{ width: '100%', height: '200px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px', padding: '10px' }}
+                      value={draftedNotificacao}
+                      onChange={(e) => setDraftedNotificacao(e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="checkbox"
+                        id="confirm_notificacao"
+                        checked={notificacaoConfirmed}
+                        onChange={(e) => setNotificacaoConfirmed(e.target.checked)}
+                      />
+                      <label htmlFor="confirm_notificacao" style={{ color: '#fff', fontSize: '0.9rem' }}>
+                        Confirmo que a notificação está redigida perfeitamente e autorizo o envio.
+                      </label>
+                    </div>
+
+                    {profileData?.plan_type === 'START' && (
+                      <>
+                        <div style={{ background: 'rgba(255, 193, 7, 0.1)', border: '1px solid #ffc107', padding: '10px', borderRadius: '6px' }}>
+                          <p style={{ color: '#ffc107', fontSize: '0.9rem', margin: 0 }}>
+                            No plano <strong>START</strong>, o envio de Notificação Extrajudicial custa <strong>R$ 10,00</strong>.
+                          </p>
+                          <p style={{ color: '#aaa', fontSize: '0.8rem', marginTop: '5px', marginBottom: 0 }}>
+                            Realize o pagamento via PIX na InfinitePay antes de enviar: 
+                            <a href="https://loja.infinitepay.io/carlos-henrique-1o7/uus4692-notificacao-extrajudicial" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-gold)', textDecoration: 'underline', marginLeft: '5px' }}>
+                              Pagar via PIX
+                            </a>
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <input
+                            type="checkbox"
+                            id="confirm_payment"
+                            checked={paymentConfirmed}
+                            onChange={(e) => setPaymentConfirmed(e.target.checked)}
+                          />
+                          <label htmlFor="confirm_payment" style={{ color: '#fff', fontSize: '0.9rem' }}>
+                            Já realizei o pagamento de R$ 10,00 via PIX.
+                          </label>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <button
+                    style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}
+                    onClick={async () => {
+                      if (!notificacaoForm.destinatario_email) { toast.error("E-mail do destinatário é obrigatório!"); return; }
+                      if (!notificacaoConfirmed) { toast.error("Você precisa confirmar que a minuta está perfeita!"); return; }
+                      if (profileData?.plan_type === 'START' && !paymentConfirmed) { toast.error("Você precisa confirmar o pagamento!"); return; }
+                      setIsShieldingNotificacao(true);
+                      try {
+                        const docPdf = new jsPDF();
+                        const pageWidth = docPdf.internal.pageSize.getWidth();
+                        
+                        const generateAndSend = async (imgData) => {
+                          docPdf.setFillColor(0, 200, 118);
+                          docPdf.rect(0, 0, pageWidth, 15, 'F');
+                          
+                          docPdf.setFont("helvetica", "bold");
+                          docPdf.setFontSize(14);
+                          docPdf.setTextColor(255, 255, 255);
+                          docPdf.text("NOTIFICAÇÃO EXTRAJUDICIAL", 15, 10);
+                          
+                          if (imgData) {
+                            try {
+                              docPdf.addImage(imgData, 'JPEG', pageWidth - 55, 20, 40, 15);
+                            } catch (e) {
+                              console.error("Erro ao adicionar imagem:", e);
+                            }
+                          }
+                          
+                          docPdf.setFont("helvetica", "normal");
+                          docPdf.setFontSize(10);
+                          docPdf.setTextColor(50, 50, 50);
+                          
+                          const splitContent = docPdf.splitTextToSize(draftedNotificacao, pageWidth - 40);
+                          docPdf.text(splitContent, 20, 40);
+                          
+                          const blob = docPdf.output('blob');
+                          const file = new File([blob], `Notificacao.pdf`, { type: 'application/pdf' });
+                          
+                          const formData = new FormData();
+                          formData.append("file", file);
+                          formData.append("destinatario_email", notificacaoForm.destinatario_email);
+                          formData.append("tone", notificacaoForm.tom);
+                          formData.append("case_id", notificacaoForm.caso);
+                          
+                          const res = await fetch("/api/crm/notificacoes", {
+                            method: "POST",
+                            body: formData,
+                          });
+                          
+                          const data = await res.json();
+                          if (data.success) {
+                            toast.success("Notificação enviada com sucesso!");
+                            setShowNotificacaoModal(false);
+                            setNotificacaoForm({ cliente: "", caso: "", tom: "Conciliador", destinatario_email: "", conteudo: "", logo: null });
+                            setShowNotificacaoResult(false);
+                            setDraftedNotificacao("");
+                            fetchBlindados();
+                          } else {
+                            toast.error(data.message || "Erro ao enviar");
+                          }
+                        };
+
+                        if (notificacaoForm.logo) {
+                          const reader = new FileReader();
+                          reader.onload = async (e) => {
+                            await generateAndSend(e.target.result);
+                            setIsShieldingNotificacao(false);
+                          };
+                          reader.readAsDataURL(notificacaoForm.logo);
+                        } else {
+                          await generateAndSend(null);
+                          setIsShieldingNotificacao(false);
+                        }
+                      } catch (error) {
+                        toast.error("Erro na requisição");
+                        setIsShieldingNotificacao(false);
+                      }
+                    }}
+                    disabled={isShieldingNotificacao}
+                  >
+                    {isShieldingNotificacao ? "Enviando..." : "Selar e Enviar Notificação"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderJurisConfirmModal = () => {
+    if (!showJurisConfirmModal) return null;
+    return (
+      <div className={styles.modalOverlay} onClick={() => setShowJurisConfirmModal(false)}>
+        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "400px", width: "90%", border: '1px solid var(--color-gold)' }}>
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle} style={{ color: 'var(--color-gold)' }}>⚠️ Atenção</h2>
+            <button className={styles.modalClose} onClick={() => setShowJurisConfirmModal(false)}><X size={20} /></button>
+          </div>
+          <div className={styles.modalBody} style={{ padding: '20px', textAlign: 'center' }}>
+            <p style={{ color: '#fff', fontSize: '1rem', marginBottom: '20px' }}>
+              No plano <strong>START</strong>, a blindagem de documentos custa <strong>4 Juris</strong>.
+            </p>
+            <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '20px' }}>
+              Deseja confirmar o desconto e prosseguir com a blindagem?
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                style={{ padding: '10px 20px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                onClick={() => {
+                  setShowJurisConfirmModal(false);
+                  if (jurisConfirmAction) jurisConfirmAction();
+                }}
+              >
+                Confirmar
+              </button>
+              <button
+                style={{ padding: '10px 20px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                onClick={() => setShowJurisConfirmModal(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderNewClientModal = () => {
     if (!showNewClientModal) return null;
 
@@ -8306,6 +10058,15 @@ export default function AdvogadoDashboard() {
             )}
           </div>
           <div
+            className={`${styles.navItem} ${activeTab === "blindagem" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("blindagem")}
+          >
+            <Shield size={18} /> <span>Blindagem de Documentos</span>
+            {!profileData?.is_premium && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            )}
+          </div>
+          <div
             className={`${styles.navItem} ${activeTab === "redator" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("redator")}
           >
@@ -8409,6 +10170,9 @@ export default function AdvogadoDashboard() {
             {activeTab === "docs" && (
               <FileText size={20} className={styles.breadcrumbIcon} />
             )}
+            {activeTab === "blindagem" && (
+              <Shield size={20} className={styles.breadcrumbIcon} />
+            )}
             {activeTab === "redator" && (
               <Sparkles size={20} className={styles.breadcrumbIcon} />
             )}
@@ -8449,6 +10213,8 @@ export default function AdvogadoDashboard() {
                       ? "CRM & KYC"
                       : activeTab === "docs"
                         ? "Smart Docs"
+                        : activeTab === "blindagem"
+                          ? "Blindagem de Documentos"
                         : activeTab === "redator"
                           ? "Redator IA"
                           : activeTab === "calculadora"
@@ -8618,6 +10384,11 @@ export default function AdvogadoDashboard() {
       {renderBuyModal()}
       {renderProModal()}
       {renderNewClientModal()}
+      {renderContratoModal()}
+      {renderProcuracaoModal()}
+      {renderProvasModal()}
+      {renderNotificacaoModal()}
+      {renderJurisConfirmModal()}
       {renderDossierModal()}
       {renderDeleteConfirmModal()}
       {renderChatModal()}

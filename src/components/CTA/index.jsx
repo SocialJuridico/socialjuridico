@@ -15,7 +15,7 @@ export default function CTA() {
           <Link prefetch={false} href="/cadastro" style={{ textDecoration: 'none' }}>
             <Button variant="primary">Criar Conta e Publicar</Button>
           </Link>
-          <Link prefetch={false} href="/advogados" style={{ textDecoration: 'none' }}>
+          <Link prefetch={false} href="/sou-advogado" style={{ textDecoration: 'none' }}>
             <Button variant="secondary">Sou Advogado</Button>
           </Link>
         </div>

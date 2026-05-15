@@ -1,26 +1,26 @@
-import { Coins, Laptop, ShieldCheck, Globe } from 'lucide-react';
+import { Sparkles, FileText, Users, Filter } from 'lucide-react';
 import styles from './Features.module.css';
 
 const featuresData = [
   {
-    icon: Coins, // Alternativa ao ícone de moedas/100%
-    title: '100% Grátis',
-    subtitle: 'ZERO TAXAS PARA PUBLICAR',
+    icon: Sparkles,
+    title: 'Redator IA Avançado',
+    subtitle: 'GERAÇÃO DE PETIÇÕES EM SEGUNDOS',
   },
   {
-    icon: Laptop, // Ícone do notebook conforme imagem
-    title: 'IA Integrada',
-    subtitle: 'ANÁLISES JURÍDICAS AUTOMÁTICAS',
+    icon: FileText,
+    title: 'Notificação Extrajudicial',
+    subtitle: 'DESTRAVE ACORDOS SEM PROCESSO',
   },
   {
-    icon: ShieldCheck, // Computador escudo conforme imagem
-    title: 'Dados Protegidos',
-    subtitle: 'SUAS INFORMAÇÕES SEMPRE SEGURAS',
+    icon: Users,
+    title: 'CRM Inteligente',
+    subtitle: 'ORGANIZE LEADS E CLIENTES',
   },
   {
-    icon: Globe, // Globo conforme imagem
-    title: 'Acesso em Qualquer Lugar',
-    subtitle: 'SINCRONIZADO EM TEMPO REAL',
+    icon: Filter,
+    title: 'Triagem de Casos',
+    subtitle: 'FILTROS AVANÇADOS DE OPORTUNIDADES',
   },
 ];
 
@@ -28,10 +28,10 @@ export default function Features() {
   return (
     <section className={styles.featuresSection}>
       <div className={styles.container}>
-        {featuresData.map((feature, index) => {
+        {featuresData.map((feature) => {
           const Icon = feature.icon;
           return (
-            <div key={index} className={styles.featureItem}>
+            <div key={feature.title} className={styles.featureItem}>
               <div className={styles.iconWrapper}>
                 <Icon size={32} strokeWidth={1.5} />
               </div>

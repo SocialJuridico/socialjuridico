@@ -78,8 +78,15 @@ export default async function Hero() {
         <div className={styles.ctaWrapper}>
           <Link prefetch={false} href="/cadastro" style={{ textDecoration: 'none' }}>
             <Button variant="primary" className={styles.ctaButton}>
-              Cadastre-se agora
+              Quero Publicar Caso
               <ArrowRight size={20} />
+            </Button>
+          </Link>
+
+          <Link prefetch={false} href="/sou-advogado" style={{ textDecoration: 'none' }}>
+            <Button variant="secondary" className={styles.ctaButton}>
+              Sou Advogado
+              <Briefcase size={20} style={{ marginLeft: '8px' }} />
             </Button>
           </Link>
 

@@ -19,12 +19,6 @@ const generateVerificationCode = () => {
 export async function GET(request) {
   try {
     await ensureDb();
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
-    }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -45,7 +39,7 @@ export async function GET(request) {
       return NextResponse.json({ success: true, data });
     }
 
-    // Se busca por ID específico (apenas o advogado dono ou o próprio signatário logado)
+    // Se busca por ID específico (usado na página pública de assinatura e pelo advogado)
     if (id) {
       const { data, error } = await supabaseAdmin
         .from('assinaturas_digitais')
@@ -58,19 +52,17 @@ export async function GET(request) {
         return NextResponse.json({ success: false, message: "Assinatura não encontrada" }, { status: 404 });
       }
 
-      // Segurança: Apenas o advogado dono ou os emails na metadata podem ver
-      const meta = typeof data.metadata === 'string' ? JSON.parse(data.metadata) : data.metadata;
-      const isOwner = data.lawyer_id === user.id;
-      const isPart = meta?.lawyer?.email === user.email || meta?.client?.email === user.email;
-
-      if (!isOwner && !isPart) {
-        return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 403 });
-      }
-
       return NextResponse.json({ success: true, data });
     }
 
-    // Listagem geral das assinaturas do advogado
+    // Listagem geral das assinaturas (apenas para advogados autenticados)
+    const supabase = createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('assinaturas_digitais')
       .select('*')

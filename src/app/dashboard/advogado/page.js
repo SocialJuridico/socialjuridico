@@ -253,6 +253,7 @@ export default function AdvogadoDashboard() {
   const [viewedOAB, setViewedOAB] = useState("");
   
   const pdfInputRef = useRef(null);
+  const recognitionRef = useRef(null);
 
   
 
@@ -2638,41 +2639,75 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const handleStopVoiceCRM = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.shouldProcess = true;
+      recognitionRef.current.stop();
+    }
+  };
+
+  const handleCancelVoiceCRM = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.shouldProcess = false;
+      recognitionRef.current.abort();
+    }
+    setShowVoiceModal(false);
+    setIsListening(false);
+  };
+
   const renderVoiceModal = () => {
     if (!showVoiceModal) return null;
 
     return (
       <div className={styles.modalOverlay} style={{ zIndex: 10001 }}>
-        <div className={styles.modalContent} style={{ maxWidth: '400px', textAlign: 'center', padding: '40px' }}>
+        <div className={styles.modalContent} style={{ maxWidth: '450px', textAlign: 'center', padding: '40px', borderRadius: '24px', background: '#111116', border: '1px solid rgba(212, 175, 55, 0.2)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
           <div className={styles.voicePulseContainer} style={{ marginBottom: '30px', position: 'relative', display: 'inline-block' }}>
-            <div className={styles.pulseMic} style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255, 69, 58, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-              <Mic size={40} color="#ff453a" />
+            <div className={styles.pulseMic} style={{ width: '90px', height: '90px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', border: '2px solid rgba(212,175,55,0.3)' }}>
+              <Mic size={45} color="var(--color-gold)" />
             </div>
             {isListening && (
               <>
-                <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid #ff453a', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }}></div>
-                <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid #ff453a', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', animationDelay: '0.5s' }}></div>
+                <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid var(--color-gold)', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', opacity: 0.6 }}></div>
+                <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid var(--color-gold)', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', animationDelay: '0.5s', opacity: 0.4 }}></div>
               </>
             )}
           </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '10px' }}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '10px', color: '#fff' }}>
             {isListening ? "Estou ouvindo..." : "Processando áudio..."}
           </h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '20px', minHeight: '1.2em' }}>
-            {voiceTranscript || "Fale os dados do cliente (Nome, CPF, Caso...)"}
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginBottom: '20px' }}>
+            Fale os dados do cliente naturalmente (ex: "O nome do cliente é João Silva, CPF 123.456.789-00, reside na rua tal...")
           </p>
-          {isListening && (
-            <button 
-              onClick={() => {
-                 // SpeechRecognition end is handled by recognition.stop() or recognition.onend
-                 // But we can trigger recognition.stop() if we kept a ref.
-                 // For now, let's just let the user wait or we could add a stop button.
-              }}
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 20px', borderRadius: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 auto' }}
-            >
-              <Square size={14} fill="currentColor" /> Parar Gravação
-            </button>
-          )}
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '15px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '25px', minHeight: '80px', maxHeight: '150px', overflowY: 'auto', textAlign: 'left' }}>
+            <p style={{ color: '#fff', fontSize: '0.9rem', margin: 0, lineHeight: '1.5', fontStyle: voiceTranscript ? 'normal' : 'italic', opacity: voiceTranscript ? 1 : 0.4 }}>
+              {voiceTranscript || "Sua fala aparecerá aqui em tempo real..."}
+            </p>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            {isListening ? (
+              <>
+                <button 
+                  type="button"
+                  onClick={handleCancelVoiceCRM}
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}
+                >
+                  <X size={16} /> Cancelar
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleStopVoiceCRM}
+                  style={{ background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', border: 'none', color: '#fff', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', boxShadow: '0 4px 12px rgba(0, 230, 118, 0.2)' }}
+                >
+                  <Square size={14} fill="currentColor" /> Concluir e Processar
+                </button>
+              </>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-gold)', fontWeight: 600 }}>
+                <Loader2 size={20} className={styles.spin} /> Processando dados...
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -2921,8 +2956,12 @@ export default function AdvogadoDashboard() {
 
     const recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
+    recognition.shouldProcess = true;
+    recognitionRef.current = recognition;
+
+    let accumulatedTranscript = "";
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -2935,25 +2974,28 @@ export default function AdvogadoDashboard() {
         .map((result) => result[0])
         .map((result) => result.transcript)
         .join("");
+      accumulatedTranscript = transcript;
       setVoiceTranscript(transcript);
     };
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error", event.error);
       setIsListening(false);
-      setShowVoiceModal(false);
-      toast.error("Erro no reconhecimento de voz.");
+      if (event.error !== "aborted") {
+        toast.error("Erro no reconhecimento de voz.");
+        setShowVoiceModal(false);
+      }
     };
 
     recognition.onend = async () => {
       setIsListening(false);
-      // O timeout serve para o usuário ver o texto final antes do modal fechar
-      if (voiceTranscript.length > 5) {
-        setTimeout(async () => {
-          await processVoiceCommand(voiceTranscript);
-          setShowVoiceModal(false);
-        }, 1000);
-      } else {
+      if (recognition.shouldProcess) {
+        const textToProcess = accumulatedTranscript.trim();
+        if (textToProcess.length > 5) {
+          await processVoiceCommand(textToProcess);
+        } else {
+          toast.error("Nenhuma fala detectada ou áudio muito curto.");
+        }
         setShowVoiceModal(false);
       }
     };

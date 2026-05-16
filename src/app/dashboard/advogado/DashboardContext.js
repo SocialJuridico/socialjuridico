@@ -157,6 +157,7 @@ export function DashboardProvider({ children }) {
     "juris",
     "triagem",
     "blindagem",
+    "assinatura",
   ];
 
   const fetchIndicacoes = useCallback(async () => {

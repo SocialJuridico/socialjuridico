@@ -266,6 +266,22 @@ export default function AdvogadoDashboard() {
   const [shieldingCertificate, setShieldingCertificate] = useState(null);
   const [blindadosDocuments, setBlindadosDocuments] = useState([]);
 
+  // Digital Signature States
+  const [signatures, setSignatures] = useState([]);
+  const [loadingSignatures, setLoadingSignatures] = useState(false);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [newSignatureData, setNewSignatureData] = useState({
+    document_name: "",
+    document_type: "contrato",
+    lawyer_name: "",
+    lawyer_email: "",
+    client_name: "",
+    client_email: "",
+    client_id: ""
+  });
+  const [signatureFile, setSignatureFile] = useState(null);
+  const [isCreatingSignature, setIsCreatingSignature] = useState(false);
+
  
   const [generatedProcuracao, setGeneratedProcuracao] = useState("");
   const [isGeneratingProcuracao, setIsGeneratingProcuracao] = useState(false);
@@ -552,6 +568,116 @@ export default function AdvogadoDashboard() {
   useEffect(() => {
     fetchBlindados();
   }, [fetchBlindados]);
+
+  const fetchSignatures = useCallback(async () => {
+    setLoadingSignatures(true);
+    try {
+      const res = await fetch("/api/crm/assinatura");
+      const data = await res.json();
+      if (data.success) {
+        setSignatures(data.data || []);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar assinaturas:", err);
+    } finally {
+      setLoadingSignatures(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "assinatura") {
+      fetchSignatures();
+    }
+  }, [activeTab, fetchSignatures]);
+
+  const handleCreateSignature = async (e) => {
+    if (e) e.preventDefault();
+    if (!signatureFile) {
+      toast.error("Por favor, selecione um arquivo PDF.");
+      return;
+    }
+    if (!newSignatureData.document_name || !newSignatureData.lawyer_name || !newSignatureData.lawyer_email || !newSignatureData.client_name || !newSignatureData.client_email) {
+      toast.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    setIsCreatingSignature(true);
+    try {
+      // 1. Upload the PDF file first
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", signatureFile);
+
+      const uploadRes = await fetch("/api/crm/assinatura/upload", {
+        method: "POST",
+        body: uploadFormData
+      });
+      const uploadResult = await uploadRes.json();
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.message || "Erro no upload do PDF");
+      }
+
+      const { document_url, original_hash } = uploadResult.data;
+
+      // 2. Start the digital signature process
+      const signaturePayload = {
+        ...newSignatureData,
+        document_url,
+        original_hash
+      };
+
+      const res = await fetch("/api/crm/assinatura", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(signaturePayload)
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Processo de assinatura digital iniciado!");
+        setShowSignatureModal(false);
+        // Reset state
+        setNewSignatureData({
+          document_name: "",
+          document_type: "contrato",
+          lawyer_name: profileData?.name || "",
+          lawyer_email: profileData?.email || "",
+          client_name: "",
+          client_email: "",
+          client_id: ""
+        });
+        setSignatureFile(null);
+        fetchSignatures();
+      } else {
+        toast.error(data.message || "Erro ao criar processo de assinatura");
+      }
+
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Erro ao iniciar assinatura digital.");
+    } finally {
+      setIsCreatingSignature(false);
+    }
+  };
+
+  const handleResendOtp = async (signatureId, role) => {
+    toast.success("Enviando código por e-mail...");
+    try {
+      const res = await fetch('/api/crm/assinatura/enviar-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signature_id: signatureId, role })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Código enviado com sucesso!");
+      } else {
+        toast.error(data.message || "Falha ao enviar código.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro de conexão ao enviar e-mail.");
+    }
+  };
 
   const generateCertificatePDF = useCallback((docData) => {
     const docPdf = new jsPDF();
@@ -1720,8 +1846,409 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const renderAssinatura = () => {
+    return (
+      <div className={styles.toolContainer}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+          <div>
+            <h2 className={styles.sectionTitle} style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <PenTool color="var(--color-gold)" size={28} /> Central de Assinaturas Digitais
+            </h2>
+            <p className={styles.sectionDesc} style={{ color: 'var(--color-silver-dark)', marginTop: '4px' }}>
+              Assine documentos com carimbo de tempo eletrônico e validade jurídica equivalente à assinatura física.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setNewSignatureData({
+                document_name: "",
+                document_type: "contrato",
+                lawyer_name: profileData?.name || "",
+                lawyer_email: profileData?.email || "",
+                client_name: "",
+                client_email: "",
+                client_id: ""
+              });
+              setSignatureFile(null);
+              setShowSignatureModal(true);
+            }}
+            className={styles.newClientBtn}
+            style={{ background: 'linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%)', color: '#000', fontWeight: 'bold' }}
+          >
+            <Plus size={18} /> Iniciar Novo Processo
+          </button>
+        </div>
+
+        {/* Metrics Row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', backdropFilter: 'blur(10px)' }}>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-silver-dark)', fontWeight: 600 }}>Total de Processos</span>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', marginTop: '5px' }}>{signatures.length}</div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0, 230, 118, 0.1)', borderRadius: '16px', padding: '20px', backdropFilter: 'blur(10px)' }}>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#00e676', fontWeight: 600 }}>Assinados por Completo</span>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#00e676', marginTop: '5px' }}>{signatures.filter(s => s.status === 'signed').length}</div>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255, 152, 0, 0.1)', borderRadius: '16px', padding: '20px', backdropFilter: 'blur(10px)' }}>
+            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#ff9800', fontWeight: 600 }}>Aguardando Assinaturas</span>
+            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ff9800', marginTop: '5px' }}>{signatures.filter(s => s.status !== 'signed').length}</div>
+          </div>
+          <div style={{ background: 'rgba(212,175,55,0.03)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: '16px', padding: '20px', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div>
+              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-gold)', fontWeight: 600 }}>Validador de Assinaturas</span>
+              <p style={{ fontSize: '0.8rem', color: 'var(--color-silver-dark)', marginTop: '2px', margin: 0 }}>Verifique a validade de um código.</p>
+            </div>
+            <a href="/validar" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: 'var(--color-gold)', textDecoration: 'none', fontWeight: 'bold', marginTop: '10px' }}>
+              Acessar Validador <ExternalLink size={14} />
+            </a>
+          </div>
+        </div>
+
+        {/* Content Listing */}
+        {loadingSignatures ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: '15px' }}>
+            <Loader2 size={40} className={styles.spin} color="var(--color-gold)" />
+            <p style={{ color: 'var(--color-silver-dark)' }}>Carregando seus processos de assinatura...</p>
+          </div>
+        ) : signatures.length === 0 ? (
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '16px', padding: '60px 20px', textAlign: 'center' }}>
+            <PenTool size={48} color="rgba(255,255,255,0.1)" style={{ marginBottom: '15px' }} />
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>Nenhuma Assinatura Registrada</h3>
+            <p style={{ color: 'var(--color-silver-dark)', maxWidth: '500px', margin: '0 auto 20px auto', fontSize: '0.9rem' }}>
+              Inicie um novo processo de assinatura enviando um contrato ou procuração PDF para coletar assinaturas eletrônicas com validade jurídica de tempo e hash.
+            </p>
+            <button
+              onClick={() => {
+                setNewSignatureData({
+                  document_name: "",
+                  document_type: "contrato",
+                  lawyer_name: profileData?.name || "",
+                  lawyer_email: profileData?.email || "",
+                  client_name: "",
+                  client_email: "",
+                  client_id: ""
+                });
+                setSignatureFile(null);
+                setShowSignatureModal(true);
+              }}
+              className={styles.newClientBtn}
+              style={{ background: 'linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%)', color: '#000', fontWeight: 'bold' }}
+            >
+              <Plus size={16} /> Iniciar Primeira Assinatura
+            </button>
+          </div>
+        ) : (
+          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Documento / Código</th>
+                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Signatários</th>
+                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Status Geral</th>
+                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Criado em</th>
+                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, textAlign: 'right' }}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {signatures.map((sig) => {
+                    const meta = typeof sig.metadata === 'string' ? JSON.parse(sig.metadata) : sig.metadata;
+                    const lawyerSigned = meta?.lawyer?.signed;
+                    const clientSigned = meta?.client?.signed;
+                    const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                    const clientSignLink = `${siteUrl}/assinatura/${sig.id}?role=client`;
+                    const lawyerSignLink = `${siteUrl}/assinatura/${sig.id}?role=lawyer`;
+
+                    return (
+                      <tr key={sig.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.01)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                        <td style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)', borderRadius: '8px', padding: '8px', display: 'flex', alignItems: 'center' }}>
+                              <FileText size={18} />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.9rem', marginBottom: '4px' }}>{sig.document_name}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--color-silver-dark)', fontFamily: 'monospace' }}>{sig.verification_code}</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(sig.verification_code);
+                                    toast.success("Código copiado!");
+                                  }}
+                                  style={{ background: 'none', border: 'none', color: 'var(--color-silver-dark)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                                  title="Copiar código"
+                                >
+                                  <Copy size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                              <span style={{ color: 'var(--color-silver-dark)', fontWeight: 600 }}>ADV:</span>
+                              <span style={{ color: '#fff' }}>{meta?.lawyer?.name}</span>
+                              {lawyerSigned ? (
+                                <span style={{ color: '#00e676', fontSize: '0.7rem', background: 'rgba(0, 230, 118, 0.1)', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '3px' }}><Check size={10} /> Assinado</span>
+                              ) : (
+                                <span style={{ color: '#ff9800', fontSize: '0.7rem', background: 'rgba(255, 152, 0, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>Pendente</span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                              <span style={{ color: 'var(--color-silver-dark)', fontWeight: 600 }}>CLI:</span>
+                              <span style={{ color: '#fff' }}>{meta?.client?.name}</span>
+                              {clientSigned ? (
+                                <span style={{ color: '#00e676', fontSize: '0.7rem', background: 'rgba(0, 230, 118, 0.1)', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '3px' }}><Check size={10} /> Assinado</span>
+                              ) : (
+                                <span style={{ color: '#ff9800', fontSize: '0.7rem', background: 'rgba(255, 152, 0, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>Pendente</span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '20px' }}>
+                          {sig.status === 'signed' ? (
+                            <span style={{ padding: '6px 12px', background: 'rgba(0, 230, 118, 0.1)', color: '#00e676', borderRadius: '30px', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <CheckCircle2 size={12} /> Assinado
+                            </span>
+                          ) : sig.status === 'partially_signed' ? (
+                            <span style={{ padding: '6px 12px', background: 'rgba(0, 140, 255, 0.1)', color: '#00b0ff', borderRadius: '30px', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={12} /> Parcialmente
+                            </span>
+                          ) : (
+                            <span style={{ padding: '6px 12px', background: 'rgba(255, 152, 0, 0.1)', color: '#ff9800', borderRadius: '30px', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={12} /> Pendente
+                            </span>
+                          )}
+                        </td>
+                        <td style={{ padding: '20px', color: 'var(--color-silver-dark)', fontSize: '0.85rem' }}>
+                          {new Date(sig.created_at).toLocaleDateString('pt-BR')}
+                        </td>
+                        <td style={{ padding: '20px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            {!lawyerSigned && (
+                              <a
+                                href={lawyerSignLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ padding: '6px 12px', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', color: 'var(--color-gold)', borderRadius: '6px', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <PenTool size={12} /> Assinar
+                              </a>
+                            )}
+                            
+                            {!clientSigned && (
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(clientSignLink);
+                                  toast.success("Link do cliente copiado!");
+                                }}
+                                style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Copy size={12} /> Link Cliente
+                              </button>
+                            )}
+
+                            {!clientSigned && (
+                              <button
+                                onClick={() => handleResendOtp(sig.id, 'client')}
+                                style={{ padding: '6px 12px', background: 'rgba(0, 140, 255, 0.1)', border: '1px solid rgba(0, 140, 255, 0.2)', color: '#00b0ff', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Send size={12} /> Reenviar E-mail
+                              </button>
+                            )}
+
+                            {sig.status === 'signed' && sig.document_url && (
+                              <a
+                                href={sig.document_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ padding: '6px 12px', background: 'rgba(0, 230, 118, 0.1)', border: '1px solid rgba(0, 230, 118, 0.2)', color: '#00e676', borderRadius: '6px', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Download size={12} /> Baixar PDF
+                              </a>
+                            )}
+
+                            <a
+                              href={`/validar?code=${sig.verification_code}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: 'var(--color-silver)', borderRadius: '6px', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              <Eye size={12} /> Validar
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Novo Processo */}
+        {showSignatureModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+            <div style={{ background: '#09090b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '30px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <PenTool color="var(--color-gold)" size={22} /> Iniciar Assinatura Digital
+                </h3>
+                <button onClick={() => setShowSignatureModal(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0.7, padding: '5px' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateSignature} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-silver)', fontWeight: 600, marginBottom: '6px' }}>Nome do Documento *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Contrato de Honorários Advocatícios - João Silva"
+                    value={newSignatureData.document_name}
+                    onChange={(e) => setNewSignatureData(prev => ({ ...prev, document_name: e.target.value }))}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px', color: '#fff', fontSize: '0.9rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-silver)', fontWeight: 600, marginBottom: '6px' }}>Tipo de Documento</label>
+                  <select
+                    value={newSignatureData.document_type}
+                    onChange={(e) => setNewSignatureData(prev => ({ ...prev, document_type: e.target.value }))}
+                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px', color: '#fff', fontSize: '0.9rem' }}
+                  >
+                    <option value="contrato" style={{ background: '#09090b' }}>Contrato</option>
+                    <option value="procuracao" style={{ background: '#09090b' }}>Procuração</option>
+                    <option value="outro" style={{ background: '#09090b' }}>Outro</option>
+                  </select>
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '15px' }}>
+                  <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--color-gold)', marginBottom: '10px' }}>Advogado (Você)</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-silver-dark)', marginBottom: '4px' }}>Nome completo</label>
+                      <input
+                        type="text"
+                        required
+                        value={newSignatureData.lawyer_name}
+                        onChange={(e) => setNewSignatureData(prev => ({ ...prev, lawyer_name: e.target.value }))}
+                        style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-silver-dark)', marginBottom: '4px' }}>E-mail</label>
+                      <input
+                        type="email"
+                        required
+                        value={newSignatureData.lawyer_email}
+                        onChange={(e) => setNewSignatureData(prev => ({ ...prev, lawyer_email: e.target.value }))}
+                        style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '15px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--color-gold)', margin: 0 }}>Cliente / Outra Parte</h4>
+                    {crmClients.length > 0 && (
+                      <select
+                        onChange={(e) => {
+                          const selected = crmClients.find(c => c.id === e.target.value);
+                          if (selected) {
+                            setNewSignatureData(prev => ({
+                              ...prev,
+                              client_id: selected.id,
+                              client_name: selected.name,
+                              client_email: selected.email || ""
+                            }));
+                          }
+                        }}
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px 8px', color: '#fff', fontSize: '0.75rem' }}
+                      >
+                        <option value="">Selecionar do CRM...</option>
+                        {crmClients.map(c => (
+                          <option key={c.id} value={c.id} style={{ background: '#09090b' }}>{c.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-silver-dark)', marginBottom: '4px' }}>Nome completo *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newSignatureData.client_name}
+                        onChange={(e) => setNewSignatureData(prev => ({ ...prev, client_name: e.target.value }))}
+                        style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-silver-dark)', marginBottom: '4px' }}>E-mail *</label>
+                      <input
+                        type="email"
+                        required
+                        value={newSignatureData.client_email}
+                        onChange={(e) => setNewSignatureData(prev => ({ ...prev, client_email: e.target.value }))}
+                        style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '0.85rem' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-silver)', fontWeight: 600, marginBottom: '6px' }}>Arquivo PDF do Documento *</label>
+                  <div style={{ border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '10px', padding: '20px', textAlign: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.01)' }} onClick={() => document.getElementById('signature-file-picker').click()}>
+                    <Upload size={24} style={{ color: 'var(--color-silver-dark)', marginBottom: '8px' }} />
+                    <p style={{ fontSize: '0.8rem', color: 'var(--color-silver)', margin: 0 }}>
+                      {signatureFile ? signatureFile.name : "Clique para selecionar o PDF original do documento"}
+                    </p>
+                    <input
+                      id="signature-file-picker"
+                      type="file"
+                      accept="application/pdf"
+                      style={{ display: 'none' }}
+                      onChange={(e) => setSignatureFile(e.target.files[0])}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowSignatureModal(false)}
+                    style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '10px', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingSignature}
+                    style={{ flex: 1, padding: '12px', background: 'linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%)', border: 'none', color: '#000', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    {isCreatingSignature ? <Loader2 className={styles.spin} size={18} /> : <PenTool size={18} />}
+                    {isCreatingSignature ? "Iniciando..." : "Iniciar Processo"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderActiveContent = () => {
     switch (activeTab) {
+      case "assinatura":
+        return renderAssinatura();
       case "blindagem":
         return renderBlindagem();
       case "oportunidades":

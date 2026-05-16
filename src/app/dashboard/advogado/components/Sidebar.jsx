@@ -24,7 +24,8 @@ import {
   User,
   LogOut,
   Lock,
-  Eye
+  Eye,
+  PenTool
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -282,6 +283,15 @@ export default function Sidebar() {
           )}
 
           <div className={styles.navGroupLabel}>Ferramentas Premium</div>
+          <div
+            className={`${styles.navItem} ${activeTab === "assinatura" ? styles.activeNavItem : ""}`}
+            onClick={() => handleTabChange("assinatura")}
+          >
+            <PenTool size={18} /> <span>Assinatura Digital</span>
+            {!profileData?.is_premium && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            )}
+          </div>
           <div
             className={`${styles.navItem} ${activeTab === "crm" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabChange("crm")}

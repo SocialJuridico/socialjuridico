@@ -64,7 +64,21 @@ export async function POST(request) {
       ? `[Social Jurídico] Seu código de assinatura eletrônica: ${otpCode}` 
       : `[Social Jurídico] Assinatura eletrônica de documento pendente`;
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://socialjuridico.com.br';
+    const origin = request.headers.get('origin') || request.headers.get('referer');
+    let siteUrl = '';
+    if (origin) {
+      try {
+        const urlObj = new URL(origin);
+        siteUrl = urlObj.origin;
+      } catch (e) {
+        // Fallback
+      }
+    }
+    if (!siteUrl) {
+      const host = request.headers.get('host') || 'localhost:3000';
+      const proto = request.headers.get('x-forwarded-proto') || 'http';
+      siteUrl = `${proto}://${host}`;
+    }
     const signLink = `${siteUrl}/assinatura/${signature_id}?role=${role}`;
 
     const htmlContent = role === 'lawyer'

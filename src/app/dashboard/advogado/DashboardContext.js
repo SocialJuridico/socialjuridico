@@ -210,7 +210,8 @@ export function DashboardProvider({ children }) {
     const restrictedToPro = ["calculadora", "juris"];
 
     if (PRO_TABS.includes(tab)) {
-      if (!profileData?.is_premium) {
+      const hasPremiumOrStart = profileData?.is_premium || planType === 'START' || planType === 'PRO';
+      if (!hasPremiumOrStart) {
         setShowProModal(true);
         return;
       }

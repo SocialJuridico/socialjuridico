@@ -42,6 +42,8 @@ export default function Sidebar() {
     logout
   } = useDashboard();
 
+  const isPremiumUser = profileData?.is_premium || profileData?.plan_type === 'START' || profileData?.plan_type === 'PRO';
+
   return (
     <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarActive : ""}`}>
       <div className={styles.sidebarHeader}>
@@ -288,7 +290,7 @@ export default function Sidebar() {
             onClick={() => handleTabChange("assinatura")}
           >
             <PenTool size={18} /> <span>Assinatura Digital</span>
-            {!profileData?.is_premium && (
+            {!isPremiumUser && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>
@@ -297,7 +299,7 @@ export default function Sidebar() {
             onClick={() => handleTabChange("crm")}
           >
             <Users size={18} /> <span>Meus Clientes (CRM)</span>
-            {!profileData?.is_premium && (
+            {!isPremiumUser && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>
@@ -306,7 +308,7 @@ export default function Sidebar() {
             onClick={() => handleTabChange("docs")}
           >
             <FileText size={18} /> <span>IA Smart Docs</span>
-            {!profileData?.is_premium && (
+            {!isPremiumUser && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>
@@ -315,7 +317,7 @@ export default function Sidebar() {
             onClick={() => handleTabChange("blindagem")}
           >
             <Shield size={18} /> <span>Blindagem de Documentos</span>
-            {!profileData?.is_premium && (
+            {!isPremiumUser && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>
@@ -324,7 +326,7 @@ export default function Sidebar() {
             onClick={() => handleTabChange("redator")}
           >
             <Sparkles size={18} /> <span>Redator IA</span>
-            {!profileData?.is_premium && (
+            {!isPremiumUser && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>
@@ -333,7 +335,7 @@ export default function Sidebar() {
             onClick={() => handleTabChange("agenda")}
           >
             <Calendar size={18} /> <span>Agenda & Prazos</span>
-            {!profileData?.is_premium && (
+            {!isPremiumUser && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>
@@ -342,7 +344,7 @@ export default function Sidebar() {
             onClick={() => handleTabChange("triagem")}
           >
             <Search size={18} /> <span>Triagem de Casos</span>
-            {!profileData?.is_premium && (
+            {!isPremiumUser && (
               <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
             )}
           </div>

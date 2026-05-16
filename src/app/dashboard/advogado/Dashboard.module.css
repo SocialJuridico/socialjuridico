@@ -5958,3 +5958,37 @@
   color: #fff;
   font-size: 0.8rem;
 }
+
+.loadingPulse {
+  opacity: 1;
+  animation: pulse-loading 1.5s infinite;
+}
+
+@keyframes pulse-loading {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+.pulseMic {
+  animation: pulse-red 1.5s infinite;
+  color: #ff453a !important;
+}
+
+@keyframes pulse-red {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.voiceWave {
+  pointer-events: none;
+}
+

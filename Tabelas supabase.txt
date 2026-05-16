@@ -1,0 +1,2052 @@
+[
+  {
+    "table_name": "admin_banners",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "admin_banners",
+    "column_name": "name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admin_banners",
+    "column_name": "image_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admin_banners",
+    "column_name": "link_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admin_banners",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "admin_banners",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "email",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "role",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "avatar",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "phone",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "bio",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "oab",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "specialties",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "verified",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "balance",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "is_premium",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "premium_expires_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "is_cofounder",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "google_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "facebook_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "stripe_customer_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "stripe_subscription_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "subscription_status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "subscription_started_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "subscription_ends_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "from_facebook_group",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "badges",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "avg_rating",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "admins",
+    "column_name": "total_ratings",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "email",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "role",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "avatar",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "phone",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "bio",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "oab",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "specialties",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "verified",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "balance",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "is_premium",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "premium_expires_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "is_cofounder",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "google_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "facebook_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "stripe_customer_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "stripe_subscription_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "subscription_status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "subscription_started_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "subscription_ends_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "from_facebook_group",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "badges",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "avg_rating",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "total_ratings",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "estado",
+    "data_type": "character varying"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "origem_descoberta",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "consulta",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "tempo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "valor",
+    "data_type": "numeric"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "indicado_por",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "oab_verification_status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "oab_warning_started_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "google_refresh_token",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "google_sync_enabled",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "plan_type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "plan_billing_cycle",
+    "data_type": "text"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "uso_redator_ia",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "uso_triagem",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "uso_agenda",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "uso_storage_mb",
+    "data_type": "double precision"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "extra_redator_ia",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "extra_triagem",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "extra_storage_mb",
+    "data_type": "double precision"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "promo_used",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "promo_start_used",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "advogados",
+    "column_name": "promo_pro_used",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "title",
+    "data_type": "text"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "description",
+    "data_type": "text"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "date",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "urgency",
+    "data_type": "text"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "client_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "agenda_items",
+    "column_name": "google_event_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anunciantes",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "anunciantes",
+    "column_name": "username",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anunciantes",
+    "column_name": "password",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anunciantes",
+    "column_name": "nome_empresa",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anunciantes",
+    "column_name": "responsavel",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anunciantes",
+    "column_name": "whatsapp",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anunciantes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "anuncios",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "anuncios",
+    "column_name": "anunciante_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "anuncios",
+    "column_name": "categoria",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anuncios",
+    "column_name": "titulo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anuncios",
+    "column_name": "descricao",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anuncios",
+    "column_name": "link_contato",
+    "data_type": "text"
+  },
+  {
+    "table_name": "anuncios",
+    "column_name": "em_destaque",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "anuncios",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "avaliacoes",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "avaliacoes",
+    "column_name": "caso_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "avaliacoes",
+    "column_name": "autor_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "avaliacoes",
+    "column_name": "alvo_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "avaliacoes",
+    "column_name": "nota",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "avaliacoes",
+    "column_name": "comentario",
+    "data_type": "text"
+  },
+  {
+    "table_name": "avaliacoes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "avaliacoes_advogado",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "avaliacoes_advogado",
+    "column_name": "cliente_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "avaliacoes_advogado",
+    "column_name": "advogado_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "avaliacoes_advogado",
+    "column_name": "caso_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "avaliacoes_advogado",
+    "column_name": "nota",
+    "data_type": "smallint"
+  },
+  {
+    "table_name": "avaliacoes_advogado",
+    "column_name": "justificativa",
+    "data_type": "text"
+  },
+  {
+    "table_name": "avaliacoes_advogado",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "avisos",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "avisos",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "avisos",
+    "column_name": "texto",
+    "data_type": "text"
+  },
+  {
+    "table_name": "avisos",
+    "column_name": "expira_em",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "avisos",
+    "column_name": "ativo",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "client_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "file_name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "file_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "protocol",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "hash_sha512",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "upload_ip",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "user_agent",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_contratos",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "client_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "file_name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "file_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "protocol",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "hash_sha512",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "upload_ip",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "user_agent",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "destinatario_email",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "access_token",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "read_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "read_ip",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "read_user_agent",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "read_geo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "tone",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_notificacoes",
+    "column_name": "case_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "client_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "file_name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "file_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "protocol",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "hash_sha512",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "upload_ip",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "user_agent",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_procuracoes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "client_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "file_name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "file_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "protocol",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "hash_sha512",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "upload_ip",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "user_agent",
+    "data_type": "text"
+  },
+  {
+    "table_name": "blindagem_provas",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "case_interests",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "case_interests",
+    "column_name": "case_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "case_interests",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "case_interests",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "case_interests",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "case_interests",
+    "column_name": "lawyer_name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "client_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "title",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "description",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "area",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "feedback_rating",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "feedback_comment",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "city",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "uf",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "price",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "complexity",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "is_paid",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "interested_lawyers",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "rating_deadline_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "lawyer_rating",
+    "data_type": "numeric"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "lawyer_rated_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "client_rating",
+    "data_type": "numeric"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "client_rated_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cases",
+    "column_name": "images",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "cliente_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "advogado_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "titulo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "descricao",
+    "data_type": "text"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "area_atuacao",
+    "data_type": "text"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "valor_proposto",
+    "data_type": "numeric"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "anexos",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "chat_started",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "negotiating_lawyers",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "cidade",
+    "data_type": "text"
+  },
+  {
+    "table_name": "casos",
+    "column_name": "estado",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "email",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "role",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "avatar",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "phone",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "bio",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "oab",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "specialties",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "verified",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "balance",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "is_premium",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "premium_expires_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "is_cofounder",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "google_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "facebook_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "stripe_customer_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "stripe_subscription_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "subscription_status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "subscription_started_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "subscription_ends_at",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "from_facebook_group",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "badges",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "avg_rating",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "total_ratings",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "origem_descoberta",
+    "data_type": "text"
+  },
+  {
+    "table_name": "clientes",
+    "column_name": "indicado_por",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "cpf_cnpj",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "rg",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "email",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "phone",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "address",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "profession",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "civil_status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "risk_score",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "notes",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_clients",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "client_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "file_name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "file_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "doc_type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "tags",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "is_blindado",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "hash_sha512",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "upload_ip",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_documents",
+    "column_name": "user_agent",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_interactions",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "crm_interactions",
+    "column_name": "client_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "crm_interactions",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "crm_interactions",
+    "column_name": "content",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_interactions",
+    "column_name": "type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "crm_interactions",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "cupom_usos",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "cupom_usos",
+    "column_name": "cupom_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "cupom_usos",
+    "column_name": "advogado_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "cupom_usos",
+    "column_name": "pago_em",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "cupom_usos",
+    "column_name": "checkout_session_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "codigo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "tipo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "desconto_tipo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "valor",
+    "data_type": "numeric"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "limite_por_usuario",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "expira_em",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "ativo",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "cupons",
+    "column_name": "stripe_coupon_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "facebook_group_members",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "facebook_group_members",
+    "column_name": "email",
+    "data_type": "text"
+  },
+  {
+    "table_name": "facebook_group_members",
+    "column_name": "name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "facebook_group_members",
+    "column_name": "role",
+    "data_type": "text"
+  },
+  {
+    "table_name": "facebook_group_members",
+    "column_name": "from_facebook_group",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "facebook_group_members",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "indicacoes",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "indicacoes",
+    "column_name": "indicador_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "indicacoes",
+    "column_name": "nome_indicado",
+    "data_type": "text"
+  },
+  {
+    "table_name": "indicacoes",
+    "column_name": "email_indicado",
+    "data_type": "text"
+  },
+  {
+    "table_name": "indicacoes",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "indicacoes",
+    "column_name": "valor_comissao",
+    "data_type": "numeric"
+  },
+  {
+    "table_name": "indicacoes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "mensagens",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "mensagens",
+    "column_name": "caso_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "mensagens",
+    "column_name": "sender_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "mensagens",
+    "column_name": "content",
+    "data_type": "text"
+  },
+  {
+    "table_name": "mensagens",
+    "column_name": "is_read",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "mensagens",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "mensagens",
+    "column_name": "interest_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "case_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "sender_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "content",
+    "data_type": "text"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "file_url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "timestamp",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "messages",
+    "column_name": "recipient_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notificacoes",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "notificacoes",
+    "column_name": "user_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "notificacoes",
+    "column_name": "titulo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notificacoes",
+    "column_name": "mensagem",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notificacoes",
+    "column_name": "link",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notificacoes",
+    "column_name": "lida",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "notificacoes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "notificacoes",
+    "column_name": "tipo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notificacoes",
+    "column_name": "meta",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "user_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "title",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "message",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "read",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "notifications",
+    "column_name": "timestamp",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "user_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q1_velocidade",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q2_marketplace",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q3_ia_redator",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q4_ia_personalidade",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q5_seguranca",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q6_prazos",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q7_crm",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q8_smartdocs",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q9_suporte",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "q10_roi",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "feedback",
+    "data_type": "text"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_advogados",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "user_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q1_cadastro",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q2_clareza",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q3_velocidade",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q4_confianca",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q5_qualidade",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q6_chat",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q7_transparencia",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q8_seguranca",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q9_pwa",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "q10_recomendacao",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "feedback",
+    "data_type": "text"
+  },
+  {
+    "table_name": "pesquisas_satisfacao_clientes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "saved_calculations",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "saved_calculations",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "saved_calculations",
+    "column_name": "client_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "saved_calculations",
+    "column_name": "category",
+    "data_type": "text"
+  },
+  {
+    "table_name": "saved_calculations",
+    "column_name": "type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "saved_calculations",
+    "column_name": "title",
+    "data_type": "text"
+  },
+  {
+    "table_name": "saved_calculations",
+    "column_name": "input_data",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "saved_calculations",
+    "column_name": "result_data",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "saved_calculations",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "lawyer_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "client_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "tags",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "url",
+    "data_type": "text"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "version",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "size",
+    "data_type": "text"
+  },
+  {
+    "table_name": "smart_docs",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "solicitacoes_exclusao",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "solicitacoes_exclusao",
+    "column_name": "user_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "solicitacoes_exclusao",
+    "column_name": "nome",
+    "data_type": "text"
+  },
+  {
+    "table_name": "solicitacoes_exclusao",
+    "column_name": "motivo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "solicitacoes_exclusao",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "solicitacoes_exclusao",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "advogado_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "target_name",
+    "data_type": "text"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "target_cpf",
+    "data_type": "text"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "ultimo_endereco_conhecido",
+    "data_type": "text"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "processos_encontrados",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "enderecos_encontrados",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "total_processos",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "tribunais_pesquisados",
+    "data_type": "ARRAY"
+  },
+  {
+    "table_name": "tracking_search",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "advogado_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "tipo",
+    "data_type": "text"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "valor",
+    "data_type": "numeric"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "moeda",
+    "data_type": "text"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "status",
+    "data_type": "text"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "juris_amount",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "stripe_session_id",
+    "data_type": "text"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "cupom_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "transacoes",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  }
+]

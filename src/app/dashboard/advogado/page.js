@@ -98,6 +98,7 @@ import {
   Send,
   Eye,
   Download,
+  ExternalLink,
   PenTool,
   History,
   Check,
@@ -116,6 +117,8 @@ import {
   Menu,
   Star,
   MapPin,
+  Mic,
+  Square,
 } from "lucide-react";
 
 import * as CalcUtils from "@/lib/calculators";
@@ -125,34 +128,102 @@ import { maskCPFCNPJ, formatPhone, maskPhone } from "@/lib/securityUtils";
 import PWAInlineBanner from "@/components/PWA/PWAInlineBanner";
 import TransparentCheckoutModal from "@/components/TransparentCheckout/TransparentCheckoutModal";
 
+import { useDashboard } from "./DashboardContext";
+import Sidebar from "./components/Sidebar";
+import TopBar from "./components/TopBar";
+
 import {
   createJurisCheckout,
   createProSubscription,
 } from "@/services/stripeCheckoutService";
 
 export default function AdvogadoDashboard() {
-  const [userName, setUserName] = useState("Advogado");
-  const [activeTab, setActiveTab] = useState("oportunidades");
-  const [casos, setCasos] = useState([]);
-  const [loadingCasos, setLoadingCasos] = useState(true);
-  const [myInterests, setMyInterests] = useState([]);
-  const [loadingMyInterests, setLoadingMyInterests] = useState(false);
-  const [notificacoes, setNotificacoes] = useState([]);
-  const [loadingNotificacoes, setLoadingNotificacoes] = useState(false);
-  const [profileData, setProfileData] = useState(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
+  const {
+    userName, setUserName,
+    activeTab, setActiveTab,
+    casos, setCasos,
+    loadingCasos, setLoadingCasos,
+    myInterests, setMyInterests,
+    loadingMyInterests, setLoadingMyInterests,
+    notificacoes, setNotificacoes,
+    loadingNotificacoes, setLoadingNotificacoes,
+    profileData, setProfileData,
+    loadingProfile, setLoadingProfile,
+    showBuyModal, setShowBuyModal,
+    showProModal, setShowProModal,
+    showTransparentCheckout, setShowTransparentCheckout,
+    isSidebarOpen, setIsSidebarOpen,
+    showAnunciosSubmenu, setShowAnunciosSubmenu,
+    unreadMessagesCount,
+    isPro,
+    isPremium,
+    handleTabChange,
+    logout,
+    refreshProfile,
+    refreshNotificacoes,
+    highlightedAds, setHighlightedAds,
+    currentAdIndex, setCurrentAdIndex,
+    anunciosData, setAnunciosData,
+    loadingAnuncios, setLoadingAnuncios,
+    activeAnuncioTab, setActiveAnuncioTab,
+    fetchAnuncios,
+    fetchHighlightedAd,
+    // CRM
+    interactions, setInteractions,
+    isFetchingInteractions,
+    newInteraction, setNewInteraction,
+    isSavingInteraction,
+    clientFinance, setClientFinance,
+    isFetchingFinance,
+    isSavingFinance,
+    newFinance, setNewFinance,
+    newQuickReminder, setNewQuickReminder,
+    isSavingReminder,
+    associatedCases, setAssociatedCases,
+    isFetchingAssociatedCases,
+    agendaItems, setAgendaItems,
+    fetchInteractions,
+    handleSaveInteraction,
+    fetchClientInsight,
+    clientInsight,
+    isGeneratingInsight,
+    fetchClientFinance,
+    fetchAllFinance,
+    allFinanceRecords,
+    financialStats,
+    isFetchingAllFinance,
+    handleSaveFinance,
+    handleTogglePaymentStatus,
+    handleSaveQuickReminder,
+    fetchAssociatedCases,
+    fetchAgenda,
+    handleQuickDocGenerate,
+    handleGenerateReport,
+    // CRM Core
+    crmClients, setCrmClients,
+    loadingCrm, setLoadingCrm,
+    selectedClient, setSelectedClient,
+    showDossierModal, setShowDossierModal,
+    clientDocuments, setClientDocuments,
+    isUploading, setIsUploading,
+    isGeneratingReport, setIsGeneratingReport,
+    handleExtractPDF,
+    isExtractingPDF,
+    fetchCrmClients,
+    // Doc Gen
+    showContratoModal, setShowContratoModal,
+    contractForm, setContractForm,
+    showProcuracaoModal, setShowProcuracaoModal,
+    procuracaoForm, setProcuracaoForm,
+  } = useDashboard();
+
+  
   const [searchQuery, setSearchQuery] = useState("");
-  const [showBuyModal, setShowBuyModal] = useState(false);
-  const [showProModal, setShowProModal] = useState(false);
-  const [showTransparentCheckout, setShowTransparentCheckout] = useState(false);
+  
   const [transparentCheckoutAmount, setTransparentCheckoutAmount] = useState(null);
   const [appliedCouponData, setAppliedCouponData] = useState(null);
   const [isProCheckout, setIsProCheckout] = useState(false);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
-  const [isBlindarProva, setIsBlindarProva] = useState(false);
-  const [crmClients, setCrmClients] = useState([]);
-  const [loadingCrm, setLoadingCrm] = useState(false);
-  const [isSubmittingClient, setIsSubmittingClient] = useState(false);
   const [newClientData, setNewClientData] = useState({
     nome_completo: "",
     tipo: "Pessoa Física",
@@ -165,11 +236,14 @@ export default function AdvogadoDashboard() {
     email: "",
     notas_internas: "",
   });
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [showDossierModal, setShowDossierModal] = useState(false);
-  const [clientDocuments, setClientDocuments] = useState([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isSubmittingClient, setIsSubmittingClient] = useState(false);
+  const [isBlindarProva, setIsBlindarProva] = useState(false);
+  
+  // Voice CRM States
+  const [isListening, setIsListening] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
+  
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showNotifDeleteConfirm, setShowNotifDeleteConfirm] = useState(false);
   const [notifToDelete, setNotifToDelete] = useState(null);
@@ -177,20 +251,11 @@ export default function AdvogadoDashboard() {
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [viewedOAB, setViewedOAB] = useState("");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  const pdfInputRef = useRef(null);
 
-  // Estados para Blindagem de Contratos
-  const [showContratoModal, setShowContratoModal] = useState(false);
-  const [contractForm, setContractForm] = useState({
-    tipo: "",
-    parte1: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
-    parte2: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
-    personality: "Técnica",
-    purpose: "",
-    comarca: "",
-    local: "",
-    data: new Date().toISOString().split('T')[0],
-  });
+  
+
   const [generatedContract, setGeneratedContract] = useState("");
   const [isGeneratingContract, setIsGeneratingContract] = useState(false);
   const [showContractResult, setShowContractResult] = useState(false);
@@ -199,17 +264,8 @@ export default function AdvogadoDashboard() {
   const [isShielding, setIsShielding] = useState(false);
   const [shieldingCertificate, setShieldingCertificate] = useState(null);
   const [blindadosDocuments, setBlindadosDocuments] = useState([]);
-  
-  // Procuração States
-  const [showProcuracaoModal, setShowProcuracaoModal] = useState(false);
-  const [procuracaoForm, setProcuracaoForm] = useState({
-    outorgante: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
-    outorgado: { nome: "", oab: "", cpf: "", endereco: "" },
-    poderes: "Ad Judicia et Extra",
-    comarca: "",
-    local: "",
-    data: new Date().toISOString().split('T')[0],
-  });
+
+ 
   const [generatedProcuracao, setGeneratedProcuracao] = useState("");
   const [isGeneratingProcuracao, setIsGeneratingProcuracao] = useState(false);
   const [showProcuracaoResult, setShowProcuracaoResult] = useState(false);
@@ -260,12 +316,7 @@ export default function AdvogadoDashboard() {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
-  const [showAnunciosSubmenu, setShowAnunciosSubmenu] = useState(false);
-  const [highlightedAds, setHighlightedAds] = useState([]);
-  const [currentAdIndex, setCurrentAdIndex] = useState(0);
-  const [anunciosData, setAnunciosData] = useState([]);
-  const [loadingAnuncios, setLoadingAnuncios] = useState(false);
-  const [activeAnuncioTab, setActiveAnuncioTab] = useState("PREPOSTOS");
+  
 
   // CALCULADORA STATE
   const [activeCalculator, setActiveCalculator] = useState("rescisao");
@@ -322,7 +373,7 @@ export default function AdvogadoDashboard() {
   const [triagemStep, setTriagemStep] = useState(1);
 
   // AGENDA STATE
-  const [agendaItems, setAgendaItems] = useState([]);
+  // const [agendaItems, setAgendaItems] = useState([]);
   const [showAgendaModal, setShowAgendaModal] = useState(false);
   const [isAiSuggesting, setIsAiSuggesting] = useState(false);
   const [agendaAnalysis, setAgendaAnalysis] = useState("");
@@ -407,9 +458,7 @@ export default function AdvogadoDashboard() {
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [selectedMsg, setSelectedMsg] = useState(null);
 
-  const unreadMessagesCount = useMemo(() => {
-    return notificacoes.filter((n) => !n.lida).length;
-  }, [notificacoes]);
+  
 
   const handleApplyCoupon = async (tipo) => {
     let code = "";
@@ -713,21 +762,6 @@ export default function AdvogadoDashboard() {
     }
   }, [chatMessages, isTypingAI]);
 
-  const fetchAgenda = useCallback(
-    async (explicitId) => {
-      if (!explicitId && !profileData?.id) return;
-      try {
-        const res = await fetch("/api/crm/agenda");
-        const data = await res.json();
-        if (data.success) {
-          setAgendaItems(data.data);
-        }
-      } catch (err) {
-        console.error("Erro fetchAgenda API:", err);
-      }
-    },
-    [],
-  );
 
   const fetchAllDocuments = useCallback(
     async (explicitId) => {
@@ -799,22 +833,7 @@ export default function AdvogadoDashboard() {
     [],
   );
 
-  const fetchCrmClients = useCallback(
-    async (explicitId) => {
-      if (!explicitId && !profileData?.id) return;
-      setLoadingCrm(true);
-      try {
-        const res = await fetch("/api/crm");
-        const data = await res.json();
-        if (data.success) setCrmClients(data.data);
-      } catch (e) {
-        console.error("Erro CRM:", e);
-      } finally {
-        setLoadingCrm(false);
-      }
-    },
-    [],
-  );
+  
 
   const syncNotificacoes = useCallback(
     async (explicitId) => {
@@ -942,41 +961,7 @@ export default function AdvogadoDashboard() {
     syncNotificacoes,
   ]);
 
-  const fetchAnuncios = useCallback(async (categoria) => {
-    setLoadingAnuncios(true);
-    try {
-      const res = await fetch(`/api/anuncios?categoria=${categoria.toUpperCase()}`);
-      const data = await res.json();
-      if (data.success) {
-        setAnunciosData(data.data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingAnuncios(false);
-    }
-  }, []);
-
-  const fetchHighlightedAd = useCallback(async () => {
-    try {
-      const res = await fetch("/api/anuncios?destaque=true");
-      const data = await res.json();
-      if (data.success && data.data.length > 0) {
-        setHighlightedAds(data.data);
-      }
-    } catch (err) {
-       console.error(err);
-    }
-  }, []);
-
-  // Auto-rotate highlighted ads every 10 seconds
-  useEffect(() => {
-    if (highlightedAds.length <= 1) return;
-    const timer = setInterval(() => {
-      setCurrentAdIndex((prev) => (prev + 1) % highlightedAds.length);
-    }, 10000);
-    return () => clearInterval(timer);
-  }, [highlightedAds.length]);
+  
 
   // Handle Stripe Redirection Race Condition
   useEffect(() => {
@@ -1030,8 +1015,8 @@ export default function AdvogadoDashboard() {
   useEffect(() => {
     loadDataFull();
     fetchAvisos();
-    fetchHighlightedAd();
-  }, [loadDataFull, fetchAvisos, fetchHighlightedAd]);
+    // fetchHighlightedAd(); // Agora no Context
+  }, [loadDataFull, fetchAvisos]);
 
   useEffect(() => {
     if (activeTab === "notificacoes") {
@@ -1093,6 +1078,41 @@ export default function AdvogadoDashboard() {
   };
 
   const handleOpenMessage = async (msg) => {
+    const meta = parseNotificationMeta(msg);
+    const CASE_RELATED_TYPES = [
+      "MENSAGEM",
+      "INTERESSE",
+      "NEGOCIACAO",
+      "CONTRATACAO",
+      "CHAT_INICIADO",
+      "CASO_CANCELADO",
+      "CASO_ENCERRADO",
+      "MEET_INVITE"
+    ];
+
+    // Redirecionamento inteligente para casos/chats
+    if (CASE_RELATED_TYPES.includes(msg.tipo)) {
+      if (msg.tipo === "MENSAGEM" || msg.tipo === "NEGOCIACAO" || msg.tipo === "CONTRATACAO" || msg.tipo === "CHAT_INICIADO") {
+        const caseId = meta.case_id || meta.caso_id;
+        const interestId = meta.interest_id || meta.interesse_id;
+        
+        if (caseId) {
+          let url = `/chat/${caseId}`;
+          if (interestId) url += `?interest=${interestId}`;
+          window.location.href = url;
+          return;
+        }
+      }
+      
+      // Se for apenas sobre o caso (ex: cancelado, interesse) e não tiver chat específico
+      const caseId = meta.case_id || meta.caso_id;
+      if (caseId && msg.tipo !== "MENSAGEM") {
+         setActiveTab("meus-casos"); // Ou outra aba relevante
+         window.scrollTo({ top: 0, behavior: 'smooth' });
+         // Talvez marcar como lida e não abrir modal
+      }
+    }
+
     setSelectedMsg(msg);
     setShowMsgModal(true);
 
@@ -1106,6 +1126,7 @@ export default function AdvogadoDashboard() {
         setNotificacoes((prev) =>
           prev.map((n) => (n.id === msg.id ? { ...n, lida: true } : n)),
         );
+        refreshNotificacoes(); // Sincroniza com o contexto
       } catch (err) {
         console.error("Erro ao marcar como lida:", err);
       }
@@ -1236,66 +1257,7 @@ export default function AdvogadoDashboard() {
     .filter(Boolean);
 
 
-  // Tabs que exigem plano PRO
-  const PRO_TABS = [
-    "crm",
-    "docs",
-    "redator",
-    "calculadora",
-    "juris",
-    "agenda",
-    "triagem",
-    "blindagem",
-  ];
-
-  const handleTabChange = async (tab) => {
-    // Fecha o menu automaticamente no mobile ao selecionar uma opção
-    if (window.innerWidth <= 768) {
-      setIsSidebarOpen(false);
-    }
-    if (tab === "indicacoes") {
-      fetchIndicacoes();
-    }
-    const planType = profileData?.plan_type || 'FREE';
-    const restrictedToPro = ["calculadora", "juris"];
-
-    if (PRO_TABS.includes(tab)) {
-      // Bloqueio Total se não for Premium (START ou PRO)
-      if (!profileData?.is_premium) {
-        setShowProModal(true);
-        return;
-      }
-      
-      // Bloqueio Específico de Ferramentas para o plano START
-      if (planType === 'START' && restrictedToPro.includes(tab)) {
-         toast.error("Esta ferramenta é exclusiva para o plano PRO.");
-         setShowProModal(true);
-         return;
-      }
-    }
-    if (tab.startsWith("anuncios-")) {
-       const cat = tab.split("-")[1];
-       setActiveAnuncioTab(cat);
-       fetchAnuncios(cat);
-    }
-
-    // Se clicar em mensagens, marcar todas como lidas no banco
-    if (tab === "minhas-mensagens" && unreadMessagesCount > 0) {
-      try {
-        await fetch("/api/notificacoes", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({}), // body vazio marca todas do user
-        });
-        // Atualiza localmente para remover o badge imediatamente
-        setNotificacoes((prev) => prev.map((n) => ({ ...n, lida: true })));
-      } catch (err) {
-        console.error("Erro ao marcar como lidas:", err);
-      }
-    }
-
-    setActiveTab(tab);
-  };
+  
 
   const renderQueroSite = () => {
     const whatsappMsg = encodeURIComponent("Olá sou advogado pró do site Social Jurídico, e gostaria de contratar o meu site com o desconto de 50%.");
@@ -2392,6 +2354,24 @@ export default function AdvogadoDashboard() {
                 borderLeft: !msg.lida
                   ? "4px solid #ef4444"
                   : "1px solid rgba(255, 255, 255, 0.05)",
+                backgroundColor: [
+                  "MENSAGEM",
+                  "NEGOCIACAO",
+                  "CONTRATACAO",
+                  "CHAT_INICIADO",
+                  "INTERESSE"
+                ].includes(msg.tipo) 
+                  ? "rgba(59, 130, 246, 0.08)" // Sutil destaque azul para casos/clientes
+                  : "transparent",
+                border: [
+                  "MENSAGEM",
+                  "NEGOCIACAO",
+                  "CONTRATACAO",
+                  "CHAT_INICIADO",
+                  "INTERESSE"
+                ].includes(msg.tipo) 
+                  ? "1px solid rgba(59, 130, 246, 0.2)" 
+                  : "1px solid rgba(255, 255, 255, 0.05)",
               }}
             >
               {!msg.lida && (
@@ -2415,13 +2395,29 @@ export default function AdvogadoDashboard() {
                 <div className={styles.opArea}>
                   <div
                     className={styles.opIcon}
-                    style={{ background: "#f59e0b" }}
+                    style={{ 
+                      background: [
+                        "MENSAGEM",
+                        "NEGOCIACAO",
+                        "CONTRATACAO",
+                        "CHAT_INICIADO",
+                        "INTERESSE"
+                      ].includes(msg.tipo) ? "#3b82f6" : "#f59e0b" 
+                    }}
                   >
                     <Bell size={16} />
                   </div>
                   <div className={styles.opTitleGroup}>
                     <h3>{msg.titulo || "Mensagem"}</h3>
-                    <span className={styles.opLocation}>Administrador</span>
+                    <span className={styles.opLocation}>
+                      {[
+                        "MENSAGEM",
+                        "NEGOCIACAO",
+                        "CONTRATACAO",
+                        "CHAT_INICIADO",
+                        "INTERESSE"
+                      ].includes(msg.tipo) ? "Cliente" : "Administrador"}
+                    </span>
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
@@ -2642,22 +2638,102 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const renderVoiceModal = () => {
+    if (!showVoiceModal) return null;
+
+    return (
+      <div className={styles.modalOverlay} style={{ zIndex: 10001 }}>
+        <div className={styles.modalContent} style={{ maxWidth: '400px', textAlign: 'center', padding: '40px' }}>
+          <div className={styles.voicePulseContainer} style={{ marginBottom: '30px', position: 'relative', display: 'inline-block' }}>
+            <div className={styles.pulseMic} style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255, 69, 58, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <Mic size={40} color="#ff453a" />
+            </div>
+            {isListening && (
+              <>
+                <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid #ff453a', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }}></div>
+                <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid #ff453a', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', animationDelay: '0.5s' }}></div>
+              </>
+            )}
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '10px' }}>
+            {isListening ? "Estou ouvindo..." : "Processando áudio..."}
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '20px', minHeight: '1.2em' }}>
+            {voiceTranscript || "Fale os dados do cliente (Nome, CPF, Caso...)"}
+          </p>
+          {isListening && (
+            <button 
+              onClick={() => {
+                 // SpeechRecognition end is handled by recognition.stop() or recognition.onend
+                 // But we can trigger recognition.stop() if we kept a ref.
+                 // For now, let's just let the user wait or we could add a stop button.
+              }}
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '10px 20px', borderRadius: '30px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', margin: '0 auto' }}
+            >
+              <Square size={14} fill="currentColor" /> Parar Gravação
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderCRM = () => (
     <div className={styles.toolContainer}>
       <div className={styles.crmHeader}>
         <div>
-          <h2 className={styles.sectionTitle}>CRM & KYC Jurídico</h2>
+          <h2 className={styles.sectionTitle}>CRM {"&"} KYC Jurídico</h2>
           <p className={styles.sectionSubtitle}>
             Gestão de carteira e análise de risco.
           </p>
         </div>
-        <button
-          className={styles.newClientBtn}
-          onClick={() => setShowNewClientModal(true)}
-        >
-          <UserPlus size={18} /> Novo Cliente
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            className={styles.newClientBtn}
+            style={{ background: 'rgba(255, 69, 58, 0.1)', color: '#ff453a', border: '1px solid rgba(255, 69, 58, 0.2)' }}
+            onClick={() => {
+              if (!isPro) {
+                setShowProModal(true);
+                return;
+              }
+              handleStartVoiceCRM();
+            }}
+            disabled={isListening}
+          >
+            <Mic size={18} className={isListening ? styles.pulseMic : ""} />
+            {isListening ? "Ouvindo..." : "Comando de Voz"}
+          </button>
+          <button
+            className={styles.newClientBtn}
+            style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={() => {
+              if (!isPro) {
+                setShowProModal(true);
+                return;
+              }
+              pdfInputRef.current?.click();
+            }}
+            disabled={isExtractingPDF}
+          >
+            {isExtractingPDF ? <Loader2 size={18} className={styles.animateSpin} /> : <Sparkles size={18} />} 
+            {isExtractingPDF ? "Lendo documento..." : "Extração com IA (PDF/Foto)"}
+          </button>
+          <button
+            className={styles.newClientBtn}
+            onClick={() => setShowNewClientModal(true)}
+          >
+            <UserPlus size={18} /> Novo Cliente
+          </button>
+        </div>
       </div>
+
+      <input 
+        type="file" 
+        ref={pdfInputRef} 
+        style={{ display: 'none' }} 
+        accept="application/pdf,image/*"
+        onChange={handlePDFExtraction}
+      />
 
       <div className={styles.crmIntro}>
         <div className={styles.crmIntroIcon}>
@@ -2685,6 +2761,53 @@ export default function AdvogadoDashboard() {
             <span className={styles.crmToolTag}>
               <FileText size={14} /> Relatórios
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* FINANCE DASHBOARD CONSOLIDATED */}
+      <div className={styles.financeConsolidated} style={{ marginBottom: '30px', background: 'var(--color-black-light)', border: '1px solid rgba(212,175,55,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
+        <div className={styles.financeConsolidatedHeader} style={{ padding: '15px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(212,175,55,0.03)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <TrendingUp size={20} color="var(--color-gold)" />
+            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800 }}>Desempenho Financeiro do Mês</h4>
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-silver-dark)', fontWeight: 600 }}>
+            {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+          </span>
+        </div>
+
+        <div className={styles.financeConsolidatedGrid} style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+          <div className={styles.financeStatCard}>
+            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-silver-dark)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Previsto Total</label>
+            <div className={styles.financeStatValue} style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-white)' }}>
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialStats.previsto)}
+            </div>
+          </div>
+          
+          <div className={styles.financeStatCard}>
+            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-silver-dark)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Recebido (Pago)</label>
+            <div className={styles.financeStatValue} style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981' }}>
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialStats.recebido)}
+            </div>
+          </div>
+
+          <div className={styles.financeStatCard} style={{ gridColumn: 'span 2' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-silver-dark)', fontWeight: 700, textTransform: 'uppercase' }}>Progresso de Recebimento</label>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-gold)' }}>
+                {financialStats.previsto > 0 ? Math.round((financialStats.recebido / financialStats.previsto) * 100) : 0}%
+              </span>
+            </div>
+            <div className={styles.financeProgressBar} style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+              <div 
+                className={styles.financeProgressFill} 
+                style={{ height: '100%', background: 'linear-gradient(90deg, var(--color-gold-dark), var(--color-gold))', transition: 'width 1s ease-out', width: `${financialStats.previsto > 0 ? Math.min(100, (financialStats.recebido / financialStats.previsto) * 100) : 0}%` }}
+              ></div>
+            </div>
+            <p style={{ fontSize: '0.7rem', color: 'var(--color-silver-dark)', marginTop: '8px', margin: '8px 0 0 0' }}>
+              {financialStats.count} lançamentos financeiros identificados neste período.
+            </p>
           </div>
         </div>
       </div>
@@ -2744,6 +2867,10 @@ export default function AdvogadoDashboard() {
                     setShowDossierModal(true);
                     setClientDocuments([]);
                     fetchClientDocuments(client.id);
+                    fetchInteractions(client.id);
+                    fetchAssociatedCases(client);
+                    fetchClientFinance(client.id);
+                    fetchClientInsight(client.id);
                   }}
                 >
                   Dossiê Completo
@@ -2760,6 +2887,105 @@ export default function AdvogadoDashboard() {
       </div>
     </div>
   );
+
+  const handlePDFExtraction = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const data = await handleExtractPDF(file);
+    if (data) {
+      setNewClientData({
+        nome_completo: data.nome_completo || "",
+        tipo: data.tipo || "Pessoa Física",
+        cpf_cnpj: data.cpf_cnpj || "",
+        rg_ie: data.rg_ie || "",
+        estado_civil: data.estado_civil || "",
+        profissao: data.profissao || "",
+        telefone: data.telefone || "",
+        endereco_completo: data.endereco_completo || "",
+        email: data.email || "",
+        notas_internas: data.notas_internas || "",
+      });
+      setShowNewClientModal(true);
+    }
+    // Limpar input
+    e.target.value = "";
+  };
+
+  const handleStartVoiceCRM = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Seu navegador não suporta reconhecimento de voz.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "pt-BR";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setShowVoiceModal(true);
+      setVoiceTranscript("");
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((result) => result[0])
+        .map((result) => result.transcript)
+        .join("");
+      setVoiceTranscript(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error", event.error);
+      setIsListening(false);
+      setShowVoiceModal(false);
+      toast.error("Erro no reconhecimento de voz.");
+    };
+
+    recognition.onend = async () => {
+      setIsListening(false);
+      // O timeout serve para o usuário ver o texto final antes do modal fechar
+      if (voiceTranscript.length > 5) {
+        setTimeout(async () => {
+          await processVoiceCommand(voiceTranscript);
+          setShowVoiceModal(false);
+        }, 1000);
+      } else {
+        setShowVoiceModal(false);
+      }
+    };
+
+    recognition.start();
+  };
+
+  const processVoiceCommand = async (text) => {
+    const tid = toast.loading("IA processando seu comando de voz...");
+    try {
+      const res = await fetch("/api/crm/voice-command", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json();
+      toast.dismiss(tid);
+      if (data.success) {
+        setNewClientData(prev => ({
+          ...prev,
+          ...data.data
+        }));
+        setShowNewClientModal(true);
+        toast.success("Dados extraídos com sucesso!");
+      } else {
+        toast.error(data.message || "Não consegui entender os dados.");
+      }
+    } catch (err) {
+      toast.dismiss(tid);
+      toast.error("Erro ao processar comando de voz.");
+    }
+  };
 
   const handleSmartFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -6815,98 +7041,11 @@ export default function AdvogadoDashboard() {
     }
   };
 
+  /*
   const handleGenerateReport = () => {
-    if (!selectedClient) return;
-    setIsGeneratingReport(true);
-
-    try {
-      const doc = new jsPDF();
-      const timestamp = new Date().toLocaleString("pt-BR");
-
-      // Cabeçalho
-      doc.setFontSize(22);
-      doc.setTextColor(212, 175, 55); // Cor Ouro
-      doc.text("SocialJuridico - Dossie do Cliente", 14, 22);
-
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text(`Relatorio gerado em: ${timestamp}`, 14, 30);
-      doc.line(14, 35, 196, 35);
-
-      // Dados do Cliente (Seção)
-      doc.setFontSize(16);
-      doc.setTextColor(0);
-      doc.text("Dados Pessoais & Contato", 14, 45);
-
-      const personalData = [
-        ["Nome", selectedClient.name],
-        ["Tipo", selectedClient.type || "Pessoa Fisica"],
-        ["CPF/CNPJ", maskCPFCNPJ(selectedClient.cpf_cnpj) || "---"],
-        ["RG/IE", selectedClient.rg || "---"],
-        ["Estado Civil", selectedClient.civil_status || "---"],
-        ["Profissao", selectedClient.profession || "---"],
-        ["Email", selectedClient.email || "---"],
-        ["Telefone", formatPhone(selectedClient.phone) || "---"],
-        ["Endereco", selectedClient.address || "---"],
-      ];
-
-      autoTable(doc, {
-        startY: 50,
-        head: [["Campo", "Valor"]],
-        body: personalData,
-        theme: "striped",
-        headStyles: { fillColor: [212, 175, 55] },
-      });
-
-      // Notas Internas
-      let finalY = doc.lastAutoTable.finalY + 15;
-      doc.setFontSize(16);
-      doc.text("Notas Internas", 14, finalY);
-
-      doc.setFontSize(11);
-      const splitNotes = doc.splitTextToSize(
-        selectedClient.notes || "Sem observacoes registradas.",
-        180,
-      );
-      doc.text(splitNotes, 14, finalY + 10);
-
-      // Lista de Documentos
-      finalY = finalY + 30 + splitNotes.length * 5;
-      if (clientDocuments.length > 0) {
-        doc.setFontSize(16);
-        doc.text("Documentos Vinculados", 14, finalY);
-
-        const docRows = clientDocuments.map((d) => [
-          d.file_name,
-          new Date(d.created_at).toLocaleDateString("pt-BR"),
-        ]);
-        autoTable(doc, {
-          startY: finalY + 5,
-          head: [["Arquivo", "Data de Anexo"]],
-          body: docRows,
-          theme: "grid",
-          headStyles: { fillColor: [40, 40, 40] },
-        });
-      }
-
-      // Rodape
-      const pageCount = doc.internal.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(`SocialJuridico PRO - Pagina ${i} de ${pageCount}`, 14, 285);
-      }
-
-      doc.save(`Dossie_${selectedClient.name.replace(/\s+/g, "_")}.pdf`);
-      toast.success("Relatório gerado!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Erro ao gerar PDF");
-    } finally {
-      setIsGeneratingReport(false);
-    }
+    ...
   };
+  */
 
   const handleDownloadCertificate = (docFile) => {
     try {
@@ -7647,7 +7786,23 @@ export default function AdvogadoDashboard() {
                 </div>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "10px" }}>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <div style={{ display: 'flex', gap: '8px', marginRight: '15px', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '15px' }}>
+                <button 
+                  className={styles.newClientBtn} 
+                  style={{ padding: '6px 12px', fontSize: '0.75rem', background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}
+                  onClick={() => handleQuickDocGenerate('PROCURACAO')}
+                >
+                  <FileText size={14} style={{ marginRight: '6px' }} /> Gerar Procuração
+                </button>
+                <button 
+                  className={styles.newClientBtn} 
+                  style={{ padding: '6px 12px', fontSize: '0.75rem', background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)', border: '1px solid rgba(212,175,55,0.2)' }}
+                  onClick={() => handleQuickDocGenerate('CONTRATO')}
+                >
+                  <Shield size={14} style={{ marginRight: '6px' }} /> Gerar Contrato
+                </button>
+              </div>
               <button
                 className={styles.closeIconBtn}
                 style={{
@@ -7664,6 +7819,34 @@ export default function AdvogadoDashboard() {
                 <X size={18} />
               </button>
             </div>
+          </div>
+
+          {/* AI INSIGHTS */}
+          <div style={{ padding: '10px 20px', background: 'rgba(212,175,55,0.05)', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <Zap size={14} color="var(--color-gold)" />
+              <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                IA Insights (KYC Avançado)
+              </span>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', margin: 0 }}>
+              {isGeneratingInsight ? (
+                <span className={styles.loadingPulse}>Gerando análise estratégica...</span>
+              ) : clientInsight === "LIMIT_REACHED" ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span style={{ color: 'var(--color-silver-dark)' }}>Você atingiu o limite de 5 insights do Plano START.</span>
+                  <button 
+                    style={{ background: 'var(--color-gold)', color: 'var(--color-black)', border: 'none', padding: '4px 12px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}
+                    onClick={() => {
+                      // Trigger upgrade flow
+                      toast("Upgrade para o PRO disponível nas configurações!");
+                    }}
+                  >
+                    FAZER UPGRADE PARA PRO
+                  </button>
+                </div>
+              ) : clientInsight || "Selecione um cliente com histórico para gerar insights automáticos."}
+            </p>
           </div>
 
           {/* BODY */}
@@ -7729,6 +7912,411 @@ export default function AdvogadoDashboard() {
                 </span>
                 <div className={styles.notesBox}>
                   {selectedClient.notes || "Sem observações registradas."}
+                </div>
+              </div>
+
+              {/* TIMELINE DE INTERAÇÕES */}
+              <div className={styles.dossierSection}>
+                <span className={styles.dossierSectionTitle}>
+                  Linha do Tempo de Interações
+                </span>
+                
+                {/* Form para nova interação - Estilo Premium */}
+                <div style={{ 
+                  marginBottom: '20px', 
+                  background: 'rgba(255,255,255,0.02)', 
+                  padding: '16px', 
+                  borderRadius: '12px', 
+                  border: '1px solid rgba(212,175,55,0.15)',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
+                }}>
+                  <textarea
+                    placeholder="Registrar nova interação (ex: Cliente ligou, Reunião feita...)"
+                    value={newInteraction.content}
+                    onChange={(e) => setNewInteraction({...newInteraction, content: e.target.value})}
+                    style={{ 
+                      width: '100%',
+                      height: '80px', 
+                      marginBottom: '12px', 
+                      resize: 'none',
+                      background: 'rgba(0,0,0,0.2)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                      padding: '10px',
+                      fontSize: '0.85rem',
+                      outline: 'none',
+                      transition: 'border-color 0.2s'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = 'var(--color-gold)'}
+                    onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                    <select
+                      value={newInteraction.type}
+                      onChange={(e) => setNewInteraction({...newInteraction, type: e.target.value})}
+                      style={{ 
+                        flex: 1,
+                        background: '#1a1a1a', // Fundo sólido escuro para evitar transparências estranhas no select
+                        border: '1px solid rgba(212,175,55,0.3)', // Borda levemente dourada
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '0.85rem',
+                        padding: '10px 12px',
+                        cursor: 'pointer',
+                        outline: 'none',
+                        appearance: 'none', // Remove a seta padrão do browser
+                        backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E")',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 12px center',
+                        backgroundSize: '16px'
+                      }}
+                    >
+                      <option value="nota" style={{ background: '#1a1a1a', color: '#fff' }}>📝 Nota Interna</option>
+                      <option value="reunião" style={{ background: '#1a1a1a', color: '#fff' }}>🤝 Reunião com Cliente</option>
+                      <option value="ligação" style={{ background: '#1a1a1a', color: '#fff' }}>📞 Chamada Telefônica</option>
+                      <option value="email" style={{ background: '#1a1a1a', color: '#fff' }}>📧 E-mail Enviado/Recebido</option>
+                      <option value="whatsapp" style={{ background: '#1a1a1a', color: '#fff' }}>💬 Mensagem de WhatsApp</option>
+                    </select>
+                    <button
+                      onClick={handleSaveInteraction}
+                      disabled={isSavingInteraction || !newInteraction.content}
+                      style={{ 
+                        padding: '8px 20px', 
+                        fontSize: '0.8rem',
+                        fontWeight: '600',
+                        borderRadius: '6px',
+                        background: isSavingInteraction || !newInteraction.content ? '#444' : 'linear-gradient(135deg, var(--color-gold), #b8860b)',
+                        color: '#000',
+                        border: 'none',
+                        cursor: isSavingInteraction || !newInteraction.content ? 'not-allowed' : 'pointer',
+                        transition: 'transform 0.2s, opacity 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                      onMouseEnter={(e) => { if(!isSavingInteraction && newInteraction.content) e.target.style.transform = 'scale(1.02)' }}
+                      onMouseLeave={(e) => { e.target.style.transform = 'scale(1)' }}
+                    >
+                      {isSavingInteraction ? 'Salvando...' : 'Registrar'}
+                      <CheckCircle2 size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Lista da Timeline */}
+                <div className={styles.timelineList} style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
+                  {isFetchingInteractions ? (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>Carregando histórico...</div>
+                  ) : interactions.length > 0 ? (
+                    interactions.map((item) => (
+                      <div key={item.id} style={{ 
+                        display: 'flex', 
+                        gap: '12px', 
+                        marginBottom: '15px', 
+                        paddingBottom: '15px', 
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        position: 'relative'
+                      }}>
+                        <div style={{ 
+                          width: '32px', 
+                          height: '32px', 
+                          borderRadius: '50%', 
+                          background: 'rgba(212,175,55,0.1)', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          color: 'var(--color-gold)',
+                          flexShrink: 0
+                        }}>
+                          {item.type === 'ligação' ? <Phone size={14} /> : 
+                           item.type === 'reunião' ? <Users size={14} /> : 
+                           item.type === 'email' ? <Mail size={14} /> :
+                           item.type === 'whatsapp' ? <MessageSquare size={14} /> :
+                           <FileText size={14} />}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: 600, fontSize: '0.85rem', textTransform: 'capitalize', color: 'var(--color-gold)' }}>
+                              {item.type}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: '#666' }}>
+                              {new Date(item.created_at).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: '0.85rem', color: '#ccc', margin: 0, lineHeight: '1.4' }}>
+                            {item.content}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '20px', color: '#555', fontSize: '0.85rem' }}>
+                      Nenhuma interação registrada ainda.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* PROCESSOS E CASOS ASSOCIADOS (MARKETPLACE) */}
+              <div className={styles.dossierSection} style={{ marginTop: '20px' }}>
+                <span className={styles.dossierSectionTitle}>
+                  Processos e Casos Associados
+                </span>
+                
+                <div className={styles.associatedCasesList}>
+                  {isFetchingAssociatedCases ? (
+                    <div style={{ textAlign: 'center', padding: '15px', color: '#888' }}>Buscando processos no marketplace...</div>
+                  ) : associatedCases.length > 0 ? (
+                    associatedCases.map((caso) => (
+                      <div key={caso.id} style={{ 
+                        background: 'rgba(255,255,255,0.03)', 
+                        borderRadius: '10px', 
+                        padding: '12px', 
+                        border: '1px solid rgba(212,175,55,0.1)',
+                        marginBottom: '10px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#fff' }}>{caso.titulo}</h4>
+                          <div style={{ display: 'flex', gap: '10px', marginTop: '4px', fontSize: '0.75rem', color: '#888' }}>
+                            <span>⚖️ {caso.area_atuacao}</span>
+                            <span>📅 {new Date(caso.created_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                          <div style={{ marginTop: '5px' }}>
+                            <span className={styles.miniBadge} style={{ 
+                              background: caso.status === 'CONCLUIDO' ? 'rgba(16,185,129,0.1)' : 'rgba(212,175,55,0.1)',
+                              color: caso.status === 'CONCLUIDO' ? '#10b981' : 'var(--color-gold)',
+                              fontSize: '0.65rem'
+                            }}>
+                              {caso.status}
+                            </span>
+                          </div>
+                        </div>
+                        <button 
+                          className={styles.newClientBtn} 
+                          style={{ padding: '6px 12px', fontSize: '0.7rem' }}
+                          onClick={() => {
+                            // Abrir chat ou detalhes do caso
+                            setShowDossierModal(false);
+                            setActiveTab('minhas-mensagens');
+                            // Aqui poderíamos setar o chat ativo se tivéssemos essa lógica global
+                          }}
+                        >
+                          Abrir Chat <ExternalLink size={12} style={{ marginLeft: '4px' }} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ 
+                      textAlign: 'center', 
+                      padding: '20px', 
+                      background: 'rgba(255,255,255,0.02)', 
+                      borderRadius: '10px',
+                      border: '1px dashed rgba(255,255,255,0.1)',
+                      color: '#555',
+                      fontSize: '0.8rem'
+                    }}>
+                      <Gavel size={24} style={{ opacity: 0.2, marginBottom: '8px' }} />
+                      <p style={{ margin: 0 }}>Nenhum caso do Marketplace vinculado a este cliente.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* GESTÃO FINANCEIRA DO CLIENTE */}
+              <div className={styles.dossierSection} style={{ marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                  <span className={styles.dossierSectionTitle} style={{ margin: 0 }}>
+                    Gestão Financeira & Honorários
+                  </span>
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '0.65rem', color: '#888', display: 'block' }}>TOTAL PAGO</span>
+                      <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.9rem' }}>
+                        R$ {clientFinance.filter(f => f.status === 'PAGO').reduce((acc, curr) => acc + parseFloat(curr.amount), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '0.65rem', color: '#888', display: 'block' }}>PENDENTE</span>
+                      <span style={{ color: '#ef4444', fontWeight: 700, fontSize: '0.9rem' }}>
+                        R$ {clientFinance.filter(f => f.status === 'PENDENTE').reduce((acc, curr) => acc + parseFloat(curr.amount), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form para novo lançamento financeiro */}
+                <div style={{ 
+                  marginBottom: '15px', 
+                  background: 'rgba(255,255,255,0.02)', 
+                  padding: '12px', 
+                  borderRadius: '10px', 
+                  border: '1px solid rgba(16,185,129,0.1)' 
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      className={styles.docFilterInput}
+                      placeholder="Descrição (ex: Parcela 1)"
+                      value={newFinance.description}
+                      onChange={(e) => setNewFinance({...newFinance, description: e.target.value})}
+                      style={{ fontSize: '0.75rem', padding: '6px' }}
+                    />
+                    <input
+                      type="number"
+                      className={styles.docFilterInput}
+                      placeholder="Valor (R$)"
+                      value={newFinance.amount}
+                      onChange={(e) => setNewFinance({...newFinance, amount: e.target.value})}
+                      style={{ fontSize: '0.75rem', padding: '6px' }}
+                    />
+                    <input
+                      type="date"
+                      className={styles.docFilterInput}
+                      value={newFinance.due_date}
+                      onChange={(e) => setNewFinance({...newFinance, due_date: e.target.value})}
+                      style={{ fontSize: '0.75rem', padding: '6px', color: '#888' }}
+                    />
+                  </div>
+                  <button 
+                    className={styles.newClientBtn} 
+                    onClick={handleSaveFinance}
+                    disabled={isSavingFinance || !newFinance.description || !newFinance.amount}
+                    style={{ width: '100%', padding: '6px', fontSize: '0.75rem', background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}
+                  >
+                    {isSavingFinance ? 'Registrando...' : '+ Novo Lançamento'}
+                  </button>
+                </div>
+
+                {/* Lista Financeira */}
+                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                  {isFetchingFinance ? (
+                    <div style={{ textAlign: 'center', padding: '10px', color: '#888' }}>Carregando finanças...</div>
+                  ) : clientFinance.length > 0 ? (
+                    clientFinance.map((item) => (
+                      <div key={item.id} style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        padding: '10px', 
+                        background: 'rgba(255,255,255,0.01)', 
+                        borderBottom: '1px solid rgba(255,255,255,0.05)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ 
+                            width: '8px', 
+                            height: '8px', 
+                            borderRadius: '50%', 
+                            background: item.status === 'PAGO' ? '#10b981' : '#ef4444' 
+                          }} />
+                          <div>
+                            <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 600 }}>{item.description}</span>
+                            <span style={{ fontSize: '0.65rem', color: '#666', display: 'block' }}>Vence em: {new Date(item.due_date).toLocaleDateString('pt-BR')}</span>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontSize: '0.85rem', color: item.status === 'PAGO' ? '#10b981' : '#fff', fontWeight: 700 }}>
+                            R$ {parseFloat(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                          <button 
+                            onClick={() => handleTogglePaymentStatus(item)}
+                            style={{ 
+                              padding: '4px 8px', 
+                              fontSize: '0.6rem', 
+                              borderRadius: '4px', 
+                              border: '1px solid',
+                              borderColor: item.status === 'PAGO' ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)',
+                              background: item.status === 'PAGO' ? 'rgba(16,185,129,0.1)' : 'transparent',
+                              color: item.status === 'PAGO' ? '#10b981' : '#888',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {item.status === 'PAGO' ? 'PAGO ✓' : 'ABERTO'}
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '15px', color: '#444', fontSize: '0.75rem' }}>Nenhum lançamento financeiro para este cliente.</div>
+                  )}
+                </div>
+              </div>
+
+              {/* PRÓXIMOS PASSOS E LEMBRETES (AGENDA) */}
+              <div className={styles.dossierSection} style={{ marginTop: '20px' }}>
+                <span className={styles.dossierSectionTitle}>
+                  Próximos Passos & Lembretes
+                </span>
+                
+                <div style={{ 
+                  background: 'rgba(255,255,255,0.02)', 
+                  padding: '12px', 
+                  borderRadius: '10px', 
+                  border: '1px solid rgba(212,175,55,0.1)',
+                  marginBottom: '15px'
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      className={styles.docFilterInput}
+                      placeholder="O que fazer? (ex: Ligar para feedback)"
+                      value={newQuickReminder.title}
+                      onChange={(e) => setNewQuickReminder({...newQuickReminder, title: e.target.value})}
+                      style={{ fontSize: '0.75rem', padding: '6px' }}
+                    />
+                    <input
+                      type="date"
+                      className={styles.docFilterInput}
+                      value={newQuickReminder.date}
+                      onChange={(e) => setNewQuickReminder({...newQuickReminder, date: e.target.value})}
+                      style={{ fontSize: '0.75rem', padding: '6px', color: '#888' }}
+                    />
+                    <input
+                      type="time"
+                      className={styles.docFilterInput}
+                      value={newQuickReminder.time}
+                      onChange={(e) => setNewQuickReminder({...newQuickReminder, time: e.target.value})}
+                      style={{ fontSize: '0.75rem', padding: '6px', color: '#888' }}
+                    />
+                  </div>
+                  <button 
+                    className={styles.newClientBtn} 
+                    onClick={handleSaveQuickReminder}
+                    disabled={isSavingReminder || !newQuickReminder.title || !newQuickReminder.date}
+                    style={{ width: '100%', padding: '6px', fontSize: '0.75rem', background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)', border: '1px solid rgba(212,175,55,0.2)' }}
+                  >
+                    {isSavingReminder ? 'Agendando...' : 'Agendar Lembrete na Agenda'}
+                  </button>
+                </div>
+
+                {/* Listagem de lembretes ativos para este cliente */}
+                <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                  {agendaItems.filter(item => item.client_id === selectedClient.id && item.status === 'PENDING').length > 0 ? (
+                    agendaItems.filter(item => item.client_id === selectedClient.id && item.status === 'PENDING').map((task) => (
+                      <div key={task.id} style={{ 
+                        display: 'flex', 
+                        gap: '10px', 
+                        padding: '8px', 
+                        background: 'rgba(255,255,255,0.01)', 
+                        borderBottom: '1px solid rgba(255,255,255,0.05)',
+                        alignItems: 'center'
+                      }}>
+                        <Calendar size={14} color="var(--color-gold)" style={{ opacity: 0.6 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '0.8rem', color: '#fff' }}>{task.title.replace(`CRM: ${selectedClient.name} - `, '')}</div>
+                          <div style={{ fontSize: '0.65rem', color: '#666' }}>{new Date(task.date).toLocaleString('pt-BR')}</div>
+                        </div>
+                        <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)' }}>
+                          AGENDADO
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '10px', color: '#444', fontSize: '0.75rem' }}>Nenhum lembrete pendente para este cliente.</div>
+                  )}
                 </div>
               </div>
 
@@ -7872,7 +8460,7 @@ export default function AdvogadoDashboard() {
           <div className={styles.dossierFooterIA}>
             <div className={styles.iaHeader}>
               <div className={styles.iaTitle}>
-                <Sparkles size={18} color="var(--color-gold)" /> IA Insights &
+                <Sparkles size={18} color="var(--color-gold)" /> IA Insights {"&"}
                 Ações
               </div>
               {/* <button className={styles.updateIABtn}><Zap size={12} /> Atualizar IA</button> */}
@@ -9949,472 +10537,17 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
   return (
     <div className={`${styles.dashboardContainer} ${isSidebarOpen ? styles.sidebarOpen : ""}`}>
       {/* SIDEBAR */}
-      <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarActive : ""}`}>
-        <div className={styles.sidebarHeader}>
-          <button 
-            className={styles.mobileToggle}
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
-            <Menu size={24} />
-          </button>
-          <div className={styles.logoWrapper}>
-            <span className={styles.logoText}>SocialJurídico</span>
-            <span className={styles.logoSub}>Advogado</span>
-          </div>
-        </div>
-
-        {profileData?.is_premium || profileData?.plan_type === 'START' ? (
-          <div className={`${styles.premiumActiveBadge} ${profileData?.plan_type === 'START' ? styles.startActiveBadge : ''}`}>
-            <Sparkles size={14} /> Plano {profileData?.plan_type === 'START' ? 'START' : 'PRO'} Ativo
-          </div>
-        ) : (
-          <button
-            className={styles.premiumBtn}
-            onClick={() => setShowProModal(true)}
-          >
-            Seja Premium
-          </button>
-        )}
-        <div className={styles.sidebarScroll}>
-          {/* CONSUMO DO PLANO */}
-          <div className={styles.usageSection}>
-          <div className={styles.navGroupLabel}>Uso do Plano ({profileData?.plan_type || 'FREE'})</div>
-          
-          {/* IA Generator Usage */}
-          {(() => {
-            const planType = profileData?.plan_type || 'FREE';
-            const baseLimit = planType === 'PRO' ? 200 : (planType === 'START' ? 20 : 0);
-            const totalLimit = baseLimit + (profileData?.extra_redator_ia || 0);
-            const usage = profileData?.uso_redator_ia || 0;
-            const percent = totalLimit > 0 ? (usage / totalLimit) * 100 : 0;
-            
-            return (
-              <div className={styles.usageItem}>
-                <div className={styles.usageHeader}>
-                  <span>Redator IA</span>
-                  <span>{usage} / {totalLimit}</span>
-                </div>
-                <div className={styles.usageBarBg}>
-                  <div 
-                    className={styles.usageBarFill} 
-                    style={{ width: `${Math.min(100, percent)}%` }}
-                  ></div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* CRM Usage */}
-          {(() => {
-            const planType = profileData?.plan_type || 'FREE';
-            const totalLimit = planType === 'PRO' ? Infinity : (planType === 'START' ? 10 : 0);
-            const usage = profileData?.crm_count || 0;
-            const percent = totalLimit > 0 ? (usage / (totalLimit === Infinity ? 1000 : totalLimit)) * 100 : 0;
-            
-            return (
-              <div className={styles.usageItem}>
-                <div className={styles.usageHeader}>
-                  <span>Clientes CRM</span>
-                  <span>{usage} / {totalLimit === Infinity ? '∞' : totalLimit}</span>
-                </div>
-                <div className={styles.usageBarBg}>
-                  <div 
-                    className={styles.usageBarFill} 
-                    style={{ width: `${Math.min(100, percent)}%` }}
-                  ></div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Triagem Usage */}
-          {(() => {
-            const planType = profileData?.plan_type || 'FREE';
-            const baseLimit = planType === 'PRO' ? 200 : (planType === 'START' ? 10 : 0);
-            const totalLimit = baseLimit + (profileData?.extra_triagem || 0);
-            const usage = profileData?.uso_triagem || 0;
-            const percent = totalLimit > 0 ? (usage / totalLimit) * 100 : 0;
-            
-            return (
-              <div className={styles.usageItem}>
-                <div className={styles.usageHeader}>
-                  <span>Triagem IA</span>
-                  <span>{usage} / {totalLimit}</span>
-                </div>
-                <div className={styles.usageBarBg}>
-                  <div 
-                    className={styles.usageBarFill} 
-                    style={{ width: `${Math.min(100, percent)}%` }}
-                  ></div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Agenda Usage */}
-          {(() => {
-            const planType = profileData?.plan_type || 'FREE';
-            const totalLimit = planType === 'PRO' ? Infinity : (planType === 'START' ? 30 : 0);
-            const usage = profileData?.uso_agenda || 0;
-            const percent = totalLimit > 0 ? (usage / (totalLimit === Infinity ? 1000 : totalLimit)) * 100 : 0;
-            
-            return (
-              <div className={styles.usageItem}>
-                <div className={styles.usageHeader}>
-                  <span>Agenda</span>
-                  <span>{usage} / {totalLimit === Infinity ? '∞' : totalLimit}</span>
-                </div>
-                <div className={styles.usageBarBg}>
-                  <div 
-                    className={styles.usageBarFill} 
-                    style={{ width: `${Math.min(100, percent)}%` }}
-                  ></div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Storage Usage (Smart Docs) */}
-          {(() => {
-            const planType = profileData?.plan_type || 'FREE';
-            const baseLimit = planType === 'PRO' ? 10240 : (planType === 'START' ? 500 : 0); // 10GB vs 500MB
-            const totalLimit = baseLimit + (profileData?.extra_storage_mb || 0);
-            const usage = profileData?.uso_storage_mb || 0;
-            const percent = totalLimit > 0 ? (usage / totalLimit) * 100 : 0;
-            
-            return (
-              <div className={styles.usageItem}>
-                <div className={styles.usageHeader}>
-                  <span>Armazenamento (IA)</span>
-                  <span>{usage >= 1024 ? (usage/1024).toFixed(1) + 'GB' : usage + 'MB'} / {totalLimit >= 1024 ? (totalLimit/1024).toFixed(0) + 'GB' : totalLimit + 'MB'}</span>
-                </div>
-                <div className={styles.usageBarBg}>
-                  <div 
-                    className={styles.usageBarFill} 
-                    style={{ width: `${Math.min(100, percent)}%` }}
-                  ></div>
-                </div>
-              </div>
-            );
-          })()}
-        </div> {/* Fecha usageSection */}
-
-        {/* NAVEGAÇÃO INTERNA AO SCROLL */}
-        <nav className={styles.nav}>
-          <div className={styles.navGroupLabel}>Navegação</div>
-          <div
-            className={`${styles.navItem} ${activeTab === "indicacoes" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("indicacoes")}
-          >
-            <UserPlus size={18} /> <span>Indique e Ganhe</span>
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "oportunidades" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("oportunidades")}
-          >
-            <Globe size={18} /> <span>Oportunidades</span>
-          </div>
-          <div className={styles.navItemWrapper}>
-            <div
-              className={`${styles.navItem} ${activeTab === "minhas-mensagens" ? styles.activeNavItem : ""}`}
-              onClick={() => handleTabChange("minhas-mensagens")}
-              style={{ width: "100%" }}
-            >
-              <MessageSquare size={18} />
-              <span>Minhas Mensagens</span>
-            </div>
-            {unreadMessagesCount > 0 && (
-              <div className={`${styles.unreadBadge} ${styles.unreadBadgeActive}`}>
-                {unreadMessagesCount}
-              </div>
-            )}
-          </div>
-
-          <div
-            className={`${styles.navItem} ${activeTab === "quero-site" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("quero-site")}
-            style={{ border: '1px solid rgba(212, 175, 55, 0.3)', background: 'rgba(212, 175, 55, 0.05)' }}
-          >
-            <Globe size={18} color="var(--color-gold)" /> <span style={{ color: 'var(--color-gold)', fontWeight: '800' }}>QUERO UM SITE</span>
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "meus-casos" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("meus-casos")}
-          >
-            <Briefcase size={18} /> <span>Meus Casos</span>
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "declarei-interesse" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("declarei-interesse")}
-          >
-            <Check size={18} /> <span>Declarei Interesse</span>
-          </div>
-
-          {/* ANUNCIOS DE SERVICOS MENU */}
-          <div
-            className={`${styles.anunciosNav}`}
-            onClick={() => setShowAnunciosSubmenu(!showAnunciosSubmenu)}
-          >
-            <Zap size={18} fill="currentColor" />
-            <span>Anúncios de Serviços</span>
-            <ChevronDown 
-              size={16} 
-              style={{ marginLeft: "auto", transform: showAnunciosSubmenu ? "rotate(180deg)" : "none", transition: "0.2s" }} 
-            />
-          </div>
-          
-          {showAnunciosSubmenu && (
-            <div className={styles.anuncioSubmenu}>
-              <div 
-                className={`${styles.subNavItem} ${activeTab === "anuncios-PREPOSTOS" ? styles.activeSubNav : ""}`}
-                onClick={() => handleTabChange("anuncios-PREPOSTOS")}
-              >
-                <Users size={14} />
-                <span>PREPOSTOS</span>
-              </div>
-              <div 
-                className={`${styles.subNavItem} ${activeTab === "anuncios-DILIGENCIAS" ? styles.activeSubNav : ""}`}
-                onClick={() => handleTabChange("anuncios-DILIGENCIAS")}
-              >
-                <Briefcase size={14} />
-                <span>DILIGÊNCIAS</span>
-              </div>
-              <div 
-                className={`${styles.subNavItem} ${activeTab === "anuncios-OUTROS" ? styles.activeSubNav : ""}`}
-                onClick={() => handleTabChange("anuncios-OUTROS")}
-              >
-                <PlusCircle size={14} />
-                <span>OUTROS</span>
-              </div>
-            </div>
-          )}
-
-          <div className={styles.navGroupLabel}>Ferramentas Premium</div>
-          <div
-            className={`${styles.navItem} ${activeTab === "crm" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("crm")}
-          >
-            <Users size={18} /> <span>Meus Clientes (CRM)</span>
-            {!profileData?.is_premium && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "docs" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("docs")}
-          >
-            <FileText size={18} /> <span>IA Smart Docs</span>
-            {!profileData?.is_premium && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "blindagem" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("blindagem")}
-          >
-            <Shield size={18} /> <span>Blindagem de Documentos</span>
-            {!profileData?.is_premium && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "redator" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("redator")}
-          >
-            <Sparkles size={18} /> <span>Redator IA</span>
-            {!profileData?.is_premium && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "agenda" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("agenda")}
-          >
-            <Calendar size={18} /> <span>Agenda & Prazos</span>
-            {!profileData?.is_premium && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "triagem" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("triagem")}
-          >
-            <Search size={18} /> <span>Triagem de Casos</span>
-            {!profileData?.is_premium && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-          </div>
-
-          {/* CALCULADORA E JURIS - EXCLUSIVO PRO */}
-          <div
-            className={`${styles.navItem} ${activeTab === "calculadora" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("calculadora")}
-          >
-            <Calculator size={18} /> <span>Calculadora</span>
-            {profileData?.plan_type !== 'PRO' && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-          </div>
-          <div
-            className={`${styles.navItem} ${activeTab === "juris" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("juris")}
-          >
-            <BookOpen size={18} /> <span>Jurisprudência</span>
-            {profileData?.plan_type !== 'PRO' && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
-            )}
-            </div>
-            <div className={styles.navGroupLabel}>Sistema</div>
-            <div
-              className={`${styles.navItem} ${activeTab === "documentacao" ? styles.activeNavItem : ""}`}
-              onClick={() => handleTabChange("documentacao")}
-            >
-              <BookOpen size={18} /> <span>Documentação</span>
-            </div>
-            <div
-              className={`${styles.navItem} ${activeTab === "cartao-visitas" ? styles.activeNavItem : ""}`}
-              onClick={() => handleTabChange("cartao-visitas")}
-            >
-              <Eye size={18} /> <span>Cartão Digital</span>
-            </div>
-          </nav>
-      </div> {/* Fecha sidebarScroll */}
-
-      <div className={styles.sidebarFooter}>
-        <div
-          className={`${styles.navItem} ${activeTab === "perfil" ? styles.activeNavItem : ""}`}
-          onClick={() => handleTabChange("perfil")}
-        >
-          <User size={18} /> <span>Meu Perfil</span>
-        </div>
-        <div
-          className={`${styles.navItem} ${styles.footerLogout}`}
-          onClick={async () => {
-            await fetch("/api/auth/logout", { method: "POST" });
-            window.location.href = "/login";
-          }}
-        >
-          <LogOut size={18} /> <span>Sair</span>
-        </div>
-      </div>
-    </aside>
+      {/* <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarActive : ""}`}>
+        ... (Sidebar original comentada para paridade)
+      </aside> */}
+      <Sidebar />
 
       {/* MAIN */}
       <main className={styles.mainContent}>
-        <header className={styles.topBar}>
-          <div className={styles.breadcrumb}>
-            {activeTab === "oportunidades" && (
-              <Globe size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "meus-casos" && (
-              <Briefcase size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "declarei-interesse" && (
-              <Check size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "minhas-mensagens" && (
-              <Bell size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "crm" && (
-              <Users size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "docs" && (
-              <FileText size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "blindagem" && (
-              <Shield size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "redator" && (
-              <Sparkles size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "calculadora" && (
-              <Calculator size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "juris" && (
-              <Scale size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "agenda" && (
-              <Calendar size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "triagem" && (
-              <Filter size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "cartao-visitas" && (
-              <Eye size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "perfil" && (
-              <User size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab === "documentacao" && (
-              <BookOpen size={20} className={styles.breadcrumbIcon} />
-            )}
-            {activeTab?.startsWith("anuncios-") && (
-              <Zap size={20} className={styles.breadcrumbIcon} />
-            )}
-            <span>
-              {activeTab === "oportunidades"
-                ? "Oportunidades em Aberto"
-                : activeTab === "meus-casos"
-                  ? "Meus Casos"
-                  : activeTab === "declarei-interesse"
-                    ? "Declarei Interesse"
-                    : activeTab === "minhas-mensagens"
-                      ? "Minhas Mensagens"
-                    : activeTab === "crm"
-                      ? "CRM & KYC"
-                      : activeTab === "docs"
-                        ? "Smart Docs"
-                        : activeTab === "blindagem"
-                          ? "Blindagem de Documentos"
-                        : activeTab === "redator"
-                          ? "Redator IA"
-                          : activeTab === "calculadora"
-                            ? "Calculadora"
-                            : activeTab === "juris"
-                              ? "Jurisprudência"
-                              : activeTab === "agenda"
-                                ? "Agenda"
-                                : activeTab === "triagem"
-                                  ? "Triagem"
-                                  : activeTab === "cartao-visitas"
-                                    ? "Cartão Digital"
-                                    : activeTab === "perfil"
-                                      ? "Perfil"
-                                      : activeTab?.startsWith("anuncios-")
-                                        ? `Anúncios: ${activeTab.split("-")[1]}`
-                                        : "Documentação"}
-            </span>
-          </div>
-
-          <div className={styles.userActions}>
-            <div className={styles.jurisBadge}>
-              <Coins size={14} color="var(--brand-gold)" />
-              <span className={styles.jurisCount}>
-                {profileData?.balance || 0} Juris
-              </span>
-              <button
-                className={styles.buyJurisBtn}
-                onClick={() => setShowBuyModal(true)}
-              >
-                Comprar
-              </button>
-            </div>
-
-            <div className={styles.userInfo}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span className={styles.userName} style={{ margin: 0 }}>{userName}</span>
-                {profileData?.oab_verification_status === "VERIFIED" && <VerifiedBadge size={16} />}
-              </div>
-              <span className={styles.userOAB}>
-                {profileData?.oab || "OAB Pendente"}
-              </span>
-            </div>
-
-            <div className={styles.avatar}>
-              {userName.substring(0, 2).toUpperCase()}
-            </div>
-          </div>
-        </header>
+        {/* <header className={styles.topBar}>
+          ... (TopBar original comentado para paridade)
+        </header> */}
+        <TopBar />
 
         <section className={styles.pageBody}>
           {showProfileReminder && activeTab !== "perfil" && (
@@ -10535,6 +10668,7 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
       {renderBuyModal()}
       {renderProModal()}
       {renderNewClientModal()}
+      {renderVoiceModal()}
       {renderContratoModal()}
       {renderProcuracaoModal()}
       {renderProvasModal()}

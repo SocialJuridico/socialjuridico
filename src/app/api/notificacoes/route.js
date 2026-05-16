@@ -125,12 +125,11 @@ export async function DELETE(req) {
        }
     }
 
-    console.log(`[DELETE Notif] Success. Deleted: ${Array.isArray(status) ? status.length : 'ok'}`);
+    console.log(`[DELETE Notif] Success. ID: ${notificationId}`);
 
     return NextResponse.json({ 
       success: true, 
-      message: "Mensagem excluída com sucesso",
-      deletedCount: Array.isArray(status) ? status.length : undefined
+      message: "Mensagem excluída com sucesso"
     });
 
   } catch (error) {

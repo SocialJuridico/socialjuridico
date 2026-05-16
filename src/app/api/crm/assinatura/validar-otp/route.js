@@ -8,7 +8,7 @@ export async function POST(request) {
   try {
     await ensureDb();
     const body = await request.json();
-    const { signature_id, role, code } = body;
+    const { signature_id, role, code, stamp_x, stamp_y, stamp_page, stamp_position } = body;
 
     if (!signature_id || !role || !code) {
       return NextResponse.json({ success: false, message: "Campos obrigatórios ausentes" }, { status: 400 });
@@ -87,8 +87,18 @@ export async function POST(request) {
     // Carrega o PDF na biblioteca pdf-lib
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const pages = pdfDoc.getPages();
-    const lastPage = pages[pages.length - 1];
-    const { width, height } = lastPage.getSize();
+    
+    // Determina a página alvo para carimbar
+    let pageIndex = pages.length - 1;
+    if (stamp_page !== undefined) {
+      const parsedPage = parseInt(stamp_page);
+      if (!isNaN(parsedPage) && parsedPage >= 1 && parsedPage <= pages.length) {
+        pageIndex = parsedPage - 1;
+      }
+    }
+    
+    const targetPage = pages[pageIndex];
+    const { width, height } = targetPage.getSize();
 
     // Carrega fontes padrões do PDF
     const fontHelvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -98,14 +108,75 @@ export async function POST(request) {
     const stampWidth = 240;
     const stampHeight = 65;
     
-    // Posição X: Advogado na esquerda, Cliente na direita
-    const xPosition = role === 'lawyer' ? 40 : width - stampWidth - 40;
-    const yPosition = 40; // Margem inferior de 40px
+    // Posição padrão
+    let xPosition = role === 'lawyer' ? 40 : width - stampWidth - 40;
+    let yPosition = 40; // Margem inferior padrão
 
-    // --- DESENHAR O CARIMBO VISUAL ---
+    // Aplica posições pré-definidas se passadas
+    if (stamp_position) {
+      switch (stamp_position) {
+        case 'header-left':
+          xPosition = 40;
+          yPosition = height - stampHeight - 40;
+          break;
+        case 'header-center':
+          xPosition = (width - stampWidth) / 2;
+          yPosition = height - stampHeight - 40;
+          break;
+        case 'header-right':
+          xPosition = width - stampWidth - 40;
+          yPosition = height - stampHeight - 40;
+          break;
+        case 'middle-left':
+          xPosition = 40;
+          yPosition = (height - stampHeight) / 2;
+          break;
+        case 'middle-center':
+          xPosition = (width - stampWidth) / 2;
+          yPosition = (height - stampHeight) / 2;
+          break;
+        case 'middle-right':
+          xPosition = width - stampWidth - 40;
+          yPosition = (height - stampHeight) / 2;
+          break;
+        case 'footer-left':
+          xPosition = 40;
+          yPosition = 40;
+          break;
+        case 'footer-center':
+          xPosition = (width - stampWidth) / 2;
+          yPosition = 40;
+          break;
+        case 'footer-right':
+          xPosition = width - stampWidth - 40;
+          yPosition = 40;
+          break;
+      }
+    }
+
+    // Se passou coordenadas personalizadas (sobrescreve os presets)
+    // Suporta tanto coordenadas absolutas em pixels/pontos quanto relativas em porcentagem (0.0 a 1.0)
+    if (stamp_x !== undefined) {
+      const xNum = Number(stamp_x);
+      if (xNum >= 0 && xNum <= 1.0) {
+        xPosition = Math.max(10, Math.min(width - stampWidth - 10, xNum * width));
+      } else {
+        xPosition = xNum;
+      }
+    }
+    if (stamp_y !== undefined) {
+      const yNum = Number(stamp_y);
+      if (yNum >= 0 && yNum <= 1.0) {
+        yPosition = Math.max(10, Math.min(height - stampHeight - 10, (1 - yNum) * height - stampHeight));
+      } else {
+        yPosition = yNum;
+      }
+    }
+
+    // --- DESENHAR O CARIMBO VISUAL NO TARGET PAGE ---
     
     // 1. Fundo Branco para cobrir qualquer texto abaixo e garantir legibilidade
-    lastPage.drawRectangle({
+    targetPage.drawRectangle({
       x: xPosition,
       y: yPosition,
       width: stampWidth,
@@ -115,7 +186,7 @@ export async function POST(request) {
 
     // 2. Bordas Duplas (Estilo GOV.BR mas com cores exclusivas)
     // Borda Externa (Dourado Claro)
-    lastPage.drawRectangle({
+    targetPage.drawRectangle({
       x: xPosition,
       y: yPosition,
       width: stampWidth,
@@ -124,7 +195,7 @@ export async function POST(request) {
       borderWidth: 1.5,
     });
     // Borda Interna (Linha fina dourada)
-    lastPage.drawRectangle({
+    targetPage.drawRectangle({
       x: xPosition + 3,
       y: yPosition + 3,
       width: stampWidth - 6,
@@ -138,7 +209,7 @@ export async function POST(request) {
     const logoX = xPosition + 10;
     const logoY = yPosition + (stampHeight - logoSize) / 2;
 
-    lastPage.drawRectangle({
+    targetPage.drawRectangle({
       x: logoX,
       y: logoY,
       width: logoSize,
@@ -147,7 +218,7 @@ export async function POST(request) {
       borderRadius: 4,
     });
     
-    lastPage.drawText("SJ", {
+    targetPage.drawText("SJ", {
       x: logoX + 8,
       y: logoY + 10,
       size: 14,
@@ -160,7 +231,7 @@ export async function POST(request) {
     const startY = yPosition + stampHeight - 12;
 
     // Linha 1: "Documento assinado digitalmente"
-    lastPage.drawText("Documento assinado digitalmente", {
+    targetPage.drawText("Documento assinado digitalmente", {
       x: textX,
       y: startY,
       size: 6.5,
@@ -170,7 +241,7 @@ export async function POST(request) {
 
     // Linha 2: Nome do Signatário (Mais destacado)
     const displayName = targetParty.name.toUpperCase().substring(0, 32);
-    lastPage.drawText(displayName, {
+    targetPage.drawText(displayName, {
       x: textX,
       y: startY - 10,
       size: 7.5,
@@ -189,7 +260,7 @@ export async function POST(request) {
       timeZone: 'America/Sao_Paulo'
     }).format(new Date(signatureDate));
 
-    lastPage.drawText(`Data: ${formattedDate}-0300`, {
+    targetPage.drawText(`Data: ${formattedDate}-0300`, {
       x: textX,
       y: startY - 20,
       size: 6.5,
@@ -198,7 +269,7 @@ export async function POST(request) {
     });
 
     // Linha 4: Link de Validação
-    lastPage.drawText("Verifique em socialjuridico.com.br/validar", {
+    targetPage.drawText("Verifique em socialjuridico.com.br/validar", {
       x: textX,
       y: startY - 30,
       size: 5.8,
@@ -207,7 +278,7 @@ export async function POST(request) {
     });
 
     // Linha 5: Código de Validação do Documento
-    lastPage.drawText(`Código: ${sig.verification_code}`, {
+    targetPage.drawText(`Código: ${sig.verification_code}`, {
       x: textX,
       y: startY - 40,
       size: 6.5,

@@ -77,8 +77,9 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "URL do documento original não encontrada" }, { status: 400 });
     }
 
-    // Baixa o PDF original
-    const pdfResponse = await fetch(originalPdfUrl);
+    // Baixa o PDF original (adiciona cache-buster para evitar cache do Next.js/CDN e garantir que pegue o PDF com a assinatura anterior)
+    const cacheBuster = originalPdfUrl.includes("?") ? `&t=${Date.now()}` : `?t=${Date.now()}`;
+    const pdfResponse = await fetch(`${originalPdfUrl}${cacheBuster}`, { cache: 'no-store' });
     if (!pdfResponse.ok) {
       throw new Error(`Erro ao baixar PDF do Storage: ${pdfResponse.statusText}`);
     }

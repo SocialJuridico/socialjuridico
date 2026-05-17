@@ -15,7 +15,8 @@ export async function GET(request) {
       absoluteUrl = `${origin}${pdfUrl.startsWith("/") ? "" : "/"}${pdfUrl}`;
     }
 
-    const response = await fetch(absoluteUrl);
+    const cacheBuster = absoluteUrl.includes("?") ? `&t=${Date.now()}` : `?t=${Date.now()}`;
+    const response = await fetch(`${absoluteUrl}${cacheBuster}`, { cache: 'no-store' });
     
     if (!response.ok) {
       return NextResponse.json({ error: "Failed to fetch PDF from remote source" }, { status: response.status });

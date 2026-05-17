@@ -7,7 +7,7 @@ export async function POST(request) {
   try {
     await ensureDb();
     const body = await request.json();
-    const { signature_id, role } = body; // role: 'lawyer' ou 'client'
+    const { signature_id, role, is_otp_request } = body; // role: 'lawyer' ou 'client'
 
     if (!signature_id || !role || (role !== 'lawyer' && role !== 'client')) {
       return NextResponse.json({ success: false, message: "Campos obrigatórios ausentes ou inválidos" }, { status: 400 });
@@ -60,7 +60,8 @@ export async function POST(request) {
     if (updateError) throw updateError;
 
     // 4. Envia o e-mail usando o Resend com um design premium e elegante
-    const subject = role === 'lawyer' 
+    const isOtpRequest = role === 'lawyer' || is_otp_request === true;
+    const subject = isOtpRequest
       ? `[Social Jurídico] Seu código de assinatura eletrônica: ${otpCode}` 
       : `[Social Jurídico] Assinatura eletrônica de documento pendente`;
 
@@ -81,11 +82,11 @@ export async function POST(request) {
     }
     const signLink = `${siteUrl}/assinatura/${signature_id}?role=${role}`;
 
-    const htmlContent = role === 'lawyer'
+    const htmlContent = isOtpRequest
       ? `
         <div style="font-family: sans-serif; padding: 30px; color: #111; max-width: 600px; margin: 0 auto; border: 1px solid #e0d0b0; border-radius: 12px; background: #fff;">
           <h2 style="color: #c5a059; border-bottom: 2px solid #e0d0b0; padding-bottom: 10px; font-weight: 800; font-size: 1.6rem; margin-top: 0;">Social Jurídico</h2>
-          <p style="font-size: 1.1rem; line-height: 1.6; color: #333;">Prezado(a) Dr(a). <strong>${targetParty.name}</strong>,</p>
+          <p style="font-size: 1.1rem; line-height: 1.6; color: #333;">Prezado(a) <strong>${targetParty.name}</strong>,</p>
           <p style="font-size: 1rem; line-height: 1.6; color: #555;">Você solicitou a validação de assinatura eletrônica para o documento: <br><strong style="color: #222;">${sig.document_name}</strong>.</p>
           
           <div style="background: #fbf9f4; border: 1px solid #e0d0b0; border-radius: 8px; padding: 25px; text-align: center; margin: 30px 0;">
@@ -96,7 +97,7 @@ export async function POST(request) {
 
           <p style="font-size: 0.9rem; color: #666; line-height: 1.5;">Esta assinatura possui validade legal e integridade criptográfica assegurada nos termos da legislação brasileira vigente.</p>
           <hr style="border: 0; border-top: 1px solid #eef; margin: 30px 0;" />
-          <p style="font-size: 0.8rem; color: #aaa; text-align: center;">Social Jurídico - Plataforma de Alta Tecnologia para Advocacia Avançada.</p>
+          <p style="font-size: 0.8rem; color: #aaa; text-align: center;">Social Jurídico - Tecnologia Segura para Documentos Digitais.</p>
         </div>
       `
       : `

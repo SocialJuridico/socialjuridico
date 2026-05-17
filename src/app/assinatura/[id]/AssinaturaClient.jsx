@@ -217,7 +217,7 @@ export default function AssinaturaClient({ signatureId, initialRole }) {
       const res = await fetch("/api/crm/assinatura/enviar-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signature_id: signatureId, role: initialRole })
+        body: JSON.stringify({ signature_id: signatureId, role: initialRole, is_otp_request: true })
       });
       const data = await res.json();
       if (data.success) {

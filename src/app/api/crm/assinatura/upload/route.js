@@ -12,24 +12,44 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file");
+    const contentType = request.headers.get("content-type") || "";
+    let buffer;
+    let fileName = "documento.pdf";
 
-    if (!file) {
+    if (contentType.includes("application/pdf")) {
+      const arrayBuffer = await request.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      const rawFileName = request.headers.get("x-file-name");
+      if (rawFileName) {
+        fileName = decodeURIComponent(rawFileName);
+      }
+    } else {
+      // Fallback para FormData
+      const formData = await request.formData();
+      const file = formData.get("file");
+      if (file) {
+        const arrayBuffer = await file.arrayBuffer();
+        buffer = Buffer.from(arrayBuffer);
+        fileName = file.name;
+      }
+    }
+
+    if (!buffer || buffer.length === 0) {
       return NextResponse.json({ success: false, message: "Arquivo é obrigatório" }, { status: 400 });
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
     const originalHash = crypto.createHash("sha256").update(buffer).digest("hex");
 
-    const fileExt = file.name.split(".").pop();
+    const fileExt = fileName.split(".").pop() || "pdf";
     const filePath = `signatures/originals/${crypto.randomUUID()}.${fileExt}`;
 
     // Upload directly to Supabase storage
     const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from("crm_documents")
-      .upload(filePath, file);
+      .upload(filePath, buffer, {
+        contentType: 'application/pdf',
+        duplex: 'half'
+      });
 
     if (uploadError) {
       console.error("Storage upload error:", uploadError);
@@ -45,7 +65,7 @@ export async function POST(request) {
       data: {
         document_url: publicUrl,
         original_hash: originalHash,
-        file_name: file.name
+        file_name: fileName
       }
     });
 

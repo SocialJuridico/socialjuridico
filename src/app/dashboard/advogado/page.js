@@ -603,13 +603,14 @@ export default function AdvogadoDashboard() {
 
     setIsCreatingSignature(true);
     try {
-      // 1. Upload the PDF file first
-      const uploadFormData = new FormData();
-      uploadFormData.append("file", signatureFile);
-
+      // 1. Upload the PDF file first (utiliza upload binário direto para máxima compatibilidade e evitar bugs de multipart/form-data em produção)
       const uploadRes = await fetch("/api/crm/assinatura/upload", {
         method: "POST",
-        body: uploadFormData
+        headers: {
+          "Content-Type": "application/pdf",
+          "X-File-Name": encodeURIComponent(signatureFile.name)
+        },
+        body: signatureFile
       });
       const uploadResult = await uploadRes.json();
       if (!uploadResult.success) {

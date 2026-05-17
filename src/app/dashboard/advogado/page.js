@@ -254,6 +254,9 @@ export default function AdvogadoDashboard() {
   
   const pdfInputRef = useRef(null);
   const recognitionRef = useRef(null);
+  const isConcludedRef = useRef(false);
+  const pastTranscriptsRef = useRef("");
+  const isListeningRef = useRef(false);
 
   
 
@@ -3313,6 +3316,8 @@ export default function AdvogadoDashboard() {
   };
 
   const handleStopVoiceCRM = () => {
+    isConcludedRef.current = true;
+    isListeningRef.current = false;
     if (recognitionRef.current) {
       recognitionRef.current.shouldProcess = true;
       recognitionRef.current.stop();
@@ -3320,6 +3325,8 @@ export default function AdvogadoDashboard() {
   };
 
   const handleCancelVoiceCRM = () => {
+    isConcludedRef.current = false;
+    isListeningRef.current = false;
     if (recognitionRef.current) {
       recognitionRef.current.shouldProcess = false;
       recognitionRef.current.abort();
@@ -3731,6 +3738,11 @@ export default function AdvogadoDashboard() {
       return;
     }
 
+    // Inicializa estados do ciclo de vida do microfone
+    isConcludedRef.current = false;
+    pastTranscriptsRef.current = "";
+    isListeningRef.current = true;
+
     const recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
     recognition.continuous = true;
@@ -3739,55 +3751,97 @@ export default function AdvogadoDashboard() {
     recognitionRef.current = recognition;
 
     let accumulatedTranscript = "";
-    let startTime = 0;
+    let startTime = Date.now();
 
     recognition.onstart = () => {
       startTime = Date.now();
       setIsListening(true);
       setShowVoiceModal(true);
-      setVoiceTranscript("");
+      if (!pastTranscriptsRef.current) {
+        setVoiceTranscript("");
+      }
     };
 
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
+      const currentTranscript = Array.from(event.results)
         .map((result) => result[0])
         .map((result) => result.transcript)
         .join("");
-      accumulatedTranscript = transcript;
-      setVoiceTranscript(transcript);
+      
+      const fullTranscript = pastTranscriptsRef.current
+        ? `${pastTranscriptsRef.current} ${currentTranscript}`
+        : currentTranscript;
+
+      accumulatedTranscript = fullTranscript;
+      setVoiceTranscript(fullTranscript);
     };
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error", event.error);
-      setIsListening(false);
-      recognition.shouldProcess = false; // Cancela o processamento posterior no onend
       
-      if (event.error === "not-allowed") {
-        toast.error("Permissão de microfone negada. Certifique-se de acessar via HTTPS e permitir o acesso ao microfone nas configurações do seu navegador.");
-      } else if (event.error === "service-not-allowed") {
-        toast.error("Serviço de reconhecimento de voz não disponível ou bloqueado neste navegador.");
-      } else if (event.error !== "aborted") {
-        toast.error("Erro no reconhecimento de voz: " + event.error);
+      // No-speech é comum em mobiles quando o advogado faz uma pausa longa para pensar
+      if (event.error === "no-speech") {
+        return; // Ignora o erro e deixa o onend lidar com o auto-restart
       }
-      setShowVoiceModal(false);
+
+      if (event.error === "not-allowed") {
+        setIsListening(false);
+        isListeningRef.current = false;
+        recognition.shouldProcess = false;
+        toast.error("Permissão de microfone negada. Certifique-se de acessar via HTTPS e permitir o acesso ao microfone nas configurações do seu navegador.");
+        setShowVoiceModal(false);
+      } else if (event.error === "service-not-allowed") {
+        setIsListening(false);
+        isListeningRef.current = false;
+        recognition.shouldProcess = false;
+        toast.error("Serviço de reconhecimento de voz não disponível ou bloqueado neste navegador.");
+        setShowVoiceModal(false);
+      } else if (event.error !== "aborted") {
+        console.warn("Erro não fatal detectado:", event.error);
+      }
     };
 
     recognition.onend = async () => {
-      setIsListening(false);
-      const duration = Date.now() - startTime;
-      if (recognition.shouldProcess) {
+      // Se o usuário cancelou voluntariamente
+      if (!recognition.shouldProcess) {
+        setIsListening(false);
+        isListeningRef.current = false;
+        setShowVoiceModal(false);
+        return;
+      }
+
+      // Se o usuário concluiu de fato clicando no botão "Concluir e Processar"
+      if (isConcludedRef.current) {
+        setIsListening(false);
+        isListeningRef.current = false;
         const textToProcess = accumulatedTranscript.trim();
         if (textToProcess.length > 5) {
           await processVoiceCommand(textToProcess);
         } else {
+          const duration = Date.now() - startTime;
           if (duration < 2000) {
-            toast.error("Conexão encerrada muito rápido pelo navegador. Navegadores como Opera, Brave e Firefox não suportam o motor de voz do Google por padrão. Por favor, utilize o Google Chrome ou Microsoft Edge normais.");
+            toast.error("Conexão encerrada muito rápido pelo navegador. Recomendamos usar o Google Chrome ou Edge.");
           } else {
-            toast.error("Nenhuma fala detectada ou áudio muito curto. Verifique se o seu microfone físico está desmutado ou selecione outro dispositivo nas configurações do sistema.");
+            toast.error("Nenhuma fala detectada ou áudio muito curto.");
           }
         }
+        setShowVoiceModal(false);
+        return;
       }
-      setShowVoiceModal(false);
+
+      // Se parou sozinho por timeout de silêncio no Mobile (Chrome Android/Safari iOS)
+      if (isListeningRef.current) {
+        pastTranscriptsRef.current = accumulatedTranscript;
+        try {
+          recognition.start();
+        } catch (e) {
+          console.log("Reiniciando captura SpeechRecognition após pausa de silêncio móvel:", e);
+        }
+      } else {
+        setIsListening(false);
+        isListeningRef.current = false;
+        setShowVoiceModal(false);
+      }
     };
 
     recognition.start();

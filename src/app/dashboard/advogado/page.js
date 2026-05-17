@@ -3331,56 +3331,138 @@ export default function AdvogadoDashboard() {
   const renderVoiceModal = () => {
     if (!showVoiceModal) return null;
 
+    const normalizedText = voiceTranscript.toLowerCase();
+    const checklist = [
+      { id: "nome", label: "Nome do Cliente", matched: normalizedText.trim().length > 5 },
+      { id: "tipo", label: "Tipo (Fís./Jur.)", matched: normalizedText.includes("física") || normalizedText.includes("jurídica") || normalizedText.includes("empresa") || normalizedText.includes("limitada") || normalizedText.includes("ltda") },
+      { id: "cpf", label: "CPF / CNPJ", matched: /\d{3}/.test(normalizedText) || normalizedText.includes("cpf") || normalizedText.includes("cnpj") },
+      { id: "rg", label: "RG / IE", matched: normalizedText.includes("rg") || normalizedText.includes("ie") || normalizedText.includes("identidade") || normalizedText.includes("inscrição estadual") },
+      { id: "estado_civil", label: "Estado Civil", matched: normalizedText.includes("solteir") || normalizedText.includes("casad") || normalizedText.includes("divorciad") || normalizedText.includes("viúv") || normalizedText.includes("união estável") || normalizedText.includes("estado civil") },
+      { id: "profissao", label: "Profissão", matched: normalizedText.includes("profissão") || normalizedText.includes("trabalha") || normalizedText.includes("autônomo") || normalizedText.includes("aposentado") || normalizedText.includes("empresário") || normalizedText.includes("advogado") || normalizedText.includes("engenheiro") || normalizedText.includes("médico") || normalizedText.includes("professor") },
+      { id: "telefone", label: "Telefone", matched: normalizedText.includes("telefone") || normalizedText.includes("celular") || normalizedText.includes("whats") || /\d{8}/.test(normalizedText) },
+      { id: "email", label: "E-mail", matched: normalizedText.includes("@") || normalizedText.includes("email") || normalizedText.includes("e-mail") },
+      { id: "endereco", label: "Endereço", matched: normalizedText.includes("rua") || normalizedText.includes("avenida") || normalizedText.includes("reside") || normalizedText.includes("mora") || normalizedText.includes("bairro") || normalizedText.includes("cidade") },
+      { id: "caso", label: "Fatos do Caso", matched: normalizedText.includes("caso") || normalizedText.includes("danos") || normalizedText.includes("processo") || normalizedText.includes("contrato") || normalizedText.includes("ação") || normalizedText.includes("fato") }
+    ];
+
     return (
-      <div className={styles.modalOverlay} style={{ zIndex: 10001 }}>
-        <div className={styles.modalContent} style={{ maxWidth: '450px', textAlign: 'center', padding: '40px', borderRadius: '24px', background: '#111116', border: '1px solid rgba(212, 175, 55, 0.2)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
-          <div className={styles.voicePulseContainer} style={{ marginBottom: '30px', position: 'relative', display: 'inline-block' }}>
-            <div className={styles.pulseMic} style={{ width: '90px', height: '90px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', border: '2px solid rgba(212,175,55,0.3)' }}>
-              <Mic size={45} color="var(--color-gold)" />
-            </div>
-            {isListening && (
-              <>
-                <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid var(--color-gold)', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', opacity: 0.6 }}></div>
-                <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid var(--color-gold)', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', animationDelay: '0.5s', opacity: 0.4 }}></div>
-              </>
-            )}
-          </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '10px', color: '#fff' }}>
-            {isListening ? "Estou ouvindo..." : "Processando áudio..."}
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem', marginBottom: '20px' }}>
-            Fale os dados do cliente naturalmente (ex: "O nome do cliente é João Silva, CPF 123.456.789-00, reside na rua tal...")
-          </p>
-          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '15px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '25px', minHeight: '80px', maxHeight: '150px', overflowY: 'auto', textAlign: 'left' }}>
-            <p style={{ color: '#fff', fontSize: '0.9rem', margin: 0, lineHeight: '1.5', fontStyle: voiceTranscript ? 'normal' : 'italic', opacity: voiceTranscript ? 1 : 0.4 }}>
-              {voiceTranscript || "Sua fala aparecerá aqui em tempo real..."}
-            </p>
-          </div>
+      <div className={styles.modalOverlay} style={{ zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ display: 'flex', gap: '20px', maxWidth: '950px', width: '100%', alignItems: 'stretch', flexWrap: 'wrap', justifyContent: 'center' }}>
           
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            {isListening ? (
-              <>
-                <button 
-                  type="button"
-                  onClick={handleCancelVoiceCRM}
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}
-                >
-                  <X size={16} /> Cancelar
-                </button>
-                <button 
-                  type="button"
-                  onClick={handleStopVoiceCRM}
-                  style={{ background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', border: 'none', color: '#fff', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', boxShadow: '0 4px 12px rgba(0, 230, 118, 0.2)' }}
-                >
-                  <Square size={14} fill="currentColor" /> Concluir e Processar
-                </button>
-              </>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-gold)', fontWeight: 600 }}>
-                <Loader2 size={20} className={styles.spin} /> Processando dados...
+          {/* PAINEL ESQUERDO: O GRAVADOR */}
+          <div className={styles.modalContent} style={{ flex: '1.2', minWidth: '320px', textAlign: 'center', padding: '35px', borderRadius: '24px', background: '#111116', border: '1px solid rgba(212, 175, 55, 0.2)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', margin: 0 }}>
+            <div>
+              <div className={styles.voicePulseContainer} style={{ marginBottom: '20px', position: 'relative', display: 'inline-block' }}>
+                <div className={styles.pulseMic} style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', border: '2px solid rgba(212,175,55,0.3)' }}>
+                  <Mic size={40} color="var(--color-gold)" />
+                </div>
+                {isListening && (
+                  <>
+                    <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid var(--color-gold)', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', opacity: 0.6 }}></div>
+                    <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid var(--color-gold)', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', animationDelay: '0.5s', opacity: 0.4 }}></div>
+                  </>
+                )}
               </div>
-            )}
+              
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '10px', color: '#fff' }}>
+                {isListening ? "Estou ouvindo..." : "Processando áudio..."}
+              </h2>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginBottom: '20px' }}>
+                Fale os dados do cliente naturalmente. A IA cuidará de estruturar tudo nos campos certos do CRM.
+              </p>
+
+              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '15px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '25px', minHeight: '120px', maxHeight: '180px', overflowY: 'auto', textAlign: 'left' }}>
+                <p style={{ color: '#fff', fontSize: '0.9rem', margin: 0, lineHeight: '1.5', fontStyle: voiceTranscript ? 'normal' : 'italic', opacity: voiceTranscript ? 1 : 0.4 }}>
+                  {voiceTranscript || "Sua fala aparecerá aqui em tempo real..."}
+                </p>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              {isListening ? (
+                <>
+                  <button 
+                    type="button"
+                    onClick={handleCancelVoiceCRM}
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}
+                  >
+                    <X size={16} /> Cancelar
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={handleStopVoiceCRM}
+                    style={{ background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', border: 'none', color: '#fff', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', boxShadow: '0 4px 12px rgba(0, 230, 118, 0.2)' }}
+                  >
+                    <Square size={14} fill="currentColor" /> Concluir e Processar
+                  </button>
+                </>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-gold)', fontWeight: 600 }}>
+                  <Loader2 size={20} className={styles.spin} /> Processando dados...
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* PAINEL DIREITO: A DOBRA / GABARITO */}
+          <div style={{ flex: '1.2', minWidth: '340px', background: '#161622', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '24px', padding: '30px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', margin: 0 }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
+                <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--color-gold)', fontWeight: 800, letterSpacing: '1px' }}>📋 Gabarito de Informações</span>
+              </div>
+              
+              {/* CHECKLIST EM 2 COLUNAS */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '25px' }}>
+                {checklist.map(item => (
+                  <div 
+                    key={item.id} 
+                    style={{ 
+                      background: item.matched ? 'rgba(0, 230, 118, 0.08)' : 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${item.matched ? '#00e676' : 'rgba(255,255,255,0.05)'}`,
+                      borderRadius: '10px', 
+                      padding: '8px 12px', 
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      color: item.matched ? '#00e676' : 'rgba(255,255,255,0.4)',
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <div style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      background: item.matched ? 'rgba(0, 230, 118, 0.15)' : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${item.matched ? '#00e676' : 'rgba(255,255,255,0.2)'}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                      flexShrink: 0
+                    }}>
+                      {item.matched ? (
+                        <Check size={10} strokeWidth={3} />
+                      ) : (
+                        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(255,255,255,0.4)' }} />
+                      )}
+                    </div>
+                    <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ROTEIRO SUGERIDO */}
+            <div style={{ background: 'rgba(212,175,55,0.03)', border: '1px solid rgba(212,175,55,0.08)', borderRadius: '14px', padding: '15px' }}>
+              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--color-gold)', fontWeight: 700, display: 'block', marginBottom: '6px' }}>💡 Dica de Roteiro</span>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', margin: 0, lineHeight: '1.45', fontStyle: 'italic' }}>
+                "Cadastra o **[Nome]**, do tipo **[Física/Jurídica]**, solteiro, profissão **[Profissão]**, CPF **[Número]**, RG **[Número]**, telefone **[Número]**, email **[Endereço]**, residente na **[Rua/Número]**. O caso dele é sobre **[Descreva o Fato]**..."
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
     );

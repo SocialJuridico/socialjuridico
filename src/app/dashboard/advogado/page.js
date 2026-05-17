@@ -3653,10 +3653,16 @@ export default function AdvogadoDashboard() {
     recognition.onerror = (event) => {
       console.error("Speech recognition error", event.error);
       setIsListening(false);
-      if (event.error !== "aborted") {
-        toast.error("Erro no reconhecimento de voz.");
-        setShowVoiceModal(false);
+      recognition.shouldProcess = false; // Cancela o processamento posterior no onend
+      
+      if (event.error === "not-allowed") {
+        toast.error("Permissão de microfone negada. Certifique-se de acessar via HTTPS e permitir o acesso ao microfone nas configurações do seu navegador.");
+      } else if (event.error === "service-not-allowed") {
+        toast.error("Serviço de reconhecimento de voz não disponível ou bloqueado neste navegador.");
+      } else if (event.error !== "aborted") {
+        toast.error("Erro no reconhecimento de voz: " + event.error);
       }
+      setShowVoiceModal(false);
     };
 
     recognition.onend = async () => {
@@ -3668,8 +3674,8 @@ export default function AdvogadoDashboard() {
         } else {
           toast.error("Nenhuma fala detectada ou áudio muito curto.");
         }
-        setShowVoiceModal(false);
       }
+      setShowVoiceModal(false);
     };
 
     recognition.start();

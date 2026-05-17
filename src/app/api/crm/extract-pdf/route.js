@@ -20,15 +20,7 @@ export async function POST(request) {
     let fileType = "";
     let fileName = "arquivo.pdf";
 
-    if (contentType.includes("application/pdf") || contentType.startsWith("image/")) {
-      const arrayBuffer = await request.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-      fileType = contentType;
-      const rawFileName = request.headers.get("x-file-name");
-      if (rawFileName) {
-        fileName = decodeURIComponent(rawFileName);
-      }
-    } else {
+    if (contentType.includes("multipart/form-data")) {
       // Fallback para FormData
       const formData = await request.formData();
       const file = formData.get("file");
@@ -37,6 +29,15 @@ export async function POST(request) {
         buffer = Buffer.from(arrayBuffer);
         fileType = file.type;
         fileName = file.name;
+      }
+    } else {
+      // Por padrão, trata como upload binário bruto no corpo da requisição
+      const arrayBuffer = await request.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      fileType = contentType;
+      const rawFileName = request.headers.get("x-file-name");
+      if (rawFileName) {
+        fileName = decodeURIComponent(rawFileName);
       }
     }
 

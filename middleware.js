@@ -142,10 +142,10 @@ export async function middleware(request) {
   // Referrer Policy - não enviar referrer para externos
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
-  // Disable de característica de rastreamento
+  // Disable de característica de rastreamento para externos, mas mantendo habilitado no próprio domínio (self) para Comando de Voz e Videoconferências (Jitsi)
   response.headers.set(
     "Permissions-Policy",
-    "geolocation=(), microphone=(), camera=()",
+    "geolocation=(self), microphone=(self), camera=(self)"
   );
 
   // Remove X-Powered-By (não expor tecnologia usada)

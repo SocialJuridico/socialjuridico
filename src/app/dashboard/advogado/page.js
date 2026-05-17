@@ -3620,10 +3620,32 @@ export default function AdvogadoDashboard() {
     e.target.value = "";
   };
 
-  const handleStartVoiceCRM = () => {
+  const handleStartVoiceCRM = async () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       toast.error("Seu navegador não suporta reconhecimento de voz.");
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast.error("Ambiente inseguro detectado. O reconhecimento de voz exige conexão segura HTTPS em produção.");
+      return;
+    }
+
+    // Solicita explicitamente o microfone antes para forçar o pop-up de permissão no navegador em produção
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Para todos os tracks do stream para não travar o dispositivo de áudio
+      stream.getTracks().forEach(track => track.stop());
+    } catch (err) {
+      console.error("Erro ao obter permissão do microfone:", err);
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        toast.error("Acesso ao microfone negado. Por favor, permita o acesso ao microfone nas configurações do seu navegador para usar o comando de voz.");
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        toast.error("Nenhum microfone físico foi encontrado no seu dispositivo.");
+      } else {
+        toast.error("Erro ao acessar o microfone. Certifique-se de estar acessando via conexão segura (HTTPS).");
+      }
       return;
     }
 

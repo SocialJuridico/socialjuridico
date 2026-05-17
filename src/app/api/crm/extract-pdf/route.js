@@ -52,17 +52,18 @@ export async function POST(request) {
     let imageBase64 = null;
 
     if (isPDF) {
-      // Extração de texto para PDF usando pdf-parse (100% estável e compatível com Node v20)
+      // Extração de texto para PDF usando unpdf (moderno, 100% puro JS, sem bugs de bundling)
       try {
-        const pdf = require("pdf-parse");
-        const parsed = await pdf(buffer);
-        contextData = parsed.text;
+        const { extractText, getDocumentProxy } = await import("unpdf");
+        const pdf = await getDocumentProxy(new Uint8Array(buffer));
+        const { text } = await extractText(pdf, { mergePages: true });
+        contextData = text;
 
         if (!contextData || contextData.trim().length < 10) {
           throw new Error("PDF sem conteúdo de texto legível (provável imagem/scan).");
         }
       } catch (pdfErr) {
-        console.error("Erro no parse do PDF (pdf-parse):", pdfErr);
+        console.error("Erro no parse do PDF (unpdf):", pdfErr);
         return NextResponse.json({ 
           success: false, 
           message: "Este PDF parece ser um scan ou imagem. Para extrair os dados, por favor envie uma FOTO clara do documento (JPG/PNG) ao invés do PDF." 

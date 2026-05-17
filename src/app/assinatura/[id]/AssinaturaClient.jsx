@@ -393,7 +393,12 @@ export default function AssinaturaClient({ signatureId, initialRole }) {
               </div>
 
               {sigData.document_url && (
-                <a href={sigData.document_url} target="_blank" rel="noopener noreferrer" className={styles.downloadBtn}>
+                <a 
+                  href={`${sigData.document_url}${sigData.document_url.includes('?') ? '&' : '?'}t=${Date.now()}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className={styles.downloadBtn}
+                >
                   <Download size={18} /> Baixar PDF Assinado
                 </a>
               )}

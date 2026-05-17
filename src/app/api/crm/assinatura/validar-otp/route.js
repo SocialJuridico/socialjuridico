@@ -300,7 +300,8 @@ export async function POST(request) {
       .from("crm_documents")
       .upload(filePath, pdfBytes, {
         contentType: 'application/pdf',
-        upsert: true
+        upsert: true,
+        cacheControl: '0'
       });
 
     if (uploadError) {

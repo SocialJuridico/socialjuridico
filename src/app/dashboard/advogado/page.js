@@ -2196,7 +2196,7 @@ export default function AdvogadoDashboard() {
 
                             {sig.status === 'signed' && sig.document_url && (
                               <a
-                                href={sig.document_url}
+                                href={`${sig.document_url}${sig.document_url.includes('?') ? '&' : '?'}t=${Date.now()}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{ padding: '6px 12px', background: 'rgba(0, 230, 118, 0.1)', border: '1px solid rgba(0, 230, 118, 0.2)', color: '#00e676', borderRadius: '6px', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}

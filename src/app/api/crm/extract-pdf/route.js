@@ -51,35 +51,17 @@ export async function POST(request) {
     let imageBase64 = null;
 
     if (isPDF) {
-      // Extração de texto para PDF usando pdfjs-dist (mais estável)
+      // Extração de texto para PDF usando pdf-parse (100% estável e compatível com Node v20)
       try {
-        const pdfjs = await eval('import("pdfjs-dist/build/pdf.mjs")');
-        
-        const uint8Bytes = new Uint8Array(buffer);
-        
-        const loadingTask = pdfjs.getDocument({
-          data: uint8Bytes,
-          useSystemFonts: true,
-          disableFontFace: true,
-        });
-        
-        const pdfDoc = await loadingTask.promise;
-        let fullText = "";
-        
-        for (let i = 1; i <= pdfDoc.numPages; i++) {
-          const page = await pdfDoc.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items.map(item => item.str).join(" ");
-          fullText += pageText + "\n";
-        }
-        
-        contextData = fullText;
+        const pdf = require("pdf-parse");
+        const parsed = await pdf(buffer);
+        contextData = parsed.text;
 
         if (!contextData || contextData.trim().length < 10) {
           throw new Error("PDF sem conteúdo de texto legível (provável imagem/scan).");
         }
       } catch (pdfErr) {
-        console.error("Erro no parse do PDF (pdfjs):", pdfErr);
+        console.error("Erro no parse do PDF (pdf-parse):", pdfErr);
         return NextResponse.json({ 
           success: false, 
           message: "Este PDF parece ser um scan ou imagem. Para extrair os dados, por favor envie uma FOTO clara do documento (JPG/PNG) ao invés do PDF." 

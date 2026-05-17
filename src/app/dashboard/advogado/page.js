@@ -3635,8 +3635,10 @@ export default function AdvogadoDashboard() {
     recognitionRef.current = recognition;
 
     let accumulatedTranscript = "";
+    let startTime = 0;
 
     recognition.onstart = () => {
+      startTime = Date.now();
       setIsListening(true);
       setShowVoiceModal(true);
       setVoiceTranscript("");
@@ -3668,12 +3670,17 @@ export default function AdvogadoDashboard() {
 
     recognition.onend = async () => {
       setIsListening(false);
+      const duration = Date.now() - startTime;
       if (recognition.shouldProcess) {
         const textToProcess = accumulatedTranscript.trim();
         if (textToProcess.length > 5) {
           await processVoiceCommand(textToProcess);
         } else {
-          toast.error("Nenhuma fala detectada ou áudio muito curto.");
+          if (duration < 2000) {
+            toast.error("Conexão encerrada muito rápido pelo navegador. Navegadores como Opera, Brave e Firefox não suportam o motor de voz do Google por padrão. Por favor, utilize o Google Chrome ou Microsoft Edge normais.");
+          } else {
+            toast.error("Nenhuma fala detectada ou áudio muito curto. Verifique se o seu microfone físico está desmutado ou selecione outro dispositivo nas configurações do sistema.");
+          }
         }
       }
       setShowVoiceModal(false);

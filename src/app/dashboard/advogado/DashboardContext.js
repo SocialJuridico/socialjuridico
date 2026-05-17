@@ -807,15 +807,16 @@ export function DashboardProvider({ children }) {
     fetchAssociatedCases,
     fetchAgenda,
     handleExtractPDF: async (file) => {
-      setIsExtractingPDF(true);
-      const formData = new FormData();
-      formData.append("file", file);
-
-      try {
-        const res = await fetch("/api/crm/extract-pdf", {
-          method: "POST",
-          body: formData,
-        });
+       setIsExtractingPDF(true);
+       try {
+         const res = await fetch("/api/crm/extract-pdf", {
+           method: "POST",
+           headers: {
+             "Content-Type": file.type || "application/octet-stream",
+             "X-File-Name": encodeURIComponent(file.name)
+           },
+           body: file,
+         });
         const data = await res.json();
         if (data.success) {
           toast.success("Dados extraídos com sucesso!");

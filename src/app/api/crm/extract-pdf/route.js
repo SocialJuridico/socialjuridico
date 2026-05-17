@@ -15,15 +15,37 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file");
+    const contentType = request.headers.get("content-type") || "";
+    let buffer;
+    let fileType = "";
+    let fileName = "arquivo.pdf";
 
-    if (!file) {
+    if (contentType.includes("application/pdf") || contentType.startsWith("image/")) {
+      const arrayBuffer = await request.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+      fileType = contentType;
+      const rawFileName = request.headers.get("x-file-name");
+      if (rawFileName) {
+        fileName = decodeURIComponent(rawFileName);
+      }
+    } else {
+      // Fallback para FormData
+      const formData = await request.formData();
+      const file = formData.get("file");
+      if (file) {
+        const arrayBuffer = await file.arrayBuffer();
+        buffer = Buffer.from(arrayBuffer);
+        fileType = file.type;
+        fileName = file.name;
+      }
+    }
+
+    if (!buffer || buffer.length === 0) {
       return NextResponse.json({ success: false, message: "Nenhum arquivo enviado" }, { status: 400 });
     }
 
-    const isPDF = file.type === "application/pdf";
-    const isImage = file.type.startsWith("image/");
+    const isPDF = fileType.includes("application/pdf") || fileName.endsWith(".pdf");
+    const isImage = fileType.startsWith("image/") || fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg");
 
     let contextData = "";
     let imageBase64 = null;
@@ -33,11 +55,10 @@ export async function POST(request) {
       try {
         const pdfjs = await eval('import("pdfjs-dist/build/pdf.mjs")');
         
-        const bytes = await file.arrayBuffer();
-        const buffer = new Uint8Array(bytes);
+        const uint8Bytes = new Uint8Array(buffer);
         
         const loadingTask = pdfjs.getDocument({
-          data: buffer,
+          data: uint8Bytes,
           useSystemFonts: true,
           disableFontFace: true,
         });
@@ -64,11 +85,9 @@ export async function POST(request) {
           message: "Este PDF parece ser um scan ou imagem. Para extrair os dados, por favor envie uma FOTO clara do documento (JPG/PNG) ao invés do PDF." 
         }, { status: 400 });
       }
-    }
- else if (isImage) {
+    } else if (isImage) {
       // Processamento de Imagem (Base64)
-      const bytes = await file.arrayBuffer();
-      imageBase64 = Buffer.from(bytes).toString("base64");
+      imageBase64 = buffer.toString("base64");
     } else {
       return NextResponse.json({ success: false, message: "Formato de arquivo não suportado. Use PDF ou Imagem." }, { status: 400 });
     }

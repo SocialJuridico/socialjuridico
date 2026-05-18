@@ -23,12 +23,10 @@ export async function middleware(request) {
   // ── VERIFICAÇÃO DE SESSÃO DO ESCRITÓRIO (COOKIE CUSTOMIZADO) ──
   const escritorioSession = request.cookies.get("sj_escritorio_session");
   if (pathname.startsWith("/dashboard/escritorio")) {
-    if (!escritorioSession) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
+    if (escritorioSession) {
+      return NextResponse.next();
     }
-    return NextResponse.next();
+    // Deixa passar para ser validado pela sessão do Supabase abaixo
   }
 
   // ── VERIFICAÇÃO DE SESSÃO DO ANUNCIANTE (COOKIE CUSTOMIZADO) ──

@@ -32,7 +32,9 @@ import {
   FileSpreadsheet,
   PlusCircle,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  Check,
+  X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./EscritorioDashboard.module.css";
@@ -950,6 +952,31 @@ export default function EscritorioDashboardPage() {
     }
   };
 
+  const handleToggleOabVerification = async (lawyerId, currentStatus) => {
+    const nextStatus = currentStatus === "VERIFIED" ? "UNVERIFIED" : "VERIFIED";
+    try {
+      const res = await fetch("/api/escritorio/staff", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lawyerId,
+          action: "TOGGLE_OAB_VERIFICATION",
+          value: nextStatus === "VERIFIED"
+        })
+      });
+      const dataJson = await res.json();
+      if (!res.ok || !dataJson.success) {
+        toast.error(dataJson.message || "Erro ao atualizar verificação");
+        return;
+      }
+      toast.success("Status de verificação da OAB atualizado!");
+      loadDashboard();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro de conexão ao atualizar verificação");
+    }
+  };
+
   if (loading || !data) {
     return <div className={styles.loading}>Carregando painel enterprise...</div>;
   }
@@ -968,10 +995,10 @@ export default function EscritorioDashboardPage() {
   const iaPercent = limits.creditos_ia >= 999999 ? 0 : Math.min(100, (usage.ia_requests_used / limits.creditos_ia) * 100) || 0;
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${isSecretary ? styles.secretaryPage : ''}`}>
       
       {/* HEADER DO ESCRITÓRIO */}
-      <header className={styles.header}>
+      <header className={`${styles.header} ${isSecretary ? styles.secretaryHeader : ''}`}>
         <div className={styles.headerLeft}>
           <div className={styles.logoBox}>
             {office.logo_url ? (
@@ -992,9 +1019,22 @@ export default function EscritorioDashboardPage() {
             </div>
           </div>
         </div>
-        <button className={styles.logoutBtn} onClick={handleLogout}>
-          <LogOut size={16} /> Sair do Painel
-        </button>
+        
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          {requester && (
+            <div className={styles.userProfileBadge}>
+              <span className={styles.userRole}>
+                {isSecretary ? "Secretária" : "Gestor"}
+              </span>
+              <span className={styles.userName}>
+                {requester.name}
+              </span>
+            </div>
+          )}
+          <button className={styles.logoutBtn} onClick={handleLogout}>
+            <LogOut size={16} /> Sair do Painel
+          </button>
+        </div>
       </header>
 
       {/* METRICAS DE CONSUMO */}
@@ -1164,7 +1204,7 @@ export default function EscritorioDashboardPage() {
 
       {/* PAINEL OPERACIONAL */}
       {activeTab === "gestao" && (
-        <main className={styles.workspace}>
+        <main className={`${styles.workspace} ${isSecretary ? styles.secretaryWorkspace : ''}`}>
         
         {/* ESQUERDA: LISTA DE MEMBROS E CAPACIDADE */}
         <section className={styles.panel}>
@@ -1176,9 +1216,11 @@ export default function EscritorioDashboardPage() {
               <span style={{ fontSize: "0.82rem", color: "#9ca3af" }}>
                 Advs: {usage.lawyers_count}/{office.max_advogados} | Ests: {usage.estagiarios_count}/{office.max_estagiarios}
               </span>
-              <button className={styles.addStaffBtn} onClick={() => setIsAddOpen(true)}>
-                <Plus size={16} /> Contratar/Adicionar
-              </button>
+              {!isSecretary && (
+                <button className={styles.addStaffBtn} onClick={() => setIsAddOpen(true)}>
+                  <Plus size={16} /> Contratar/Adicionar
+                </button>
+              )}
             </div>
           </div>
 
@@ -1196,6 +1238,7 @@ export default function EscritorioDashboardPage() {
                     <th>Telefone</th>
                     <th>Cargo</th>
                     <th>OAB</th>
+                    <th>Status OAB</th>
                     <th>IA Liberada</th>
                   </tr>
                 </thead>
@@ -1213,6 +1256,39 @@ export default function EscritorioDashboardPage() {
                         </span>
                       </td>
                       <td>{member.oab ? `${member.oab}/${member.estado}` : "Não possui"}</td>
+                      <td>
+                        {member.cargo === "advogado" && member.oab ? (
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            {member.oab_verification_status === "VERIFIED" ? (
+                              <span style={{ color: "#10b981", fontWeight: 700, fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <Check size={12} /> Verificada
+                              </span>
+                            ) : (
+                              <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <X size={12} /> Pendente
+                              </span>
+                            )}
+                            {!isSecretary && (
+                              <button
+                                onClick={() => handleToggleOabVerification(member.id, member.oab_verification_status)}
+                                style={{
+                                  background: "rgba(255, 255, 255, 0.05)",
+                                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                                  borderRadius: "4px",
+                                  padding: "2px 6px",
+                                  fontSize: "0.7rem",
+                                  color: "#fff",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                {member.oab_verification_status === "VERIFIED" ? "Inativar" : "Verificar"}
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: "#9ca3af" }}>-</span>
+                        )}
+                      </td>
                       <td>
                         {member.bloqueado_ia ? (
                           <span style={{ color: "#ef4444", fontWeight: 700, fontSize: "0.8rem", display: "inline-flex", alignItems: "center", gap: "4px" }}>
@@ -1233,6 +1309,7 @@ export default function EscritorioDashboardPage() {
         </section>
 
         {/* DIREITA: DISTRIBUIÇÃO DE COTAS E PERMISSÕES DE ACESSO */}
+        {!isSecretary && (
         <section className={styles.panel}>
           <div className={styles.panelHeader} style={{ flexDirection: "column", alignItems: "flex-start", gap: "10px" }}>
             <h2 style={{ margin: 0 }}>
@@ -1654,6 +1731,7 @@ export default function EscritorioDashboardPage() {
             );
           })()}
         </section>
+        )}
 
       </main>
       )}

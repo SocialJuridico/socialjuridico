@@ -1,21 +1,39 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
-const db = supabaseAdmin || supabase;
+const db = supabaseAdmin;
 
 // Helper to authenticate office session
 async function getOfficeId() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("sj_escritorio_session");
-  if (!sessionCookie) return null;
-  try {
-    const decoded = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString("utf8"));
-    return decoded.id;
-  } catch {
-    return null;
+  if (sessionCookie) {
+    try {
+      const decoded = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString("utf8"));
+      return decoded.id;
+    } catch {
+      // ignore
+    }
   }
+
+  try {
+    const supabase = createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user && !error) {
+      const { data: adv } = await (supabaseAdmin || supabase)
+        .from("advogados")
+        .select("escritorio_id")
+        .eq("id", user.id)
+        .single();
+      if (adv) return adv.escritorio_id;
+    }
+  } catch (e) {
+    console.error("Erro ao obter officeId do usuario auth:", e);
+  }
+
+  return null;
 }
 
 // POST /api/escritorio/staff -> Cadastrar funcionário (Advogado ou Estagiário) pelo Painel do Escritório
@@ -184,6 +202,8 @@ export async function PUT(request) {
       updates.bloqueado_ia = !!value;
     } else if (action === "UPDATE_PERMISSIONS") {
       updates.permissoes = typeof value === "object" ? value : {};
+    } else if (action === "TOGGLE_OAB_VERIFICATION") {
+      updates.oab_verification_status = value ? "VERIFIED" : "UNVERIFIED";
     }
 
     const { data: updatedLawyer, error: updateError } = await db

@@ -83,6 +83,29 @@ export default function Sidebar() {
         </div>
       </div>
 
+      {profileData?.nome_escritorio && (
+        <div 
+          style={{
+            background: "rgba(0, 180, 216, 0.08)",
+            border: "1px solid rgba(0, 180, 216, 0.25)",
+            borderRadius: "8px",
+            padding: "6px 12px",
+            margin: "0 16px 10px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            color: "#00b4d8",
+            fontSize: "0.82rem",
+            fontWeight: 600
+          }}
+        >
+          <Users size={14} style={{ flexShrink: 0 }} />
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {profileData.nome_escritorio}
+          </span>
+        </div>
+      )}
+
       {profileData?.is_premium || profileData?.plan_type === 'START' ? (
         <div className={`${styles.premiumActiveBadge} ${profileData?.plan_type === 'START' ? styles.startActiveBadge : ''}`}>
           <Sparkles size={14} /> Plano {profileData?.plan_type === 'START' ? 'START' : 'PRO'} Ativo

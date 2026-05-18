@@ -1,13 +1,13 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-
-const db = supabaseAdmin || supabase;
 
 // Helper to authenticate the requester and return officeId + user profile
 async function getSessionInfo() {
   const cookieStore = await cookies();
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
   
   // 1. Check if logged in as the Office Administrator
   const sessionCookie = cookieStore.get("sj_escritorio_session");
@@ -65,6 +65,9 @@ export async function GET(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
+    const supabase = createClient();
+    const db = supabaseAdmin || supabase;
+
     // 1. Obter canais do escritório
     const { data: canais, error: canaisError } = await db
       .from("escritorio_canais")
@@ -113,6 +116,9 @@ export async function POST(request) {
     if (!officeId) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
+
+    const supabase = createClient();
+    const db = supabaseAdmin || supabase;
 
     const body = await request.json();
     const { action } = body;

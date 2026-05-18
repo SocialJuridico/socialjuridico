@@ -1,14 +1,14 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { Client } from "pg";
 
-const db = supabaseAdmin || supabase;
-
 // Helper to authenticate the requester and return officeId + user profile (Admin or Secretary)
 async function getSessionInfo() {
   const cookieStore = await cookies();
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
   
   // 1. Check if logged in as the Office Administrator
   const sessionCookie = cookieStore.get("sj_escritorio_session");
@@ -167,6 +167,9 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Não autorizado." }, { status: 401 });
     }
 
+    const supabase = createClient();
+    const db = supabaseAdmin || supabase;
+
     // Check permissions if secretary
     if (user.cargo === "secretaria" && !user.permissoes.ver_financeiro) {
       return NextResponse.json({ success: false, message: "Acesso financeiro restrito pelo Administrador." }, { status: 403 });
@@ -236,6 +239,9 @@ export async function POST(req) {
     if (!officeId) {
       return NextResponse.json({ success: false, message: "Não autorizado." }, { status: 401 });
     }
+
+    const supabase = createClient();
+    const db = supabaseAdmin || supabase;
 
     // Check permissions if secretary
     if (user.cargo === "secretaria" && !user.permissoes.ver_financeiro) {

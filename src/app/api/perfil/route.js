@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 const PROFILE_SELECT_FIELDS = {
   clientes: "id, name, email, role, phone, avatar, bio, created_at",
   advogados:
-    "id, name, email, role, phone, avatar, bio, oab, estado, specialties, verified, created_at, is_premium, balance, badges, avg_rating, total_ratings, consulta, tempo, valor, oab_verification_status, oab_warning_started_at, plan_type, plan_billing_cycle, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb, promo_start_used, promo_pro_used",
+    "id, name, email, role, phone, avatar, bio, oab, estado, specialties, verified, created_at, is_premium, balance, badges, avg_rating, total_ratings, consulta, tempo, valor, oab_verification_status, oab_warning_started_at, plan_type, plan_billing_cycle, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb, promo_start_used, promo_pro_used, escritorio_id, cargo",
   admins: "id, name, email, role, phone, avatar, created_at",
 };
 
@@ -155,6 +155,18 @@ export async function GET(request) {
           
           profile.oab_verification_status = "ERROR";
         }
+      }
+    }
+
+    // Se o advogado for membro de escritório, buscar o nome do escritório
+    if (profile.role === "LAWYER" && profile.escritorio_id) {
+      const { data: officeData } = await db
+        .from("escritorios")
+        .select("nome")
+        .eq("id", profile.escritorio_id)
+        .maybeSingle();
+      if (officeData) {
+        profile.nome_escritorio = officeData.nome;
       }
     }
 

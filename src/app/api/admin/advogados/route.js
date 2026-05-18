@@ -43,6 +43,7 @@ export async function GET() {
     const { data, error } = await db
       .from("advogados")
       .select("id, name, email, phone, oab, estado, is_premium, premium_expires_at, balance, created_at, oab_verification_status, plan_type")
+      .is("escritorio_id", null)
       .order("created_at", { ascending: false });
 
     if (error) throw error;

@@ -1,13 +1,13 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-
-const db = supabaseAdmin || supabase;
 
 // Helper to authenticate the requester and return officeId + user profile (Admin or Secretary)
 async function getSessionInfo() {
   const cookieStore = await cookies();
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
   
   // 1. Check if logged in as the Office Administrator
   const sessionCookie = cookieStore.get("sj_escritorio_session");
@@ -71,6 +71,9 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Não autorizado. Faça login novamente." }, { status: 401 });
     }
 
+    const supabase = createClient();
+    const db = supabaseAdmin || supabase;
+
     // 1. Fetch office data from database
     const { data: office, error: officeError } = await db
       .from("escritorios")
@@ -85,7 +88,7 @@ export async function GET() {
     // 2. Fetch associated staff/lawyers list
     const { data: staff, error: staffError } = await db
       .from("advogados")
-      .select("id, name, email, phone, oab, estado, cargo, cota_oab_sinc, bloqueado_ia, uso_redator_ia, uso_triagem, uso_storage_mb, permissoes, created_at")
+      .select("id, name, email, phone, oab, estado, cargo, cota_oab_sinc, bloqueado_ia, uso_redator_ia, uso_triagem, uso_storage_mb, permissoes, created_at, oab_verification_status")
       .eq("escritorio_id", officeId)
       .order("name", { ascending: true });
 

@@ -261,6 +261,39 @@ export default function AdminEscritoriosPage() {
     }
   };
 
+  const handleUpdatePlan = async (newPlan) => {
+    if (!selectedOffice) return;
+    try {
+      const res = await fetch("/api/admin/escritorios", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedOffice.id,
+          action: "UPDATE_PLAN",
+          value: newPlan
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Erro ao atualizar plano");
+        return;
+      }
+      toast.success("Plano atualizado com sucesso!");
+      setSelectedOffice(data.data);
+      setLimitsEdit(data.data.limites || {
+        storage_mb: 256000,
+        creditos_ia: 1500,
+        notificacoes: 50,
+        osint: 15,
+        oab_sinc: 0
+      });
+      loadEscritorios();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro de rede ao atualizar plano");
+    }
+  };
+
   // Handle adding a new associated staff member
   const handleAddStaffSubmit = async (e) => {
     e.preventDefault();
@@ -362,15 +395,27 @@ export default function AdminEscritoriosPage() {
                 <h2 className={styles.dossierTitle}>{selectedOffice.nome}</h2>
                 <div className={styles.dossierSubtitle}>
                   <span><strong>CNPJ:</strong> {selectedOffice.cnpj}</span>
-                  <span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
                     <strong>Plano:</strong> 
-                    <span className={`${styles.planBadge} ${
-                      selectedOffice.plano === "pro_plus" ? styles.badgeProPlus :
-                      selectedOffice.plano === "pro" ? styles.badgePro : styles.badgeStart
-                    }`}>
-                      {selectedOffice.plano === "pro_plus" ? "Enterprise Pro+" :
-                       selectedOffice.plano === "pro" ? "Enterprise Pro" : "Enterprise Start"}
-                    </span>
+                    <select
+                      value={selectedOffice.plano}
+                      onChange={(e) => handleUpdatePlan(e.target.value)}
+                      style={{
+                        background: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        borderRadius: "6px",
+                        color: "#fff",
+                        padding: "2px 6px",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        outline: "none"
+                      }}
+                    >
+                      <option value="start" style={{ background: "#111" }}>Enterprise Start (R$ 590,00)</option>
+                      <option value="pro" style={{ background: "#111" }}>Enterprise Pro (R$ 700,00)</option>
+                      <option value="pro_plus" style={{ background: "#111" }}>Enterprise Pro+ (R$ 950,00)</option>
+                    </select>
                   </span>
                 </div>
               </div>

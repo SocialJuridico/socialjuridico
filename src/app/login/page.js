@@ -53,14 +53,19 @@ function LoginContent() {
         setSuccessMsg("Login realizado com sucesso! Redirecionando...");
 
         setTimeout(() => {
-          if (activeTab === "escritorios") {
-            router.push("/dashboard/escritorio");
+          const role = response.user?.role || "CLIENT";
+          const cargo = response.user?.cargo || null;
+          const needsUpdate = response.user?.needsPasswordUpdate === true;
+
+          if (needsUpdate) {
+            router.push("/atualizar-senha");
           } else {
-            const role = response.user?.role || "CLIENT";
-            const cargo = response.user?.cargo || null;
-            const needsUpdate = response.user?.needsPasswordUpdate === true;
-            if (needsUpdate) {
-              router.push("/atualizar-senha");
+            if (activeTab === "escritorios") {
+              if (cargo === "advogado") {
+                router.push("/dashboard/advogado");
+              } else {
+                router.push("/dashboard/escritorio");
+              }
             } else {
               if (role === "ADMIN") router.push("/dashboard/admin");
               else if (cargo === "secretaria") router.push("/dashboard/escritorio");

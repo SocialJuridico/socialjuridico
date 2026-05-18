@@ -202,13 +202,25 @@ export async function POST(request) {
     for (const table of tables) {
       const { data } = await db
         .from(table)
-        .select(`id, name, email, role, phone, avatar${table === "advogados" ? ", oab_verification_status, oab_warning_started_at" : ""}`)
+        .select(`id, name, email, role, phone, avatar${table === "advogados" ? ", oab_verification_status, oab_warning_started_at, escritorio_id" : ""}`)
         .eq("id", user.id)
         .maybeSingle();
       if (data) {
         profile = data;
         break;
       }
+    }
+
+    // Bloquear membros de escritório no login individual
+    if (profile && profile.escritorio_id) {
+      await supabase.auth.signOut(); // Revoga a sessão
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Acesso restrito. Membros de escritório (Enterprise) devem efetuar o login pela aba 'Escritórios (Enterprise)'."
+        },
+        { status: 403 }
+      );
     }
 
     // Verificação de bloqueio de OAB

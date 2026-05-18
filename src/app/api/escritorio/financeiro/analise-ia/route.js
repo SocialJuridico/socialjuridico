@@ -1,10 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import OpenAI from "openai";
-
-const db = supabaseAdmin || supabase;
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -12,6 +10,8 @@ const openai = new OpenAI({
 
 async function getSessionInfo() {
   const cookieStore = await cookies();
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
   
   const sessionCookie = cookieStore.get("sj_escritorio_session");
   if (sessionCookie?.value) {
@@ -76,6 +76,9 @@ export async function GET(request) {
     if (user.cargo === "secretaria" && !user.permissoes.ver_financeiro) {
       return NextResponse.json({ success: false, message: "Acesso restrito pelo Administrador." }, { status: 403 });
     }
+
+    const supabase = createClient();
+    const db = supabaseAdmin || supabase;
 
     const { searchParams } = new URL(request.url);
     const month = parseInt(searchParams.get("month") || new Date().getMonth() + 1, 10);

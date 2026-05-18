@@ -44,6 +44,30 @@ export default function Sidebar() {
 
   const isPremiumUser = profileData?.is_premium || profileData?.plan_type === 'START' || profileData?.plan_type === 'PRO';
 
+  // Permissões de estagiário
+  const isEstagiario = profileData?.cargo === "estagiario";
+  const perms = profileData?.permissoes || {};
+
+  const hasAssinaturaAccess = !isEstagiario || !!perms.ferr_assinatura;
+  const hasCrmAccess = !isEstagiario || !!perms.ferr_crm;
+  const hasSmartDocsAccess = !isEstagiario || !!perms.ferr_smart_docs;
+  const hasBlindagemAccess = !isEstagiario || !!perms.ferr_blindagem;
+  const hasRedatorIaAccess = !isEstagiario || !!perms.ferr_redator_ia;
+  const hasAgendaAccess = !isEstagiario || !!perms.ferr_agenda;
+  const hasTriagemAccess = !isEstagiario || !!perms.ferr_triagem;
+  const hasCalculadoraAccess = !isEstagiario || !!perms.ferr_calculadora;
+  const hasJurisprudenciaAccess = !isEstagiario || !!perms.ferr_jurisprudencia;
+
+  // Import alert handling toast directly if not present
+  const handleTabClick = (tabName, allowed) => {
+    if (!allowed) {
+      const toastModule = require("react-hot-toast").default;
+      toastModule.error("Recurso premium bloqueado pelo Administrador do Escritório.");
+      return;
+    }
+    handleTabChange(tabName);
+  };
+
   return (
     <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarActive : ""}`}>
       <div className={styles.sidebarHeader}>
@@ -287,86 +311,97 @@ export default function Sidebar() {
           <div className={styles.navGroupLabel}>Ferramentas Premium</div>
           <div
             className={`${styles.navItem} ${activeTab === "assinatura" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("assinatura")}
+            onClick={() => handleTabClick("assinatura", hasAssinaturaAccess)}
           >
             <PenTool size={18} /> <span>Assinatura Digital</span>
-            {!isPremiumUser && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            {(!isPremiumUser || !hasAssinaturaAccess) && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5, color: !hasAssinaturaAccess ? "#f87171" : "currentColor" }} />
             )}
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "crm" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("crm")}
+            onClick={() => handleTabClick("crm", hasCrmAccess)}
           >
             <Users size={18} /> <span>Meus Clientes (CRM)</span>
-            {!isPremiumUser && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            {(!isPremiumUser || !hasCrmAccess) && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5, color: !hasCrmAccess ? "#f87171" : "currentColor" }} />
             )}
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "docs" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("docs")}
+            onClick={() => handleTabClick("docs", hasSmartDocsAccess)}
           >
             <FileText size={18} /> <span>IA Smart Docs</span>
-            {!isPremiumUser && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            {(!isPremiumUser || !hasSmartDocsAccess) && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5, color: !hasSmartDocsAccess ? "#f87171" : "currentColor" }} />
             )}
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "blindagem" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("blindagem")}
+            onClick={() => handleTabClick("blindagem", hasBlindagemAccess)}
           >
             <Shield size={18} /> <span>Blindagem de Documentos</span>
-            {!isPremiumUser && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            {(!isPremiumUser || !hasBlindagemAccess) && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5, color: !hasBlindagemAccess ? "#f87171" : "currentColor" }} />
             )}
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "redator" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("redator")}
+            onClick={() => handleTabClick("redator", hasRedatorIaAccess)}
           >
             <Sparkles size={18} /> <span>Redator IA</span>
-            {!isPremiumUser && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            {(!isPremiumUser || !hasRedatorIaAccess) && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5, color: !hasRedatorIaAccess ? "#f87171" : "currentColor" }} />
             )}
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "agenda" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("agenda")}
+            onClick={() => handleTabClick("agenda", hasAgendaAccess)}
           >
             <Calendar size={18} /> <span>Agenda & Prazos</span>
-            {!isPremiumUser && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            {(!isPremiumUser || !hasAgendaAccess) && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5, color: !hasAgendaAccess ? "#f87171" : "currentColor" }} />
             )}
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "triagem" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("triagem")}
+            onClick={() => handleTabClick("triagem", hasTriagemAccess)}
           >
             <Search size={18} /> <span>Triagem de Casos</span>
-            {!isPremiumUser && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            {(!isPremiumUser || !hasTriagemAccess) && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5, color: !hasTriagemAccess ? "#f87171" : "currentColor" }} />
             )}
           </div>
 
           <div
             className={`${styles.navItem} ${activeTab === "calculadora" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("calculadora")}
+            onClick={() => handleTabClick("calculadora", hasCalculadoraAccess)}
           >
             <Calculator size={18} /> <span>Calculadora</span>
-            {profileData?.plan_type !== 'PRO' && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            {(!isPremiumUser || !hasCalculadoraAccess) && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5, color: !hasCalculadoraAccess ? "#f87171" : "currentColor" }} />
             )}
           </div>
           <div
             className={`${styles.navItem} ${activeTab === "juris" ? styles.activeNavItem : ""}`}
-            onClick={() => handleTabChange("juris")}
+            onClick={() => handleTabClick("juris", hasJurisprudenciaAccess)}
           >
             <BookOpen size={18} /> <span>Jurisprudência</span>
-            {profileData?.plan_type !== 'PRO' && (
-              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5 }} />
+            {(!isPremiumUser || !hasJurisprudenciaAccess) && (
+              <Lock size={12} style={{ marginLeft: "auto", opacity: 0.5, color: !hasJurisprudenciaAccess ? "#f87171" : "currentColor" }} />
             )}
           </div>
+          {profileData?.escritorio_id && (
+            <>
+              <div className={styles.navGroupLabel}>Escritório</div>
+              <div
+                className={`${styles.navItem} ${activeTab === "comunicacao" ? styles.activeNavItem : ""}`}
+                onClick={() => handleTabChange("comunicacao")}
+              >
+                <MessageSquare size={18} /> <span>Comunicação Interna</span>
+              </div>
+            </>
+          )}
           <div className={styles.navGroupLabel}>Sistema</div>
           <div
             className={`${styles.navItem} ${activeTab === "documentacao" ? styles.activeNavItem : ""}`}

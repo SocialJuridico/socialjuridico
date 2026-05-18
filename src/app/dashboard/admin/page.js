@@ -18,6 +18,7 @@ import {
   Star,
   DollarSign,
   Megaphone,
+  Building,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./AdminDashboard.module.css";
@@ -118,6 +119,12 @@ export default function AdminDashboardPage() {
                 <article className={`${styles.card} ${styles.cardClickable}`}>
                   <div className={styles.cardTop}><Scale size={16} /> Advogados</div>
                   <strong>{stats.totalAdvogados}</strong>
+                </article>
+              </Link>
+              <Link href="/dashboard/admin/escritorios" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #00b4d8", background: "rgba(0, 180, 216, 0.03)" }}>
+                  <div className={styles.cardTop}><Building size={16} color="#00b4d8" /> Escritórios (Enterprise)</div>
+                  <strong>Gerenciar</strong>
                 </article>
               </Link>
               <Link href="/dashboard/admin/admins" className={styles.cardLink}>

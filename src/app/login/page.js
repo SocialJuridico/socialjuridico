@@ -14,6 +14,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "true";
   const [oabError, setOabError] = useState(false);
+  const [activeTab, setActiveTab] = useState("individual"); // "individual" ou "escritorios"
 
   useEffect(() => {
     // Limpar o flag do popup de Advogado do Mês ao carregar a tela de login
@@ -38,36 +39,50 @@ function LoginContent() {
     setSuccessMsg("");
     setLoading(true);
 
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: formData.email, password: formData.senha }),
-    });
-    const response = await res.json();
+    const endpoint = activeTab === "escritorios" ? "/api/auth/login-escritorio" : "/api/auth/login";
 
-    if (response.success) {
-      setSuccessMsg("Login realizado com sucesso! Redirecionando...");
-      const role = response.user?.role || "CLIENT";
-      const needsUpdate = response.user?.needsPasswordUpdate === true;
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email, password: formData.senha }),
+      });
+      const response = await res.json();
 
-      setTimeout(() => {
-        if (needsUpdate) {
-          router.push("/atualizar-senha");
-        } else {
-          if (role === "ADMIN") router.push("/dashboard/admin");
-          else if (role === "LAWYER") router.push("/dashboard/advogado");
-          else router.push("/dashboard/cliente");
-        }
-      }, 1500);
-    } else {
-      if (response.type === "OAB_ERROR") {
-        setOabError(true);
+      if (response.success) {
+        setSuccessMsg("Login realizado com sucesso! Redirecionando...");
+
+        setTimeout(() => {
+          if (activeTab === "escritorios") {
+            router.push("/dashboard/escritorio");
+          } else {
+            const role = response.user?.role || "CLIENT";
+            const cargo = response.user?.cargo || null;
+            const needsUpdate = response.user?.needsPasswordUpdate === true;
+            if (needsUpdate) {
+              router.push("/atualizar-senha");
+            } else {
+              if (role === "ADMIN") router.push("/dashboard/admin");
+              else if (cargo === "secretaria") router.push("/dashboard/escritorio");
+              else if (role === "LAWYER") router.push("/dashboard/advogado");
+              else router.push("/dashboard/cliente");
+            }
+          }
+        }, 1500);
       } else {
-        setErrorMsg(
-          response.message ||
-            "Erro ao realizar login. Verifique suas credenciais.",
-        );
+        if (response.type === "OAB_ERROR") {
+          setOabError(true);
+        } else {
+          setErrorMsg(
+            response.message ||
+              "Erro ao realizar login. Verifique suas credenciais.",
+          );
+        }
+        setLoading(false);
       }
+    } catch (err) {
+      console.error("Erro ao autenticar:", err);
+      setErrorMsg("Erro de rede ao autenticar. Tente novamente.");
       setLoading(false);
     }
   };
@@ -105,20 +120,45 @@ function LoginContent() {
       </div>
 
       {/* LADO DIREITO: Formulario de Login */}
-      <div className={styles.rightSide}>
+      <div className={`${styles.rightSide} ${activeTab === "escritorios" ? styles.escritorioBg : ""}`}>
         <div className={styles.formContainer}>
           <Link prefetch={false} href="/" className={styles.logoMobileOnly}>
             <Scale size={28} />
             SocialJurídico
           </Link>
 
+          {/* Abas de Login */}
+          <div className={styles.tabContainer}>
+            <button
+              type="button"
+              className={`${styles.tab} ${activeTab === "individual" ? styles.activeTab : ""}`}
+              onClick={() => {
+                setActiveTab("individual");
+                setErrorMsg("");
+              }}
+            >
+              Profissional / Individual
+            </button>
+            <button
+              type="button"
+              className={`${styles.tab} ${activeTab === "escritorios" ? styles.activeTabEscritorio : ""}`}
+              onClick={() => {
+                setActiveTab("escritorios");
+                setErrorMsg("");
+              }}
+            >
+              Escritórios (Enterprise)
+            </button>
+          </div>
+
           <div className={styles.formHeader}>
             <h2 className={styles.formTitle}>Acesse sua conta</h2>
             <p className={styles.formSubtitle}>
-              Digite seu email e senha para entrar.
+              {activeTab === "escritorios" 
+                ? "Painel de Gestão do seu Escritório Enterprise." 
+                : "Digite seu email e senha para entrar."}
             </p>
           </div>
-
           {/* Banner de sessão expirada */}
           {sessionExpired && (
             <div

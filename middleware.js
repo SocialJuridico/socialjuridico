@@ -20,6 +20,17 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
+  // ── VERIFICAÇÃO DE SESSÃO DO ESCRITÓRIO (COOKIE CUSTOMIZADO) ──
+  const escritorioSession = request.cookies.get("sj_escritorio_session");
+  if (pathname.startsWith("/dashboard/escritorio")) {
+    if (!escritorioSession) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
   // ── VERIFICAÇÃO DE SESSÃO DO ANUNCIANTE (COOKIE CUSTOMIZADO) ──
   const anuncianteSession = request.cookies.get("sj_anunciante_session");
   if (pathname.startsWith("/dashboard/anunciante")) {
@@ -29,6 +40,14 @@ export async function middleware(request) {
       return NextResponse.redirect(url);
     }
     return NextResponse.next();
+  }
+
+  if (isAuthRoute) {
+    if (escritorioSession) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard/escritorio";
+      return NextResponse.redirect(url);
+    }
   }
 
   let response = NextResponse.next({

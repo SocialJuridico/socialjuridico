@@ -15,6 +15,7 @@ function LoginContent() {
   const sessionExpired = searchParams.get("expired") === "true";
   const [oabError, setOabError] = useState(false);
   const [activeTab, setActiveTab] = useState("individual"); // "individual" ou "escritorios"
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
 
   useEffect(() => {
     // Limpar o flag do popup de Advogado do Mês ao carregar a tela de login
@@ -294,9 +295,27 @@ function LoginContent() {
 
             <div className={styles.loginHint}>
               Ainda não tem uma conta?{" "}
-              <Link prefetch={false} href="/cadastro" className={styles.linkTag}>
-                Cadastre-se grátis
-              </Link>
+              {activeTab === "escritorios" ? (
+                <button
+                  type="button"
+                  onClick={() => setShowEnterpriseModal(true)}
+                  className={styles.linkTag}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    font: "inherit",
+                    cursor: "pointer",
+                    color: "#00b4d8"
+                  }}
+                >
+                  Traga seu escritório
+                </button>
+              ) : (
+                <Link prefetch={false} href="/cadastro" className={styles.linkTag}>
+                  Cadastre-se grátis
+                </Link>
+              )}
             </div>
           </form>
         </div>
@@ -326,6 +345,50 @@ function LoginContent() {
             
             <button onClick={() => setOabError(false)} className={styles.closeBtn}>
               Fechar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ENTERPRISE CONTACT SUPPORT MODAL */}
+      {showEnterpriseModal && (
+        <div className={styles.oabModalOverlay}>
+          <div className={styles.oabModalCard} style={{ borderColor: "rgba(0, 180, 216, 0.4)" }}>
+            <div style={{
+              width: "60px",
+              height: "60px",
+              borderRadius: "50%",
+              backgroundColor: "rgba(0, 180, 216, 0.1)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: "20px"
+            }}>
+              <Scale size={32} color="#00b4d8" />
+            </div>
+            <h3 style={{ color: "#fff", fontWeight: 800 }}>SocialJurídico Enterprise</h3>
+            <p>
+              Para implantar e configurar a infraestrutura de gerenciamento corporativo no seu escritório, entre em contato com nosso atendimento especializado.
+            </p>
+            <p className={styles.oabModalSub}>
+              Um consultor irá desenhar a topologia de limites e migração ideal para a sua equipe.
+            </p>
+            
+            <a 
+              href="https://wa.me/5515981657317?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20a%20implantação%20do%20plano%20Enterprise%20do%20SocialJurídico%20para%20o%20meu%20escritório." 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className={styles.supportBtn}
+              style={{
+                background: "linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)",
+                boxShadow: "0 4px 15px rgba(0, 180, 216, 0.3)"
+              }}
+            >
+              Falar com um Especialista
+            </a>
+            
+            <button onClick={() => setShowEnterpriseModal(false)} className={styles.closeBtn}>
+              Voltar
             </button>
           </div>
         </div>

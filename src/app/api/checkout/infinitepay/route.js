@@ -47,6 +47,7 @@ export async function POST(request) {
       ],
       redirect_url: "https://socialjuridico.com.br/dashboard/advogado?payment_status=success",
       webhook_url: "https://socialjuridico.com.br/api/webhook/infinitepay",
+      order_nsu: `sj_${customer.email}_${Date.now()}`,
       customer: {
         name: customer.name || "Cliente Social Jurídico",
         email: customer.email,

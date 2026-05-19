@@ -17,7 +17,15 @@ export async function POST(request) {
     const { amount, customer, items, order_nsu } = payload;
     
     // O email do cliente é crucial para identificarmos quem comprou
-    const email = customer?.email;
+    let email = customer?.email || payload.customer_email || payload.metadata?.email;
+    
+    // Failsafe: se o email não estiver no local padrão, mas vier no order_nsu codificado como sj_email_timestamp
+    if (!email && order_nsu && order_nsu.startsWith("sj_")) {
+      const parts = order_nsu.split("_");
+      // O formato é sj_email_timestamp. Remove o 'sj' e o timestamp
+      email = parts.slice(1, -1).join("_");
+      console.log("ℹ️ [Webhook InfinitePay] Email recuperado via order_nsu:", email);
+    }
     
     if (!email) {
       console.error("❌ [Webhook InfinitePay] Email do cliente não encontrado no payload.");

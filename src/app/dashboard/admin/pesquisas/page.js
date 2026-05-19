@@ -1,8 +1,21 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { ArrowLeft, Star, Download, ChevronDown, ChevronUp, CheckCircle, Scale } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Star, 
+  Download, 
+  ChevronDown, 
+  ChevronUp, 
+  CheckCircle, 
+  Scale,
+  Sparkles,
+  Brain,
+  Award,
+  Users,
+  Copy
+} from "lucide-react";
 import * as htmlToImage from "html-to-image";
 import toast from "react-hot-toast";
 import styles from "./Pesquisas.module.css";
@@ -38,9 +51,45 @@ export default function AdminPesquisasPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("advogados");
   const [expandedId, setExpandedId] = useState(null);
+  
+  // AI summary states
+  const [aiSummary, setAiSummary] = useState(null);
+  const [generatingAi, setGeneratingAi] = useState(false);
 
   // Refs for capturing specific cards
   const cardRefs = useRef({});
+
+  // Dynamic statistics calculation
+  const stats = useMemo(() => {
+    const advCount = data.advogados.length;
+    const cliCount = data.clientes.length;
+    const totalCount = advCount + cliCount;
+
+    let advSum = 0;
+    data.advogados.forEach(item => {
+      const sum = ADV_QUESTIONS.reduce((acc, q) => acc + (item[q.key] || 0), 0);
+      advSum += sum / 10;
+    });
+    const advAvg = advCount > 0 ? (advSum / advCount) : 0;
+
+    let cliSum = 0;
+    data.clientes.forEach(item => {
+      const sum = CLI_QUESTIONS.reduce((acc, q) => acc + (item[q.key] || 0), 0);
+      cliSum += sum / 10;
+    });
+    const cliAvg = cliCount > 0 ? (cliSum / cliCount) : 0;
+
+    const overallAvg = totalCount > 0 ? ((advSum + cliSum) / totalCount) : 0;
+
+    return {
+      advCount,
+      cliCount,
+      totalCount,
+      advAvg: advAvg.toFixed(1),
+      cliAvg: cliAvg.toFixed(1),
+      overallAvg: overallAvg.toFixed(1),
+    };
+  }, [data]);
 
   useEffect(() => {
     async function loadData() {
@@ -60,6 +109,25 @@ export default function AdminPesquisasPage() {
     }
     loadData();
   }, []);
+
+  const handleGenerateSummary = async () => {
+    setGeneratingAi(true);
+    const loadToast = toast.loading("Analisando avaliações com IA...");
+    try {
+      const res = await fetch("/api/admin/pesquisas/summary", { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        setAiSummary(json.data);
+        toast.success("Resumo inteligente gerado com sucesso!", { id: loadToast });
+      } else {
+        toast.error(json.message || "Erro ao analisar feedbacks", { id: loadToast });
+      }
+    } catch (err) {
+      toast.error("Erro ao comunicar com o servidor", { id: loadToast });
+    } finally {
+      setGeneratingAi(false);
+    }
+  };
 
   const handleDownload = async (id, userName) => {
     const node = cardRefs.current[id];
@@ -203,6 +271,157 @@ export default function AdminPesquisasPage() {
           </p>
         </div>
       </header>
+
+      {/* Grid de Estatísticas Gerais */}
+      {!loading && (
+        <div className={styles.statsGrid}>
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>Nota Geral da Plataforma</span>
+            <div className={styles.statValue}>
+              <Award size={24} color="var(--color-gold)" fill="var(--color-gold)" />
+              {stats.overallAvg} <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', fontWeight: 'normal' }}>/ 5.0</span>
+            </div>
+            <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
+              {renderStars(Math.round(parseFloat(stats.overallAvg)))}
+            </div>
+            <span className={styles.statSubtext}>Média consolidada de todos os usuários</span>
+          </div>
+
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>Média (Advogados)</span>
+            <div className={styles.statValue}>
+              <Scale size={24} color="var(--color-gold)" />
+              {stats.advAvg} <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', fontWeight: 'normal' }}>/ 5.0</span>
+            </div>
+            <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
+              {renderStars(Math.round(parseFloat(stats.advAvg)))}
+            </div>
+            <span className={styles.statSubtext}>Baseado em {stats.advCount} feedbacks</span>
+          </div>
+
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>Média (Clientes)</span>
+            <div className={styles.statValue}>
+              <CheckCircle size={24} color="var(--color-gold)" />
+              {stats.cliAvg} <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', fontWeight: 'normal' }}>/ 5.0</span>
+            </div>
+            <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
+              {renderStars(Math.round(parseFloat(stats.cliAvg)))}
+            </div>
+            <span className={styles.statSubtext}>Baseado em {stats.cliCount} feedbacks</span>
+          </div>
+
+          <div className={styles.statCard}>
+            <span className={styles.statLabel}>Total de Avaliações</span>
+            <div className={styles.statValue}>
+              <Users size={24} color="#a0a0a0" />
+              {stats.totalCount}
+            </div>
+            <span className={styles.statSubtext} style={{ marginTop: '14px' }}>Feedbacks recebidos no v3.0</span>
+          </div>
+        </div>
+      )}
+
+      {/* Copilot de Marketing com Inteligência Artificial */}
+      {!loading && (
+        <div className={styles.aiSummaryCard}>
+          <div className={styles.aiHeader}>
+            <div className={styles.aiTitle}>
+              <Brain size={20} color="#8b5cf6" />
+              <span>Copilot de Marketing IA</span>
+              <span style={{ fontSize: '10px', background: 'rgba(139, 92, 246, 0.15)', color: '#a78bfa', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold' }}>Novo</span>
+            </div>
+            <button 
+              className={styles.aiButton} 
+              onClick={handleGenerateSummary}
+              disabled={generatingAi}
+            >
+              <Sparkles size={14} />
+              {generatingAi ? "Analisando com IA..." : "Gerar Resumo para Marketing"}
+            </button>
+          </div>
+
+          {aiSummary ? (
+            <div className={styles.aiContent}>
+              <p className={styles.aiText}>
+                {aiSummary.summary}
+              </p>
+
+              <div className={styles.aiGrid}>
+                {/* 3 Principais Diferenciais */}
+                <div>
+                  <h4 className={styles.aiSectionTitle}>
+                    <Award size={14} /> 3 Diferenciais Chave
+                  </h4>
+                  <div className={styles.strengthsList}>
+                    {aiSummary.strengths?.map((str, idx) => (
+                      <div key={idx} className={styles.strengthItem}>
+                        <span className={styles.strengthBadge}>Destaque</span>
+                        <span>{str}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Prova Social Curada */}
+                <div>
+                  <h4 className={styles.aiSectionTitle}>
+                    <Users size={14} /> Prova Social / Depoimentos
+                  </h4>
+                  <div className={styles.quotesList}>
+                    {aiSummary.quotes?.map((quote, idx) => (
+                      <div key={idx} className={styles.quoteCard}>
+                        <p>{quote}</p>
+                        <button 
+                          onClick={() => {
+                            navigator.clipboard.writeText(quote);
+                            toast.success("Copiado para a área de transferência!");
+                          }}
+                          style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}
+                          title="Copiar Depoimento"
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Ideias de Copy para Marketing */}
+                <div>
+                  <h4 className={styles.aiSectionTitle}>
+                    <Sparkles size={14} /> Ganchos de Copy / Slogans
+                  </h4>
+                  <div className={styles.hooksList}>
+                    {aiSummary.marketingHooks?.map((hook, idx) => (
+                      <div key={idx} className={styles.hookCard}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className={styles.hookTag}>Ideia {idx + 1}</span>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(hook);
+                              toast.success("Copiado para a área de transferência!");
+                            }}
+                            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer' }}
+                            title="Copiar Slogan"
+                          >
+                            <Copy size={12} />
+                          </button>
+                        </div>
+                        <p className={styles.hookText}>{hook}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '10px 0', color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>
+              Clique no botão acima para consolidar todos os feedbacks com inteligência artificial e gerar ganchos publicitários.
+            </div>
+          )}
+        </div>
+      )}
 
       <div className={styles.tabs}>
         <button 

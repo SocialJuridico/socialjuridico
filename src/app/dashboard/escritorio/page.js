@@ -34,10 +34,16 @@ import {
   Calendar,
   RefreshCw,
   Check,
-  X
+  X,
+  AlertTriangle,
+  BarChart3,
+  CheckCircle2,
+  User,
+  Filter
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./EscritorioDashboard.module.css";
+import { maskCPFCNPJ, maskPhone } from "@/lib/securityUtils";
 
 const ESTADOS_BRASIL = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", 
@@ -108,6 +114,37 @@ export default function EscritorioDashboardPage() {
     data_competencia: new Date().toISOString().split("T")[0],
     status: "PAGO"
   });
+
+  // --- ESTADOS DA AGENDA E PRAZOS COMPARTILHADOS ---
+  const [agendaItems, setAgendaItems] = useState([]);
+  const [calendarMemberFilter, setCalendarMemberFilter] = useState("TODOS");
+  const [showAgendaModal, setShowAgendaModal] = useState(false);
+  const [editingAgendaItem, setEditingAgendaItem] = useState(null);
+  const [newAgendaItem, setNewAgendaItem] = useState({
+    title: "",
+    date: "",
+    time: "09:00",
+    description: "",
+    type: "Judicial",
+    urgency: "Média",
+    clientId: "",
+    lawyerId: "",
+  });
+  const [isAnalyzingAgenda, setIsAnalyzingAgenda] = useState(false);
+  const [showAgendaAnalysisModal, setShowAgendaAnalysisModal] = useState(false);
+  const [agendaAnalysis, setAgendaAnalysis] = useState("");
+  const [isAiSuggesting, setIsAiSuggesting] = useState(false);
+  const [aiDeadlineResult, setAiDeadlineResult] = useState(null);
+  const [crmClients, setCrmClients] = useState([]);
+  const [loadingCrm, setLoadingCrm] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [showDossierModal, setShowDossierModal] = useState(false);
+  const [delegatingClient, setDelegatingClient] = useState(null);
+  const [isDelegating, setIsDelegating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [clientDocuments, setClientDocuments] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [crmFilter, setCrmFilter] = useState("all");
   const [exportMonth, setExportMonth] = useState(new Date().getMonth() + 1);
   const [exportYear, setExportYear] = useState(new Date().getFullYear());
   const [showManageSubs, setShowManageSubs] = useState(false);
@@ -160,6 +197,331 @@ export default function EscritorioDashboardPage() {
       loadFinance();
     }
   }, [activeTab]);
+
+  // --- MÉTODOS DA AGENDA COMPARTILHADA ---
+  const fetchAgenda = async () => {
+    try {
+      const res = await fetch("/api/crm/agenda?escritorio=true");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setAgendaItems(json.agenda || []);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao carregar agenda:", e);
+    }
+  };
+
+  const fetchCrmClients = async () => {
+    setLoadingCrm(true);
+    try {
+      const res = await fetch("/api/crm");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setCrmClients(json.clients || []);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao carregar clientes do CRM:", e);
+    } finally {
+      setLoadingCrm(false);
+    }
+  };
+
+  const handleDelegateCase = async (clientId, targetLawyerId) => {
+    setIsDelegating(true);
+    try {
+      const res = await fetch("/api/crm", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          lawyer_id: targetLawyerId || null
+        })
+      });
+      const resJson = await res.ok ? await res.json() : null;
+      if (resJson && resJson.success) {
+        toast.success("Responsável do lead atualizado com sucesso!");
+        // Update client responsibility locally
+        setCrmClients(prev => prev.map(c => c.id === clientId ? { ...c, lawyer_id: targetLawyerId } : c));
+        setDelegatingClient(null);
+      } else {
+        toast.error(resJson?.message || "Erro ao atribuir caso");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao atribuir caso");
+    } finally {
+      setIsDelegating(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "agenda") {
+      fetchAgenda();
+      fetchCrmClients();
+    } else if (activeTab === "crm") {
+      fetchCrmClients();
+    }
+  }, [activeTab]);
+
+  const handleSaveAgenda = async (e) => {
+    if (e) e.preventDefault();
+    if (!newAgendaItem.title || !newAgendaItem.date || !newAgendaItem.time) {
+      return toast.error("Preencha título, data e hora.");
+    }
+
+    const dateObj = new Date(`${newAgendaItem.date}T${newAgendaItem.time}`);
+    const isoDate = dateObj.toISOString();
+
+    const payload = {
+      title: newAgendaItem.title,
+      date: isoDate,
+      description: newAgendaItem.description,
+      type: newAgendaItem.type,
+      urgency: newAgendaItem.urgency,
+      client_id: newAgendaItem.clientId || null,
+      lawyer_id: newAgendaItem.lawyerId || data?.user?.id || null,
+      status: "PENDING",
+    };
+
+    try {
+      const method = editingAgendaItem ? "PATCH" : "POST";
+      const body = editingAgendaItem
+        ? { id: editingAgendaItem.id, ...payload }
+        : payload;
+
+      const res = await fetch("/api/crm/agenda", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const resJson = await res.json();
+      if (!resJson.success) throw new Error(resJson.message);
+
+      toast.success(
+        editingAgendaItem ? "Compromisso atualizado!" : "Adicionado à agenda!",
+      );
+
+      fetchAgenda();
+      setShowAgendaModal(false);
+      setNewAgendaItem({
+        title: "",
+        date: "",
+        time: "09:00",
+        description: "",
+        type: "Judicial",
+        urgency: "Média",
+        clientId: "",
+        lawyerId: "",
+      });
+      setEditingAgendaItem(null);
+      setAiDeadlineResult(null);
+    } catch (err) {
+      toast.error(err.message || "Erro ao salvar na agenda");
+    }
+  };
+
+  const handleDeleteAgenda = async (id) => {
+    if (!confirm("Tem certeza que deseja excluir este compromisso?")) return;
+    try {
+      const res = await fetch("/api/crm/agenda", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const resJson = await res.json();
+      if (resJson.success) {
+        toast.success("Compromisso removido.");
+        fetchAgenda();
+      } else {
+        toast.error(resJson.message || "Erro ao excluir");
+      }
+    } catch (err) {
+      toast.error("Erro na conexão");
+    }
+  };
+
+  const handleAiSuggestDeadline = async () => {
+    if (!newAgendaItem.title.trim()) {
+      return toast.error("Digite pelo menos um título para a IA analisar.");
+    }
+    setIsAiSuggesting(true);
+    setAiDeadlineResult(null);
+    try {
+      const res = await fetch("/api/crm/analisador", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "SUGGEST_DEADLINE",
+          title: newAgendaItem.title,
+          description: newAgendaItem.description,
+        }),
+      });
+      const resJson = await res.json();
+      if (resJson.success && resJson.suggestion) {
+        const sug = resJson.suggestion;
+        setAiDeadlineResult({
+          reasoning: sug.reasoning || "Recomendado baseado no tipo de ato.",
+          suggestedDate: sug.suggestedDate || new Date().toISOString().split("T")[0],
+          preparationDays: sug.preparationDays || 3,
+        });
+        toast.success("Prazo sugerido pela IA!");
+      }
+    } catch (err) {
+      toast.error("Erro na consulta IA");
+    } finally {
+      setIsAiSuggesting(false);
+    }
+  };
+
+  const handleAnalyseAgenda = async () => {
+    if (agendaItems.length === 0) return toast.error("A agenda está vazia!");
+    setIsAnalyzingAgenda(true);
+    setAgendaAnalysis("");
+    setShowAgendaAnalysisModal(true);
+
+    const agendaSummary = agendaItems.map(i => `- ${i.title} (${new Date(i.date).toLocaleString('pt-BR')}): ${i.description || 'Sem descrição'}`).join('\n');
+
+    try {
+      const res = await fetch("/api/crm/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Analise a agenda jurídica do escritório e identifique possíveis conflitos de horários, prazos críticos de advogados e sugira recomendações para o gestor:\n\n${agendaSummary}\n\nForneça uma análise técnica e profissional focada em riscos para o escritório.`,
+          clientData: { name: "Análise de Agenda do Escritório" },
+          history: [],
+        }),
+      });
+
+      const resJson = await res.json();
+      if (resJson.success) {
+        setAgendaAnalysis(resJson.response);
+      } else {
+        toast.error(resJson.message || "Erro na análise IA");
+      }
+    } catch (err) {
+      toast.error("Erro na conexão");
+    } finally {
+      setIsAnalyzingAgenda(false);
+    }
+  };
+
+  const handleSummarizeAgenda = async () => {
+    if (agendaItems.length === 0) return toast.error("A agenda está vazia!");
+    setIsAnalyzingAgenda(true);
+    setAgendaAnalysis("");
+    setShowAgendaAnalysisModal(true);
+
+    const agendaSummary = agendaItems.map(i => `- ${i.title} (${new Date(i.date).toLocaleString('pt-BR')})`).join('\n');
+
+    try {
+      const res = await fetch("/api/crm/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Gere um resumo estratégico e executivo dos compromissos e prazos do escritório para os próximos dias:\n\n${agendaSummary}\n\nDestaque os gargalos e o que exige mais atenção gerencial do escritório.`,
+          clientData: { name: "Resumo de Agenda do Escritório" },
+          history: [],
+        }),
+      });
+
+      const resJson = await res.json();
+      if (resJson.success) {
+        setAgendaAnalysis(resJson.response);
+      } else {
+        toast.error(resJson.message || "Erro no resumo IA");
+      }
+    } catch (err) {
+      toast.error("Erro na conexão");
+    } finally {
+      setIsAnalyzingAgenda(false);
+    }
+  };
+
+  const renderAgendaCard = (item) => {
+    const isUrgent = item.urgency === "Crítica" || item.urgency === "Alta";
+    const assignedLawyer = (staff || []).find(m => m.id === item.lawyer_id);
+    
+    return (
+      <div 
+        key={item.id} 
+        className={`${styles.agendaCard} ${isUrgent ? styles.agendaCardUrgent : ""}`}
+        onClick={() => {
+          setEditingAgendaItem(item);
+          setAiDeadlineResult(null);
+          const localDate = new Date(item.date);
+          const dateStr = localDate.toISOString().split("T")[0];
+          const timeStr = String(localDate.getHours()).padStart(2, "0") + ":" + String(localDate.getMinutes()).padStart(2, "0");
+          setNewAgendaItem({
+            title: item.title,
+            date: dateStr,
+            time: timeStr,
+            description: item.description || "",
+            type: item.type || "Judicial",
+            urgency: item.urgency || "Média",
+            clientId: item.client_id || "",
+            lawyerId: item.lawyer_id || "",
+          });
+          setShowAgendaModal(true);
+        }}
+      >
+        <div className={styles.agendaCardHeader}>
+          <span className={styles.agendaTime}>
+            ⏰ {new Date(item.date).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+          </span>
+          <span className={styles.agendaDate}>
+            📅 {new Date(item.date).toLocaleDateString("pt-BR")}
+          </span>
+        </div>
+        <div className={styles.agendaTitle}>{item.title}</div>
+        
+        {item.description && (
+          <p style={{ margin: "0 0 10px 0", fontSize: "0.75rem", color: "#cbd5e1", lineHeight: "1.4", textOrigin: "left", textAlign: "left" }}>
+            {item.description}
+          </p>
+        )}
+
+        <div style={{ display: "flex", gap: "6px", alignItems: "center", marginBottom: "8px" }}>
+          <User size={12} color="#cbd5e1" />
+          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#9ca3af" }}>
+            Responsável: {assignedLawyer ? assignedLawyer.name : "Nenhum atribuído"}
+          </span>
+        </div>
+
+        {item.client_name && (
+          <div className={styles.agendaClient}>
+            <Users size={12} /> Cliente: {item.client_name}
+          </div>
+        )}
+
+        <div className={styles.agendaFooter}>
+          <span className={styles.agendaTypeTag}>{item.type}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span className={`${styles.agendaBadge} ${
+              item.urgency === "Crítica" || item.urgency === "Alta" ? styles.badgeHigh : 
+              item.urgency === "Média" ? styles.badgeMed : styles.badgeLow
+            }`}>
+              {item.urgency}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteAgenda(item.id);
+              }}
+              className={styles.agendaActionMiniBtn}
+              title="Excluir da Agenda"
+            >
+              <Trash2 size={12} color="#fca5a5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
@@ -1245,6 +1607,17 @@ export default function EscritorioDashboardPage() {
             <Users size={16} /> Gestão e Cotas
           </button>
         )}
+        {(!isSecretary || perms.ver_crm || true) && (
+          <button 
+            className={`${styles.tabBtn} ${activeTab === "crm" ? styles.activeTabBtn : ""}`} 
+            onClick={() => {
+              setActiveTab("crm");
+              fetchCrmClients();
+            }}
+          >
+            <Building size={16} /> CRM Geral
+          </button>
+        )}
         {(!isSecretary || perms.ver_comunicacao) && (
           <button 
             className={`${styles.tabBtn} ${activeTab === "comunicacao" ? styles.activeTabBtn : ""}`} 
@@ -1256,7 +1629,7 @@ export default function EscritorioDashboardPage() {
             <MessageSquare size={16} /> Comunicação Interna (Corporate Hub)
           </button>
         )}
-        {(!isSecretary || perms.ver_financeiro) && (
+        {!isSecretary && (
           <button 
             className={`${styles.tabBtn} ${activeTab === "financeiro" ? styles.activeTabBtn : ""}`} 
             onClick={() => {
@@ -1265,6 +1638,18 @@ export default function EscritorioDashboardPage() {
             }}
           >
             <Coins size={16} /> Financeiro & Contabilidade
+          </button>
+        )}
+        {(!isSecretary || perms.ver_agenda || true) && (
+          <button 
+            className={`${styles.tabBtn} ${activeTab === "agenda" ? styles.activeTabBtn : ""}`} 
+            onClick={() => {
+              setActiveTab("agenda");
+              fetchAgenda();
+              fetchCrmClients();
+            }}
+          >
+            <Calendar size={16} /> Agenda e Prazos
           </button>
         )}
       </div>
@@ -2136,7 +2521,7 @@ export default function EscritorioDashboardPage() {
       {/* ======================================================== */}
       {/* SEÇÃO FINANCEIRO & CONTABILIDADE */}
       {/* ======================================================== */}
-      {activeTab === "financeiro" && (
+      {activeTab === "financeiro" && !isSecretary && (
         <main className={styles.workspace} style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "20px" }}>
           
           {/* COLUNA DA ESQUERDA: LANÇAMENTO E EXTRATO */}
@@ -2707,6 +3092,365 @@ export default function EscritorioDashboardPage() {
         </main>
       )}
 
+      {/* ======================================================== */}
+      {/* SEÇÃO CRM GERAL DO ESCRITÓRIO */}
+      {/* ======================================================== */}
+      {activeTab === "crm" && (
+        <main className={styles.workspace} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          
+          {/* CRM METRICS CARDS */}
+          <section className={styles.statsGrid}>
+            <div className={styles.statCard}>
+              <div className={styles.statCardTitle}>
+                <Building size={16} color="var(--color-gold)" style={{ marginRight: "6px", marginBottom: "-3px" }} />
+                Total de Leads / Casos
+              </div>
+              <div className={styles.statCardValue}>{crmClients.length}</div>
+              <div className={styles.statCardLimit}>Leads integrados no CRM</div>
+            </div>
+
+            <div className={styles.statCard} style={{ border: "1px solid rgba(239, 68, 68, 0.2)" }}>
+              <div className={styles.statCardTitle} style={{ color: "#ef4444" }}>
+                <AlertCircle size={16} color="#ef4444" style={{ marginRight: "6px", marginBottom: "-3px" }} />
+                Casos Sem Responsável
+              </div>
+              <div className={styles.statCardValue} style={{ color: "#ef4444" }}>
+                {crmClients.filter(c => !c.lawyer_id).length}
+              </div>
+              <div className={styles.statCardLimit}>Aguardando delegação</div>
+            </div>
+
+            <div className={styles.statCard} style={{ border: "1px solid rgba(16, 185, 129, 0.2)" }}>
+              <div className={styles.statCardTitle} style={{ color: "#10b981" }}>
+                <Users size={16} color="#10b981" style={{ marginRight: "6px", marginBottom: "-3px" }} />
+                Delegados a Membros
+              </div>
+              <div className={styles.statCardValue} style={{ color: "#10b981" }}>
+                {crmClients.filter(c => c.lawyer_id).length}
+              </div>
+              <div className={styles.statCardLimit}>Casos em andamento</div>
+            </div>
+          </section>
+
+          {/* CRM SEARCH & CONTROLS */}
+          <section className={styles.panel} style={{ padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "15px" }}>
+              <div style={{ textAlign: "left" }}>
+                <h2 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, color: "#fff" }}>
+                  <Building size={20} color="#d4af37" /> Funil Geral do Escritório (CRM)
+                </h2>
+                <p style={{ margin: "5px 0 0 0", fontSize: "0.78rem", color: "#9ca3af" }}>
+                  Supervisione todos os clientes do escritório, gerencie prioridades e distribua casos complexos para sua equipe.
+                </p>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar cliente, email ou CPF/CNPJ..."
+                    className={styles.redatorInput}
+                    style={{ paddingLeft: "35px", width: "280px", margin: 0 }}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <Search size={14} color="#9ca3af" style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)" }} />
+                </div>
+                <button 
+                  type="button" 
+                  className={styles.newClientBtn} 
+                  onClick={fetchCrmClients} 
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                >
+                  <RefreshCw size={14} /> Atualizar
+                </button>
+              </div>
+            </div>
+          </section>
+
+          {/* CRM CLIENT LISTING */}
+          <div className={styles.clientList} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: "20px" }}>
+            {loadingCrm ? (
+              <div className={styles.emptyState} style={{ gridColumn: "1/-1", padding: "60px 0" }}>
+                <div style={{ 
+                  width: "30px", 
+                  height: "30px", 
+                  borderRadius: "50%", 
+                  border: "3px solid rgba(212, 175, 55, 0.1)", 
+                  borderTopColor: "var(--color-gold)",
+                  animation: "spin 1s linear infinite",
+                  margin: "0 auto 15px"
+                }} />
+                <span>Carregando clientes do CRM...</span>
+              </div>
+            ) : crmClients.filter(c => {
+              const q = searchQuery.toLowerCase();
+              return c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.cpf_cnpj?.includes(q);
+            }).length > 0 ? (
+              crmClients
+                .filter(c => {
+                  const q = searchQuery.toLowerCase();
+                  return c.name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q) || c.cpf_cnpj?.includes(q);
+                })
+                .map((client) => {
+                  const responsible = staff.find(m => m.id === client.lawyer_id);
+                  return (
+                    <div key={client.id} className={styles.clientCard} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", background: "rgba(30, 41, 59, 0.2)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "16px", padding: "20px", transition: "transform 0.2s, box-shadow 0.2s" }}>
+                      
+                      {/* Avatar & Header */}
+                      <div className={styles.clientMainInfo} style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "15px" }}>
+                        <div className={styles.clientAvatar} style={{ width: "40px", height: "40px", borderRadius: "10px", background: "rgba(212,175,55,0.1)", color: "var(--color-gold)", display: "flex", justifyContent: "center", alignItems: "center", fontWeight: "bold", fontSize: "0.95rem" }}>
+                          {client.name.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className={styles.clientMeta} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <h4 style={{ margin: 0, color: "#fff", fontSize: "0.92rem", fontWeight: 700 }}>{client.name}</h4>
+                          <p style={{ margin: 0, fontSize: "0.75rem", color: "#9ca3af" }}>
+                            {client.email || "Sem e-mail"} • {maskPhone(client.phone) || "Sem telefone"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Client Details Grid */}
+                      <div className={styles.clientSecondaryInfo} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: "12px", marginBottom: "15px" }}>
+                        <div className={styles.infoGroup}>
+                          <span className={styles.infoLabel} style={{ fontSize: "0.68rem", color: "#9ca3af", textTransform: "uppercase", fontWeight: "bold" }}>CPF / CNPJ</span>
+                          <span className={styles.infoValue} style={{ fontSize: "0.8rem", color: "#e2e8f0" }}>{maskCPFCNPJ(client.cpf_cnpj) || "--"}</span>
+                        </div>
+                        <div className={styles.infoGroup}>
+                          <span className={styles.infoLabel} style={{ fontSize: "0.68rem", color: "#9ca3af", textTransform: "uppercase", fontWeight: "bold" }}>Risco Jurídico</span>
+                          <span
+                            className={`${styles.riskBadge} ${client.risk_score < 30 ? styles.riskLow : client.risk_score < 70 ? styles.riskMed : styles.riskHigh}`}
+                            style={{ display: "inline-block", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "6px" }}
+                          >
+                            {client.risk_score < 30 ? "Baixo" : client.risk_score < 70 ? "Médio" : "Alto"} ({client.risk_score}%)
+                          </span>
+                        </div>
+                        <div className={styles.infoGroup}>
+                          <span className={styles.infoLabel} style={{ fontSize: "0.68rem", color: "#9ca3af", textTransform: "uppercase", fontWeight: "bold" }}>Status Funil</span>
+                          <span className={styles.infoValue} style={{ fontSize: "0.8rem", color: "#e2e8f0" }}>{client.status || "Novo"}</span>
+                        </div>
+                        <div className={styles.infoGroup}>
+                          <span className={styles.infoLabel} style={{ fontSize: "0.68rem", color: "#9ca3af", textTransform: "uppercase", fontWeight: "bold" }}>Cadastro</span>
+                          <span className={styles.infoValue} style={{ fontSize: "0.8rem", color: "#e2e8f0" }}>
+                            {client.created_at ? new Date(client.created_at).toLocaleDateString("pt-BR") : "--"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Footer Actions & Lawyer Responsible */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid rgba(255,255,255,0.04)", paddingTop: "12px", marginTop: "auto" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span style={{ fontSize: "0.65rem", color: "#9ca3af", fontWeight: "bold", textTransform: "uppercase" }}>Responsável</span>
+                          <span style={{ fontSize: "0.8rem", color: responsible ? "var(--color-gold)" : "#ef4444", fontWeight: 600 }}>
+                            {responsible ? `💼 ${responsible.name}` : "⚠️ Sem Responsável"}
+                          </span>
+                        </div>
+
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          <button
+                            type="button"
+                            className={styles.newClientBtn}
+                            style={{ padding: "6px 12px", fontSize: "0.75rem", background: "rgba(212,175,55,0.1)", color: "var(--color-gold)", border: "1px solid rgba(212,175,55,0.2)" }}
+                            onClick={() => setDelegatingClient(client)}
+                          >
+                            Delegar
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.newClientBtn}
+                            style={{ padding: "6px 12px", fontSize: "0.75rem", background: "rgba(255,255,255,0.03)", color: "#fff", border: "1px solid rgba(255,255,255,0.06)" }}
+                            onClick={() => {
+                              setSelectedClient(client);
+                              setShowDossierModal(true);
+                            }}
+                          >
+                            Ver Ficha
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+                  );
+                })
+            ) : (
+              <div className={styles.emptyState} style={{ gridColumn: "1/-1", padding: "60px 0" }}>Nenhum lead/cliente encontrado no CRM.</div>
+            )}
+          </div>
+
+        </main>
+      )}
+
+      {/* MODAL DE DELEGAÇÃO DE CASOS (CRM GERAL) */}
+      {delegatingClient && (
+        <div className={styles.modalOverlay} onClick={() => setDelegatingClient(null)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "450px", width: "95%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ margin: 0, color: "var(--color-gold)", display: "flex", alignItems: "center", gap: "8px" }}>
+                <Building size={20} color="var(--color-gold)" /> Delegar Responsável
+              </h3>
+              <button 
+                type="button" 
+                onClick={() => setDelegatingClient(null)} 
+                style={{ background: "none", border: "none", color: "#9ca3af", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                &times;
+              </button>
+            </div>
+            
+            <p style={{ fontSize: "0.85rem", color: "#cbd5e1", margin: "0 0 15px", lineHeight: "1.5" }}>
+              Selecione o advogado membro do escritório que ficará encarregado de conduzir o caso de <strong>{delegatingClient.name}</strong>:
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginBottom: "20px" }}>
+              <label style={{ fontSize: "0.78rem", color: "#9ca3af", fontWeight: "bold" }}>Selecione o Advogado</label>
+              <select
+                style={{
+                  width: "100%",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  padding: "10px",
+                  fontSize: "0.85rem",
+                  outline: "none"
+                }}
+                defaultValue={delegatingClient.lawyer_id || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  handleDelegateCase(delegatingClient.id, val || null);
+                }}
+                disabled={isDelegating}
+              >
+                <option value="">-- Nenhum (Deixar Sem Responsável) --</option>
+                {staff
+                  .filter(member => member.cargo === "advogado")
+                  .map(member => (
+                    <option key={member.id} value={member.id}>
+                      💼 {member.name} (OAB: {member.oab || "Sem OAB"})
+                    </option>
+                  ))
+                }
+              </select>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button 
+                type="button" 
+                className={styles.cancelBtn} 
+                onClick={() => setDelegatingClient(null)}
+                disabled={isDelegating}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE FICHA COMPLETA DO CLIENTE (CRM GERAL) */}
+      {showDossierModal && selectedClient && (
+        <div className={styles.modalOverlay} onClick={() => setShowDossierModal(false)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px", width: "95%", maxHeight: "90vh", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "15px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div style={{ width: "45px", height: "45px", borderRadius: "12px", background: "rgba(212,175,55,0.1)", color: "var(--color-gold)", display: "flex", justifyContent: "center", alignItems: "center", fontWeight: "bold", fontSize: "1.1rem" }}>
+                  {selectedClient.name.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, color: "#fff", fontSize: "1.15rem", fontWeight: 700 }}>{selectedClient.name}</h3>
+                  <span style={{ fontSize: "0.72rem", color: "#9ca3af", textTransform: "uppercase" }}>{selectedClient.type || "Pessoa Física"}</span>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowDossierModal(false)} 
+                style={{ background: "none", border: "none", color: "#9ca3af", fontSize: "1.5rem", cursor: "pointer" }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "20px", paddingRight: "5px" }}>
+              
+              {/* Informações Básicas */}
+              <div>
+                <h4 style={{ margin: "0 0 10px 0", color: "var(--color-gold)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Ficha Cadastral</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", padding: "15px", borderRadius: "10px" }}>
+                  <div>
+                    <span style={{ display: "block", fontSize: "0.68rem", color: "#9ca3af", fontWeight: "bold" }}>CPF / CNPJ</span>
+                    <span style={{ fontSize: "0.85rem", color: "#fff" }}>{selectedClient.cpf_cnpj || "Não cadastrado"}</span>
+                  </div>
+                  <div>
+                    <span style={{ display: "block", fontSize: "0.68rem", color: "#9ca3af", fontWeight: "bold" }}>RG</span>
+                    <span style={{ fontSize: "0.85rem", color: "#fff" }}>{selectedClient.rg || "Não cadastrado"}</span>
+                  </div>
+                  <div>
+                    <span style={{ display: "block", fontSize: "0.68rem", color: "#9ca3af", fontWeight: "bold" }}>Telefone</span>
+                    <span style={{ fontSize: "0.85rem", color: "#fff" }}>{selectedClient.phone || "Não cadastrado"}</span>
+                  </div>
+                  <div>
+                    <span style={{ display: "block", fontSize: "0.68rem", color: "#9ca3af", fontWeight: "bold" }}>E-mail</span>
+                    <span style={{ fontSize: "0.85rem", color: "#fff" }}>{selectedClient.email || "Não cadastrado"}</span>
+                  </div>
+                  <div style={{ gridColumn: "1/-1" }}>
+                    <span style={{ display: "block", fontSize: "0.68rem", color: "#9ca3af", fontWeight: "bold" }}>Endereço Residencial</span>
+                    <span style={{ fontSize: "0.85rem", color: "#fff" }}>{selectedClient.address || "Não cadastrado"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status do Caso */}
+              <div>
+                <h4 style={{ margin: "0 0 10px 0", color: "var(--color-gold)", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>Diagnóstico Jurídico</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", padding: "15px", borderRadius: "10px" }}>
+                  <div>
+                    <span style={{ display: "block", fontSize: "0.68rem", color: "#9ca3af", fontWeight: "bold" }}>Responsável do Escritório</span>
+                    <span style={{ fontSize: "0.85rem", color: "var(--color-gold)", fontWeight: 600 }}>
+                      {(() => {
+                        const r = staff.find(m => m.id === selectedClient.lawyer_id);
+                        return r ? `💼 ${r.name}` : "⚠️ Sem Responsável";
+                      })()}
+                    </span>
+                  </div>
+                  <div>
+                    <span style={{ display: "block", fontSize: "0.68rem", color: "#9ca3af", fontWeight: "bold" }}>Risco Judicial</span>
+                    <span style={{ fontSize: "0.85rem", color: "#fff" }}>{selectedClient.risk_score || 0}%</span>
+                  </div>
+                  <div style={{ gridColumn: "1/-1" }}>
+                    <span style={{ display: "block", fontSize: "0.68rem", color: "#9ca3af", fontWeight: "bold" }}>Notas e Observações Internas</span>
+                    <span style={{ fontSize: "0.85rem", color: "#cbd5e1", fontStyle: "italic", whiteSpace: "pre-line", display: "block", marginTop: "4px" }}>
+                      {selectedClient.notes || "Nenhuma observação interna registrada para este lead."}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "20px", paddingTop: "15px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+              <button 
+                type="button" 
+                className={styles.newClientBtn} 
+                style={{ padding: "8px 16px", fontSize: "0.8rem", background: "rgba(212,175,55,0.1)", color: "var(--color-gold)", border: "1px solid rgba(212,175,55,0.2)" }}
+                onClick={() => {
+                  setShowDossierModal(false);
+                  setDelegatingClient(selectedClient);
+                }}
+              >
+                Delegar Caso
+              </button>
+              <button 
+                type="button" 
+                className={styles.cancelBtn} 
+                onClick={() => setShowDossierModal(false)}
+              >
+                Fechar Ficha
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TELA DE ACESSO RESTRITO PARA SECRETÁRIAS */}
       {activeTab === "restrito" && (
         <main className={styles.workspace} style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "450px" }}>
@@ -2721,6 +3465,178 @@ export default function EscritorioDashboardPage() {
             <div style={{ padding: "14px 18px", borderRadius: "12px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255,255,255,0.05)", fontSize: "0.82rem", color: "#6b7280" }}>
               Se precisar de novos acessos às cotas ou à comunicação interna, entre em contato diretamente com o gestor do seu escritório.
             </div>
+          </div>
+        </main>
+      )}
+
+      {/* ======================================================== */}
+      {/* SEÇÃO AGENDA & PRAZOS COMPARTILHADOS */}
+      {/* ======================================================== */}
+      {activeTab === "agenda" && (
+        <main className={styles.workspace} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* TOP CONTROLS CARD */}
+          <section className={styles.panel} style={{ padding: "20px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "15px" }}>
+              <div style={{ textAlign: "left" }}>
+                <h2 style={{ display: "flex", alignItems: "center", gap: "8px", margin: 0, color: "#fff" }}>
+                  <Calendar size={20} color="#d4af37" /> Agenda Centralizada do Escritório
+                </h2>
+                <p style={{ margin: "5px 0 0 0", fontSize: "0.78rem", color: "#cbd5e1" }}>
+                  Gerencie audiências, prazos processuais fatais, consultas e atribua compromissos diretamente para os membros do escritório.
+                </p>
+              </div>
+
+              {/* ACTION BUTTONS & FILTER */}
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                
+                {/* FILTER BY OFFICE MEMBER */}
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.08)", borderRadius: "10px", padding: "6px 12px" }}>
+                  <Filter size={14} color="#d4af37" />
+                  <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#9ca3af" }}>Filtrar Membro:</span>
+                  <select
+                    value={calendarMemberFilter}
+                    onChange={(e) => setCalendarMemberFilter(e.target.value)}
+                    style={{ background: "transparent", border: "none", color: "#fff", fontSize: "0.78rem", fontWeight: 700, outline: "none", cursor: "pointer" }}
+                  >
+                    <option value="TODOS" style={{ background: "#11141c" }}>Todos os Membros</option>
+                    {(staff || []).map(m => (
+                      <option key={m.id} value={m.id} style={{ background: "#11141c" }}>
+                        {m.name} ({m.cargo.toUpperCase()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* IA ACTION BUTTONS */}
+                <button
+                  onClick={handleAnalyseAgenda}
+                  className={styles.actionBtn}
+                  style={{ color: "#10b981", borderColor: "rgba(16, 185, 129, 0.2)" }}
+                >
+                  <Cpu size={14} /> Analisar Riscos IA
+                </button>
+
+                <button
+                  onClick={handleSummarizeAgenda}
+                  className={styles.actionBtn}
+                  style={{ color: "#60a5fa", borderColor: "rgba(96, 165, 250, 0.2)" }}
+                >
+                  <BarChart3 size={14} /> Resumo Executivo
+                </button>
+
+                <button
+                  onClick={() => {
+                    setEditingAgendaItem(null);
+                    setAiDeadlineResult(null);
+                    setNewAgendaItem({
+                      title: "",
+                      date: new Date().toISOString().split("T")[0],
+                      time: "09:00",
+                      description: "",
+                      type: "Judicial",
+                      urgency: "Média",
+                      clientId: "",
+                      lawyerId: "",
+                    });
+                    setShowAgendaModal(true);
+                  }}
+                  className={styles.addStaffBtn}
+                  style={{ background: "linear-gradient(135deg, #d4af37 0%, #b8901c 100%)", color: "#000", fontWeight: 800 }}
+                >
+                  <Plus size={16} /> Novo Compromisso
+                </button>
+
+              </div>
+            </div>
+          </section>
+
+          {/* AGENDA COLUMNS (Judicial, Reunião, Outros) */}
+          <div className={styles.agendaGrid}>
+            
+            {/* AUDIÊNCIAS E JUIZADOS */}
+            <div className={styles.agendaCol}>
+              <div className={styles.agendaColHeader}>
+                <span className={styles.agendaColTitle}>⚖️ Audiências e Prazos Judiciais</span>
+                <span className={styles.agendaCount}>
+                  {agendaItems.filter(i => {
+                    if (calendarMemberFilter !== "TODOS" && i.lawyer_id !== calendarMemberFilter) return false;
+                    return i.type === "Judicial" || i.type === "Audiência";
+                  }).length}
+                </span>
+              </div>
+              <div className={styles.agendaList}>
+                {agendaItems.filter(i => {
+                  if (calendarMemberFilter !== "TODOS" && i.lawyer_id !== calendarMemberFilter) return false;
+                  return i.type === "Judicial" || i.type === "Audiência";
+                }).length === 0 ? (
+                  <div className={styles.agendaEmpty}>Nenhuma audiência ou prazo judicial pendente.</div>
+                ) : (
+                  agendaItems
+                    .filter(i => {
+                      if (calendarMemberFilter !== "TODOS" && i.lawyer_id !== calendarMemberFilter) return false;
+                      return i.type === "Judicial" || i.type === "Audiência";
+                    })
+                    .map(item => renderAgendaCard(item))
+                )}
+              </div>
+            </div>
+
+            {/* REUNIÕES E CONSULTAS */}
+            <div className={styles.agendaCol}>
+              <div className={styles.agendaColHeader}>
+                <span className={styles.agendaColTitle}>🤝 Reuniões e Consultas</span>
+                <span className={styles.agendaCount}>
+                  {agendaItems.filter(i => {
+                    if (calendarMemberFilter !== "TODOS" && i.lawyer_id !== calendarMemberFilter) return false;
+                    return i.type === "Reunião" || i.type === "Atendimento";
+                  }).length}
+                </span>
+              </div>
+              <div className={styles.agendaList}>
+                {agendaItems.filter(i => {
+                  if (calendarMemberFilter !== "TODOS" && i.lawyer_id !== calendarMemberFilter) return false;
+                  return i.type === "Reunião" || i.type === "Atendimento";
+                }).length === 0 ? (
+                  <div className={styles.agendaEmpty}>Nenhuma reunião ou consulta agendada.</div>
+                ) : (
+                  agendaItems
+                    .filter(i => {
+                      if (calendarMemberFilter !== "TODOS" && i.lawyer_id !== calendarMemberFilter) return false;
+                      return i.type === "Reunião" || i.type === "Atendimento";
+                    })
+                    .map(item => renderAgendaCard(item))
+                )}
+              </div>
+            </div>
+
+            {/* ADESÕES E OUTROS */}
+            <div className={styles.agendaCol}>
+              <div className={styles.agendaColHeader}>
+                <span className={styles.agendaColTitle}>📌 Outras Obrigações e Prazos</span>
+                <span className={styles.agendaCount}>
+                  {agendaItems.filter(i => {
+                    if (calendarMemberFilter !== "TODOS" && i.lawyer_id !== calendarMemberFilter) return false;
+                    return i.type !== "Judicial" && i.type !== "Audiência" && i.type !== "Reunião" && i.type !== "Atendimento";
+                  }).length}
+                </span>
+              </div>
+              <div className={styles.agendaList}>
+                {agendaItems.filter(i => {
+                  if (calendarMemberFilter !== "TODOS" && i.lawyer_id !== calendarMemberFilter) return false;
+                  return i.type !== "Judicial" && i.type !== "Audiência" && i.type !== "Reunião" && i.type !== "Atendimento";
+                }).length === 0 ? (
+                  <div className={styles.agendaEmpty}>Nenhum outro compromisso registrado.</div>
+                ) : (
+                  agendaItems
+                    .filter(i => {
+                      if (calendarMemberFilter !== "TODOS" && i.lawyer_id !== calendarMemberFilter) return false;
+                      return i.type !== "Judicial" && i.type !== "Audiência" && i.type !== "Reunião" && i.type !== "Atendimento";
+                    })
+                    .map(item => renderAgendaCard(item))
+                )}
+              </div>
+            </div>
+
           </div>
         </main>
       )}
@@ -2956,6 +3872,244 @@ export default function EscritorioDashboardPage() {
                   <FileSpreadsheet size={14} style={{ marginRight: "6px", marginBottom: "-2px" }} /> Exportar Fechamento Completo + Parecer IA
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PARA AGENDAR OU EDITAR COMPROMISSO */}
+      {showAgendaModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard} style={{ maxWidth: "560px", width: "90%" }}>
+            <h3>{editingAgendaItem ? "Editar Compromisso" : "Agendar Novo Compromisso"}</h3>
+            <form onSubmit={handleSaveAgenda} className={styles.formGrid}>
+              
+              <div className={styles.formItemFull}>
+                <label className={styles.formLabel}>Título / Compromisso</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Audiência de Instrução e Julgamento - Proc 1029..."
+                  className={styles.formInput}
+                  value={newAgendaItem.title}
+                  onChange={(e) => setNewAgendaItem({ ...newAgendaItem, title: e.target.value })}
+                />
+              </div>
+
+              {/* IA SUGGEST DEADLINE BUTTON */}
+              <div className={styles.formItemFull}>
+                <button
+                  type="button"
+                  onClick={handleAiSuggestDeadline}
+                  className={styles.iaSuggestionBtn}
+                  disabled={isAiSuggesting}
+                >
+                  <Cpu size={16} className={isAiSuggesting ? styles.spin : ""} />
+                  {isAiSuggesting ? "IA Calculando Prazo..." : "Calcular Prazo Legal com IA"}
+                </button>
+              </div>
+
+              {aiDeadlineResult && (
+                <div className={styles.iaResultBox}>
+                  <span className={styles.iaResultLabel}>Sugestão da IA</span>
+                  <div className={styles.iaResultText}>
+                    <strong>Prazo Sugerido:</strong> {new Date(aiDeadlineResult.suggestedDate).toLocaleDateString("pt-BR")} ({aiDeadlineResult.preparationDays} dias de margem segura)
+                    <p style={{ margin: "6px 0 0 0", fontSize: "0.75rem", color: "#a7f3d0" }}>
+                      {aiDeadlineResult.reasoning}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewAgendaItem({
+                        ...newAgendaItem,
+                        date: aiDeadlineResult.suggestedDate
+                      });
+                      toast.success("Data da IA aplicada!");
+                    }}
+                    style={{
+                      background: "rgba(16, 185, 129, 0.15)",
+                      border: "1px solid rgba(16, 185, 129, 0.3)",
+                      borderRadius: "6px",
+                      color: "#10b981",
+                      padding: "6px 12px",
+                      fontSize: "0.72rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      marginTop: "10px"
+                    }}
+                  >
+                    Usar Data Sugerida
+                  </button>
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: "15px" }}>
+                <div className={styles.formItem}>
+                  <label className={styles.formLabel}>Data</label>
+                  <input
+                    type="date"
+                    required
+                    className={styles.formInput}
+                    value={newAgendaItem.date}
+                    onChange={(e) => setNewAgendaItem({ ...newAgendaItem, date: e.target.value })}
+                  />
+                </div>
+                <div className={styles.formItem}>
+                  <label className={styles.formLabel}>Hora</label>
+                  <input
+                    type="time"
+                    required
+                    className={styles.formInput}
+                    value={newAgendaItem.time}
+                    onChange={(e) => setNewAgendaItem({ ...newAgendaItem, time: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+                <div className={styles.formItem}>
+                  <label className={styles.formLabel}>Tipo</label>
+                  <select
+                    className={styles.formSelect}
+                    value={newAgendaItem.type}
+                    onChange={(e) => setNewAgendaItem({ ...newAgendaItem, type: e.target.value })}
+                  >
+                    <option value="Judicial">⚖️ Judicial (Prazo)</option>
+                    <option value="Audiência">🏛️ Audiência</option>
+                    <option value="Reunião">🤝 Reunião</option>
+                    <option value="Atendimento">📞 Consulta / Atendimento</option>
+                    <option value="Outro">📌 Outro</option>
+                  </select>
+                </div>
+                <div className={styles.formItem}>
+                  <label className={styles.formLabel}>Urgência</label>
+                  <select
+                    className={styles.formSelect}
+                    value={newAgendaItem.urgency}
+                    onChange={(e) => setNewAgendaItem({ ...newAgendaItem, urgency: e.target.value })}
+                  >
+                    <option value="Baixa">🟢 Baixa</option>
+                    <option value="Média">🟡 Média</option>
+                    <option value="Alta">🔴 Alta</option>
+                    <option value="Crítica">🚨 Crítica (Fatal)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* ATRIBUIR A UM ADVOGADO ESPECÍFICO */}
+              <div className={styles.formItemFull}>
+                <label className={styles.formLabel}>Atribuir a Responsabilidade (Advogado / Membro)</label>
+                <select
+                  className={styles.formSelect}
+                  value={newAgendaItem.lawyerId}
+                  onChange={(e) => setNewAgendaItem({ ...newAgendaItem, lawyerId: e.target.value })}
+                >
+                  <option value="">Nenhum - Atribuir a Mim ({data?.user?.name || "Administrador"})</option>
+                  {(staff || []).map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.cargo.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* VINCULAR A CLIENTE CRM */}
+              <div className={styles.formItemFull}>
+                <label className={styles.formLabel}>Vincular ao Cliente (Opcional)</label>
+                <select
+                  className={styles.formSelect}
+                  value={newAgendaItem.clientId}
+                  onChange={(e) => setNewAgendaItem({ ...newAgendaItem, clientId: e.target.value })}
+                >
+                  <option value="">Compromisso Interno do Escritório (Sem Cliente)</option>
+                  {(crmClients || []).map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.email || c.phone || "Sem contato"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.formItemFull}>
+                <label className={styles.formLabel}>Descrição / Notas</label>
+                <textarea
+                  placeholder="Instruções adicionais, link do Teams/Meet ou observações..."
+                  rows={3}
+                  className={styles.formTextarea}
+                  value={newAgendaItem.description}
+                  onChange={(e) => setNewAgendaItem({ ...newAgendaItem, description: e.target.value })}
+                />
+              </div>
+
+              <div className={styles.modalActions}>
+                <button
+                  type="button"
+                  className={styles.cancelBtn}
+                  onClick={() => {
+                    setShowAgendaModal(false);
+                    setEditingAgendaItem(null);
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className={styles.confirmBtn}>
+                  {editingAgendaItem ? "Atualizar Compromisso" : "Agendar Compromisso"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE ANÁLISE IA DA AGENDA */}
+      {showAgendaAnalysisModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalCard} style={{ maxWidth: "750px", width: "90%", maxHeight: "85vh", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+              <h3 style={{ margin: 0, color: "#d4af37", display: "flex", alignItems: "center", gap: "8px" }}>
+                <Cpu size={20} color="#d4af37" /> Parecer e Auditoria de Prazos IA
+              </h3>
+              <button 
+                type="button" 
+                onClick={() => setShowAgendaAnalysisModal(false)}
+                style={{ background: "none", border: "none", color: "#9ca3af", fontSize: "1.2rem", cursor: "pointer" }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", paddingRight: "10px", margin: "10px 0" }}>
+              {isAnalyzingAgenda ? (
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "60px 0", gap: "15px" }}>
+                  <div style={{ 
+                    width: "40px", 
+                    height: "40px", 
+                    borderRadius: "50%", 
+                    border: "3px solid rgba(212, 175, 55, 0.1)", 
+                    borderTopColor: "#d4af37",
+                    animation: "spin 1s linear infinite"
+                  }} />
+                  <div style={{ textAlign: "center" }}>
+                    <span style={{ fontSize: "0.88rem", color: "#fff", fontWeight: 700 }}>SocialJurídico AI Legal Analyzer</span>
+                    <p style={{ margin: "5px 0 0 0", fontSize: "0.72rem", color: "#9ca3af" }}>Cruzando agendas, identificando conflitos de conciliações, avaliando riscos de revelia e redigindo recomendações...</p>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: "0.85rem", color: "#cbd5e1", lineHeight: "1.6", whiteSpace: "pre-line", textAlign: "left" }}>
+                  {agendaAnalysis}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "15px", paddingTop: "15px", borderTop: "1px solid rgba(255, 255, 255, 0.05)" }}>
+              <button 
+                type="button" 
+                className={styles.cancelBtn} 
+                onClick={() => setShowAgendaAnalysisModal(false)}
+              >
+                Fechar Parecer
+              </button>
             </div>
           </div>
         </div>

@@ -44,25 +44,30 @@ export default function Sidebar() {
 
   const isPremiumUser = profileData?.is_premium || profileData?.plan_type === 'START' || profileData?.plan_type === 'PRO';
 
-  // Permissões de estagiário
+  // Permissões de estagiário e secretária
   const isEstagiario = profileData?.cargo === "estagiario";
+  const isSecretary = profileData?.cargo === "secretaria";
   const perms = profileData?.permissoes || {};
 
   const hasAssinaturaAccess = !isEstagiario || !!perms.ferr_assinatura;
   const hasCrmAccess = !isEstagiario || !!perms.ferr_crm;
   const hasSmartDocsAccess = !isEstagiario || !!perms.ferr_smart_docs;
   const hasBlindagemAccess = !isEstagiario || !!perms.ferr_blindagem;
-  const hasRedatorIaAccess = !isEstagiario || !!perms.ferr_redator_ia;
+  const hasRedatorIaAccess = !isSecretary && (!isEstagiario || !!perms.ferr_redator_ia);
   const hasAgendaAccess = !isEstagiario || !!perms.ferr_agenda;
   const hasTriagemAccess = !isEstagiario || !!perms.ferr_triagem;
   const hasCalculadoraAccess = !isEstagiario || !!perms.ferr_calculadora;
-  const hasJurisprudenciaAccess = !isEstagiario || !!perms.ferr_jurisprudencia;
+  const hasJurisprudenciaAccess = !isSecretary && (!isEstagiario || !!perms.ferr_jurisprudencia);
 
   // Import alert handling toast directly if not present
   const handleTabClick = (tabName, allowed) => {
     if (!allowed) {
       const toastModule = require("react-hot-toast").default;
-      toastModule.error("Recurso premium bloqueado pelo Administrador do Escritório.");
+      if (isSecretary && (tabName === "redator" || tabName === "juris")) {
+        toastModule.error("Acesso restrito: Secretárias não possuem acesso a ferramentas técnicas de direito.");
+      } else {
+        toastModule.error("Recurso premium bloqueado pelo Administrador do Escritório.");
+      }
       return;
     }
     handleTabChange(tabName);

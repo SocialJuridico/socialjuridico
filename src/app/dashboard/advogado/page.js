@@ -186,6 +186,7 @@ export default function AdvogadoDashboard() {
     associatedCases, setAssociatedCases,
     isFetchingAssociatedCases,
     agendaItems, setAgendaItems,
+    membrosEscritorio, setMembrosEscritorio,
     fetchInteractions,
     handleSaveInteraction,
     fetchClientInsight,
@@ -223,6 +224,9 @@ export default function AdvogadoDashboard() {
 
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [delegatingClient, setDelegatingClient] = useState(null);
+  const [isDelegating, setIsDelegating] = useState(false);
+  const [crmFilter, setCrmFilter] = useState("all"); // "my" or "all"
   
   const [transparentCheckoutAmount, setTransparentCheckoutAmount] = useState(null);
   const [appliedCouponData, setAppliedCouponData] = useState(null);
@@ -271,6 +275,7 @@ export default function AdvogadoDashboard() {
   const [isAddChannelOpen, setIsAddChannelOpen] = useState(false);
   const [newChannel, setNewChannel] = useState({ nome: "", tipo: "texto", limite: 0 });
   const [showOabModal, setShowOabModal] = useState(false);
+  const [calendarMemberFilter, setCalendarMemberFilter] = useState("TODOS");
 
   const [generatedContract, setGeneratedContract] = useState("");
   const [isGeneratingContract, setIsGeneratingContract] = useState(false);
@@ -441,6 +446,7 @@ export default function AdvogadoDashboard() {
     type: "Judicial",
     urgency: "Média",
     clientId: "",
+    lawyerId: "",
   });
 
   // Smart Docs states
@@ -1408,6 +1414,13 @@ export default function AdvogadoDashboard() {
   ]);
 
   
+
+  // Configurar filtro padrão do CRM com base no cargo (admin vê tudo, membro vê seus casos)
+  useEffect(() => {
+    if (profileData) {
+      setCrmFilter(profileData.cargo === 'admin' ? 'all' : 'my');
+    }
+  }, [profileData]);
 
   // Handle Stripe Redirection Race Condition
   useEffect(() => {
@@ -3984,6 +3997,14 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const filteredClients = useMemo(() => {
+    if (!profileData?.escritorio_id) return crmClients || [];
+    if (crmFilter === "my") {
+      return (crmClients || []).filter(c => c.lawyer_id === profileData.id);
+    }
+    return crmClients || [];
+  }, [crmClients, crmFilter, profileData]);
+
   const renderCRM = () => (
     <div className={styles.toolContainer}>
       <div className={styles.crmHeader}>
@@ -4129,11 +4150,57 @@ export default function AdvogadoDashboard() {
         </div>
       </div>
 
+      {/* SELETOR DE FILTRO CRM (APENAS PARA USUÁRIOS DE ESCRITÓRIO) */}
+      {profileData?.escritorio_id && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'var(--color-black-light)', padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--color-silver-dark)', fontWeight: 600 }}>Visualização:</span>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className={styles.tabBtn}
+                style={{
+                  padding: '6px 16px',
+                  fontSize: '0.75rem',
+                  borderRadius: '20px',
+                  border: crmFilter === 'my' ? '1px solid var(--color-gold)' : '1px solid transparent',
+                  background: crmFilter === 'my' ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.03)',
+                  color: crmFilter === 'my' ? 'var(--color-gold)' : 'var(--color-silver)',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setCrmFilter('my')}
+              >
+                👤 Meus Casos (Prioridade)
+              </button>
+              <button
+                type="button"
+                className={styles.tabBtn}
+                style={{
+                  padding: '6px 16px',
+                  fontSize: '0.75rem',
+                  borderRadius: '20px',
+                  border: crmFilter === 'all' ? '1px solid var(--color-gold)' : '1px solid transparent',
+                  background: crmFilter === 'all' ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.03)',
+                  color: crmFilter === 'all' ? 'var(--color-gold)' : 'var(--color-silver)',
+                  cursor: 'pointer'
+                }}
+                onClick={() => setCrmFilter('all')}
+              >
+                🏢 Todos do Escritório
+              </button>
+            </div>
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-silver-dark)' }}>
+            Mostrando <strong>{filteredClients.length}</strong> de {crmClients.length} clientes.
+          </span>
+        </div>
+      )}
+
       <div className={styles.clientList}>
         {loadingCrm ? (
           <div className={styles.emptyState}>Carregando clientes...</div>
-        ) : crmClients.length > 0 ? (
-          crmClients.map((client) => (
+        ) : filteredClients.length > 0 ? (
+          filteredClients.map((client) => (
             <div key={client.id} className={styles.clientCard}>
               <div className={styles.clientMainInfo}>
                 <div className={styles.clientAvatar}>
@@ -4143,7 +4210,7 @@ export default function AdvogadoDashboard() {
                   <h4>{client.name}</h4>
                   <p>
                     {client.email || "Sem email"} •{" "}
-                    {/* ⚠️ SEGURANÇA: Telefo ne mascarado na listagem */}
+                    {/* ⚠️ SEGURANÇA: Telefone mascarado na listagem */}
                     {maskPhone(client.phone) || "Sem telefone"}
                   </p>
                 </div>
@@ -4176,7 +4243,41 @@ export default function AdvogadoDashboard() {
                     {client.status || "Ativo"}
                   </span>
                 </div>
+
+                {profileData?.escritorio_id && (
+                  <div className={styles.infoGroup}>
+                    <span className={styles.infoLabel}>Responsável</span>
+                    <span className={styles.infoValue} style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '150px' }}>
+                      <span style={{ color: client.lawyer_id ? 'var(--color-silver)' : 'var(--color-silver-dark)', fontStyle: client.lawyer_id ? 'normal' : 'italic' }}>
+                        {(() => {
+                          const responsible = (membrosEscritorio || []).find(m => m.id === client.lawyer_id);
+                          return responsible ? `💼 ${responsible.name}` : "⚠️ Sem Responsável";
+                        })()}
+                      </span>
+                      {profileData?.cargo === 'admin' && (
+                        <button
+                          type="button"
+                          style={{
+                            background: 'rgba(212,175,55,0.1)',
+                            color: 'var(--color-gold)',
+                            border: '1px solid rgba(212,175,55,0.3)',
+                            borderRadius: '4px',
+                            padding: '2px 8px',
+                            fontSize: '0.65rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onClick={() => setDelegatingClient(client)}
+                        >
+                          Delegar
+                        </button>
+                      )}
+                    </span>
+                  </div>
+                )}
+
                 <button
+                  type="button"
                   className={styles.buyJurisBtn}
                   style={{ padding: "6px 12px", fontSize: "0.75rem" }}
                   onClick={() => {
@@ -4204,6 +4305,42 @@ export default function AdvogadoDashboard() {
       </div>
     </div>
   );
+
+  const handleDelegateCase = async (clientId, targetLawyerId) => {
+    if (!clientId || !targetLawyerId) {
+      toast.error("Por favor, selecione um advogado.");
+      return;
+    }
+
+    setIsDelegating(true);
+    try {
+      const res = await fetch("/api/crm", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: clientId,
+          lawyer_id: targetLawyerId
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Caso delegado e advogado notificado com sucesso!");
+        setDelegatingClient(null);
+        fetchCrmClients();
+        if (selectedClient && selectedClient.id === clientId) {
+          setSelectedClient(data.data);
+        }
+      } else {
+        toast.error(data.message || "Erro ao delegar caso.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro de conexão ao delegar.");
+    } finally {
+      setIsDelegating(false);
+    }
+  };
 
   const handlePDFExtraction = async (e) => {
     const file = e.target.files[0];
@@ -4850,6 +4987,18 @@ export default function AdvogadoDashboard() {
   };
 
   const renderRedator = () => {
+    if (profileData?.cargo === "secretaria") {
+      return (
+        <div className={styles.emptyState} style={{ padding: "40px", textAlign: "center" }}>
+          <Lock size={48} style={{ color: "#ef4444", marginBottom: "15px" }} />
+          <h3>Acesso Restrito</h3>
+          <p style={{ color: "#aaa" }}>
+            Seu cargo de Secretária não possui permissão para acessar o Redator IA.
+          </p>
+        </div>
+      );
+    }
+
     const marketIndexes = [
       { id: 1, title: "Petição", low: 1100, mid: 3250, high: 9000 },
       { id: 2, title: "Embargos", low: 1220, mid: 2800, high: 4050 },
@@ -5875,6 +6024,18 @@ export default function AdvogadoDashboard() {
   };
 
   const renderJuris = () => {
+    if (profileData?.cargo === "secretaria") {
+      return (
+        <div className={styles.emptyState} style={{ padding: "40px", textAlign: "center" }}>
+          <Lock size={48} style={{ color: "#ef4444", marginBottom: "15px" }} />
+          <h3>Acesso Restrito</h3>
+          <p style={{ color: "#aaa" }}>
+            Seu cargo de Secretária não possui permissão para acessar a Inteligência Jurisprudencial.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className={styles.jurisContainer}>
         <div className={styles.smartDocsHeader}>
@@ -6110,10 +6271,14 @@ export default function AdvogadoDashboard() {
       return "Próximos Dias";
     };
 
+    const filteredAgendaItems = calendarMemberFilter === "TODOS"
+      ? agendaItems
+      : agendaItems.filter(i => i.lawyer_id === calendarMemberFilter);
+
     const grouped = {
-      Hoje: agendaItems.filter((i) => getGroup(i.date) === "Hoje"),
-      Amanhã: agendaItems.filter((i) => getGroup(i.date) === "Amanhã"),
-      "Próximos Dias": agendaItems.filter(
+      Hoje: filteredAgendaItems.filter((i) => getGroup(i.date) === "Hoje"),
+      Amanhã: filteredAgendaItems.filter((i) => getGroup(i.date) === "Amanhã"),
+      "Próximos Dias": filteredAgendaItems.filter(
         (i) => getGroup(i.date) === "Próximos Dias",
       ),
     };
@@ -6144,7 +6309,19 @@ export default function AdvogadoDashboard() {
             </button>
             <button
               className={styles.redatorGenerateBtn}
-              onClick={() => setShowAgendaModal(true)}
+              onClick={() => {
+                setNewAgendaItem({
+                  title: "",
+                  date: "",
+                  time: "09:00",
+                  description: "",
+                  type: "Judicial",
+                  urgency: "Média",
+                  clientId: "",
+                  lawyerId: profileData?.id || "",
+                });
+                setShowAgendaModal(true);
+              }}
             >
               <Plus size={16} /> Novo
             </button>
@@ -6169,6 +6346,53 @@ export default function AdvogadoDashboard() {
             )}
           </div>
         </div>
+
+        {/* FILTROS DE MEMBROS DO ESCRITÓRIO */}
+        {profileData?.escritorio_id && membrosEscritorio.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", padding: "12px", marginBottom: "20px", background: "rgba(255, 255, 255, 0.02)", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
+            <span style={{ fontSize: "0.8rem", color: "#94a3b8", display: "flex", alignItems: "center", marginRight: "10px" }}>
+              <Filter size={14} style={{ marginRight: "5px" }} /> Filtrar Membro:
+            </span>
+            <button
+              onClick={() => setCalendarMemberFilter("TODOS")}
+              style={{
+                padding: "5px 12px",
+                borderRadius: "15px",
+                fontSize: "0.75rem",
+                border: "none",
+                cursor: "pointer",
+                background: calendarMemberFilter === "TODOS" ? "var(--brand-gold)" : "rgba(255, 255, 255, 0.05)",
+                color: calendarMemberFilter === "TODOS" ? "#000" : "#fff",
+                fontWeight: "600",
+                transition: "all 0.2s"
+              }}
+            >
+              Todos ({agendaItems.length})
+            </button>
+            {membrosEscritorio.map(member => {
+              const count = agendaItems.filter(i => i.lawyer_id === member.id).length;
+              return (
+                <button
+                  key={member.id}
+                  onClick={() => setCalendarMemberFilter(member.id)}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: "15px",
+                    fontSize: "0.75rem",
+                    border: "none",
+                    cursor: "pointer",
+                    background: calendarMemberFilter === member.id ? "var(--brand-gold)" : "rgba(255, 255, 255, 0.05)",
+                    color: calendarMemberFilter === member.id ? "#000" : "#fff",
+                    fontWeight: "600",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  {member.name} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div className={styles.jurisInfoCard}>
           <div className={styles.infoIconWrapper}>
@@ -6229,6 +6453,7 @@ export default function AdvogadoDashboard() {
                           type: item.type,
                           urgency: item.urgency,
                           clientId: item.client_id || "",
+                          lawyerId: item.lawyer_id || "",
                         });
                         setShowAgendaModal(true);
                       }}
@@ -6247,13 +6472,25 @@ export default function AdvogadoDashboard() {
                         </span>
                       </div>
                       <h4 className={styles.agendaTitle}>{item.title}</h4>
+                      
                       {item.client_id && (
                         <div className={styles.agendaClient}>
                           <User size={12} />{" "}
-                          {crmClients.find((c) => c.id === item.client_id)
-                            ?.name || "Cliente"}
+                          <span>
+                            {crmClients.find((c) => c.id === item.client_id)?.name || "Cliente"}
+                          </span>
                         </div>
                       )}
+
+                      {profileData?.escritorio_id && (
+                        <div className={styles.agendaClient} style={{ color: "var(--brand-gold)", marginTop: "4px" }}>
+                          <User size={12} color="var(--brand-gold)" />{" "}
+                          <span>
+                            {membrosEscritorio.find((m) => m.id === item.lawyer_id)?.name || "Atribuído a você"}
+                          </span>
+                        </div>
+                      )}
+
                       <div className={styles.agendaFooter}>
                         <span className={styles.agendaTypeTag}>
                           {item.type}
@@ -8401,6 +8638,29 @@ export default function AdvogadoDashboard() {
         if (isBlindarProva && profileData?.plan_type === 'START') {
            reloadPlanUsage();
         }
+
+        // Silent timeline audit log
+        try {
+          const cargoFriendly = profileData?.cargo === "admin" ? "Gestor(a)" :
+                                profileData?.cargo === "secretaria" ? "Secretária" :
+                                profileData?.cargo === "estagiario" ? "Estagiário(a)" :
+                                "Advogado(a)";
+          const userNameStr = profileData?.name || "Membro";
+          const logMsg = `Documento '${file.name}' anexado por ${cargoFriendly} ${userNameStr}`;
+          
+          await fetch("/api/crm/interactions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: selectedClient.id,
+              content: logMsg,
+              type: "auditoria"
+            })
+          });
+          fetchInteractions(selectedClient.id);
+        } catch (auditErr) {
+          console.error("Erro ao registrar log de auditoria de upload:", auditErr);
+        }
       } else {
         toast.error(data.message || "Erro no upload");
       }
@@ -8418,6 +8678,13 @@ export default function AdvogadoDashboard() {
   };
 
   const executeDeleteDocument = async () => {
+    if (profileData?.cargo === "estagiario") {
+      toast.error("Acesso restrito: Estagiários não possuem permissão para excluir documentos ou históricos.");
+      setShowDeleteConfirm(false);
+      setDocToDelete(null);
+      return;
+    }
+
     if (!docToDelete) return;
 
     try {
@@ -8436,6 +8703,29 @@ export default function AdvogadoDashboard() {
       if (data.success) {
         toast.success("Arquivo excluído!");
         fetchClientDocuments(selectedClient.id);
+
+        // Silent timeline audit log
+        try {
+          const cargoFriendly = profileData?.cargo === "admin" ? "Gestor(a)" :
+                                profileData?.cargo === "secretaria" ? "Secretária" :
+                                profileData?.cargo === "estagiario" ? "Estagiário(a)" :
+                                "Advogado(a)";
+          const userNameStr = profileData?.name || "Membro";
+          const logMsg = `Documento '${fileName}' excluído por ${cargoFriendly} ${userNameStr}`;
+          
+          await fetch("/api/crm/interactions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: selectedClient.id,
+              content: logMsg,
+              type: "auditoria"
+            })
+          });
+          fetchInteractions(selectedClient.id);
+        } catch (auditErr) {
+          console.error("Erro ao registrar log de auditoria de exclusão:", auditErr);
+        }
       } else {
         toast.error(data.message || "Erro ao excluir");
       }
@@ -8699,6 +8989,7 @@ export default function AdvogadoDashboard() {
       type: newAgendaItem.type,
       urgency: newAgendaItem.urgency,
       client_id: newAgendaItem.clientId || null,
+      lawyer_id: newAgendaItem.lawyerId || profileData?.id,
       status: "PENDING",
     };
 
@@ -8732,6 +9023,7 @@ export default function AdvogadoDashboard() {
         type: "Judicial",
         urgency: "Média",
         clientId: "",
+        lawyerId: "",
       });
       setEditingAgendaItem(null);
       setAiDeadlineResult(null);
@@ -8949,7 +9241,7 @@ export default function AdvogadoDashboard() {
                   }
                 />
               </div>
-              <div className={styles.formItem}>
+              <div className={styles.formItem} style={{ gridColumn: profileData?.escritorio_id ? "span 1" : "span 2" }}>
                 <label className={styles.formLabel}>Cliente (Opcional)</label>
                 <select
                   className={styles.formSelect}
@@ -8970,6 +9262,29 @@ export default function AdvogadoDashboard() {
                 </select>
               </div>
             </div>
+
+            {profileData?.escritorio_id && (
+              <div className={styles.formItemFull} style={{ marginTop: "15px" }}>
+                <label className={styles.formLabel}>Responsável Atribuído *</label>
+                <select
+                  className={styles.formSelect}
+                  value={newAgendaItem.lawyerId}
+                  onChange={(e) =>
+                    setNewAgendaItem({
+                      ...newAgendaItem,
+                      lawyerId: e.target.value,
+                    })
+                  }
+                >
+                  <option value="">-- Selecione o Membro do Escritório --</option>
+                  {membrosEscritorio.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.cargo === "admin" ? "Administrador" : m.cargo === "advogado" ? "Advogado" : m.cargo === "secretaria" ? "Secretária" : "Estagiário"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className={styles.formItemFull}>
               <label className={styles.formLabel}>Descrição (para IA)</label>
@@ -9193,6 +9508,28 @@ export default function AdvogadoDashboard() {
               </div>
             </div>
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {profileData?.escritorio_id && (
+                <div style={{ marginRight: '15px', paddingRight: '15px', borderRight: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.65rem', color: 'var(--color-silver-dark)', textTransform: 'uppercase', fontWeight: 'bold' }}>Responsável</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                      {(() => {
+                        const r = (membrosEscritorio || []).find(m => m.id === selectedClient.lawyer_id);
+                        return r ? `💼 ${r.name}` : "⚠️ Sem Responsável";
+                      })()}
+                    </span>
+                    {profileData?.cargo === 'admin' && (
+                      <button
+                        className={styles.newClientBtn}
+                        style={{ padding: '2px 8px', fontSize: '0.65rem', background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)', border: '1px solid rgba(212,175,55,0.2)', marginLeft: '4px', cursor: 'pointer' }}
+                        onClick={() => setDelegatingClient(selectedClient)}
+                      >
+                        Delegar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '8px', marginRight: '15px', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '15px' }}>
                 <button 
                   className={styles.newClientBtn} 
@@ -9895,6 +10232,51 @@ export default function AdvogadoDashboard() {
           >
             Fechar Dossiê
           </button>
+        </div>
+      </div>
+    );
+  };
+
+  const renderDelegatingModal = () => {
+    if (!delegatingClient) return null;
+
+    return (
+      <div className={styles.modalOverlay} onClick={() => setDelegatingClient(null)} style={{ zIndex: 11000 }}>
+        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px', border: '1px solid rgba(212,175,55,0.2)', padding: '20px' }}>
+          <div className={styles.modalHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0, color: 'var(--color-gold)', fontSize: '1.1rem' }}>
+              🤝 Delegar Responsável
+            </h3>
+            <button className={styles.closeBtn} onClick={() => setDelegatingClient(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className={styles.modalBody}>
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-silver)', margin: '0 0 15px 0', lineHeight: '1.4' }}>
+              Selecione o advogado membro do escritório que ficará responsável pelo caso do cliente <strong>{delegatingClient.name}</strong>.
+            </p>
+            <div className={styles.formItemFull} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className={styles.formLabel}>Advogado Responsável</label>
+              <select
+                className={styles.formSelect}
+                value={delegatingClient.lawyer_id || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val) {
+                    handleDelegateCase(delegatingClient.id, val);
+                  }
+                }}
+                disabled={isDelegating}
+              >
+                <option value="">-- Selecione o Advogado --</option>
+                {(membrosEscritorio || []).map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.cargo ? m.cargo.toUpperCase() : "ADVOGADO"})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -12081,6 +12463,7 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
       {renderNotificacaoModal()}
       {renderJurisConfirmModal()}
       {renderDossierModal()}
+      {renderDelegatingModal()}
       {renderDeleteConfirmModal()}
       {renderChatModal()}
       {renderMessageContentModal()}

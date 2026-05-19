@@ -59,6 +59,7 @@ export function DashboardProvider({ children }) {
     data: new Date().toISOString().split('T')[0],
   });
   const [agendaItems, setAgendaItems] = useState([]);
+  const [membrosEscritorio, setMembrosEscritorio] = useState([]);
 
   // CRM Timeline States
   const [interactions, setInteractions] = useState([]);
@@ -403,6 +404,31 @@ export function DashboardProvider({ children }) {
       const data = await res.json();
       if (data.success) {
         toast.success("Lançamento financeiro registrado!");
+        
+        // Silent timeline audit log
+        try {
+          const cargoFriendly = profileData?.cargo === "admin" ? "Gestor(a)" :
+                                profileData?.cargo === "secretaria" ? "Secretária" :
+                                profileData?.cargo === "estagiario" ? "Estagiário(a)" :
+                                "Advogado(a)";
+          const userNameStr = profileData?.name || "Membro";
+          const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(newFinance.amount);
+          const logMsg = `Lançamento financeiro de ${formattedAmount} ('${newFinance.description}') registrado por ${cargoFriendly} ${userNameStr}`;
+          
+          await fetch("/api/crm/interactions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: selectedClient.id,
+              content: logMsg,
+              type: "auditoria"
+            })
+          });
+          fetchInteractions(selectedClient.id);
+        } catch (auditErr) {
+          console.error("Erro ao registrar log de auditoria financeiro:", auditErr);
+        }
+
         setNewFinance({ description: "", amount: "", due_date: "", status: "PENDENTE" });
         fetchClientFinance(selectedClient.id);
         fetchAllFinance();
@@ -425,6 +451,31 @@ export function DashboardProvider({ children }) {
       const data = await res.json();
       if (data.success) {
         toast.success(`Status atualizado para ${newStatus}`);
+        
+        // Silent timeline audit log
+        try {
+          const cargoFriendly = profileData?.cargo === "admin" ? "Gestor(a)" :
+                                profileData?.cargo === "secretaria" ? "Secretária" :
+                                profileData?.cargo === "estagiario" ? "Estagiário(a)" :
+                                "Advogado(a)";
+          const userNameStr = profileData?.name || "Membro";
+          const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.amount);
+          const logMsg = `Lançamento de ${formattedAmount} ('${item.description}') marcado como ${newStatus} por ${cargoFriendly} ${userNameStr}`;
+          
+          await fetch("/api/crm/interactions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: item.client_id,
+              content: logMsg,
+              type: "auditoria"
+            })
+          });
+          fetchInteractions(item.client_id);
+        } catch (auditErr) {
+          console.error("Erro ao registrar log de auditoria de status de pagamento:", auditErr);
+        }
+
         fetchClientFinance(item.client_id);
         fetchAllFinance();
       }
@@ -435,13 +486,22 @@ export function DashboardProvider({ children }) {
 
   const fetchAgenda = useCallback(async () => {
     try {
-      const res = await fetch("/api/crm/agenda");
+      const hasEscritorio = !!profileData?.escritorio_id;
+      const url = hasEscritorio ? "/api/crm/agenda?escritorio=true" : "/api/crm/agenda";
+      const res = await fetch(url);
       const data = await res.json();
-      if (data.success) setAgendaItems(data.data || []);
+      if (data.success) {
+        setAgendaItems(data.data || []);
+        if (data.membros) {
+          setMembrosEscritorio(data.membros || []);
+        } else {
+          setMembrosEscritorio([]);
+        }
+      }
     } catch (err) {
       console.error("Erro ao buscar agenda:", err);
     }
-  }, []);
+  }, [profileData?.escritorio_id]);
 
   const handleSaveQuickReminder = async () => {
     if (!selectedClient || !newQuickReminder.title || !newQuickReminder.date) return;
@@ -791,6 +851,7 @@ export function DashboardProvider({ children }) {
     associatedCases, setAssociatedCases,
     isFetchingAssociatedCases, setIsFetchingAssociatedCases,
     agendaItems, setAgendaItems,
+    membrosEscritorio, setMembrosEscritorio,
     fetchInteractions,
     handleSaveInteraction,
     fetchClientInsight,

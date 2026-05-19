@@ -1,28 +1,110 @@
 import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { google } from 'googleapis';
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 
-// GET /api/crm/agenda -> Lista compromissos do advogado logado
+async function getSessionUser() {
+  const cookieStore = await cookies();
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
+  
+  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
+  const sessionCookie = cookieStore.get("sj_escritorio_session");
+  if (sessionCookie?.value) {
+    try {
+      const decoded = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString("utf8"));
+      return {
+        id: decoded.id,
+        name: `${decoded.nome} (Gestor)`,
+        cargo: "admin",
+        escritorio_id: decoded.id,
+        isOfficeAdmin: true
+      };
+    } catch (e) {
+      console.error("Erro ao decodificar cookie de escritorio:", e);
+    }
+  }
+
+  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user && !error) {
+      const { data: adv, error: advError } = await db
+        .from("advogados")
+        .select("id, name, cargo, escritorio_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (adv && !advError) {
+        return {
+          id: adv.id,
+          name: adv.name,
+          cargo: adv.cargo || "advogado",
+          escritorio_id: adv.escritorio_id || null,
+          isOfficeAdmin: false
+        };
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao obter usuario autenticado:", e);
+  }
+
+  return null;
+}
+
 export async function GET(request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = await getSessionUser();
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('agenda_items')
-      .select('*')
-      .eq('lawyer_id', user.id)
-      .order('date', { ascending: true });
+    const { searchParams } = new URL(request.url);
+    const getEscritorio = searchParams.get('escritorio') === 'true';
 
-    if (error) throw error;
+    if (getEscritorio && user.escritorio_id) {
+      // Buscar todos os membros ativos deste escritório
+      const { data: membros, error: membrosError } = await supabaseAdmin
+        .from('advogados')
+        .select('id, name, email, cargo')
+        .eq('escritorio_id', user.escritorio_id);
 
-    return NextResponse.json({ success: true, data: data || [] });
+      if (membrosError) throw membrosError;
+
+      const memberIds = membros.map(m => m.id);
+      if (user.isOfficeAdmin) {
+        memberIds.push(user.id);
+      }
+
+      // Buscar todos os itens de agenda de todos os membros do escritório
+      const { data: agendaItems, error: agendaError } = await supabaseAdmin
+        .from('agenda_items')
+        .select('*')
+        .in('lawyer_id', memberIds)
+        .order('date', { ascending: true });
+
+      if (agendaError) throw agendaError;
+
+      return NextResponse.json({ 
+        success: true, 
+        data: agendaItems || [],
+        membros: membros || []
+      });
+    } else {
+      // Retorna apenas a agenda do usuário logado
+      const { data, error } = await supabaseAdmin
+        .from('agenda_items')
+        .select('*')
+        .eq('lawyer_id', user.id)
+        .order('date', { ascending: true });
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, data: data || [], membros: [] });
+    }
 
   } catch (error) {
     console.error("Erro GET /api/crm/agenda:", error);
@@ -30,17 +112,16 @@ export async function GET(request) {
   }
 }
 
-// POST /api/crm/agenda -> Cria novo compromisso
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = await getSessionUser();
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
     const body = await request.json();
+    const supabase = createClient();
 
     // Verificação de Limites do Plano
     const planLimits = await getUserPlanLimits(supabaseAdmin || supabase, user.id);
@@ -55,9 +136,34 @@ export async function POST(request) {
         error_type: "QUOTA_EXCEEDED" 
       }, { status: 403 });
     }
+
+    // Buscar perfil do criador do evento
+    const creatorProfile = user.isOfficeAdmin ? { escritorio_id: user.escritorio_id, cargo: 'admin' } : await (async () => {
+      const { data } = await supabaseAdmin
+        .from('advogados')
+        .select('escritorio_id, cargo')
+        .eq('id', user.id)
+        .single();
+      return data;
+    })();
+
+    // Determinar o lawyer_id final (quem é o responsável atribuído)
+    let assignedLawyerId = user.id;
+    if (body.lawyer_id && body.lawyer_id !== user.id && creatorProfile?.escritorio_id) {
+      // Verificar se o advogado atribuído está no mesmo escritório
+      const { data: targetProfile } = await supabaseAdmin
+        .from('advogados')
+        .select('escritorio_id')
+        .eq('id', body.lawyer_id)
+        .single();
+
+      if (targetProfile && targetProfile.escritorio_id === creatorProfile.escritorio_id) {
+        assignedLawyerId = body.lawyer_id;
+      }
+    }
     
     const payload = {
-      id: crypto.randomUUID(), // Garantir ID se não houver default no banco
+      id: crypto.randomUUID(),
       title: body.title,
       date: body.date,
       description: body.description,
@@ -65,7 +171,7 @@ export async function POST(request) {
       urgency: body.urgency,
       client_id: body.client_id,
       status: body.status || "PENDING",
-      lawyer_id: user.id,
+      lawyer_id: assignedLawyerId,
       created_at: new Date().toISOString()
     };
 
@@ -85,16 +191,13 @@ export async function POST(request) {
     // SINCRONIZAÇÃO COM GOOGLE CALENDAR
     // ==========================================
     try {
-      // 1. Buscar preferências do advogado
       const { data: profile } = await supabaseAdmin
         .from('advogados')
         .select('google_refresh_token, google_sync_enabled')
-        .eq('id', user.id)
+        .eq('id', assignedLawyerId)
         .single();
 
       if (profile && profile.google_sync_enabled && profile.google_refresh_token) {
-        
-        // 2. Configurar cliente do Google
         const oauth2Client = new google.auth.OAuth2(
           process.env.GOOGLE_CLIENT_ID,
           process.env.GOOGLE_CLIENT_SECRET,
@@ -104,11 +207,7 @@ export async function POST(request) {
         oauth2Client.setCredentials({ refresh_token: profile.google_refresh_token });
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-        // 3. Montar o objeto do evento (Google Calendar Format)
-        // Precisamos converter a data (ex: '2023-12-01T14:30') para o fuso horário correto
         const startDate = new Date(body.date);
-        
-        // Vamos presumir que a reunião dure 1 hora por padrão (pois não temos end_time no form)
         const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); 
 
         const googleEvent = {
@@ -122,25 +221,20 @@ export async function POST(request) {
             dateTime: endDate.toISOString(),
             timeZone: 'America/Sao_Paulo',
           },
-          colorId: body.urgency === 'HIGH' ? '11' : (body.urgency === 'MEDIUM' ? '5' : '9'), // Cores: Vermelho, Amarelo, Azul
+          colorId: body.urgency === 'HIGH' ? '11' : (body.urgency === 'MEDIUM' ? '5' : '9'),
         };
 
-        // 4. Inserir no Google
         const googleRes = await calendar.events.insert({
           calendarId: 'primary',
           resource: googleEvent,
         });
 
-        console.log(`✅ [Calendar] Evento sincronizado: ${googleRes.data.htmlLink}`);
-        
-        // Opcional: Salvar o ID do evento do Google no nosso banco se precisarmos deletar depois
         await supabaseAdmin
           .from('agenda_items')
           .update({ google_event_id: googleRes.data.id })
           .eq('id', savedEvent.id);
       }
     } catch (calendarError) {
-      // Falhas no Google não devem quebrar o salvamento do CRM
       console.error("⚠️ Erro ao sincronizar com Google Calendar:", calendarError.message);
     }
 
@@ -158,76 +252,165 @@ export async function POST(request) {
 
 // PATCH /api/crm/agenda -> Atualiza compromisso existente
 export async function PATCH(request) {
-    try {
-      const supabase = createClient();
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
-      if (authError || !user) {
-        return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
-      }
-  
-      const body = await request.json();
-      const { id, ...updateData } = body;
+  try {
+    const user = await getSessionUser();
 
-      if (!id) return NextResponse.json({ success: false, message: "ID obrigatório" }, { status: 400 });
-
-      // Mapear campos se necessário e garantir que lawyer_id seja do usuário logado
-      const payload = {
-        ...updateData,
-        lawyer_id: user.id
-      };
-
-      const { error } = await supabaseAdmin
-        .from('agenda_items')
-        .update(payload)
-        .eq('id', id)
-        .eq('lawyer_id', user.id);
-  
-      if (error) throw error;
-  
-      return NextResponse.json({ success: true });
-  
-    } catch (error) {
-      console.error("Erro PATCH /api/crm/agenda:", error);
-      return NextResponse.json({ 
-        success: false, 
-        message: error.message || "Erro ao atualizar agenda",
-        details: error
-      }, { status: 500 });
+    if (!user) {
+      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
+
+    const body = await request.json();
+    const { id, ...updateData } = body;
+
+    if (!id) return NextResponse.json({ success: false, message: "ID obrigatório" }, { status: 400 });
+
+    // Buscar o item existente para saber quem é o atual responsável
+    const { data: existingItem } = await supabaseAdmin
+      .from('agenda_items')
+      .select('lawyer_id')
+      .eq('id', id)
+      .single();
+
+    if (!existingItem) {
+      return NextResponse.json({ success: false, message: "Compromisso não encontrado" }, { status: 404 });
+    }
+
+    // Buscar perfil do usuário para verificar permissão
+    const userProfile = user.isOfficeAdmin ? { escritorio_id: user.escritorio_id, cargo: 'admin' } : await (async () => {
+      const { data } = await supabaseAdmin
+        .from('advogados')
+        .select('escritorio_id, cargo')
+        .eq('id', user.id)
+        .single();
+      return data;
+    })();
+
+    let hasPermission = existingItem.lawyer_id === user.id || user.isOfficeAdmin;
+
+    if (!hasPermission && userProfile?.escritorio_id) {
+      // Se estão no mesmo escritório, permite atualização
+      const { data: targetProfile } = await supabaseAdmin
+        .from('advogados')
+        .select('escritorio_id')
+        .eq('id', existingItem.lawyer_id)
+        .single();
+
+      if (targetProfile && targetProfile.escritorio_id === userProfile.escritorio_id) {
+        hasPermission = true;
+      }
+    }
+
+    if (!hasPermission) {
+      return NextResponse.json({ success: false, message: "Não autorizado a alterar este compromisso" }, { status: 403 });
+    }
+
+    // Se estiver reatribuindo para outro advogado, verificar se ele pertence ao mesmo escritório
+    let finalLawyerId = existingItem.lawyer_id;
+    if (updateData.lawyer_id && updateData.lawyer_id !== existingItem.lawyer_id && userProfile?.escritorio_id) {
+      const { data: newTargetProfile } = await supabaseAdmin
+        .from('advogados')
+        .select('escritorio_id')
+        .eq('id', updateData.lawyer_id)
+        .single();
+
+      if (newTargetProfile && newTargetProfile.escritorio_id === userProfile.escritorio_id) {
+        finalLawyerId = updateData.lawyer_id;
+      }
+    }
+
+    const payload = {
+      ...updateData,
+      lawyer_id: finalLawyerId
+    };
+
+    const { error } = await supabaseAdmin
+      .from('agenda_items')
+      .update(payload)
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error("Erro PATCH /api/crm/agenda:", error);
+    return NextResponse.json({ 
+      success: false, 
+      message: error.message || "Erro ao atualizar agenda",
+      details: error
+    }, { status: 500 });
+  }
 }
 
 // DELETE /api/crm/agenda -> Exclui compromisso
 export async function DELETE(request) {
-    try {
-      const supabase = createClient();
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
-      if (authError || !user) {
-        return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
-      }
-  
-      const { searchParams } = new URL(request.url);
-      const id = searchParams.get('id');
+  try {
+    const user = await getSessionUser();
 
-      if (!id) return NextResponse.json({ success: false, message: "ID obrigatório" }, { status: 400 });
-
-      const { error } = await supabaseAdmin
-        .from('agenda_items')
-        .delete()
-        .eq('id', id)
-        .eq('lawyer_id', user.id);
-  
-      if (error) throw error;
-  
-      return NextResponse.json({ success: true });
-  
-    } catch (error) {
-      console.error("Erro DELETE /api/crm/agenda:", error);
-      return NextResponse.json({ 
-        success: false, 
-        message: error.message || "Erro ao excluir agenda",
-        details: error
-      }, { status: 500 });
+    if (!user) {
+      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) return NextResponse.json({ success: false, message: "ID obrigatório" }, { status: 400 });
+
+    // Buscar o item existente
+    const { data: existingItem } = await supabaseAdmin
+      .from('agenda_items')
+      .select('lawyer_id')
+      .eq('id', id)
+      .single();
+
+    if (!existingItem) {
+      return NextResponse.json({ success: false, message: "Compromisso não encontrado" }, { status: 404 });
+    }
+
+    // Buscar perfil do usuário para verificar permissão
+    const userProfile = user.isOfficeAdmin ? { escritorio_id: user.escritorio_id, cargo: 'admin' } : await (async () => {
+      const { data } = await supabaseAdmin
+        .from('advogados')
+        .select('escritorio_id, cargo')
+        .eq('id', user.id)
+        .single();
+      return data;
+    })();
+
+    let hasPermission = existingItem.lawyer_id === user.id || user.isOfficeAdmin;
+
+    if (!hasPermission && userProfile?.escritorio_id) {
+      // Se estão no mesmo escritório, permite exclusão
+      const { data: targetProfile } = await supabaseAdmin
+        .from('advogados')
+        .select('escritorio_id')
+        .eq('id', existingItem.lawyer_id)
+        .single();
+
+      if (targetProfile && targetProfile.escritorio_id === userProfile.escritorio_id) {
+        hasPermission = true;
+      }
+    }
+
+    if (!hasPermission) {
+      return NextResponse.json({ success: false, message: "Não autorizado a excluir este compromisso" }, { status: 403 });
+    }
+
+    const { error } = await supabaseAdmin
+      .from('agenda_items')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+
+  } catch (error) {
+    console.error("Erro DELETE /api/crm/agenda:", error);
+    return NextResponse.json({ 
+      success: false, 
+      message: error.message || "Erro ao excluir agenda",
+      details: error
+    }, { status: 500 });
+  }
 }

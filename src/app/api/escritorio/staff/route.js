@@ -119,7 +119,7 @@ export async function POST(request) {
       balance: 10, // Saldo inicial de Juris
       is_premium: true, // Todos no enterprise são premium!
       origem_descoberta: "Escritório Enterprise",
-      plan_type: office.plano === "pro_plus" ? "ENTERPRISE_PRO_PLUS" : office.plano === "pro" ? "ENTERPRISE_PRO" : "ENTERPRISE_START",
+      plan_type: office.plano?.startsWith("pro_plus") ? "ENTERPRISE_PRO_PLUS" : office.plano?.startsWith("pro") ? "ENTERPRISE_PRO" : "ENTERPRISE_START",
       created_at: new Date().toISOString()
     };
 
@@ -204,6 +204,46 @@ export async function PUT(request) {
       updates.permissoes = typeof value === "object" ? value : {};
     } else if (action === "TOGGLE_OAB_VERIFICATION") {
       updates.oab_verification_status = value ? "VERIFIED" : "UNVERIFIED";
+    } else if (action === "DISTRIBUTE_JURIS") {
+      const transferAmount = Number(value || 0);
+      if (transferAmount <= 0) {
+        return NextResponse.json({ success: false, message: "Valor de transferência inválido." }, { status: 400 });
+      }
+
+      // Buscar saldo do escritório
+      const { data: office, error: officeError } = await db
+        .from("escritorios")
+        .select("balance")
+        .eq("id", officeId)
+        .single();
+
+      if (officeError || !office) {
+        return NextResponse.json({ success: false, message: "Erro ao consultar saldo do escritório." }, { status: 400 });
+      }
+
+      if ((office.balance || 0) < transferAmount) {
+        return NextResponse.json({
+          success: false,
+          message: `Saldo do escritório insuficiente. Saldo atual: ${office.balance || 0} Juris.`
+        }, { status: 400 });
+      }
+
+      // Deduzir saldo do escritório
+      const { error: officeUpdateError } = await db
+        .from("escritorios")
+        .update({ balance: (office.balance || 0) - transferAmount })
+        .eq("id", officeId);
+
+      if (officeUpdateError) throw officeUpdateError;
+
+      // Adicionar ao saldo do advogado
+      const { data: staffMember } = await db
+        .from("advogados")
+        .select("balance")
+        .eq("id", lawyerId)
+        .single();
+
+      updates.balance = (staffMember?.balance || 0) + transferAmount;
     }
 
     const { data: updatedLawyer, error: updateError } = await db

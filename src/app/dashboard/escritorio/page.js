@@ -44,11 +44,31 @@ const ESTADOS_BRASIL = [
   "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
+const getPlanDisplayName = (plano) => {
+  if (!plano) return "Enterprise Start";
+  const names = {
+    start: "Enterprise Start",
+    start_7: "Enterprise Start 7 dias",
+    start_15: "Enterprise Start 15 dias",
+    start_30: "Enterprise Start 30 dias",
+    pro: "Enterprise Pro",
+    pro_7: "Enterprise Pro 7 dias",
+    pro_15: "Enterprise Pro 15 dias",
+    pro_30: "Enterprise Pro 30 dias",
+    pro_plus: "Enterprise Pro+",
+    pro_plus_7: "Enterprise Pro+ 7 dias",
+    pro_plus_15: "Enterprise Pro+ 15 dias",
+    pro_plus_30: "Enterprise Pro+ 30 dias",
+  };
+  return names[plano] || "Enterprise Start";
+};
+
 export default function EscritorioDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [staff, setStaff] = useState([]);
+  const [jurisInput, setJurisInput] = useState({});
   
   // Registration form
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -977,6 +997,40 @@ export default function EscritorioDashboardPage() {
     }
   };
 
+  const handleDistributeJuris = async (lawyerId) => {
+    const amount = Number(jurisInput[lawyerId] || 0);
+    if (amount <= 0) {
+      toast.error("Por favor, insira uma quantidade maior que zero.");
+      return;
+    }
+    if (amount > (data.office?.balance || 0)) {
+      toast.error("Saldo do escritório insuficiente.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/escritorio/staff", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lawyerId,
+          action: "DISTRIBUTE_JURIS",
+          value: amount
+        })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        toast.error(json.message || "Erro ao distribuir Juris.");
+        return;
+      }
+      toast.success("Juris distribuídos com sucesso!");
+      setJurisInput({ ...jurisInput, [lawyerId]: "" });
+      loadDashboard();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro de conexão ao distribuir Juris.");
+    }
+  };
+
   if (loading || !data) {
     return <div className={styles.loading}>Carregando painel enterprise...</div>;
   }
@@ -1013,8 +1067,7 @@ export default function EscritorioDashboardPage() {
               <span><strong>CNPJ:</strong> {office.cnpj}</span>
               <span><strong>Responsável:</strong> {office.nome_responsavel}</span>
               <span className={styles.planBadge}>
-                {office.plano === "pro_plus" ? "Enterprise Pro+" :
-                 office.plano === "pro" ? "Enterprise Pro" : "Enterprise Start"}
+                {getPlanDisplayName(office.plano)}
               </span>
             </div>
           </div>
@@ -1166,6 +1219,20 @@ export default function EscritorioDashboardPage() {
           </div>
         )}
 
+        {/* Card 6: Saldo de Juris */}
+        <div className={styles.statCard} style={{ border: "1px solid rgba(212, 175, 55, 0.2)", background: "linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(17, 17, 20, 0.8) 100%)" }}>
+          <div className={styles.statCardTitle} style={{ color: "var(--color-gold)", fontWeight: 700 }}>
+            <Coins size={16} color="var(--color-gold)" style={{ marginBottom: "-3px", marginRight: "6px" }} /> 
+            Saldo de Juris (Disponível)
+          </div>
+          <div className={styles.statCardValue} style={{ color: "var(--color-gold)", textShadow: "0 0 10px rgba(212, 175, 55, 0.3)" }}>
+            {office.balance || 0} Juris
+          </div>
+          <div className={styles.statCardLimit} style={{ color: "rgba(255,255,255,0.6)" }}>
+            Para distribuir aos membros
+          </div>
+        </div>
+
       </section>
 
       {/* SELETOR DE ABAS */}
@@ -1240,6 +1307,7 @@ export default function EscritorioDashboardPage() {
                     <th>OAB</th>
                     <th>Status OAB</th>
                     <th>IA Liberada</th>
+                    <th>Saldo Juris</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1299,6 +1367,10 @@ export default function EscritorioDashboardPage() {
                             <Unlock size={12} /> Liberado
                           </span>
                         )}
+                      </td>
+                      <td style={{ fontWeight: 700, color: "var(--color-gold)" }}>
+                        <Coins size={12} style={{ marginRight: "4px", marginBottom: "-2px" }} />
+                        {member.balance || 0}
                       </td>
                     </tr>
                   ))}
@@ -1413,6 +1485,43 @@ export default function EscritorioDashboardPage() {
                           />
                           <span className={styles.sliderRound} />
                         </label>
+                      </div>
+
+                      {/* Distribuição de Juris */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px" }}>
+                        <Coins size={14} color="var(--color-gold)" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: "0.78rem", color: "#cbd5e1" }}><strong>Distribuir Juris:</strong></span>
+                        <input 
+                          type="number" 
+                          placeholder="Qtd"
+                          style={{
+                            width: "60px",
+                            background: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            borderRadius: "6px",
+                            color: "#fff",
+                            padding: "2px 6px",
+                            fontSize: "0.78rem",
+                            outline: "none"
+                          }}
+                          value={jurisInput[member.id] || ""}
+                          onChange={(e) => setJurisInput({ ...jurisInput, [member.id]: e.target.value })}
+                        />
+                        <button
+                          onClick={() => handleDistributeJuris(member.id)}
+                          style={{
+                            background: "rgba(212, 175, 55, 0.1)",
+                            border: "1px solid rgba(212, 175, 55, 0.2)",
+                            borderRadius: "6px",
+                            color: "var(--color-gold)",
+                            padding: "2px 8px",
+                            fontSize: "0.75rem",
+                            fontWeight: "bold",
+                            cursor: "pointer"
+                          }}
+                        >
+                          Enviar
+                        </button>
                       </div>
                     </div>
                   );
@@ -1603,6 +1712,43 @@ export default function EscritorioDashboardPage() {
                           />
                           <span className={styles.sliderRound} />
                         </label>
+                      </div>
+
+                      {/* Distribuição de Juris */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "12px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "12px" }}>
+                        <Coins size={14} color="var(--color-gold)" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: "0.78rem", color: "#cbd5e1" }}><strong>Distribuir Juris:</strong></span>
+                        <input 
+                          type="number" 
+                          placeholder="Qtd"
+                          style={{
+                            width: "60px",
+                            background: "rgba(255, 255, 255, 0.05)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            borderRadius: "6px",
+                            color: "#fff",
+                            padding: "2px 6px",
+                            fontSize: "0.78rem",
+                            outline: "none"
+                          }}
+                          value={jurisInput[member.id] || ""}
+                          onChange={(e) => setJurisInput({ ...jurisInput, [member.id]: e.target.value })}
+                        />
+                        <button
+                          onClick={() => handleDistributeJuris(member.id)}
+                          style={{
+                            background: "rgba(212, 175, 55, 0.1)",
+                            border: "1px solid rgba(212, 175, 55, 0.2)",
+                            borderRadius: "6px",
+                            color: "var(--color-gold)",
+                            padding: "2px 8px",
+                            fontSize: "0.75rem",
+                            fontWeight: "bold",
+                            cursor: "pointer"
+                          }}
+                        >
+                          Enviar
+                        </button>
                       </div>
                     </div>
                   );

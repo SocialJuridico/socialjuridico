@@ -30,6 +30,7 @@ import {
   UserX,
   Search,
   Globe,
+  Briefcase,
 } from "lucide-react";
 import styles from "./Dashboard.module.css";
 import {
@@ -156,11 +157,18 @@ export default function ClienteDashboard() {
   const [showNotifDeleteConfirm, setShowNotifDeleteConfirm] = useState(false);
   const [notifToDelete, setNotifToDelete] = useState(null);
 
+  // States para Modal de Escritório e Advogados do Escritório
+  const [selectedOffice, setSelectedOffice] = useState(null);
+  const [isOfficeModalOpen, setIsOfficeModalOpen] = useState(false);
+
   // Filtra advogados com especialidade preenchida
   const advogadosComEspecialidade = useMemo(() => {
     return advogados.filter((adv) => {
       // Ocultar advogados com erro de verificação
       if (adv.oab_verification_status === "ERROR") return false;
+
+      // Ocultar secretárias e estagiários do painel do cliente
+      if (adv.cargo === "secretaria" || adv.cargo === "estagiario") return false;
 
       const specs = String(adv.specialties || "").trim();
       return specs && specs !== "Clínico Geral" && specs.length > 0;
@@ -201,6 +209,30 @@ export default function ClienteDashboard() {
 
     return grupos;
   }, [advogadosComEspecialidade, lawyerSearch]);
+
+  // Filtra e agrupa escritórios únicos com seus respectivos advogados ativos
+  const uniqueOffices = useMemo(() => {
+    const offices = {};
+    advogados.forEach((adv) => {
+      if (adv.oab_verification_status === "ERROR" || !adv.escritorio_id || !adv.nome_escritorio) {
+        return;
+      }
+      // Ocultar secretárias e estagiários
+      if (adv.cargo === "secretaria" || adv.cargo === "estagiario") {
+        return;
+      }
+      if (!offices[adv.escritorio_id]) {
+        offices[adv.escritorio_id] = {
+          id: adv.escritorio_id,
+          nome: adv.nome_escritorio,
+          logo_url: adv.logo_escritorio,
+          advogados: [],
+        };
+      }
+      offices[adv.escritorio_id].advogados.push(adv);
+    });
+    return Object.values(offices).filter(o => o.advogados.length > 0);
+  }, [advogados]);
 
   const showNotificationToast = useCallback(
     (notif) => {
@@ -997,6 +1029,11 @@ export default function ClienteDashboard() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', justifyContent: 'center' }}>
           <h3 className={styles.lawyerName} style={{ margin: 0 }}>{adv.name}</h3>
         </div>
+        {adv.nome_escritorio && (
+          <div className={styles.officeTag} title={`Membro de ${adv.nome_escritorio}`}>
+            <Briefcase size={12} /> {adv.nome_escritorio}
+          </div>
+        )}
         <div
           className={`${styles.oabStatusBadge} ${adv.oab_verification_status === "VERIFIED" ? styles.oabStatusVerified : styles.oabStatusPending}`}
         >
@@ -1307,6 +1344,44 @@ export default function ClienteDashboard() {
                     onChange={(e) => setLawyerSearch(e.target.value)}
                   />
                 </div>
+
+                {/* Escritórios Parceiros */}
+                {uniqueOffices.length > 0 && !lawyerSearch && (
+                  <div className={styles.officesSection}>
+                    <h3 className={styles.officesTitle}>
+                      <Scale size={18} color="var(--color-gold)" />
+                      Escritórios Disponíveis
+                    </h3>
+                    <div className={styles.officesGrid}>
+                      {uniqueOffices.map((office) => (
+                        <div
+                          key={office.id}
+                          className={styles.officeCard}
+                          onClick={() => {
+                            setSelectedOffice(office);
+                            setIsOfficeModalOpen(true);
+                          }}
+                        >
+                          <div className={styles.officeLogoWrapper}>
+                            {office.logo_url ? (
+                              <img
+                                src={office.logo_url}
+                                alt={office.nome}
+                                className={styles.officeLogo}
+                              />
+                            ) : (
+                              <div className={styles.officeLogoFallback}>
+                                {office.nome.substring(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                          <h4 className={styles.officeName}>{office.nome}</h4>
+                          <span className={styles.officeBadge}>Escritório</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* INTERESSES PENDENTES E EM NEGOCIAÇÃO */}
                 {interesses.length > 0 && (
@@ -2224,6 +2299,54 @@ export default function ClienteDashboard() {
           </div>
         </div>
       )}
+      {/* MODAL DO ESCRITÓRIO E SEUS ADVOGADOS */}
+      {isOfficeModalOpen && selectedOffice && (
+        <div
+          className={styles.modalOverlay}
+          style={{ zIndex: 999 }}
+          onClick={() => setIsOfficeModalOpen(false)}
+        >
+          <div
+            className={styles.officeModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className={styles.closeModalBtn}
+              onClick={() => setIsOfficeModalOpen(false)}
+            >
+              <X size={24} />
+            </button>
+            <div className={styles.officeModalHeader}>
+              <div className={styles.officeModalLogo}>
+                {selectedOffice.logo_url ? (
+                  <img
+                    src={selectedOffice.logo_url}
+                    alt={selectedOffice.nome}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  <div className={styles.officeModalLogoFallback}>
+                    {selectedOffice.nome.substring(0, 2).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className={styles.officeModalTitleArea}>
+                <h2>{selectedOffice.nome}</h2>
+                <p>
+                  Conheça os advogados e especialistas que fazem parte de nossa equipe
+                </p>
+              </div>
+            </div>
+            
+            <div className={styles.lpModalBody} style={{ maxHeight: "55vh", overflowY: "auto", padding: "10px" }}>
+              <div className={styles.lawyersGrid} style={{ gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "20px" }}>
+                {selectedOffice.advogados.map((adv) => renderLawyerCard(adv))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL PERFIL DO ADVOGADO */}
       {isLawyerModalOpen && selectedLawyer && (
         <div
@@ -2262,6 +2385,11 @@ export default function ClienteDashboard() {
                   <h2 style={{ margin: 0 }}>{selectedLawyer.name}</h2>
                   {selectedLawyer.oab_verification_status === "VERIFIED" && <VerifiedBadge size={50} />}
                 </div>
+                {selectedLawyer.nome_escritorio && (
+                  <div className={styles.officeTagModal} title={`Membro de ${selectedLawyer.nome_escritorio}`}>
+                    <Briefcase size={12} style={{ marginRight: "4px" }} /> {selectedLawyer.nome_escritorio}
+                  </div>
+                )}
                 <p className={styles.lpModalOab}>
                   OAB: {selectedLawyer.oab || "Não informada"}
                 </p>

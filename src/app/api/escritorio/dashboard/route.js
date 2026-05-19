@@ -88,7 +88,7 @@ export async function GET() {
     // 2. Fetch associated staff/lawyers list
     const { data: staff, error: staffError } = await db
       .from("advogados")
-      .select("id, name, email, phone, oab, estado, cargo, cota_oab_sinc, bloqueado_ia, uso_redator_ia, uso_triagem, uso_storage_mb, permissoes, created_at, oab_verification_status")
+      .select("id, name, email, phone, oab, estado, cargo, cota_oab_sinc, bloqueado_ia, uso_redator_ia, uso_triagem, uso_storage_mb, permissoes, created_at, oab_verification_status, balance")
       .eq("escritorio_id", officeId)
       .order("name", { ascending: true });
 
@@ -111,6 +111,7 @@ export async function GET() {
         nome: office.nome,
         cnpj: office.cnpj,
         plano: office.plano,
+        balance: office.balance || 0,
         logo_url: office.logo_url,
         nome_responsavel: office.nome_responsavel,
         email: office.email,

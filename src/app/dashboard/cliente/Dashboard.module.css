@@ -607,6 +607,40 @@
   width: fit-content;
 }
 
+.officeTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(212, 175, 55, 0.08);
+  color: var(--color-gold);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+}
+
+.officeTagModal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(212, 175, 55, 0.1);
+  color: var(--color-gold);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+}
+
 .oabStatusVerified {
   background: rgba(16, 185, 129, 0.1);
   color: #10b981;
@@ -2289,4 +2323,169 @@
   .lpModalStatsGrid {
       grid-template-columns: 1fr 1fr;
   }
+}
+
+.officesSection {
+  margin-bottom: 30px;
+  width: 100%;
+}
+
+.officesTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-white);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.officesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.officeCard {
+  background: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  aspect-ratio: 1 / 1;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+}
+
+.officeCard:hover {
+  transform: translateY(-5px);
+  border-color: var(--color-gold);
+  background: rgba(35, 35, 35, 0.8);
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.15);
+}
+
+.officeLogoWrapper {
+  width: 90px;
+  height: 90px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--color-black);
+  border: 1.5px solid rgba(212, 175, 55, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.officeLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.officeLogoFallback {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  color: var(--color-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+.officeName {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-white);
+  line-height: 1.3;
+  margin: 0 0 10px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.officeBadge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--color-gold);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.officeModal {
+  background: var(--color-black-light);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 28px;
+  width: 100%;
+  max-width: 950px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(212, 175, 55, 0.1);
+  padding: 40px;
+  position: relative;
+  animation: slideUpModal 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.officeModalHeader {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.officeModalLogo {
+  width: 80px;
+  height: 80px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--color-black);
+  border: 2px solid var(--color-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.officeModalLogoFallback {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+  color: var(--color-black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.officeModalTitleArea h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin: 0 0 6px 0;
+}
+
+.officeModalTitleArea p {
+  color: var(--color-silver);
+  font-size: 0.9rem;
+  margin: 0;
 }

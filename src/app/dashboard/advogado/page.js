@@ -118,6 +118,10 @@ import {
   Star,
   MapPin,
   Mic,
+  MicOff,
+  Volume2,
+  PhoneOff,
+  Video,
   Square,
 } from "lucide-react";
 
@@ -258,7 +262,15 @@ export default function AdvogadoDashboard() {
   const pastTranscriptsRef = useRef("");
   const isListeningRef = useRef(false);
 
-  
+  // Communication States (Discord Copy / Jitsi Hub)
+  const [commData, setCommData] = useState({ canais: [], mensagens: [], participantesVoz: [], user: null });
+  const [activeChannelId, setActiveChannelId] = useState(null);
+  const [activeMeetingRoom, setActiveMeetingRoom] = useState(null);
+  const [activeMeetingTitle, setActiveMeetingTitle] = useState("");
+  const [commChatInput, setCommChatInput] = useState("");
+  const [isAddChannelOpen, setIsAddChannelOpen] = useState(false);
+  const [newChannel, setNewChannel] = useState({ nome: "", tipo: "texto", limite: 0 });
+  const [showOabModal, setShowOabModal] = useState(false);
 
   const [generatedContract, setGeneratedContract] = useState("");
   const [isGeneratingContract, setIsGeneratingContract] = useState(false);
@@ -571,6 +583,174 @@ export default function AdvogadoDashboard() {
   useEffect(() => {
     fetchBlindados();
   }, [fetchBlindados]);
+
+  const loadCommunication = async () => {
+    try {
+      const res = await fetch("/api/escritorio/comunicacao");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setCommData(json);
+        }
+      }
+    } catch (e) {
+      console.error("Erro ao carregar comunicação interna:", e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "comunicacao" && profileData?.escritorio_id) {
+      loadCommunication();
+      const interval = setInterval(loadCommunication, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, profileData]);
+
+  const handleSendCommMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (!commChatInput.trim()) return;
+
+    try {
+      const res = await fetch("/api/escritorio/comunicacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "SEND_MESSAGE",
+          channelId: activeChannelId,
+          mensagem: commChatInput
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setCommChatInput("");
+        loadCommunication();
+      } else {
+        toast.error(json.message || "Erro ao enviar mensagem");
+      }
+    } catch (e) {
+      console.error("Erro no envio:", e);
+      toast.error("Falha ao enviar mensagem.");
+    }
+  };
+
+  const handleCreateChannel = async (e) => {
+    e.preventDefault();
+    if (!newChannel.nome.trim()) return;
+
+    try {
+      const res = await fetch("/api/escritorio/comunicacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CREATE_CHANNEL",
+          tipo: newChannel.tipo,
+          nome: newChannel.nome,
+          limite: newChannel.limite
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Canal criado com sucesso!");
+        setIsAddChannelOpen(false);
+        setNewChannel({ nome: "", tipo: "texto", limite: 0 });
+        loadCommunication();
+      } else {
+        toast.error(json.message || "Erro ao criar canal");
+      }
+    } catch (e) {
+      console.error("Erro ao criar canal:", e);
+    }
+  };
+
+  const handleDeleteChannel = async (e, channelId) => {
+    e.stopPropagation();
+    if (!confirm("Tem certeza que deseja excluir este canal?")) return;
+
+    try {
+      const res = await fetch("/api/escritorio/comunicacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "DELETE_CHANNEL",
+          channelId
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Canal excluído!");
+        if (activeChannelId === channelId) {
+          setActiveChannelId(null);
+        }
+        loadCommunication();
+      } else {
+        toast.error(json.message || "Erro ao excluir canal");
+      }
+    } catch (e) {
+      console.error("Erro ao deletar canal:", e);
+    }
+  };
+
+  const handleJoinVoice = async (channelId) => {
+    try {
+      const res = await fetch("/api/escritorio/comunicacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "JOIN_VOICE",
+          channelId
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Conectado à sala de voz!");
+        loadCommunication();
+      } else {
+        toast.error(json.message || "Erro ao conectar");
+      }
+    } catch (e) {
+      console.error("Erro ao entrar em voz:", e);
+    }
+  };
+
+  const handleLeaveVoice = async () => {
+    try {
+      const res = await fetch("/api/escritorio/comunicacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "LEAVE_VOICE"
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Desconectado da sala de voz.");
+        loadCommunication();
+      } else {
+        toast.error(json.message || "Erro ao desconectar");
+      }
+    } catch (e) {
+      console.error("Erro ao sair da voz:", e);
+    }
+  };
+
+  const handleToggleMute = async (isCurrentlyMuted) => {
+    try {
+      const res = await fetch("/api/escritorio/comunicacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "TOGGLE_MUTE",
+          mutado: !isCurrentlyMuted
+        })
+      });
+      const json = await res.json();
+      if (json.success) {
+        loadCommunication();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const fetchSignatures = useCallback(async () => {
     setLoadingSignatures(true);
@@ -2436,9 +2616,338 @@ export default function AdvogadoDashboard() {
       case "anuncios-DILIGENCIAS":
       case "anuncios-OUTROS":
         return renderAnuncios();
+      case "comunicacao":
+        return renderComunicacao();
       default:
         return renderOportunidades();
     }
+  };
+
+  const renderComunicacao = () => {
+    if (!profileData?.escritorio_id) return null;
+    return (
+      <div className={styles.toolContainer}>
+        <div className={styles.crmHeader} style={{ marginBottom: "20px" }}>
+          <div>
+            <h2 className={styles.sectionTitle}>💬 Comunicação Interna (Hub Corporativo)</h2>
+            <p className={styles.sectionSubtitle}>
+              Canais de texto, voz e videoconferência Jitsi integrados para o seu escritório.
+            </p>
+          </div>
+        </div>
+
+        <main className={styles.commContainer}>
+          {/* SIDEBAR: CANAIS */}
+          <aside className={styles.commSidebar}>
+            <div className={styles.sidebarHeader}>
+              <h3>Canais</h3>
+              {profileData?.cargo === "admin" && (
+                <button 
+                  className={styles.addChannelBtn} 
+                  onClick={() => setIsAddChannelOpen(true)} 
+                  title="Criar Canal"
+                >
+                  <Plus size={16} />
+                </button>
+              )}
+            </div>
+
+            <div className={styles.channelsList}>
+              {/* Canais de Texto */}
+              <div className={styles.channelCategory}>
+                <span className={styles.categoryTitle}>💬 Canais de Texto</span>
+                {/* Chat Geral */}
+                <div 
+                  className={`${styles.channelItem} ${activeChannelId === null ? styles.activeChannelItem : ""}`}
+                  onClick={() => {
+                    setActiveChannelId(null);
+                    setActiveMeetingRoom(null);
+                  }}
+                >
+                  <span className={styles.channelItemLeft}># geral</span>
+                </div>
+                {/* Canais criados */}
+                {(commData.canais || [])
+                  .filter(c => c.tipo === "texto")
+                  .map(chan => (
+                    <div 
+                      key={chan.id}
+                      className={`${styles.channelItem} ${activeChannelId === chan.id ? styles.activeChannelItem : ""}`}
+                      onClick={() => {
+                        setActiveChannelId(chan.id);
+                        setActiveMeetingRoom(null);
+                      }}
+                    >
+                      <span className={styles.channelItemLeft}># {chan.nome}</span>
+                      {profileData?.cargo === "admin" && (
+                        <button className={styles.deleteChanBtn} onClick={(e) => handleDeleteChannel(e, chan.id)}>
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+
+              {/* Canais de Voz (Discord Style) */}
+              <div className={styles.channelCategory}>
+                <span className={styles.categoryTitle}>🔊 Canais de Voz</span>
+                {(commData.canais || []).filter(c => c.tipo === "voz").length === 0 && (
+                  <div style={{ fontSize: "0.78rem", color: "#6b7280", paddingLeft: "8px", fontStyle: "italic" }}>
+                    Nenhuma sala de voz ativa.
+                  </div>
+                )}
+                {(commData.canais || [])
+                  .filter(c => c.tipo === "voz")
+                  .map(chan => {
+                    const roomParticipants = (commData.participantesVoz || []).filter(p => p.canal_id === chan.id);
+                    const isUserInThisRoom = roomParticipants.some(p => p.member_id === profileData?.id);
+                    
+                    return (
+                      <div key={chan.id} className={styles.channelCategory}>
+                        <div 
+                          className={`${styles.channelItem} ${isUserInThisRoom ? styles.activeChannelItem : ""}`}
+                          onClick={() => handleJoinVoice(chan.id)}
+                        >
+                          <span className={styles.channelItemLeft}>
+                            🔊 {chan.nome} ({roomParticipants.length}/{chan.limite_pessoas || "∞"})
+                          </span>
+                          {profileData?.cargo === "admin" && (
+                            <button className={styles.deleteChanBtn} onClick={(e) => handleDeleteChannel(e, chan.id)}>
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                        
+                        {/* Membros na sala */}
+                        {roomParticipants.length > 0 && (
+                          <div className={styles.voiceUsersList}>
+                            {roomParticipants.map(participant => (
+                              <div key={participant.id} className={styles.voiceUserItem}>
+                                <span className={styles.voiceUserLeft}>
+                                  <div className={`${styles.voiceAvatar} ${!participant.mutado ? styles.activeSpeaker : ""}`}>
+                                    {participant.member_name.charAt(0).toUpperCase()}
+                                  </div>
+                                  {participant.member_name}
+                                </span>
+                                <div className={styles.voiceUserIcons}>
+                                  {participant.mutado ? (
+                                    <MicOff size={11} color="#ef4444" />
+                                  ) : (
+                                    <Mic size={11} color="#10b981" />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+
+              {/* Salas de Reunião por Vídeo */}
+              <div className={styles.channelCategory}>
+                <span className={styles.categoryTitle}>🎥 Salas de Reunião</span>
+                {(commData.canais || []).filter(c => c.tipo === "video").length === 0 && (
+                  <div style={{ fontSize: "0.78rem", color: "#6b7280", paddingLeft: "8px", fontStyle: "italic" }}>
+                    Nenhuma sala de reunião ativa.
+                  </div>
+                )}
+                {(commData.canais || [])
+                  .filter(c => c.tipo === "video")
+                  .map(chan => (
+                    <div 
+                      key={chan.id}
+                      className={`${styles.channelItem} ${activeMeetingRoom === chan.id ? styles.activeChannelItem : ""}`}
+                      onClick={() => {
+                        setActiveChannelId(null);
+                        setActiveMeetingRoom(chan.id);
+                        setActiveMeetingTitle(chan.nome);
+                      }}
+                    >
+                      <span className={styles.channelItemLeft}>🎥 {chan.nome}</span>
+                      {profileData?.cargo === "admin" && (
+                        <button className={styles.deleteChanBtn} onClick={(e) => handleDeleteChannel(e, chan.id)}>
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Rodapé da Voz (Status Conectado) */}
+            {(commData.participantesVoz || []).some(p => p.member_id === profileData?.id) && (() => {
+              const myVoice = (commData.participantesVoz || []).find(p => p.member_id === profileData?.id);
+              const room = (commData.canais || []).find(c => c.id === myVoice?.canal_id);
+              return (
+                <div className={styles.voiceStatusPanel}>
+                  <div className={styles.voiceStatusHeader}>
+                    <Volume2 size={14} /> Voz: {room?.nome}
+                  </div>
+                  <div className={styles.voiceStatusActions}>
+                    <button 
+                      className={`${styles.micBtn} ${myVoice?.mutado ? styles.micMuted : ""}`} 
+                      onClick={() => handleToggleMute(myVoice?.mutado)}
+                    >
+                      {myVoice?.mutado ? <MicOff size={14} /> : <Mic size={14} />} 
+                      {myVoice?.mutado ? "Mutado" : "Falar"}
+                    </button>
+                    <button className={styles.disconnectBtn} onClick={handleLeaveVoice}>
+                      <PhoneOff size={14} /> Sair
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </aside>
+
+          {/* MAIN CHAT AREA */}
+          {activeMeetingRoom ? (() => {
+            const secureMeetingRoomName = `sj-meet-${profileData.escritorio_id}-${activeMeetingRoom}`;
+            return (
+              <div className={styles.chatArea}>
+                <div className={styles.chatAreaHeader}>
+                  <h2>🎥 Sala de Reunião: {activeMeetingTitle}</h2>
+                </div>
+                <div className={styles.meetingPreScreen}>
+                  <div className={styles.meetingCard}>
+                    <Video size={48} color="#10b981" />
+                    <h3>Preparar Videoconferência</h3>
+                    <p style={{ fontSize: "0.85rem", color: "#9ca3af", margin: 0, lineHeight: "1.4" }}>
+                      Esta sala de reuniões suporta áudio, vídeo, chat de texto e compartilhamento de tela com criptografia. A videoconferência será aberta em uma tela integrada.
+                    </p>
+                    <button 
+                      className={styles.meetingBtn} 
+                      onClick={() => {
+                        window.open(`https://meet.jit.si/${secureMeetingRoomName}#config.startWithVideoMuted=true`, "_blank");
+                      }}
+                    >
+                      <Video size={18} /> Iniciar Vídeo / Entrar na Reunião
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })() : (() => {
+            const channelObj = (commData.canais || []).find(c => c.id === activeChannelId);
+            const channelName = channelObj ? `# ${channelObj.nome}` : "# geral";
+            const filteredMessages = (commData.mensagens || []).filter(m => m.canal_id === activeChannelId);
+
+            return (
+              <div className={styles.chatArea}>
+                <div className={styles.chatAreaHeader}>
+                  <h2>💬 {channelName}</h2>
+                  <span style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                    Histórico do canal ({filteredMessages.length} msgs)
+                  </span>
+                </div>
+
+                <div className={styles.messageList}>
+                  {filteredMessages.length === 0 ? (
+                    <div style={{ padding: "40px", fontStyle: "italic", textAlign: "center", color: "#6b7280", fontSize: "0.85rem" }}>
+                      Nenhuma mensagem enviada neste canal ainda. Envie a primeira mensagem!
+                    </div>
+                  ) : (
+                    filteredMessages.map(msg => (
+                      <div key={msg.id} className={styles.messageItem}>
+                        <div className={styles.msgAvatar}>
+                          {msg.sender_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className={styles.msgContent}>
+                          <div className={styles.msgHeader}>
+                            <span className={styles.msgSender}>{msg.sender_name}</span>
+                            <span className={`${styles.msgBadge} ${styles[`badge_${msg.sender_cargo}`]}`}>
+                              {msg.sender_cargo === "admin" ? "Gestor" : (msg.sender_cargo === "secretaria" ? "Secretária" : (msg.sender_cargo === "estagiario" ? "Estagiário" : "Advogado"))}
+                            </span>
+                            <span className={styles.msgTime}>
+                              {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          <div className={styles.msgText}>{msg.mensagem}</div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className={styles.chatInputWrapper}>
+                  <form className={styles.chatInputBar} onSubmit={handleSendCommMessage}>
+                    <input 
+                      type="text"
+                      className={styles.chatInput}
+                      placeholder={`Enviar mensagem em ${channelName}...`}
+                      value={commChatInput}
+                      onChange={(e) => setCommChatInput(e.target.value)}
+                    />
+                    <button type="submit" className={styles.chatSendBtn}>
+                      <Send size={14} /> Enviar
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          })()}
+        </main>
+
+        {/* MODAL: CRIAR CANAL */}
+        {isAddChannelOpen && (
+          <div className={styles.modalOverlay} onClick={() => setIsAddChannelOpen(false)}>
+            <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: "450px" }}>
+              <div className={styles.modalHeader}>
+                <h2 className={styles.modalTitle}>Criar Novo Canal</h2>
+                <p className={styles.modalSubtitle}>Crie espaços para chat, voz ou videoconferência</p>
+              </div>
+
+              <form onSubmit={handleCreateChannel} style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                  <label style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Nome do Canal</label>
+                  <input 
+                    type="text" 
+                    placeholder="ex: societario-geral"
+                    className={styles.formInput}
+                    value={newChannel.nome}
+                    onChange={e => setNewChannel({ ...newChannel, nome: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                  <label style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tipo de Canal</label>
+                  <select 
+                    className={styles.formInput}
+                    value={newChannel.tipo}
+                    onChange={e => setNewChannel({ ...newChannel, tipo: e.target.value })}
+                  >
+                    <option value="texto">💬 Canal de Texto (Chat)</option>
+                    <option value="voz">🔊 Canal de Voz (Discord Style)</option>
+                    <option value="video">🎥 Sala de Reunião por Vídeo</option>
+                  </select>
+                </div>
+
+                {newChannel.tipo === "voz" && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                    <label style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Limite de Pessoas (0 = Ilimitado)</label>
+                    <input 
+                      type="number" 
+                      className={styles.formInput}
+                      value={newChannel.limite}
+                      onChange={e => setNewChannel({ ...newChannel, limite: Number(e.target.value) })}
+                      min="0"
+                    />
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                  <button type="submit" className={styles.submitBtn} style={{ flex: 1 }}>Criar Canal</button>
+                  <button type="button" className={styles.closeModalBtn} onClick={() => setIsAddChannelOpen(false)} style={{ flex: 1, margin: 0 }}>Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderAnuncios = () => {
@@ -3515,6 +4024,17 @@ export default function AdvogadoDashboard() {
             {isExtractingPDF ? <Loader2 size={18} className={styles.animateSpin} /> : <Sparkles size={18} />} 
             {isExtractingPDF ? "Lendo documento..." : "Extração com IA (PDF/Foto)"}
           </button>
+          {profileData?.escritorio_id && (
+            <button
+              className={styles.newClientBtn}
+              style={{ background: 'rgba(212, 175, 55, 0.1)', color: 'var(--color-gold)', border: '1px solid rgba(212, 175, 55, 0.3)' }}
+              onClick={() => {
+                setShowOabModal(true);
+              }}
+            >
+              <Download size={18} /> Trazer Processos por OAB
+            </button>
+          )}
           <button
             className={styles.newClientBtn}
             onClick={() => setShowNewClientModal(true)}
@@ -11732,6 +12252,52 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
           </div>
         </div>
       )}
+      
+      {/* MODAL PREMIUM: OAB EM DESENVOLVIMENTO */}
+      {showOabModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowOabModal(false)}>
+          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: "550px", border: "1px solid rgba(212, 175, 55, 0.3)", background: "rgba(15, 17, 23, 0.95)", backdropFilter: "blur(20px)" }}>
+            <div className={styles.modalHeader} style={{ textAlign: "center", borderBottom: "1px solid rgba(212, 175, 55, 0.15)", paddingBottom: "15px" }}>
+              <div style={{ display: "inline-flex", padding: "12px", borderRadius: "50%", background: "rgba(212, 175, 55, 0.1)", marginBottom: "12px", border: "1px solid rgba(212, 175, 55, 0.3)" }}>
+                <Sparkles size={28} color="var(--brand-gold)" />
+              </div>
+              <h2 className={styles.modalTitle} style={{ color: "var(--brand-gold)" }}>💡 Importação de Processos por OAB</h2>
+              <p className={styles.modalSubtitle}>Automação Inteligente e Conexão Direta ao CRM</p>
+            </div>
+
+            <div style={{ padding: "20px 0", color: "#e2e8f0", fontSize: "0.9rem", lineHeight: "1.6", display: "flex", flexDirection: "column", gap: "15px" }}>
+              <p style={{ margin: 0, color: "#cbd5e1" }}>
+                Esta funcionalidade está sendo preparada para o seu escritório! Em breve, com apenas um clique, o <strong>SocialJuridico</strong> fará a varredura completa de todos os processos ativos vinculados à sua OAB nos diários oficiais e tribunais do país.
+              </p>
+              
+              <div style={{ background: "rgba(255, 255, 255, 0.03)", borderRadius: "8px", padding: "15px", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
+                <h4 style={{ color: "var(--brand-gold)", margin: "0 0 10px 0", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px" }}>O que a nossa IA fará por você:</h4>
+                <ul style={{ margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <li>🔍 <strong>Varredura Automatizada:</strong> Busca em tempo real em Tribunais Estaduais, Federais e Diários Oficiais.</li>
+                  <li>🤖 <strong>Sincronização com o CRM:</strong> Cadastro automático de clientes no CRM com preenchimento completo de dados.</li>
+                  <li>📈 <strong>Insights KYC Avançados:</strong> Geração instantânea de análises de risco e viabilidade processual com inteligência artificial.</li>
+                </ul>
+              </div>
+              
+              <p style={{ margin: 0, fontSize: "0.8rem", color: "#9ca3af", fontStyle: "italic", textAlign: "center" }}>
+                Nossa equipe de engenharia está finalizando as integrações com os tribunais para garantir o máximo de estabilidade.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+              <button 
+                type="button" 
+                className={styles.submitBtn} 
+                onClick={() => setShowOabModal(false)}
+                style={{ flex: 1, background: "linear-gradient(135deg, var(--brand-gold) 0%, #b8860b 100%)", color: "#000", fontWeight: "600", border: "none" }}
+              >
+                Entendido, mal posso esperar!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* CHECKOUT TRANSPARENTE */}
       <TransparentCheckoutModal
         isOpen={showTransparentCheckout}

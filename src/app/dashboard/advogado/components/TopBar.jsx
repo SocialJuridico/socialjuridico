@@ -20,7 +20,8 @@ import {
   User,
   BookOpen,
   Zap,
-  Coins
+  Coins,
+  MessageSquare
 } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge/VerifiedBadge";
 
@@ -75,6 +76,9 @@ export default function TopBar() {
         {activeTab === "documentacao" && (
           <BookOpen size={20} className={styles.breadcrumbIcon} />
         )}
+        {activeTab === "comunicacao" && (
+          <MessageSquare size={20} className={styles.breadcrumbIcon} />
+        )}
         {activeTab?.startsWith("anuncios-") && (
           <Zap size={20} className={styles.breadcrumbIcon} />
         )}
@@ -107,9 +111,11 @@ export default function TopBar() {
                                 ? "Cartão Digital"
                                 : activeTab === "perfil"
                                   ? "Perfil"
-                                  : activeTab?.startsWith("anuncios-")
-                                    ? `Anúncios: ${activeTab.split("-")[1]}`
-                                    : "Documentação"}
+                                  : activeTab === "comunicacao"
+                                    ? "Comunicação Interna"
+                                    : activeTab?.startsWith("anuncios-")
+                                      ? `Anúncios: ${activeTab.split("-")[1]}`
+                                      : "Documentação"}
         </span>
       </div>
 

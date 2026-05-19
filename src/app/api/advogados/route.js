@@ -7,18 +7,35 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("advogados")
       .select(
-        "id, name, avatar, oab, estado, avg_rating, total_ratings, verified, specialties, is_premium, consulta, tempo, valor, oab_verification_status",
+        "id, name, avatar, oab, estado, avg_rating, total_ratings, verified, specialties, is_premium, consulta, tempo, valor, oab_verification_status, escritorio_id, cargo",
       )
       .order("is_premium", { ascending: false })
       .order("name", { ascending: true });
 
     if (error) throw error;
 
+    // Buscar nomes e logos dos escritórios vinculados
+    const officeIds = [...new Set((data || []).map(lawyer => lawyer.escritorio_id).filter(Boolean))];
+    const officeMap = {};
+    if (officeIds.length > 0) {
+      const { data: offices, error: officeError } = await supabaseAdmin
+        .from("escritorios")
+        .select("id, nome, logo_url")
+        .in("id", officeIds);
+      if (!officeError && offices) {
+        offices.forEach(o => {
+          officeMap[o.id] = { nome: o.nome, logo_url: o.logo_url };
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: (data || []).map((lawyer) => ({
         ...lawyer,
         oab: formatStoredOAB(lawyer.oab, lawyer.estado),
+        nome_escritorio: officeMap[lawyer.escritorio_id]?.nome || null,
+        logo_escritorio: officeMap[lawyer.escritorio_id]?.logo_url || null,
       })),
     });
   } catch (error) {

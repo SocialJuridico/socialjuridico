@@ -19,7 +19,8 @@ import {
   Bell, 
   Eye, 
   Users,
-  Scale
+  Scale,
+  Coins
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./EscritoriosAdmin.module.css";
@@ -49,6 +50,25 @@ const formatCEP = (value) => {
   const limited = digits.slice(0, 8);
   if (limited.length <= 5) return limited;
   return `${limited.slice(0, 5)}-${limited.slice(5)}`;
+};
+
+const getPlanDisplayName = (plano) => {
+  if (!plano) return "Enterprise Start";
+  const names = {
+    start: "Enterprise Start",
+    start_7: "Enterprise Start 7 dias",
+    start_15: "Enterprise Start 15 dias",
+    start_30: "Enterprise Start 30 dias (R$ 590,00)",
+    pro: "Enterprise Pro",
+    pro_7: "Enterprise Pro 7 dias",
+    pro_15: "Enterprise Pro 15 dias",
+    pro_30: "Enterprise Pro 30 dias (R$ 700,00)",
+    pro_plus: "Enterprise Pro+",
+    pro_plus_7: "Enterprise Pro+ 7 dias",
+    pro_plus_15: "Enterprise Pro+ 15 dias",
+    pro_plus_30: "Enterprise Pro+ 30 dias (R$ 950,00)",
+  };
+  return names[plano] || "Enterprise Start";
 };
 
 export default function AdminEscritoriosPage() {
@@ -294,6 +314,33 @@ export default function AdminEscritoriosPage() {
     }
   };
 
+  const handleUpdateBalance = async (newBalance) => {
+    if (!selectedOffice) return;
+    try {
+      const val = Number(newBalance) || 0;
+      const res = await fetch("/api/admin/escritorios", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedOffice.id,
+          action: "UPDATE_GENERAL",
+          value: { balance: val }
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(data.message || "Erro ao atualizar saldo de Juris");
+        return;
+      }
+      toast.success("Saldo de Juris atualizado com sucesso!");
+      setSelectedOffice(data.data);
+      loadEscritorios();
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro de rede ao atualizar saldo");
+    }
+  };
+
   // Handle adding a new associated staff member
   const handleAddStaffSubmit = async (e) => {
     e.preventDefault();
@@ -413,9 +460,41 @@ export default function AdminEscritoriosPage() {
                       }}
                     >
                       <option value="start" style={{ background: "#111" }}>Enterprise Start (R$ 590,00)</option>
+                      <option value="start_7" style={{ background: "#111" }}>Enterprise Start 7 dias</option>
+                      <option value="start_15" style={{ background: "#111" }}>Enterprise Start 15 dias</option>
+                      <option value="start_30" style={{ background: "#111" }}>Enterprise Start 30 dias (R$ 590,00)</option>
+                      
                       <option value="pro" style={{ background: "#111" }}>Enterprise Pro (R$ 700,00)</option>
+                      <option value="pro_7" style={{ background: "#111" }}>Enterprise Pro 7 dias</option>
+                      <option value="pro_15" style={{ background: "#111" }}>Enterprise Pro 15 dias</option>
+                      <option value="pro_30" style={{ background: "#111" }}>Enterprise Pro 30 dias (R$ 700,00)</option>
+                      
                       <option value="pro_plus" style={{ background: "#111" }}>Enterprise Pro+ (R$ 950,00)</option>
+                      <option value="pro_plus_7" style={{ background: "#111" }}>Enterprise Pro+ 7 dias</option>
+                      <option value="pro_plus_15" style={{ background: "#111" }}>Enterprise Pro+ 15 dias</option>
+                      <option value="pro_plus_30" style={{ background: "#111" }}>Enterprise Pro+ 30 dias (R$ 950,00)</option>
                     </select>
+                  </span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginLeft: "12px" }}>
+                    <Coins size={14} color="var(--color-gold)" />
+                    <strong>Juris do Escritório:</strong>
+                    <input
+                      type="number"
+                      value={selectedOffice.balance || 0}
+                      onChange={(e) => handleUpdateBalance(e.target.value)}
+                      style={{
+                        width: "70px",
+                        background: "rgba(255, 255, 255, 0.05)",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        borderRadius: "6px",
+                        color: "#fff",
+                        padding: "2px 6px",
+                        fontSize: "0.78rem",
+                        fontWeight: 700,
+                        outline: "none",
+                        textAlign: "center"
+                      }}
+                    />
                   </span>
                 </div>
               </div>
@@ -709,11 +788,10 @@ export default function AdminEscritoriosPage() {
                       <td>{esc.nome_responsavel}</td>
                       <td>
                         <span className={`${styles.planBadge} ${
-                          esc.plano === "pro_plus" ? styles.badgeProPlus :
-                          esc.plano === "pro" ? styles.badgePro : styles.badgeStart
+                          String(esc.plano || "").startsWith("pro_plus") ? styles.badgeProPlus :
+                          String(esc.plano || "").startsWith("pro") ? styles.badgePro : styles.badgeStart
                         }`}>
-                          {esc.plano === "pro_plus" ? "Enterprise Pro+" :
-                           esc.plano === "pro" ? "Enterprise Pro" : "Enterprise Start"}
+                          {getPlanDisplayName(esc.plano)}
                         </span>
                       </td>
                       <td>
@@ -859,14 +937,25 @@ export default function AdminEscritoriosPage() {
                       const pl = e.target.value;
                       let advs = 10;
                       let ests = 5;
-                      if (pl === "pro") { advs = 15; ests = 7; }
-                      if (pl === "pro_plus") { advs = 20; ests = 10; }
+                      if (pl.startsWith("pro_plus")) { advs = 20; ests = 10; }
+                      else if (pl.startsWith("pro")) { advs = 15; ests = 7; }
                       setNewOffice({ ...newOffice, plano: pl, max_advogados: advs, max_estagiarios: ests });
                     }}
                   >
                     <option value="start">Enterprise Start (R$ 590,00)</option>
+                    <option value="start_7">Enterprise Start 7 dias</option>
+                    <option value="start_15">Enterprise Start 15 dias</option>
+                    <option value="start_30">Enterprise Start 30 dias (R$ 590,00)</option>
+                    
                     <option value="pro">Enterprise Pro (R$ 700,00)</option>
+                    <option value="pro_7">Enterprise Pro 7 dias</option>
+                    <option value="pro_15">Enterprise Pro 15 dias</option>
+                    <option value="pro_30">Enterprise Pro 30 dias (R$ 700,00)</option>
+                    
                     <option value="pro_plus">Enterprise Pro+ (R$ 950,00)</option>
+                    <option value="pro_plus_7">Enterprise Pro+ 7 dias</option>
+                    <option value="pro_plus_15">Enterprise Pro+ 15 dias</option>
+                    <option value="pro_plus_30">Enterprise Pro+ 30 dias (R$ 950,00)</option>
                   </select>
                 </div>
 

@@ -1,22 +1,85 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import crypto from "crypto";
+
+async function getSessionUser() {
+  const cookieStore = await cookies();
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
+  
+  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
+  const sessionCookie = cookieStore.get("sj_escritorio_session");
+  if (sessionCookie?.value) {
+    try {
+      const decoded = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString("utf8"));
+      return {
+        id: decoded.id,
+        name: `${decoded.nome} (Gestor)`,
+        cargo: "admin",
+        escritorio_id: decoded.id,
+        isOfficeAdmin: true
+      };
+    } catch (e) {
+      console.error("Erro ao decodificar cookie de escritorio:", e);
+    }
+  }
+
+  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user && !error) {
+      const { data: adv, error: advError } = await db
+        .from("advogados")
+        .select("id, name, cargo, escritorio_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (adv && !advError) {
+        return {
+          id: adv.id,
+          name: adv.name,
+          cargo: adv.cargo || "advogado",
+          escritorio_id: adv.escritorio_id || null,
+          isOfficeAdmin: false
+        };
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao obter usuario autenticado:", e);
+  }
+
+  return null;
+}
 
 export async function GET(request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const userSession = await getSessionUser();
 
-    if (authError || !user) {
+    if (!userSession) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
+    let memberIds = [userSession.id];
+
+    if (userSession.escritorio_id) {
+      const { data: membros } = await supabaseAdmin
+        .from('advogados')
+        .select('id')
+        .eq('escritorio_id', userSession.escritorio_id);
+      
+      memberIds = (membros || []).map(m => m.id);
+      if (userSession.isOfficeAdmin) {
+        memberIds.push(userSession.id);
+      }
+    }
+
     const [contratos, procuracoes, provas, notificacoes] = await Promise.all([
-      supabaseAdmin.from('blindagem_contratos').select('*').eq('lawyer_id', user.id),
-      supabaseAdmin.from('blindagem_procuracoes').select('*').eq('lawyer_id', user.id),
-      supabaseAdmin.from('blindagem_provas').select('*').eq('lawyer_id', user.id),
-      supabaseAdmin.from('blindagem_notificacoes').select('*').eq('lawyer_id', user.id),
+      supabaseAdmin.from('blindagem_contratos').select('*').in('lawyer_id', memberIds),
+      supabaseAdmin.from('blindagem_procuracoes').select('*').in('lawyer_id', memberIds),
+      supabaseAdmin.from('blindagem_provas').select('*').in('lawyer_id', memberIds),
+      supabaseAdmin.from('blindagem_notificacoes').select('*').in('lawyer_id', memberIds),
     ]);
 
     const allDocs = [];
@@ -37,13 +100,9 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const userSession = await getSessionUser();
 
-    if (authError || !user) {
+    if (!userSession) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
@@ -82,7 +141,7 @@ export async function POST(request) {
     const { data: adv } = await supabaseAdmin
       .from("advogados")
       .select("is_premium, plan_type, balance")
-      .eq("id", user.id)
+      .eq("id", userSession.id)
       .single();
 
     const isStart = adv?.plan_type === "START";
@@ -127,7 +186,7 @@ export async function POST(request) {
     const docData = {
       id: crypto.randomUUID(),
       client_id: clientId || null,
-      lawyer_id: user.id,
+      lawyer_id: userSession.id,
       file_name: file.name,
       file_url: publicUrl,
       protocol: protocol,
@@ -155,7 +214,7 @@ export async function POST(request) {
       await supabaseAdmin
         .from("advogados")
         .update({ balance: newBalance })
-        .eq("id", user.id);
+        .eq("id", userSession.id);
     }
 
     return NextResponse.json({ 

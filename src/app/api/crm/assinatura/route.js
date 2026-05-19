@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { ensureDb } from '@/lib/dbSignatureHelper';
 
 const generateVerificationCode = () => {
@@ -14,6 +15,55 @@ const generateVerificationCode = () => {
   };
   return `SJ-${genPart(4)}-${genPart(4)}`;
 };
+
+async function getSessionUser() {
+  const cookieStore = await cookies();
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
+  
+  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
+  const sessionCookie = cookieStore.get("sj_escritorio_session");
+  if (sessionCookie?.value) {
+    try {
+      const decoded = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString("utf8"));
+      return {
+        id: decoded.id,
+        name: `${decoded.nome} (Gestor)`,
+        cargo: "admin",
+        escritorio_id: decoded.id,
+        isOfficeAdmin: true
+      };
+    } catch (e) {
+      console.error("Erro ao decodificar cookie de escritorio:", e);
+    }
+  }
+
+  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user && !error) {
+      const { data: adv, error: advError } = await db
+        .from("advogados")
+        .select("id, name, cargo, escritorio_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (adv && !advError) {
+        return {
+          id: adv.id,
+          name: adv.name,
+          cargo: adv.cargo || "advogado",
+          escritorio_id: adv.escritorio_id || null,
+          isOfficeAdmin: false
+        };
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao obter usuario autenticado:", e);
+  }
+
+  return null;
+}
 
 // GET /api/crm/assinatura -> Lista assinaturas do advogado logado (ou busca uma específica por ?id=...)
 export async function GET(request) {
@@ -56,18 +106,30 @@ export async function GET(request) {
     }
 
     // Listagem geral das assinaturas (apenas para advogados autenticados)
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const userSession = await getSessionUser();
 
-    if (authError || !user) {
+    if (!userSession) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('assinaturas_digitais')
-      .select('*')
-      .eq('lawyer_id', user.id)
-      .order('created_at', { ascending: false });
+    let query = supabaseAdmin.from('assinaturas_digitais').select('*');
+
+    if (userSession.escritorio_id) {
+      const { data: membros } = await supabaseAdmin
+        .from('advogados')
+        .select('id')
+        .eq('escritorio_id', userSession.escritorio_id);
+      
+      const memberIds = (membros || []).map(m => m.id);
+      if (userSession.isOfficeAdmin) {
+        memberIds.push(userSession.id);
+      }
+      query = query.in('lawyer_id', memberIds);
+    } else {
+      query = query.eq('lawyer_id', userSession.id);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) throw error;
 
@@ -83,10 +145,9 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await ensureDb();
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const userSession = await getSessionUser();
 
-    if (authError || !user) {
+    if (!userSession) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
@@ -110,7 +171,7 @@ export async function POST(request) {
     const verification_code = generateVerificationCode();
 
     const insertData = {
-      lawyer_id: user.id,
+      lawyer_id: userSession.id,
       client_id: client_id || null,
       document_name,
       document_url: document_url || null,

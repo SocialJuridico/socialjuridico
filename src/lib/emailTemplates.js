@@ -968,3 +968,18 @@ export function boasVindasPlanoTemplate({ lawyerName, planType, jurisBonus }) {
 </html>`;
 }
 
+/**
+ * 10. Template de notificação de novo cliente cadastrado no CRM
+ */
+export function clienteCadastradoCrmTemplate({ lawyerName, clientName, casoTitulo }) {
+  return notificacaoAdvogadoBase({
+    lawyerName,
+    headerSubtitle: 'CLIENTE ADICIONADO AO CRM',
+    emoji: '👤',
+    titulo: 'Novo Cliente no seu CRM!',
+    mensagem: `O cliente <strong style="color: #ffffff;">"${clientName}"</strong> foi cadastrado automaticamente no seu CRM após contratar os seus serviços no caso <strong style="color: #ffffff;">"${casoTitulo}"</strong>.`,
+    ctaText: 'Acessar CRM',
+    ctaUrl: 'https://socialjuridico.com.br/dashboard/advogado',
+  });
+}
+

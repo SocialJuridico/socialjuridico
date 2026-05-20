@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
-import { interesseRecusadoTemplate, interesseAceitoTemplate, advogadoContratadoTemplate, casoEncerradoTemplate } from "@/lib/emailTemplates";
+import { interesseRecusadoTemplate, interesseAceitoTemplate, advogadoContratadoTemplate, casoEncerradoTemplate, clienteCadastradoCrmTemplate } from "@/lib/emailTemplates";
 import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 
 // POST /api/casos/interesse
@@ -51,7 +51,7 @@ export async function POST(request) {
     // 2. Verificar que o usuário logado é o cliente dono do caso
     const { data: caso, error: cError } = await db
       .from("casos")
-      .select("id, cliente_id, titulo, advogado_id, status")
+      .select("id, cliente_id, titulo, advogado_id, status, descricao, anexos")
       .eq("id", interest.case_id)
       .single();
 
@@ -253,6 +253,106 @@ export async function POST(request) {
           updated_at: new Date().toISOString(),
         })
         .eq("id", interest.case_id);
+
+      // Adicionar o cliente e a contratação automaticamente ao CRM do advogado
+      try {
+        const { data: cliente } = await db
+          .from("clientes")
+          .select("*")
+          .eq("id", caso.cliente_id)
+          .single();
+
+        const { data: advogado } = await db
+          .from("advogados")
+          .select("name, email")
+          .eq("id", interest.lawyer_id)
+          .single();
+
+        if (cliente) {
+          const { data: crmClientExist } = await db
+            .from("crm_clients")
+            .select("id")
+            .eq("lawyer_id", interest.lawyer_id)
+            .eq("email", cliente.email)
+            .maybeSingle();
+
+          let crmClientId;
+
+          if (crmClientExist) {
+            crmClientId = crmClientExist.id;
+            await db
+              .from("crm_clients")
+              .update({
+                notes: `Cliente recontratou para um novo caso.\nCaso: ${caso.titulo}\nStatus: Ativo`
+              })
+              .eq("id", crmClientId);
+          } else {
+            crmClientId = crypto.randomUUID();
+            await db
+              .from("crm_clients")
+              .insert([{
+                id: crmClientId,
+                lawyer_id: interest.lawyer_id,
+                name: cliente.name || "Cliente sem Nome",
+                email: cliente.email,
+                phone: cliente.phone || "",
+                status: "Ativo",
+                type: "Pessoa Física",
+                notes: `Adicionado automaticamente via contratação do caso "${caso.titulo}".\nDescrição do Caso: ${caso.descricao || "Sem descrição"}`,
+                risk_score: Math.floor(Math.random() * 100),
+                created_at: new Date().toISOString()
+              }]);
+          }
+
+          // Registrar interação no CRM
+          await db
+            .from("crm_interactions")
+            .insert([{
+              id: crypto.randomUUID(),
+              client_id: crmClientId,
+              lawyer_id: interest.lawyer_id,
+              type: "CONTRATO",
+              content: `Cliente contratou o advogado para o caso "${caso.titulo}".`,
+              created_at: new Date().toISOString()
+            }]);
+
+          // Sincronizar anexos (documentos) para crm_documents se houver
+          if (caso.anexos && Array.isArray(caso.anexos)) {
+            const docsToInsert = caso.anexos.map(anexo => ({
+              id: crypto.randomUUID(),
+              client_id: crmClientId,
+              file_name: anexo.name || anexo.fileName || "Documento sem nome",
+              file_url: anexo.url || anexo.fileUrl || "",
+              created_at: new Date().toISOString()
+            })).filter(doc => doc.file_url);
+
+            if (docsToInsert.length > 0) {
+              await db.from("crm_documents").insert(docsToInsert);
+            }
+          }
+
+          // Disparar e-mail ao advogado informando que o cliente foi cadastrado no CRM
+          if (advogado?.email) {
+            try {
+              await resend.emails.send({
+                from: 'Social Jurídico <contato@socialjuridico.com.br>',
+                to: advogado.email,
+                subject: `👤 Cliente "${cliente.name || "Cliente"}" cadastrado no seu CRM`,
+                html: clienteCadastradoCrmTemplate({
+                  lawyerName: advogado.name || 'Advogado(a)',
+                  clientName: cliente.name || 'Cliente',
+                  casoTitulo: caso.titulo
+                }),
+              });
+              console.log(`📧 E-mail de cadastro de CRM enviado para ${advogado.email}`);
+            } catch (emailErr) {
+              console.error("⚠️ Erro ao enviar e-mail de CRM (não-fatal):", emailErr.message);
+            }
+          }
+        }
+      } catch (crmErr) {
+        console.error("⚠️ Erro ao sincronizar dados no CRM (não-fatal):", crmErr.message);
+      }
 
       // Migrar as mensagens do chat de negociação para o chat principal (interest_id = null)
       await db

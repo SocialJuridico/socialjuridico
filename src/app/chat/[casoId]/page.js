@@ -212,29 +212,76 @@ function ChatContent() {
 
     loadData();
 
-    // Supabase Realtime subscription for incoming/outgoing case messages
-    const channelName = `chat-caso-${casoId}`;
-    const subscription = supabase
-      .channel(channelName)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "mensagens",
-          filter: `caso_id=eq.${casoId}`
-        },
-        () => {
-          loadMensagens();
-        }
-      )
-      .subscribe();
-
     return () => {
-      supabase.removeChannel(subscription);
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     };
   }, [casoId, loadMensagens, router, interestId]);
+
+  // Realtime subscription for incoming messages
+  useEffect(() => {
+    if (!casoId || !currentUser) return;
+
+    let subscription;
+    let isActive = true;
+
+    async function initRealtime() {
+      // 1. Obter a sessão e configurar autenticação do WebSocket
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!isActive) return;
+
+      let token = session?.access_token;
+
+      // Fallback: se o cliente-side não conseguir ler o cookie de autenticação,
+      // busca o token JWT assinado diretamente do servidor.
+      if (!token) {
+        try {
+          const res = await fetch("/api/auth/token");
+          const data = await res.json();
+          if (data.success && data.token) {
+            token = data.token;
+          }
+        } catch (err) {
+          console.error("Erro ao obter token de fallback:", err);
+        }
+      }
+
+      if (token) {
+        supabase.realtime.setAuth(token);
+      }
+
+      // 2. Inscrever no canal do caso específico
+      const channelName = `chat-caso-${casoId}`;
+      subscription = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "mensagens",
+            filter: `caso_id=eq.${casoId}`
+          },
+          () => {
+            loadMensagens();
+          }
+        )
+        .subscribe((status, err) => {
+          if (err) {
+            console.error("Erro na inscrição Realtime do Chat:", err);
+          }
+          console.log(`Inscrição Realtime (${channelName}) status:`, status);
+        });
+    }
+
+    initRealtime();
+
+    return () => {
+      isActive = false;
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
+    };
+  }, [casoId, currentUser, loadMensagens]);
 
   useEffect(() => {
     if (currentUser?.role !== "LAWYER" || !currentUser?.id) return;

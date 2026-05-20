@@ -672,3 +672,191 @@
   background: #0f0f0f;
 }
 
+/* MEDIA AND VOICE MESSAGES */
+.attachmentBtn, .recordBtn {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  border-radius: 14px;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.attachmentBtn:hover, .recordBtn:hover {
+  background: rgba(212, 175, 55, 0.1);
+  border-color: var(--gold);
+  transform: translateY(-1px);
+}
+
+.recordBtn.recordingActive {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #ef4444;
+  animation: pulseRecording 1.5s infinite alternate;
+}
+
+@keyframes pulseRecording {
+  from { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  to { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+}
+
+.recordingContainer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px dashed rgba(239, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 10px 18px;
+  color: #ef4444;
+}
+
+.recordingBlink {
+  width: 10px;
+  height: 10px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.recordingTime {
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-family: monospace;
+}
+
+.recordingLabel {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  flex: 1;
+}
+
+.cancelRecordBtn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.cancelRecordBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* MEDIA BUBBLES */
+.mediaMessage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.mediaImage {
+  max-width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mediaImage:hover {
+  opacity: 0.9;
+}
+
+.pdfCard, .genericFileCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.ownBubble .pdfCard, .ownBubble .genericFileCard {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #1f2937;
+}
+
+.ownBubble .pdfCard a, .ownBubble .genericFileCard a {
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.pdfIcon, .fileIcon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.fileDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.fileName {
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.viewLink {
+  font-size: 0.78rem;
+  color: var(--gold);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.audioMessageContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 240px;
+  max-width: 100%;
+}
+
+.audioPlayer {
+  width: 100%;
+  height: 40px;
+  border-radius: 8px;
+  outline: none;
+}
+
+/* Custom styling for player inside client/advogado own bubble */
+.ownBubble .audioPlayer {
+  filter: sepia(20%) saturate(70%) grayscale(50%) contrast(90%) invert(5%);
+}
+
+.otherBubble .audioPlayer {
+  filter: sepia(30%) saturate(80%) grayscale(40%) contrast(85%) invert(90%);
+}
+
+

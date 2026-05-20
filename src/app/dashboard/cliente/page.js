@@ -804,23 +804,38 @@ export default function ClienteDashboard() {
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    const validFiles = files.filter((file) => {
-      const isLt5MB = file.size / 1024 / 1024 < 5;
+    const validFiles = [];
+
+    for (const file of files) {
+      const isLt10MB = file.size / 1024 / 1024 < 10;
       const isAllowed = [
         "application/pdf",
         "image/jpeg",
         "image/png",
         "image/webp",
       ].includes(file.type);
-      return isLt5MB && isAllowed;
-    });
+
+      if (!isAllowed) {
+        toast.error(`Arquivo "${file.name}" não aceito. Apenas PDF, JPG, PNG e WEBP são suportados.`);
+        continue;
+      }
+
+      if (!isLt10MB) {
+        toast.error(`Arquivo "${file.name}" excede o limite de 10MB.`);
+        continue;
+      }
+
+      validFiles.push(file);
+    }
 
     if (selectedFiles.length + validFiles.length > 5) {
       toast.error("Limite máximo de 5 arquivos atingido.");
       return;
     }
 
-    setSelectedFiles((prev) => [...prev, ...validFiles]);
+    if (validFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...validFiles]);
+    }
   };
 
   const removeFile = (index) => {
@@ -865,14 +880,14 @@ export default function ClienteDashboard() {
         const filePath = fileName;
 
         const { error: uploadError } = await supabase.storage
-          .from("CASES")
+          .from("cases")
           .upload(filePath, file);
 
         if (uploadError) throw uploadError;
 
         const {
           data: { publicUrl },
-        } = supabase.storage.from("CASES").getPublicUrl(filePath);
+        } = supabase.storage.from("cases").getPublicUrl(filePath);
 
         uploadedUrls.push(publicUrl);
       }

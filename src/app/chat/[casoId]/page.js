@@ -9,6 +9,10 @@ import {
   Loader2,
   MessageSquare,
   Video,
+  Paperclip,
+  Mic,
+  Trash2,
+  X
 } from "lucide-react";
 import Link from "next/link";
 import styles from "./Chat.module.css";
@@ -36,6 +40,14 @@ function ChatContent() {
   const [showMeetModal, setShowMeetModal] = useState(false);
   const [meetLinkInput, setMeetLinkInput] = useState("");
   const [newMessage, setNewMessage] = useState("");
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+
+  const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
 
   const loadMensagens = useCallback(async () => {
     try {
@@ -112,6 +124,7 @@ function ChatContent() {
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     };
   }, [casoId, loadMensagens, router, interestId]);
 
@@ -226,11 +239,248 @@ function ChatContent() {
     }
   };
 
+  const sendMediaMessage = async (contentStr) => {
+    try {
+      const bodyData = { caso_id: casoId, content: contentStr };
+      if (interestId) bodyData.interest_id = interestId;
+
+      const res = await fetch("/api/mensagens", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyData),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        await loadMensagens();
+      } else {
+        toast.error(data.message || "Erro ao enviar mensagem.");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão ao enviar anexo.");
+    }
+  };
+
+  const handleFileAttach = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isLt15MB = file.size / 1024 / 1024 < 15;
+    if (!isLt15MB) {
+      toast.error("O arquivo excede o limite de 15MB.");
+      return;
+    }
+
+    setUploadingFile(true);
+    const toastId = toast.loading("Enviando arquivo...");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("casoId", casoId);
+
+      const res = await fetch("/api/mensagens/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Erro ao enviar anexo.");
+      }
+
+      const mediaContent = JSON.stringify({
+        isMedia: true,
+        fileUrl: data.url,
+        fileName: data.fileName,
+        fileType: data.fileType,
+      });
+
+      await sendMediaMessage(mediaContent);
+      toast.success("Arquivo enviado!", { id: toastId });
+    } catch (error) {
+      console.error("Erro no upload do anexo:", error);
+      toast.error(error.message || "Falha ao enviar arquivo.", { id: toastId });
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((track) => track.stop());
+
+        if (audioChunksRef.current.length === 0) return;
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+
+        if (mediaRecorderRef.current === null) return;
+
+        const mimeType = audioBlob.type || "audio/webm";
+        const fileExt = mimeType.split(";")[0].split("/")[1] || "webm";
+        const file = new File([audioBlob], `gravacao-${Date.now()}.${fileExt}`, {
+          type: mimeType,
+        });
+
+        setUploadingFile(true);
+        const toastId = toast.loading("Enviando mensagem de voz...");
+
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          formData.append("casoId", casoId);
+
+          const res = await fetch("/api/mensagens/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+
+          if (!res.ok || !data.success) {
+            throw new Error(data.message || "Erro ao fazer upload da gravação.");
+          }
+
+          const mediaContent = JSON.stringify({
+            isMedia: true,
+            fileUrl: data.url,
+            fileName: "Mensagem de Voz",
+            fileType: data.fileType || "audio/webm",
+          });
+
+          await sendMediaMessage(mediaContent);
+          toast.success("Mensagem de voz enviada!", { id: toastId });
+        } catch (error) {
+          console.error("Erro ao enviar áudio:", error);
+          toast.error("Falha ao enviar mensagem de voz.", { id: toastId });
+        } finally {
+          setUploadingFile(false);
+        }
+      };
+
+      recorder.start(250);
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+
+    } catch (err) {
+      console.error("Erro ao acessar microfone:", err);
+      toast.error("Não foi possível acessar o microfone.");
+    }
+  };
+
+  const stopRecording = (shouldSend = true) => {
+    if (!isRecording || !mediaRecorderRef.current) return;
+
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+
+    if (!shouldSend) {
+      mediaRecorderRef.current = null;
+    }
+
+    try {
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    setIsRecording(false);
+    setRecordingTime(0);
+  };
+
+  const formatRecordingTime = (secs) => {
+    const minutes = Math.floor(secs / 60);
+    const seconds = secs % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
+
   const isLawyer = currentUser?.role === "LAWYER";
   const dashboardHref = isLawyer ? "/dashboard/advogado" : "/dashboard/cliente";
   const isNegotiationChat = !!interestId;
 
   const renderMessageContent = (content) => {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.isMedia) {
+        const isImg = parsed.fileType?.startsWith("image/") || parsed.fileType === "image";
+        const isPdf = parsed.fileType === "application/pdf" || parsed.fileType === "pdf";
+        const isAudio = parsed.fileType?.startsWith("audio/") || parsed.fileType === "audio";
+
+        if (isImg) {
+          return (
+            <div className={styles.mediaMessage}>
+              <img
+                src={parsed.fileUrl}
+                alt={parsed.fileName}
+                className={styles.mediaImage}
+                onClick={() => window.open(parsed.fileUrl, "_blank")}
+              />
+              <span className={styles.messageText}>{parsed.fileName}</span>
+            </div>
+          );
+        } else if (isPdf) {
+          return (
+            <div className={styles.pdfCard}>
+              <span className={styles.pdfIcon}>📄</span>
+              <div className={styles.fileDetails}>
+                <span className={styles.fileName}>{parsed.fileName}</span>
+                <span
+                  className={styles.viewLink}
+                  onClick={() => window.open(parsed.fileUrl, "_blank")}
+                >
+                  Visualizar PDF
+                </span>
+              </div>
+            </div>
+          );
+        } else if (isAudio) {
+          return (
+            <div className={styles.audioMessageContainer}>
+              <audio src={parsed.fileUrl} controls className={styles.audioPlayer} />
+            </div>
+          );
+        } else {
+          return (
+            <div className={styles.genericFileCard}>
+              <span className={styles.fileIcon}>📁</span>
+              <div className={styles.fileDetails}>
+                <span className={styles.fileName}>{parsed.fileName}</span>
+                <span
+                  className={styles.viewLink}
+                  onClick={() => window.open(parsed.fileUrl, "_blank")}
+                >
+                  Baixar arquivo
+                </span>
+              </div>
+            </div>
+          );
+        }
+      }
+    } catch (e) {
+      // Ignora erro e renderiza texto normal
+    }
+
     const meetRegex = /(https:\/\/(meet\.google\.com|meet\.jit\.si)\/[^\s]+)/i;
     const match = String(content || "").match(meetRegex);
 
@@ -557,29 +807,92 @@ function ChatContent() {
       {/* INPUT AREA */}
       <footer className={styles.inputArea}>
         <form onSubmit={handleSubmit} className={styles.inputForm}>
-          <textarea
-            ref={inputRef}
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Digite sua mensagem... (Enter para enviar)"
-            className={styles.messageInput}
-            rows={1}
-            disabled={sending}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileAttach}
+            style={{ display: "none" }}
+            accept="image/*,application/pdf,audio/*"
+            disabled={uploadingFile || sending}
           />
-          <button
-            type="submit"
-            className={styles.sendBtn}
-            disabled={!newMessage.trim() || sending}
-          >
-            {sending ? (
-              <Loader2 size={20} className={styles.spinner} />
-            ) : (
+
+          {!isRecording && (
+            <button
+              type="button"
+              className={styles.attachmentBtn}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingFile || sending}
+              title="Anexar arquivo"
+            >
+              <Paperclip size={20} />
+            </button>
+          )}
+
+          {isRecording ? (
+            <div className={styles.recordingContainer}>
+              <div className={styles.recordingBlink}></div>
+              <span className={styles.recordingTime}>
+                {formatRecordingTime(recordingTime)}
+              </span>
+              <span className={styles.recordingLabel}>Gravando voz...</span>
+              <button
+                type="button"
+                className={styles.cancelRecordBtn}
+                onClick={() => stopRecording(false)}
+                title="Cancelar gravação"
+              >
+                <Trash2 size={20} />
+              </button>
+            </div>
+          ) : (
+            <textarea
+              ref={inputRef}
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={uploadingFile ? "Enviando arquivo..." : "Digite sua mensagem... (Enter para enviar)"}
+              className={styles.messageInput}
+              rows={1}
+              disabled={sending || uploadingFile}
+            />
+          )}
+
+          {isRecording ? (
+            <button
+              type="button"
+              className={styles.sendBtn}
+              onClick={() => stopRecording(true)}
+              title="Enviar áudio"
+            >
               <Send size={20} />
-            )}
-          </button>
+            </button>
+          ) : newMessage.trim() ? (
+            <button
+              type="submit"
+              className={styles.sendBtn}
+              disabled={!newMessage.trim() || sending || uploadingFile}
+            >
+              {sending ? (
+                <Loader2 size={20} className={styles.spinner} />
+              ) : (
+                <Send size={20} />
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.recordBtn}
+              onClick={startRecording}
+              disabled={uploadingFile || sending}
+              title="Gravar áudio"
+            >
+              <Mic size={20} />
+            </button>
+          )}
         </form>
-        <p className={styles.inputHint}>Shift+Enter para nova linha</p>
+        <p className={styles.inputHint}>
+          {isRecording ? "Toque na lixeira para cancelar" : "Shift+Enter para nova linha"}
+        </p>
       </footer>
     </div>
   );

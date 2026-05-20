@@ -258,11 +258,13 @@ function ChatContent() {
           {
             event: "*",
             schema: "public",
-            table: "mensagens",
-            filter: `caso_id=eq.${casoId}`
+            table: "mensagens"
           },
-          () => {
-            loadMensagens();
+          (payload) => {
+            console.log("Recebeu evento Realtime na tabela mensagens:", payload);
+            if (payload.new && payload.new.caso_id === casoId) {
+              loadMensagens();
+            }
           }
         )
         .subscribe((status, err) => {

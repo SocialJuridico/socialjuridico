@@ -1053,7 +1053,7 @@ function ChatContent() {
               placeholder={uploadingFile ? "Enviando arquivo..." : "Digite sua mensagem... (Enter para enviar)"}
               className={styles.messageInput}
               rows={1}
-              disabled={sending || uploadingFile}
+              disabled={uploadingFile}
             />
           )}
 

@@ -607,8 +607,51 @@ export default function AdvogadoDashboard() {
   useEffect(() => {
     if (activeTab === "comunicacao" && profileData?.escritorio_id) {
       loadCommunication();
-      const interval = setInterval(loadCommunication, 3000);
-      return () => clearInterval(interval);
+
+      const channelName = `escritorio-comunicacao-${profileData.escritorio_id}`;
+      const subscription = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "escritorio_mensagens",
+            filter: `escritorio_id=eq.${profileData.escritorio_id}`
+          },
+          () => {
+            loadCommunication();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "escritorio_canais",
+            filter: `escritorio_id=eq.${profileData.escritorio_id}`
+          },
+          () => {
+            loadCommunication();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "escritorio_voz_participantes",
+            filter: `escritorio_id=eq.${profileData.escritorio_id}`
+          },
+          () => {
+            loadCommunication();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
     }
   }, [activeTab, profileData]);
 

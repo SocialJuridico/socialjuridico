@@ -2,7 +2,6 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { Client } from "pg";
 
 // Helper to authenticate the requester and return officeId + user profile (Admin or Secretary)
 async function getSessionInfo() {
@@ -64,98 +63,53 @@ async function getSessionInfo() {
   return { officeId: null, user: null };
 }
 
-// Self-migration check to dynamically create both tables in PostgreSQL
-async function ensureTablesExist(officeId) {
-  const connStr = process.env.DATABASE_URL;
-  if (!connStr) {
-    console.error("DATABASE_URL não configurada!");
-    return;
-  }
-
-  const client = new Client({
-    connectionString: connStr,
-    ssl: { rejectUnauthorized: false }
-  });
-
+// Pre-populate default subcategories if none exist for this office (strictly using Supabase client)
+async function ensureDefaultSubcategories(db, officeId) {
+  if (!officeId) return;
   try {
-    await client.connect();
+    const { count, error } = await db
+      .from("escritorio_subcategorias")
+      .select("*", { count: "exact", head: true })
+      .eq("escritorio_id", officeId);
     
-    // 1. Create Subcategories Table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS escritorio_subcategorias (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        escritorio_id UUID NOT NULL REFERENCES escritorios(id) ON DELETE CASCADE,
-        tipo TEXT NOT NULL CHECK (tipo IN ('RECEITA', 'DESPESA')),
-        categoria TEXT NOT NULL,
-        nome TEXT NOT NULL,
-        criado_em TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-        UNIQUE (escritorio_id, tipo, categoria, nome)
-      );
-    `);
+    if (!error && count === 0) {
+      console.log(`Pre-populando subcategorias padrao para o escritorio ${officeId} via Supabase...`);
+      const defaults = [
+        // DESPESA categories
+        { tipo: "DESPESA", cat: "Copa & Limpeza", subs: ["Café e Açúcar", "Material de Limpeza", "Copa Geral"] },
+        { tipo: "DESPESA", cat: "Pessoal & Encargos", subs: ["Salários CLT", "Bolsas de Estagiários", "Pró-Labore", "Vales e Benefícios"] },
+        { tipo: "DESPESA", cat: "Repasses & Comissões", subs: ["Comissões Associados", "Comissão p/ Parceiros"] },
+        { tipo: "DESPESA", cat: "Tecnologia & Softwares", subs: ["Assinatura SocialJurídico", "Outros Softwares", "Certificados e Tokens"] },
+        { tipo: "DESPESA", cat: "Ocupação & Consumo", subs: ["Aluguel e Condomínio", "Energia e Água", "Internet e Telefone"] },
+        { tipo: "DESPESA", cat: "Comercial & Marketing", subs: ["Anúncios Patrocinados", "Papelaria e Cartões", "Eventos"] },
+        { tipo: "DESPESA", cat: "Tributos & OAB", subs: ["DAS Simples Nacional", "Anuidade OAB", "ISS e Taxas"] },
+        { tipo: "DESPESA", cat: "Outros", subs: ["Outros"] },
 
-    // 2. Create Transactions Table
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS escritorio_financeiro (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        escritorio_id UUID NOT NULL REFERENCES escritorios(id) ON DELETE CASCADE,
-        tipo TEXT NOT NULL CHECK (tipo IN ('RECEITA', 'DESPESA')),
-        categoria TEXT NOT NULL,
-        subcategoria TEXT NOT NULL,
-        descricao TEXT,
-        valor NUMERIC(12, 2) NOT NULL,
-        data_competencia DATE NOT NULL DEFAULT CURRENT_DATE,
-        status TEXT NOT NULL DEFAULT 'PAGO',
-        comprovante_url TEXT,
-        criado_em TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-      );
-    `);
+        // RECEITA categories
+        { tipo: "RECEITA", cat: "Honorários Contratuais", subs: ["Retainer / Assessoria Mensal", "Honorários Iniciais"] },
+        { tipo: "RECEITA", cat: "Honorários de Êxito", subs: ["Porcentagem sobre Vitória"] },
+        { tipo: "RECEITA", cat: "Honorários Sucumbenciais", subs: ["Sucumbência Fixada em Juízo"] },
+        { tipo: "RECEITA", cat: "Consultoria", subs: ["Elaboração de Pareceres", "Consultas Jurídicas Avulsas"] },
+        { tipo: "RECEITA", cat: "Reembolso de Custas", subs: ["Custas Judiciais Reembolsadas", "Despesas Viagem"] },
+        { tipo: "RECEITA", cat: "Outros", subs: ["Outras Receitas"] }
+      ];
 
-    // 3. Pre-populate default subcategories if none exist for this office
-    if (officeId) {
-      const checkRes = await client.query(
-        "SELECT COUNT(*) FROM escritorio_subcategorias WHERE escritorio_id = $1",
-        [officeId]
-      );
-      
-      if (parseInt(checkRes.rows[0].count, 10) === 0) {
-        console.log(`Pre-populando subcategorias padrao para o escritorio ${officeId}...`);
-        
-        const defaults = [
-          // DESPESA categories
-          { tipo: "DESPESA", cat: "Copa & Limpeza", subs: ["Café e Açúcar", "Material de Limpeza", "Copa Geral"] },
-          { tipo: "DESPESA", cat: "Pessoal & Encargos", subs: ["Salários CLT", "Bolsas de Estagiários", "Pró-Labore", "Vales e Benefícios"] },
-          { tipo: "DESPESA", cat: "Repasses & Comissões", subs: ["Comissões Associados", "Comissão p/ Parceiros"] },
-          { tipo: "DESPESA", cat: "Tecnologia & Softwares", subs: ["Assinatura SocialJurídico", "Outros Softwares", "Certificados e Tokens"] },
-          { tipo: "DESPESA", cat: "Ocupação & Consumo", subs: ["Aluguel e Condomínio", "Energia e Água", "Internet e Telefone"] },
-          { tipo: "DESPESA", cat: "Comercial & Marketing", subs: ["Anúncios Patrocinados", "Papelaria e Cartões", "Eventos"] },
-          { tipo: "DESPESA", cat: "Tributos & OAB", subs: ["DAS Simples Nacional", "Anuidade OAB", "ISS e Taxas"] },
-          { tipo: "DESPESA", cat: "Outros", subs: ["Outros"] },
-
-          // RECEITA categories
-          { tipo: "RECEITA", cat: "Honorários Contratuais", subs: ["Retainer / Assessoria Mensal", "Honorários Iniciais"] },
-          { tipo: "RECEITA", cat: "Honorários de Êxito", subs: ["Porcentagem sobre Vitória"] },
-          { tipo: "RECEITA", cat: "Honorários Sucumbenciais", subs: ["Sucumbência Fixada em Juízo"] },
-          { tipo: "RECEITA", cat: "Consultoria", subs: ["Elaboração de Pareceres", "Consultas Jurídicas Avulsas"] },
-          { tipo: "RECEITA", cat: "Reembolso de Custas", subs: ["Custas Judiciais Reembolsadas", "Despesas Viagem"] },
-          { tipo: "RECEITA", cat: "Outros", subs: ["Outras Receitas"] }
-        ];
-
-        for (const item of defaults) {
-          for (const sub of item.subs) {
-            await client.query(
-              `INSERT INTO escritorio_subcategorias (escritorio_id, tipo, categoria, nome) 
-               VALUES ($1, $2, $3, $4) 
-               ON CONFLICT DO NOTHING`,
-              [officeId, item.tipo, item.cat, sub]
-            );
-          }
+      const rowsToInsert = [];
+      for (const item of defaults) {
+        for (const sub of item.subs) {
+          rowsToInsert.push({
+            escritorio_id: officeId,
+            tipo: item.tipo,
+            categoria: item.cat,
+            nome: sub
+          });
         }
       }
+
+      await db.from("escritorio_subcategorias").insert(rowsToInsert);
     }
   } catch (e) {
-    console.error("Erro ao rodar migração de finanças e subcategorias:", e);
-  } finally {
-    await client.end();
+    console.error("Erro ao pre-popular subcategorias via Supabase:", e);
   }
 }
 
@@ -175,8 +129,8 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Acesso financeiro restrito pelo Administrador." }, { status: 403 });
     }
 
-    // Ensure the table and defaults exist
-    await ensureTablesExist(officeId);
+    // Ensure the defaults exist
+    await ensureDefaultSubcategories(db, officeId);
 
     // 1. Query transactions
     const { data: trans, error: transError } = await db
@@ -248,8 +202,8 @@ export async function POST(req) {
       return NextResponse.json({ success: false, message: "Acesso financeiro restrito." }, { status: 403 });
     }
 
-    // Ensure tables exist
-    await ensureTablesExist(officeId);
+    // Ensure defaults exist
+    await ensureDefaultSubcategories(db, officeId);
 
     const body = await req.json();
     const { action } = body;

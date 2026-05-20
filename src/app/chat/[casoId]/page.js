@@ -29,7 +29,6 @@ function ChatContent() {
   const interestId = searchParams.get("interest");
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
-  const pollingRef = useRef(null);
   const messagesAreaRef = useRef(null);
   const isAtBottomRef = useRef(true);
 
@@ -213,11 +212,26 @@ function ChatContent() {
 
     loadData();
 
-    // Polling para atualizar mensagens a cada 5 segundos
-    pollingRef.current = setInterval(loadMensagens, 5000);
+    // Supabase Realtime subscription for incoming/outgoing case messages
+    const channelName = `chat-caso-${casoId}`;
+    const subscription = supabase
+      .channel(channelName)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "mensagens",
+          filter: `caso_id=eq.${casoId}`
+        },
+        () => {
+          loadMensagens();
+        }
+      )
+      .subscribe();
 
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
+      supabase.removeChannel(subscription);
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     };
   }, [casoId, loadMensagens, router, interestId]);
@@ -744,9 +758,6 @@ function ChatContent() {
           <Link
             href={dashboardHref}
             className={styles.backBtn}
-            onClick={() => {
-              if (pollingRef.current) clearInterval(pollingRef.current);
-            }}
           >
             <ArrowLeft size={20} />
           </Link>
@@ -780,10 +791,10 @@ function ChatContent() {
             type="button"
             className={styles.aiToggleButton}
             onClick={triggerGlobalAnalysis}
-            title="Assistente de IA"
+            title={currentUser?.role === "LAWYER" ? "Assistente de IA" : "Anjo Jurídico"}
           >
             <Sparkles size={14} />
-            <span>Assistente IA</span>
+            <span>{currentUser?.role === "LAWYER" ? "Assistente IA" : "Anjo Jurídico"}</span>
           </button>
           <span className={styles.statusChip} style={isNegotiationChat ? { background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000' } : {}}>
             {isNegotiationChat ? "NEGOCIANDO" : caso?.status || "ABERTO"}
@@ -913,7 +924,7 @@ function ChatContent() {
                               }}
                             >
                               <Sparkles size={12} />
-                              Ver Parecer da IA
+                              {currentUser?.role === "LAWYER" ? "Ver Parecer da IA" : "Ver Anjo Jurídico"}
                             </button>
                           ) : (
                             <button
@@ -927,7 +938,9 @@ function ChatContent() {
                               ) : (
                                 <Sparkles size={12} />
                               )}
-                              {loadingAnalysisId === msg.id ? "Analisando..." : "Pedir Parecer da IA"}
+                              {loadingAnalysisId === msg.id 
+                                ? (currentUser?.role === "LAWYER" ? "Analisando..." : "Consultando Anjo...") 
+                                : (currentUser?.role === "LAWYER" ? "Pedir Parecer da IA" : "Chamar Anjo Jurídico")}
                             </button>
                           )}
                         </div>
@@ -1046,7 +1059,7 @@ function ChatContent() {
             <span>
               {currentUser?.role === "LAWYER"
                 ? "Assessor de Negócios IA"
-                : "Consultor Jurídico IA"}
+                : "Anjo Jurídico"}
             </span>
           </div>
           <button
@@ -1062,7 +1075,9 @@ function ChatContent() {
           {loadingAnalysisId === "global" ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '40px 0', color: 'white' }}>
               <Loader2 size={32} className={styles.spinner} style={{ animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
-              <p style={{ fontSize: '0.9rem', color: 'var(--silver)' }}>Analisando o histórico da conversa...</p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--silver)' }}>
+                {currentUser?.role === "LAWYER" ? "Analisando o histórico da conversa..." : "Anjo consultando o histórico..."}
+              </p>
             </div>
           ) : selectedAnalysis ? (
             <div className={styles.aiCard}>
@@ -1070,8 +1085,8 @@ function ChatContent() {
                 <Bot size={18} />
                 <span>
                   {selectedAnalysis.mensagem_id 
-                    ? "Parecer da Mensagem" 
-                    : "Parecer Geral da Conversa"}
+                    ? (currentUser?.role === "LAWYER" ? "Parecer da Mensagem" : "Análise da Mensagem") 
+                    : (currentUser?.role === "LAWYER" ? "Parecer Geral da Conversa" : "Análise Geral da Conversa")}
                 </span>
               </div>
               <div className={styles.aiCardContent}>
@@ -1084,7 +1099,7 @@ function ChatContent() {
                 onClick={() => handleCopyText(selectedAnalysis.analise_texto)}
               >
                 <Copy size={14} />
-                Copiar Parecer
+                {currentUser?.role === "LAWYER" ? "Copiar Parecer" : "Copiar Análise"}
               </button>
             </div>
           ) : (

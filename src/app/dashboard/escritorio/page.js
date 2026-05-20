@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { 
   Building, 
   Users, 
@@ -749,12 +750,55 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
   };
 
   useEffect(() => {
-    if (activeTab === "comunicacao") {
+    if (activeTab === "comunicacao" && data?.office?.id) {
       loadCommunication();
-      const interval = setInterval(loadCommunication, 3000);
-      return () => clearInterval(interval);
+
+      const channelName = `escritorio-comunicacao-${data.office.id}`;
+      const subscription = supabase
+        .channel(channelName)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "escritorio_mensagens",
+            filter: `escritorio_id=eq.${data.office.id}`
+          },
+          () => {
+            loadCommunication();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "escritorio_canais",
+            filter: `escritorio_id=eq.${data.office.id}`
+          },
+          () => {
+            loadCommunication();
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "escritorio_voz_participantes",
+            filter: `escritorio_id=eq.${data.office.id}`
+          },
+          () => {
+            loadCommunication();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(subscription);
+      };
     }
-  }, [activeTab]);
+  }, [activeTab, data]);
 
   useEffect(() => {
     if (activeTab === "financeiro") {

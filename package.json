@@ -10,8 +10,6 @@
     "test": "jest --config jest.config.js"
   },
   "dependencies": {
-    "@google/genai": "^1.45.0",
-    "@google/generative-ai": "^0.24.1",
     "@jitsi/react-sdk": "^1.4.4",
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.3.1",

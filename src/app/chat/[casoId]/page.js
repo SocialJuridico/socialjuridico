@@ -262,8 +262,36 @@ function ChatContent() {
           },
           (payload) => {
             console.log("Recebeu evento Realtime na tabela mensagens:", payload);
-            if (payload.new && payload.new.caso_id === casoId) {
-              loadMensagens();
+            const evCasoId = payload.new?.caso_id;
+            console.log("Comparando caso_id do evento:", evCasoId, "com casoId da página:", casoId);
+
+            if (payload.new && String(evCasoId).toLowerCase() === String(casoId).toLowerCase()) {
+              console.log("IDs correspondem! Evento:", payload.eventType);
+
+              if (payload.eventType === "INSERT") {
+                const newMsg = payload.new;
+                setMensagens((prev) => {
+                  // Evita duplicar mensagens
+                  const exists = prev.some((m) => m.id === newMsg.id);
+                  if (exists) return prev;
+
+                  // Se for uma mensagem temporária enviada por nós, substitui com os dados finais
+                  const tempIndex = prev.findIndex((m) => m.isTemp && m.content === newMsg.content);
+                  if (tempIndex !== -1) {
+                    const nextList = [...prev];
+                    nextList[tempIndex] = newMsg;
+                    return nextList;
+                  }
+
+                  return [...prev, newMsg];
+                });
+              } else if (payload.eventType === "UPDATE") {
+                setMensagens((prev) =>
+                  prev.map((m) => (m.id === payload.new.id ? payload.new : m))
+                );
+              }
+            } else if (payload.eventType === "DELETE" && payload.old) {
+              setMensagens((prev) => prev.filter((m) => m.id !== payload.old.id));
             }
           }
         )

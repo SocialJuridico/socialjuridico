@@ -12,7 +12,10 @@ import {
   Paperclip,
   Mic,
   Trash2,
-  X
+  X,
+  Sparkles,
+  Bot,
+  Copy
 } from "lucide-react";
 import Link from "next/link";
 import styles from "./Chat.module.css";
@@ -44,10 +47,35 @@ function ChatContent() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
 
+  // Estados dos Assistentes de IA
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+  const [selectedAnalysis, setSelectedAnalysis] = useState(null);
+  const [loadingAnalysisId, setLoadingAnalysisId] = useState(null);
+  const [analysesMap, setAnalysesMap] = useState({});
+
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
+
+  const loadAnalyses = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from("mensagens_analise_ia")
+        .select("*")
+        .eq("caso_id", casoId);
+      
+      if (!error && data) {
+        const map = {};
+        data.forEach((item) => {
+          map[item.mensagem_id] = item;
+        });
+        setAnalysesMap(map);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar análises de IA:", err);
+    }
+  }, [casoId]);
 
   const loadMensagens = useCallback(async () => {
     try {
@@ -57,11 +85,77 @@ function ChatContent() {
       const data = await res.json();
       if (data.success) {
         setMensagens(data.data);
+        await loadAnalyses();
       }
     } catch (err) {
       console.error("Erro ao carregar mensagens:", err);
     }
-  }, [casoId, interestId]);
+  }, [casoId, interestId, loadAnalyses]);
+
+  const triggerMessageAnalysis = async (msgId) => {
+    if (loadingAnalysisId) return;
+    setLoadingAnalysisId(msgId);
+    try {
+      const res = await fetch("/api/chat/analise-ia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caso_id: casoId,
+          interest_id: interestId || null,
+          mensagem_id: msgId
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAnalysesMap(prev => ({
+          ...prev,
+          [msgId]: data.data
+        }));
+        setSelectedAnalysis(data.data);
+        setAiDrawerOpen(true);
+        toast.success("Análise de IA gerada!");
+      } else {
+        toast.error(data.message || "Erro ao gerar análise de IA.");
+      }
+    } catch (err) {
+      console.error("Erro ao solicitar análise:", err);
+      toast.error("Erro de conexão ao solicitar análise.");
+    } finally {
+      setLoadingAnalysisId(null);
+    }
+  };
+
+  const triggerGlobalAnalysis = async () => {
+    setAiDrawerOpen(true);
+    setLoadingAnalysisId("global");
+    try {
+      const res = await fetch("/api/chat/analise-ia", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caso_id: casoId,
+          interest_id: interestId || null,
+          mensagem_id: "global"
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSelectedAnalysis(data.data);
+      } else {
+        toast.error(data.message || "Erro ao gerar análise geral.");
+      }
+    } catch (err) {
+      console.error("Erro ao solicitar análise global:", err);
+      toast.error("Erro de conexão ao solicitar análise global.");
+    } finally {
+      setLoadingAnalysisId(null);
+    }
+  };
+
+  const handleCopyText = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Resposta copiada para a área de transferência!");
+  };
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -682,6 +776,15 @@ function ChatContent() {
               </button>
             </div>
           )}
+          <button
+            type="button"
+            className={styles.aiToggleButton}
+            onClick={triggerGlobalAnalysis}
+            title="Assistente de IA"
+          >
+            <Sparkles size={14} />
+            <span>Assistente IA</span>
+          </button>
           <span className={styles.statusChip} style={isNegotiationChat ? { background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000' } : {}}>
             {isNegotiationChat ? "NEGOCIANDO" : caso?.status || "ABERTO"}
           </span>
@@ -787,13 +890,48 @@ function ChatContent() {
                         <Scale size={14} />
                       </div>
                     )}
-                    <div
-                      className={`${styles.messageBubble} ${isOwn ? styles.ownBubble : styles.otherBubble} ${msg.isTemp ? styles.tempBubble : ""}`}
-                    >
-                      {renderMessageContent(msg.content)}
-                      <span className={styles.messageTime}>
-                        {formatTime(msg.created_at)}
-                      </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '70%' }}>
+                      <div
+                        className={`${styles.messageBubble} ${isOwn ? styles.ownBubble : styles.otherBubble} ${msg.isTemp ? styles.tempBubble : ""}`}
+                        style={{ maxWidth: '100%' }}
+                      >
+                        {renderMessageContent(msg.content)}
+                        <span className={styles.messageTime}>
+                          {formatTime(msg.created_at)}
+                        </span>
+                      </div>
+                      
+                      {!isOwn && !msg.isTemp && (
+                        <div className={styles.aiBadgeWrapper}>
+                          {analysesMap[msg.id] ? (
+                            <button
+                              type="button"
+                              className={styles.aiBadge}
+                              onClick={() => {
+                                setSelectedAnalysis(analysesMap[msg.id]);
+                                setAiDrawerOpen(true);
+                              }}
+                            >
+                              <Sparkles size={12} />
+                              Ver Parecer da IA
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.aiBadge}
+                              onClick={() => triggerMessageAnalysis(msg.id)}
+                              disabled={loadingAnalysisId === msg.id}
+                            >
+                              {loadingAnalysisId === msg.id ? (
+                                <Loader2 size={12} style={{ animation: "spin 1s linear infinite" }} />
+                              ) : (
+                                <Sparkles size={12} />
+                              )}
+                              {loadingAnalysisId === msg.id ? "Analisando..." : "Pedir Parecer da IA"}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -894,6 +1032,70 @@ function ChatContent() {
           {isRecording ? "Toque na lixeira para cancelar" : "Shift+Enter para nova linha"}
         </p>
       </footer>
+
+      {/* AI ASSISTANT DRAWER */}
+      <div
+        className={`${styles.aiDrawerOverlay} ${aiDrawerOpen ? styles.aiDrawerOverlayActive : ""}`}
+        onClick={() => setAiDrawerOpen(false)}
+      />
+
+      <div className={`${styles.aiDrawer} ${aiDrawerOpen ? styles.aiDrawerOpen : ""}`}>
+        <div className={styles.aiDrawerHeader}>
+          <div className={styles.aiDrawerTitle}>
+            <Sparkles size={20} />
+            <span>
+              {currentUser?.role === "LAWYER"
+                ? "Assessor de Negócios IA"
+                : "Consultor Jurídico IA"}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={styles.aiCloseBtn}
+            onClick={() => setAiDrawerOpen(false)}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className={styles.aiDrawerContent}>
+          {loadingAnalysisId === "global" ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: '40px 0', color: 'white' }}>
+              <Loader2 size={32} className={styles.spinner} style={{ animation: 'spin 1s linear infinite', marginBottom: '12px' }} />
+              <p style={{ fontSize: '0.9rem', color: 'var(--silver)' }}>Analisando o histórico da conversa...</p>
+            </div>
+          ) : selectedAnalysis ? (
+            <div className={styles.aiCard}>
+              <div className={styles.aiCardHeader}>
+                <Bot size={18} />
+                <span>
+                  {selectedAnalysis.mensagem_id 
+                    ? "Parecer da Mensagem" 
+                    : "Parecer Geral da Conversa"}
+                </span>
+              </div>
+              <div className={styles.aiCardContent}>
+                {selectedAnalysis.analise_texto}
+              </div>
+              <button
+                type="button"
+                className={styles.aiToggleButton}
+                style={{ alignSelf: 'flex-start', marginTop: '10px' }}
+                onClick={() => handleCopyText(selectedAnalysis.analise_texto)}
+              >
+                <Copy size={14} />
+                Copiar Parecer
+              </button>
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--silver)', fontSize: '0.9rem' }}>
+              <Bot size={40} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+              <p>Nenhuma análise ativa selecionada.</p>
+              <p style={{ fontSize: '0.8rem', marginTop: '8px' }}>Clique no botão "Ver Parecer da IA" de qualquer mensagem ou acesse "Assistente IA" no topo para ver uma análise geral da conversa.</p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

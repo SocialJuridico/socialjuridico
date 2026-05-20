@@ -78,9 +78,15 @@ function ChatContent() {
 
   const loadMensagens = useCallback(async () => {
     try {
-      let url = `/api/mensagens?caso_id=${casoId}`;
+      let url = `/api/mensagens?caso_id=${casoId}&_t=${Date.now()}`;
       if (interestId) url += `&interest_id=${interestId}`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        cache: "no-store",
+        headers: {
+          "Pragma": "no-cache",
+          "Cache-Control": "no-cache"
+        }
+      });
       const data = await res.json();
       if (data.success) {
         setMensagens(data.data);
@@ -216,6 +222,19 @@ function ChatContent() {
       if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     };
   }, [casoId, loadMensagens, router, interestId]);
+
+  // Polling fallback: garante sincronização do chat a cada 3 segundos em qualquer cenário
+  useEffect(() => {
+    if (!casoId) return;
+
+    const interval = setInterval(() => {
+      loadMensagens();
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [casoId, loadMensagens]);
 
   // Realtime subscription for incoming messages
   useEffect(() => {

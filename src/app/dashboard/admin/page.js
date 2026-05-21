@@ -249,7 +249,7 @@ export default function AdminDashboardPage() {
         doc.text(`Página 1 de 1`, 196, 287, { align: "right" });
 
         // Considerações e Segurança
-        let nextY = doc.lastAutoTable.finalY + 12;
+        let nextY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 12 : 120;
         
         // Evita que a assinatura quebre ou saia da folha
         if (nextY > 230) {
@@ -337,7 +337,7 @@ export default function AdminDashboardPage() {
         });
 
         // Tabela Mensal
-        let nextY = doc.lastAutoTable.finalY + 12;
+        let nextY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 12 : 80;
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
         doc.setTextColor(15, 19, 24);
@@ -366,7 +366,7 @@ export default function AdminDashboardPage() {
         });
 
         // Considerações e Segurança
-        nextY = doc.lastAutoTable.finalY + 14;
+        nextY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 14 : 150;
         doc.setFillColor(248, 250, 252);
         doc.setDrawColor(226, 232, 240);
         doc.roundedRect(14, nextY, 182, 22, 1, 1, 'FD');

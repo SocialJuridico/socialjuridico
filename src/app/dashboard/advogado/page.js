@@ -315,6 +315,14 @@ export default function AdvogadoDashboard() {
   const [showProvasModal, setShowProvasModal] = useState(false);
   const [showJurisConfirmModal, setShowJurisConfirmModal] = useState(false);
   const [jurisConfirmAction, setJurisConfirmAction] = useState(null);
+  // Modais de Manifesto de Interesse
+  const [showConfirmInterestModal, setShowConfirmInterestModal] = useState(false);
+  const [confirmInterestCaseId, setConfirmInterestCaseId] = useState(null);
+  const [confirmInterestCount, setConfirmInterestCount] = useState(0);
+  const [isCheckingInterest, setIsCheckingInterest] = useState(false);
+  const [showCancelInterestModal, setShowCancelInterestModal] = useState(false);
+  const [cancelInterestCaseId, setCancelInterestCaseId] = useState(null);
+  const [isCancelingInterest, setIsCancelingInterest] = useState(false);
   const [uploadedProvaFile, setUploadedProvaFile] = useState(null);
   const [provaAnalysis, setProvaAnalysis] = useState("");
   const [isAnalyzingProva, setIsAnalyzingProva] = useState(false);
@@ -3305,19 +3313,7 @@ export default function AdvogadoDashboard() {
     </div>
   );
 
-  const vincularCaso = async (casoId) => {
-    const currentBalance = profileData?.balance || 0;
-    if (currentBalance < 1) {
-      toast.error("Saldo insuficiente. Você precisa de pelo menos 1 Juri.");
-      setShowBuyModal(true);
-      return;
-    }
-    if (
-      !confirm(
-        `Manifestar interesse neste caso? Custo: 1 Juri (saldo atual: ${currentBalance})`,
-      )
-    )
-      return;
+  const executeVincularCaso = async (casoId) => {
     try {
       const res = await fetch("/api/casos/vincular", {
         method: "POST",
@@ -3345,6 +3341,69 @@ export default function AdvogadoDashboard() {
       }
     } catch (err) {
       toast.error("Erro ao manifestar interesse.");
+    } finally {
+      setShowConfirmInterestModal(false);
+      setConfirmInterestCaseId(null);
+    }
+  };
+
+  const vincularCaso = async (casoId) => {
+    const currentBalance = profileData?.balance || 0;
+    if (currentBalance < 1) {
+      toast.error("Saldo insuficiente. Você precisa de pelo menos 1 Juri.");
+      setShowBuyModal(true);
+      return;
+    }
+    
+    setIsCheckingInterest(true);
+    try {
+      const res = await fetch(`/api/casos/vincular?casoId=${casoId}`);
+      const data = await res.json();
+      if (data.success) {
+        setConfirmInterestCount(data.count || 0);
+        setConfirmInterestCaseId(casoId);
+        setShowConfirmInterestModal(true);
+      } else {
+        toast.error(data.message || "Erro ao verificar interessados.");
+      }
+    } catch (err) {
+      console.error("Erro ao verificar interessados:", err);
+      toast.error("Erro ao verificar interessados no caso.");
+    } finally {
+      setIsCheckingInterest(false);
+    }
+  };
+
+  const handleDesfazerInteresse = (casoId) => {
+    setCancelInterestCaseId(casoId);
+    setShowCancelInterestModal(true);
+  };
+
+  const executeDesfazerInteresse = async () => {
+    if (!cancelInterestCaseId) return;
+    setIsCancelingInterest(true);
+    try {
+      const res = await fetch(`/api/casos/vincular?casoId=${cancelInterestCaseId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Interesse cancelado com sucesso!");
+        setProfileData((prev) =>
+          prev ? { ...prev, balance: data.newBalance } : prev,
+        );
+        fetchMyInterests(profileData.id);
+        fetchCasos(profileData.id);
+      } else {
+        toast.error(data.message || "Erro ao desfazer interesse.");
+      }
+    } catch (err) {
+      console.error("Erro ao desfazer interesse:", err);
+      toast.error("Erro ao desfazer interesse.");
+    } finally {
+      setIsCancelingInterest(false);
+      setShowCancelInterestModal(false);
+      setCancelInterestCaseId(null);
     }
   };
 
@@ -3553,13 +3612,22 @@ export default function AdvogadoDashboard() {
                     Conversar com Cliente
                   </button>
                 ) : (
-                  <button
-                    className={styles.applyBtn}
-                    style={{ background: "transparent", color: "#888", border: "1px solid #444", cursor: "not-allowed" }}
-                    disabled
-                  >
-                    Aguardando...
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                    <button
+                      className={styles.applyBtn}
+                      style={{ background: "transparent", color: "#888", border: "1px solid #444", cursor: "not-allowed", flex: 1 }}
+                      disabled
+                    >
+                      Aguardando...
+                    </button>
+                    <button
+                      className={styles.applyBtn}
+                      style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.3)", fontWeight: 600, flex: 1, cursor: 'pointer' }}
+                      onClick={() => handleDesfazerInteresse(caso.id)}
+                    >
+                      Desfazer
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -4030,7 +4098,7 @@ export default function AdvogadoDashboard() {
             <div style={{ background: 'rgba(212,175,55,0.03)', border: '1px solid rgba(212,175,55,0.08)', borderRadius: '14px', padding: '15px' }}>
               <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--color-gold)', fontWeight: 700, display: 'block', marginBottom: '6px' }}>💡 Dica de Roteiro</span>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', margin: 0, lineHeight: '1.45', fontStyle: 'italic' }}>
-                "Cadastra o **[Nome]**, do tipo **[Física/Jurídica]**, solteiro, profissão **[Profissão]**, CPF **[Número]**, RG **[Número]**, telefone **[Número]**, email **[Endereço]**, residente na **[Rua/Número]**. O caso dele é sobre **[Descreva o Fato]**..."
+                &quot;Cadastra o **[Nome]**, do tipo **[Física/Jurídica]**, solteiro, profissão **[Profissão]**, CPF **[Número]**, RG **[Número]**, telefone **[Número]**, email **[Endereço]**, residente na **[Rua/Número]**. O caso dele é sobre **[Descreva o Fato]**...&quot;
               </p>
             </div>
           </div>
@@ -11861,6 +11929,142 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
     );
   };
 
+  const renderConfirmInterestModal = () => {
+    if (!showConfirmInterestModal) return null;
+    const isHighCompetition = confirmInterestCount > 2;
+    const currentBalance = profileData?.balance || 0;
+
+    return (
+      <div className={styles.modalOverlay} onClick={() => { setShowConfirmInterestModal(false); setConfirmInterestCaseId(null); }}>
+        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "420px", width: "90%", border: isHighCompetition ? '1px solid #ef4444' : '1px solid var(--color-gold)' }}>
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle} style={{ color: isHighCompetition ? '#ef4444' : 'var(--color-gold)' }}>
+              {isHighCompetition ? "🔥 Alta Concorrência!" : "⚖️ Confirmar Interesse"}
+            </h2>
+            <button className={styles.modalClose} onClick={() => { setShowConfirmInterestModal(false); setConfirmInterestCaseId(null); }}><X size={20} /></button>
+          </div>
+          <div className={styles.modalBody} style={{ padding: '20px', textAlign: 'center' }}>
+            {isHighCompetition ? (
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', padding: '12px', marginBottom: '20px' }}>
+                <p style={{ color: '#ef4444', fontSize: '0.95rem', fontWeight: 600, margin: 0 }}>
+                  Atenção: Já existem {confirmInterestCount} Advogados interessados neste caso.
+                </p>
+              </div>
+            ) : (
+              <p style={{ color: '#aaa', fontSize: '0.95rem', marginBottom: '20px' }}>
+                Ao manifestar interesse, você poderá negociar diretamente com o cliente.
+              </p>
+            )}
+
+            <p style={{ color: '#fff', fontSize: '1.05rem', fontWeight: 500, marginBottom: '8px' }}>
+              Custo: <strong>1 Júri</strong>
+            </p>
+            
+            <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '24px' }}>
+              Seu saldo atual: <strong>{currentBalance} Juris</strong>
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                style={{
+                  padding: '12px 24px',
+                  background: isHighCompetition ? '#ef4444' : 'var(--color-gold)',
+                  color: isHighCompetition ? '#fff' : '#000',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  flex: 1,
+                  transition: 'opacity 0.2s'
+                }}
+                onClick={() => executeVincularCaso(confirmInterestCaseId)}
+              >
+                Confirmar
+              </button>
+              <button
+                style={{
+                  padding: '12px 24px',
+                  background: '#222',
+                  color: '#fff',
+                  border: '1px solid #444',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  flex: 1
+                }}
+                onClick={() => { setShowConfirmInterestModal(false); setConfirmInterestCaseId(null); }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderCancelInterestModal = () => {
+    if (!showCancelInterestModal) return null;
+
+    return (
+      <div className={styles.modalOverlay} onClick={() => { if (!isCancelingInterest) { setShowCancelInterestModal(false); setCancelInterestCaseId(null); } }}>
+        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "420px", width: "90%", border: '1px solid #ef4444' }}>
+          <div className={styles.modalHeader}>
+            <h2 className={styles.modalTitle} style={{ color: '#ef4444' }}>↩️ Desfazer Interesse</h2>
+            <button className={styles.modalClose} onClick={() => { if (!isCancelingInterest) { setShowCancelInterestModal(false); setCancelInterestCaseId(null); } }} disabled={isCancelingInterest}><X size={20} /></button>
+          </div>
+          <div className={styles.modalBody} style={{ padding: '20px', textAlign: 'center' }}>
+            <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 500, marginBottom: '16px' }}>
+              Tem certeza que deseja cancelar sua manifestação de interesse neste caso?
+            </p>
+            
+            <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
+              <p style={{ color: '#22c55e', fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>
+                💰 Reembolso garantido: 1 Júri será devolvido à sua carteira imediatamente.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                style={{
+                  padding: '12px 24px',
+                  background: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isCancelingInterest ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold',
+                  flex: 1,
+                  opacity: isCancelingInterest ? 0.7 : 1
+                }}
+                disabled={isCancelingInterest}
+                onClick={executeDesfazerInteresse}
+              >
+                {isCancelingInterest ? "Cancelando..." : "Confirmar"}
+              </button>
+              <button
+                style={{
+                  padding: '12px 24px',
+                  background: '#222',
+                  color: '#fff',
+                  border: '1px solid #444',
+                  borderRadius: '8px',
+                  cursor: isCancelingInterest ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold',
+                  flex: 1
+                }}
+                disabled={isCancelingInterest}
+                onClick={() => { setShowCancelInterestModal(false); setCancelInterestCaseId(null); }}
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderNewClientModal = () => {
     if (!showNewClientModal) return null;
 
@@ -12505,6 +12709,8 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
       {renderProvasModal()}
       {renderNotificacaoModal()}
       {renderJurisConfirmModal()}
+      {renderConfirmInterestModal()}
+      {renderCancelInterestModal()}
       {renderDossierModal()}
       {renderDelegatingModal()}
       {renderDeleteConfirmModal()}

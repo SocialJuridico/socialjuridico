@@ -205,3 +205,186 @@ export async function POST(request) {
     );
   }
 }
+
+export async function GET(request) {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const casoId = searchParams.get("casoId");
+
+    if (!casoId) {
+      return NextResponse.json(
+        { success: false, message: "ID do caso é obrigatório" },
+        { status: 400 },
+      );
+    }
+
+    const db = supabaseAdmin || supabase;
+    const { count, error } = await db
+      .from("case_interests")
+      .select("*", { count: "exact", head: true })
+      .eq("case_id", casoId)
+      .in("status", ["PENDING", "NEGOTIATING"]);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, count: count || 0 });
+  } catch (error) {
+    console.error("Erro ao obter contagem de interesses:", error);
+    return NextResponse.json(
+      { success: false, message: "Erro interno no servidor" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const casoId = searchParams.get("casoId");
+
+    if (!casoId) {
+      return NextResponse.json(
+        { success: false, message: "ID do caso é obrigatório" },
+        { status: 400 },
+      );
+    }
+
+    const db = supabaseAdmin || supabase;
+    if (!(await isLawyer(db, user.id))) {
+      return NextResponse.json(
+        { success: false, message: "Apenas advogados podem desfazer interesse" },
+        { status: 403 },
+      );
+    }
+
+    // 1. Buscar a manifestação de interesse deste advogado para este caso
+    const { data: interest, error: interestError } = await db
+      .from("case_interests")
+      .select("id, status, lawyer_id, case_id")
+      .eq("case_id", casoId)
+      .eq("lawyer_id", user.id)
+      .single();
+
+    if (interestError || !interest) {
+      return NextResponse.json(
+        { success: false, message: "Manifestação de interesse não encontrada neste caso" },
+        { status: 404 },
+      );
+    }
+
+    // 2. Verificar exigência 1: O Cliente não pode ter aceitado o interesse do advogado que manifestou o interesse (status PENDING)
+    if (interest.status !== "PENDING") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Você não pode desfazer interesse pois ele já foi respondido ou aceito pelo cliente.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // 3. Verificar exigência 2: O Cliente não pode ter aceitado o interesse de NENHUM outro advogado (nenhum outro interesse NEGOTIATING ou HIRED)
+    const { data: otherInterests, error: otherError } = await db
+      .from("case_interests")
+      .select("id")
+      .eq("case_id", casoId)
+      .in("status", ["NEGOTIATING", "HIRED"]);
+
+    if (otherError) throw otherError;
+
+    if (otherInterests && otherInterests.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Não é possível desfazer o interesse pois o cliente já iniciou negociação com outro advogado.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // 4. Deletar a manifestação de interesse
+    const { error: deleteError } = await db
+      .from("case_interests")
+      .delete()
+      .eq("id", interest.id);
+
+    if (deleteError) throw deleteError;
+
+    // 5. Buscar caso para deletar notificação correspondente
+    const { data: caso } = await db
+      .from("casos")
+      .select("cliente_id")
+      .eq("id", casoId)
+      .single();
+
+    if (caso?.cliente_id) {
+      await db
+        .from("notificacoes")
+        .delete()
+        .eq("user_id", caso.cliente_id)
+        .eq("tipo", "INTERESSE")
+        .like("meta", `%${user.id}%`)
+        .like("meta", `%${casoId}%`);
+    }
+
+    // 6. Devolver 1 Juri para o saldo do advogado
+    const { data: advogado, error: advError } = await db
+      .from("advogados")
+      .select("balance")
+      .eq("id", user.id)
+      .single();
+
+    if (advError || !advogado) {
+      return NextResponse.json(
+        { success: false, message: "Perfil do advogado não encontrado" },
+        { status: 404 },
+      );
+    }
+
+    const newBalance = (advogado.balance || 0) + 1;
+    const { error: balanceError } = await db
+      .from("advogados")
+      .update({ balance: newBalance })
+      .eq("id", user.id);
+
+    if (balanceError) throw balanceError;
+
+    return NextResponse.json({
+      success: true,
+      message: "Manifestação de interesse desfeita e 1 Juri foi reembolsado com sucesso.",
+      newBalance: newBalance,
+    });
+  } catch (error) {
+    console.error("Erro ao desfazer interesse:", error);
+    return NextResponse.json(
+      { success: false, message: "Erro interno no servidor" },
+      { status: 500 },
+    );
+  }
+}

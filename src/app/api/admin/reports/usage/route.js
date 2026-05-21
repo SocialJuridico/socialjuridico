@@ -53,77 +53,77 @@ export async function GET() {
 
     // 1. Queries de ACESSOS (page_views)
     const accessesDaily = await pgClient.query(`
-      SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') as date, count(*)::int as count
+      SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-MM-DD') as date, count(*)::int as count
       FROM public.access_logs
       WHERE action = 'page_view' AND created_at >= NOW() - INTERVAL '30 days'
-      GROUP BY date_trunc('day', created_at)
-      ORDER BY date_trunc('day', created_at) ASC;
+      GROUP BY date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
     const accessesWeekly = await pgClient.query(`
-      SELECT to_char(date_trunc('week', created_at), 'YYYY-"W"IW') as date, count(*)::int as count
+      SELECT to_char(date_trunc('week', created_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-"W"IW') as date, count(*)::int as count
       FROM public.access_logs
       WHERE action = 'page_view' AND created_at >= NOW() - INTERVAL '12 weeks'
-      GROUP BY date_trunc('week', created_at)
-      ORDER BY date_trunc('week', created_at) ASC;
+      GROUP BY date_trunc('week', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date_trunc('week', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
     const accessesMonthly = await pgClient.query(`
-      SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') as date, count(*)::int as count
+      SELECT to_char(date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-MM') as date, count(*)::int as count
       FROM public.access_logs
       WHERE action = 'page_view' AND created_at >= NOW() - INTERVAL '6 months'
-      GROUP BY date_trunc('month', created_at)
-      ORDER BY date_trunc('month', created_at) ASC;
+      GROUP BY date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
     // 2. Queries de ADVOGADOS (logins)
     const lawyersDaily = await pgClient.query(`
-      SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') as date, count(distinct user_id)::int as count
+      SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-MM-DD') as date, count(distinct user_id)::int as count
       FROM public.access_logs
       WHERE user_role = 'LAWYER' AND action = 'login' AND created_at >= NOW() - INTERVAL '30 days'
-      GROUP BY date_trunc('day', created_at)
-      ORDER BY date_trunc('day', created_at) ASC;
+      GROUP BY date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
     const lawyersWeekly = await pgClient.query(`
-      SELECT to_char(date_trunc('week', created_at), 'YYYY-"W"IW') as date, count(distinct user_id)::int as count
+      SELECT to_char(date_trunc('week', created_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-"W"IW') as date, count(distinct user_id)::int as count
       FROM public.access_logs
       WHERE user_role = 'LAWYER' AND action = 'login' AND created_at >= NOW() - INTERVAL '12 weeks'
-      GROUP BY date_trunc('week', created_at)
-      ORDER BY date_trunc('week', created_at) ASC;
+      GROUP BY date_trunc('week', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date_trunc('week', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
     const lawyersMonthly = await pgClient.query(`
-      SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') as date, count(distinct user_id)::int as count
+      SELECT to_char(date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-MM') as date, count(distinct user_id)::int as count
       FROM public.access_logs
       WHERE user_role = 'LAWYER' AND action = 'login' AND created_at >= NOW() - INTERVAL '6 months'
-      GROUP BY date_trunc('month', created_at)
-      ORDER BY date_trunc('month', created_at) ASC;
+      GROUP BY date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
     // 3. Queries de CLIENTES (logins)
     const clientsDaily = await pgClient.query(`
-      SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') as date, count(distinct user_id)::int as count
+      SELECT to_char(date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-MM-DD') as date, count(distinct user_id)::int as count
       FROM public.access_logs
       WHERE user_role = 'CLIENT' AND action = 'login' AND created_at >= NOW() - INTERVAL '30 days'
-      GROUP BY date_trunc('day', created_at)
-      ORDER BY date_trunc('day', created_at) ASC;
+      GROUP BY date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
     const clientsWeekly = await pgClient.query(`
-      SELECT to_char(date_trunc('week', created_at), 'YYYY-"W"IW') as date, count(distinct user_id)::int as count
+      SELECT to_char(date_trunc('week', created_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-"W"IW') as date, count(distinct user_id)::int as count
       FROM public.access_logs
       WHERE user_role = 'CLIENT' AND action = 'login' AND created_at >= NOW() - INTERVAL '12 weeks'
-      GROUP BY date_trunc('week', created_at)
-      ORDER BY date_trunc('week', created_at) ASC;
+      GROUP BY date_trunc('week', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date_trunc('week', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
     const clientsMonthly = await pgClient.query(`
-      SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') as date, count(distinct user_id)::int as count
+      SELECT to_char(date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo'), 'YYYY-MM') as date, count(distinct user_id)::int as count
       FROM public.access_logs
       WHERE user_role = 'CLIENT' AND action = 'login' AND created_at >= NOW() - INTERVAL '6 months'
-      GROUP BY date_trunc('month', created_at)
-      ORDER BY date_trunc('month', created_at) ASC;
+      GROUP BY date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
     return NextResponse.json({

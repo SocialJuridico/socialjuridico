@@ -38,6 +38,8 @@ export default function AdminDashboardPage() {
   const [reportPeriod, setReportPeriod] = useState(7);
   const [includeLawyers, setIncludeLawyers] = useState(true);
   const [includeClients, setIncludeClients] = useState(true);
+  const [includeDbTotals, setIncludeDbTotals] = useState(true);
+  const [includeSatisfaction, setIncludeSatisfaction] = useState(true);
 
   const mergeData = (accessesList = [], lawyersList = [], clientsList = [], limit = 7) => {
     const map = {};
@@ -209,11 +211,50 @@ export default function AdminDashboardPage() {
         doc.text(card.value, cardX + 4, 99);
       });
 
+      // Segunda fileira de cards (opcional: Totais e Satisfação)
+      const secondRowCards = [];
+      if (includeDbTotals) {
+        secondRowCards.push({ title: "TOTAL DE ADVOGADOS", value: (reportData.totals?.lawyers || 0).toLocaleString('pt-BR') });
+        secondRowCards.push({ title: "TOTAL DE CLIENTES", value: (reportData.totals?.clients || 0).toLocaleString('pt-BR') });
+      }
+      if (includeSatisfaction) {
+        secondRowCards.push({ title: "SATISFAÇÃO GERAL", value: `${(reportData.satisfaction?.overallAvg || 0).toFixed(1)} / 5.0` });
+        secondRowCards.push({ title: "TOTAL DE AVALIAÇÕES", value: (reportData.satisfaction?.totalSurveys || 0).toLocaleString('pt-BR') });
+      }
+
+      let nextY = 116;
+      let tableStartY = 120;
+
+      if (secondRowCards.length > 0) {
+        const row2CardWidth = secondRowCards.length === 4 ? 41 : (secondRowCards.length === 3 ? 56 : (secondRowCards.length === 2 ? 85 : 182));
+        const row2CardGap = secondRowCards.length === 4 ? 6 : (secondRowCards.length === 3 ? 7 : (secondRowCards.length === 2 ? 12 : 0));
+
+        secondRowCards.forEach((card, idx) => {
+          const cardX = 14 + idx * (row2CardWidth + row2CardGap);
+          doc.setFillColor(245, 247, 250);
+          doc.setDrawColor(226, 232, 240);
+          doc.roundedRect(cardX, 112, row2CardWidth, 22, 2, 2, 'FD');
+
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(8);
+          doc.setTextColor(100, 116, 139);
+          doc.text(card.title, cardX + 4, 119);
+
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(14);
+          doc.setTextColor(15, 19, 24);
+          doc.text(card.value, cardX + 4, 128);
+        });
+
+        nextY = 142;
+        tableStartY = 146;
+      }
+
       // Tabela Diária
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(15, 19, 24);
-      doc.text(`1. Métricas Diárias (Últimos ${reportPeriod} dias)`, 14, 116);
+      doc.text(`1. Métricas Diárias (Últimos ${reportPeriod} dias)`, 14, nextY);
 
       const dailyHeaders = ['Data', 'Acessos Totais (Hits)'];
       if (includeLawyers) dailyHeaders.push('Advogados Ativos');
@@ -227,7 +268,7 @@ export default function AdminDashboardPage() {
       });
 
       autoTable(doc, {
-        startY: 120,
+        startY: tableStartY,
         head: [dailyHeaders],
         body: dailyBody,
         theme: 'striped',
@@ -687,6 +728,30 @@ export default function AdminDashboardPage() {
                     onChange={(e) => setIncludeClients(e.target.checked)} 
                   />
                   <span>Logins de Clientes</span>
+                </label>
+              </div>
+            </div>
+
+            <div className={styles.modalGroup}>
+              <label className={styles.modalLabel}>Métricas Gerais (Opcionais)</label>
+              <div className={styles.checkboxGroup}>
+                <label className={styles.checkboxLabel}>
+                  <input 
+                    type="checkbox" 
+                    className={styles.checkboxInput} 
+                    checked={includeDbTotals} 
+                    onChange={(e) => setIncludeDbTotals(e.target.checked)} 
+                  />
+                  <span>Totais de Cadastros (Banco de Dados)</span>
+                </label>
+                <label className={styles.checkboxLabel}>
+                  <input 
+                    type="checkbox" 
+                    className={styles.checkboxInput} 
+                    checked={includeSatisfaction} 
+                    onChange={(e) => setIncludeSatisfaction(e.target.checked)} 
+                  />
+                  <span>Nota de Satisfação Geral da Plataforma</span>
                 </label>
               </div>
             </div>

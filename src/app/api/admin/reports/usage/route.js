@@ -126,6 +126,47 @@ export async function GET() {
       ORDER BY date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
+    // Buscar contagem total de cadastrados no banco
+    const [totalLawyersRes, totalClientsRes] = await Promise.all([
+      db.from("advogados").select("id", { count: "exact", head: true }),
+      db.from("clientes").select("id", { count: "exact", head: true }),
+    ]);
+
+    // Buscar pesquisas de satisfação para calcular médias
+    const [advSurveysRes, cliSurveysRes] = await Promise.all([
+      db.from("pesquisas_satisfacao_advogados").select("*"),
+      db.from("pesquisas_satisfacao_clientes").select("*"),
+    ]);
+
+    const advSurveys = advSurveysRes.data || [];
+    const cliSurveys = cliSurveysRes.data || [];
+
+    const ADV_QUESTIONS = [
+      "q1_velocidade", "q2_marketplace", "q3_ia_redator", "q4_ia_personalidade",
+      "q5_seguranca", "q6_prazos", "q7_crm", "q8_smartdocs", "q9_suporte", "q10_roi"
+    ];
+    const CLI_QUESTIONS = [
+      "q1_cadastro", "q2_clareza", "q3_velocidade", "q4_confianca",
+      "q5_qualidade", "q6_chat", "q7_transparencia", "q8_seguranca", "q9_pwa", "q10_recomendacao"
+    ];
+
+    let advSum = 0;
+    advSurveys.forEach(item => {
+      const sum = ADV_QUESTIONS.reduce((acc, key) => acc + (item[key] || 0), 0);
+      advSum += sum / 10;
+    });
+    const advAvg = advSurveys.length > 0 ? (advSum / advSurveys.length) : 0;
+
+    let cliSum = 0;
+    cliSurveys.forEach(item => {
+      const sum = CLI_QUESTIONS.reduce((acc, key) => acc + (item[key] || 0), 0);
+      cliSum += sum / 10;
+    });
+    const cliAvg = cliSurveys.length > 0 ? (cliSum / cliSurveys.length) : 0;
+
+    const totalSurveys = advSurveys.length + cliSurveys.length;
+    const overallAvg = totalSurveys > 0 ? ((advSum + cliSum) / totalSurveys) : 0;
+
     return NextResponse.json({
       success: true,
       data: {
@@ -143,6 +184,16 @@ export async function GET() {
           daily: clientsDaily.rows,
           weekly: clientsWeekly.rows,
           monthly: clientsMonthly.rows,
+        },
+        totals: {
+          lawyers: totalLawyersRes.count || 0,
+          clients: totalClientsRes.count || 0,
+        },
+        satisfaction: {
+          overallAvg: Number(overallAvg.toFixed(1)),
+          advAvg: Number(advAvg.toFixed(1)),
+          cliAvg: Number(cliAvg.toFixed(1)),
+          totalSurveys: totalSurveys,
         }
       }
     });

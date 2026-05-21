@@ -39,6 +39,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import { Toaster } from 'react-hot-toast';
 import OneSignalSetup from "@/components/PWA/OneSignalSetup";
 import PWAInstallPrompt from "@/components/PWA/PWAInstallPrompt";
+import AccessTracker from "@/components/AccessTracker";
 
 export default function RootLayout({ children }) {
   return (
@@ -50,6 +51,7 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <AccessTracker />
         <OneSignalSetup />
         <Toaster position="top-right" toastOptions={{
           style: {

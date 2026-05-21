@@ -33,6 +33,386 @@ export default function AdminDashboardPage() {
     totalCasos: 0,
     totalNotificacoes: 0,
   });
+  const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [reportPeriod, setReportPeriod] = useState(7);
+  const [includeLawyers, setIncludeLawyers] = useState(true);
+  const [includeClients, setIncludeClients] = useState(true);
+
+  const mergeData = (accessesList = [], lawyersList = [], clientsList = [], limit = 7) => {
+    const map = {};
+    
+    accessesList.forEach(item => {
+      map[item.date] = { date: item.date, accesses: item.count, lawyers: 0, clients: 0 };
+    });
+
+    lawyersList.forEach(item => {
+      if (!map[item.date]) {
+        map[item.date] = { date: item.date, accesses: 0, lawyers: item.count, clients: 0 };
+      } else {
+        map[item.date].lawyers = item.count;
+      }
+    });
+
+    clientsList.forEach(item => {
+      if (!map[item.date]) {
+        map[item.date] = { date: item.date, accesses: 0, lawyers: 0, clients: item.count };
+      } else {
+        map[item.date].clients = item.count;
+      }
+    });
+
+    return Object.values(map)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-limit);
+  };
+
+  const translateMonth = (monthStr) => {
+    if (!monthStr) return "";
+    const [year, month] = monthStr.split('-');
+    const months = {
+      '01': 'Janeiro', '02': 'Fevereiro', '03': 'Março', '04': 'Abril',
+      '05': 'Maio', '06': 'Junho', '07': 'Julho', '08': 'Agosto',
+      '09': 'Setembro', '10': 'Outubro', '11': 'Novembro', '12': 'Dezembro'
+    };
+    return `${months[month] || month} de ${year}`;
+  };
+
+  const translateWeek = (weekStr) => {
+    if (!weekStr) return "";
+    const [year, week] = weekStr.split('-W');
+    return `Semana ${week} (${year})`;
+  };
+
+  const translateDay = (dayStr) => {
+    if (!dayStr) return "";
+    const [year, month, day] = dayStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
+  const generatePDFReport = async () => {
+    if (generatingPDF) return;
+    if (!includeLawyers && !includeClients) {
+      toast.error("Selecione pelo menos um público-alvo (Advogados ou Clientes).");
+      return;
+    }
+    setGeneratingPDF(true);
+    const toastId = toast.loading("Buscando dados de acesso...");
+
+    try {
+      const res = await fetch("/api/admin/reports/usage", { cache: "no-store" });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Erro ao buscar dados do relatório");
+      }
+
+      toast.loading("Renderizando documento PDF...", { id: toastId });
+
+      // Importar jspdf dinamicamente para evitar problemas de build com window/document
+      const { default: jsPDF } = await import("jspdf");
+      const { default: autoTable } = await import("jspdf-autotable");
+
+      const doc = new jsPDF();
+      const reportData = json.data;
+
+      // ── CONSOLIDAR DADOS ──
+      const dailyMerged = mergeData(reportData.accesses.daily, reportData.lawyers.daily, reportData.clients.daily, reportPeriod);
+      const weeklyMerged = mergeData(reportData.accesses.weekly, reportData.lawyers.weekly, reportData.clients.weekly, 4);
+      const monthlyMerged = mergeData(reportData.accesses.monthly, reportData.lawyers.monthly, reportData.clients.monthly, 6);
+
+      // Calcular resumos com base no período selecionado
+      const totalAccessesPeriod = (reportData.accesses.daily || [])
+        .slice(-reportPeriod)
+        .reduce((sum, item) => sum + item.count, 0);
+      
+      const totalLawyerLoginsPeriod = (reportData.lawyers.daily || [])
+        .slice(-reportPeriod)
+        .reduce((sum, item) => sum + item.count, 0);
+      
+      const totalClientLoginsPeriod = (reportData.clients.daily || [])
+        .slice(-reportPeriod)
+        .reduce((sum, item) => sum + item.count, 0);
+
+      // ── PÁGINA 1: CABEÇALHO E HISTÓRICO DIÁRIO ──
+      // Banner
+      doc.setFillColor(15, 19, 24); // #0F1318
+      doc.rect(0, 0, 210, 40, 'F');
+
+      // Título
+      doc.setTextColor(212, 175, 55); // Ouro
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text("SOCIALJURÍDICO", 14, 20);
+
+      // Subtítulo
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("RELATÓRIO CONSOLIDADO DE TELEMETRIA E USO", 14, 28);
+      doc.text("AUDITORIA ADMINISTRATIVA E ACESSOS DE USUÁRIOS", 14, 33);
+
+      // Metadados
+      doc.setTextColor(71, 85, 105);
+      doc.setFontSize(9);
+      doc.text(`Gerado por: ${admin?.name || 'Administrador'}`, 14, 50);
+      doc.text(`E-mail: ${admin?.email || ''}`, 14, 55);
+      doc.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 14, 60);
+
+      let classification = "Classificação: CONFIDENCIAL / USO ADMINISTRATIVO RESTRITO";
+      if (!includeLawyers || !includeClients) {
+        const activeRoles = [];
+        if (includeLawyers) activeRoles.push("ADVOGADOS");
+        if (includeClients) activeRoles.push("CLIENTES");
+        classification += ` (Filtro: Apenas ${activeRoles.join(", ")})`;
+      }
+      doc.text(classification, 14, 65);
+
+      // Linha Gold
+      doc.setDrawColor(212, 175, 55);
+      doc.setLineWidth(0.75);
+      doc.line(14, 70, 196, 70);
+
+      // Resumo Executivo
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(15, 19, 24);
+      doc.text(`Resumo de Atividade (Últimos ${reportPeriod} dias)`, 14, 78);
+
+      // Cards dinâmicos
+      const cards = [];
+      cards.push({ title: "ACESSOS TOTAIS", value: totalAccessesPeriod.toLocaleString('pt-BR') });
+      if (includeLawyers) {
+        cards.push({ title: "LOGINS DE ADVOGADOS", value: totalLawyerLoginsPeriod.toLocaleString('pt-BR') });
+      }
+      if (includeClients) {
+        cards.push({ title: "LOGINS DE CLIENTES", value: totalClientLoginsPeriod.toLocaleString('pt-BR') });
+      }
+
+      const cardWidth = cards.length === 3 ? 56 : (cards.length === 2 ? 85 : 182);
+      const cardGap = cards.length === 3 ? 7 : (cards.length === 2 ? 12 : 0);
+
+      cards.forEach((card, idx) => {
+        const cardX = 14 + idx * (cardWidth + cardGap);
+        doc.setFillColor(245, 247, 250);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(cardX, 83, cardWidth, 22, 2, 2, 'FD');
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(card.title, cardX + 4, 90);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(15, 19, 24);
+        doc.text(card.value, cardX + 4, 99);
+      });
+
+      // Tabela Diária
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(15, 19, 24);
+      doc.text(`1. Métricas Diárias (Últimos ${reportPeriod} dias)`, 14, 116);
+
+      const dailyHeaders = ['Data', 'Acessos Totais (Hits)'];
+      if (includeLawyers) dailyHeaders.push('Advogados Ativos');
+      if (includeClients) dailyHeaders.push('Clientes Ativos');
+
+      const dailyBody = dailyMerged.map(item => {
+        const row = [translateDay(item.date), item.accesses.toLocaleString('pt-BR')];
+        if (includeLawyers) row.push(item.lawyers.toLocaleString('pt-BR'));
+        if (includeClients) row.push(item.clients.toLocaleString('pt-BR'));
+        return row;
+      });
+
+      autoTable(doc, {
+        startY: 120,
+        head: [dailyHeaders],
+        body: dailyBody,
+        theme: 'striped',
+        headStyles: { fillColor: [15, 19, 24], textColor: [212, 175, 55], fontStyle: 'bold', fontSize: 9 },
+        bodyStyles: { fontSize: 8.5 },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 14, right: 14 }
+      });
+
+      const hasSecondPage = reportPeriod === 30;
+      const pageCount = hasSecondPage ? 2 : 1;
+
+      if (!hasSecondPage) {
+        // Rodapé da página 1
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(148, 163, 184);
+        doc.text("Plataforma SocialJurídico - Telemetria de Uso", 14, 287);
+        doc.text(`Página 1 de 1`, 196, 287, { align: "right" });
+
+        // Considerações e Segurança
+        let nextY = doc.lastAutoTable.finalY + 12;
+        
+        // Evita que a assinatura quebre ou saia da folha
+        if (nextY > 230) {
+          doc.addPage();
+          doc.setFillColor(15, 19, 24);
+          doc.rect(0, 0, 210, 12, 'F');
+          doc.setTextColor(212, 175, 55);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(8);
+          doc.text("SOCIALJURÍDICO - RELATÓRIO DE TELEMETRIA E USO DA PLATAFORMA", 14, 8);
+          nextY = 24;
+        }
+
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(14, nextY, 182, 22, 1, 1, 'FD');
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(71, 85, 105);
+        doc.text("DECLARAÇÃO DE AUDITORIA E PRIVACIDADE", 18, nextY + 5);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.2);
+        doc.setTextColor(100, 116, 139);
+        const decText = "Este documento de telemetria foi gerado de forma automatizada com base nos logs de auditoria e segurança armazenados de forma criptografada nos servidores da plataforma SocialJurídico. A coleta de dados obedece estritamente aos preceitos da Lei Geral de Proteção de Dados (LGPD) e às políticas de confidencialidade da plataforma. O compartilhamento deste relatório sem autorização expressa é estritamente proibido.";
+        const splitText = doc.splitTextToSize(decText, 174);
+        doc.text(splitText, 18, nextY + 10);
+
+        // Assinatura
+        nextY = nextY + 38;
+        doc.setDrawColor(148, 163, 184);
+        doc.setLineWidth(0.5);
+        doc.line(65, nextY, 145, nextY);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(71, 85, 105);
+        doc.text("Assinatura do Administrador Responsável", 105, nextY + 4, { align: "center" });
+        doc.setFont("helvetica", "bold");
+        doc.text(admin?.name || "Administrador", 105, nextY + 8, { align: "center" });
+      } else {
+        // Rodapé da página 1 (se tiver página 2)
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(148, 163, 184);
+        doc.text("Plataforma SocialJurídico - Telemetria de Uso", 14, 287);
+        doc.text(`Página 1 de ${pageCount}`, 196, 287, { align: "right" });
+
+        // ── PÁGINA 2: HISTÓRICO SEMANAL, MENSAL E ASSINATURA ──
+        doc.addPage();
+
+        // Top mini header
+        doc.setFillColor(15, 19, 24);
+        doc.rect(0, 0, 210, 12, 'F');
+        doc.setTextColor(212, 175, 55);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.text("SOCIALJURÍDICO - RELATÓRIO DE TELEMETRIA E USO DA PLATAFORMA", 14, 8);
+
+        // Tabela Semanal
+        doc.setFontSize(11);
+        doc.setTextColor(15, 19, 24);
+        doc.text("2. Métricas Semanais (Últimas 4 semanas)", 14, 24);
+
+        const weeklyHeaders = ['Semana', 'Acessos Totais (Hits)'];
+        if (includeLawyers) weeklyHeaders.push('Advogados Ativos');
+        if (includeClients) weeklyHeaders.push('Clientes Ativos');
+
+        const weeklyBody = weeklyMerged.map(item => {
+          const row = [translateWeek(item.date), item.accesses.toLocaleString('pt-BR')];
+          if (includeLawyers) row.push(item.lawyers.toLocaleString('pt-BR'));
+          if (includeClients) row.push(item.clients.toLocaleString('pt-BR'));
+          return row;
+        });
+
+        autoTable(doc, {
+          startY: 28,
+          head: [weeklyHeaders],
+          body: weeklyBody,
+          theme: 'striped',
+          headStyles: { fillColor: [15, 19, 24], textColor: [212, 175, 55], fontStyle: 'bold', fontSize: 9 },
+          bodyStyles: { fontSize: 8.5 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          margin: { left: 14, right: 14 }
+        });
+
+        // Tabela Mensal
+        let nextY = doc.lastAutoTable.finalY + 12;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 19, 24);
+        doc.text("3. Métricas Mensais (Últimos 6 meses)", 14, nextY);
+
+        const monthlyHeaders = ['Mês', 'Acessos Totais (Hits)'];
+        if (includeLawyers) monthlyHeaders.push('Advogados Ativos');
+        if (includeClients) monthlyHeaders.push('Clientes Ativos');
+
+        const monthlyBody = monthlyMerged.map(item => {
+          const row = [translateMonth(item.date), item.accesses.toLocaleString('pt-BR')];
+          if (includeLawyers) row.push(item.lawyers.toLocaleString('pt-BR'));
+          if (includeClients) row.push(item.clients.toLocaleString('pt-BR'));
+          return row;
+        });
+
+        autoTable(doc, {
+          startY: nextY + 4,
+          head: [monthlyHeaders],
+          body: monthlyBody,
+          theme: 'striped',
+          headStyles: { fillColor: [15, 19, 24], textColor: [212, 175, 55], fontStyle: 'bold', fontSize: 9 },
+          bodyStyles: { fontSize: 8.5 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          margin: { left: 14, right: 14 }
+        });
+
+        // Considerações e Segurança
+        nextY = doc.lastAutoTable.finalY + 14;
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(14, nextY, 182, 22, 1, 1, 'FD');
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(71, 85, 105);
+        doc.text("DECLARAÇÃO DE AUDITORIA E PRIVACIDADE", 18, nextY + 5);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.2);
+        doc.setTextColor(100, 116, 139);
+        const decText = "Este documento de telemetria foi gerado de forma automatizada com base nos logs de auditoria e segurança armazenados de forma criptografada nos servidores da plataforma SocialJurídico. A coleta de dados obedece estritamente aos preceitos da Lei Geral de Proteção de Dados (LGPD) e às políticas de confidencialidade da plataforma. O compartilhamento deste relatório sem autorização expressa é estritamente proibido.";
+        const splitText = doc.splitTextToSize(decText, 174);
+        doc.text(splitText, 18, nextY + 10);
+
+        // Assinatura
+        nextY = nextY + 40;
+        doc.setDrawColor(148, 163, 184);
+        doc.setLineWidth(0.5);
+        doc.line(65, nextY, 145, nextY);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(71, 85, 105);
+        doc.text("Assinatura do Administrador Responsável", 105, nextY + 4, { align: "center" });
+        doc.setFont("helvetica", "bold");
+        doc.text(admin?.name || "Administrador", 105, nextY + 8, { align: "center" });
+
+        // Rodapé da página 2
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(148, 163, 184);
+        doc.text("Plataforma SocialJurídico - Telemetria de Uso", 14, 287);
+        doc.text(`Página 2 de 2`, 196, 287, { align: "right" });
+      }
+
+      // Salvar
+      doc.save(`relatorio_uso_socialjuridico_${new Date().toISOString().slice(0,10)}.pdf`);
+      toast.success("Relatório gerado com sucesso!", { id: toastId });
+    } catch (error) {
+      console.error("Erro ao gerar relatório:", error);
+      toast.error(error.message || "Erro ao gerar PDF do relatório.", { id: toastId });
+    } finally {
+      setGeneratingPDF(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -209,6 +589,26 @@ export default function AdminDashboardPage() {
           </section>
 
           <section className={styles.section}>
+            <h2 className={styles.sectionTitle}><FileText size={20} /> Relatórios & Auditoria</h2>
+            <div className={styles.grid}>
+              <div 
+                className={`${styles.card} ${styles.cardClickable}`} 
+                style={{ borderLeft: "4px solid var(--color-gold)", background: "rgba(212, 175, 55, 0.03)" }}
+                onClick={() => setShowConfigModal(true)}
+              >
+                <div className={styles.cardTop}>
+                  <FileText size={16} color="var(--color-gold)" /> Relatório PDF de Uso
+                </div>
+                {generatingPDF ? (
+                  <strong style={{ fontSize: "1.2rem", color: "#9ca3af" }}>Gerando...</strong>
+                ) : (
+                  <strong>Gerar PDF</strong>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className={styles.section}>
             <h2 className={styles.sectionTitle}><Shield size={20} /> Sistema & Configurações</h2>
             <div className={styles.grid}>
               <Link href="/dashboard/admin/banners" className={styles.cardLink}>
@@ -245,6 +645,74 @@ export default function AdminDashboardPage() {
           </section>
         </div>
       </main>
+
+      {showConfigModal && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <FileText size={20} color="var(--color-gold)" />
+              <span>Configuração do Relatório PDF</span>
+            </div>
+
+            <div className={styles.modalGroup}>
+              <label className={styles.modalLabel}>Período do Relatório</label>
+              <select 
+                className={styles.modalSelect} 
+                value={reportPeriod} 
+                onChange={(e) => setReportPeriod(Number(e.target.value))}
+              >
+                <option value={7}>Últimos 7 dias</option>
+                <option value={15}>Últimos 15 dias</option>
+                <option value={30}>Últimos 30 dias (Completo)</option>
+              </select>
+            </div>
+
+            <div className={styles.modalGroup}>
+              <label className={styles.modalLabel}>Público-Alvo (Incluir no Relatório)</label>
+              <div className={styles.checkboxGroup}>
+                <label className={styles.checkboxLabel}>
+                  <input 
+                    type="checkbox" 
+                    className={styles.checkboxInput} 
+                    checked={includeLawyers} 
+                    onChange={(e) => setIncludeLawyers(e.target.checked)} 
+                  />
+                  <span>Logins de Advogados</span>
+                </label>
+                <label className={styles.checkboxLabel}>
+                  <input 
+                    type="checkbox" 
+                    className={styles.checkboxInput} 
+                    checked={includeClients} 
+                    onChange={(e) => setIncludeClients(e.target.checked)} 
+                  />
+                  <span>Logins de Clientes</span>
+                </label>
+              </div>
+            </div>
+
+            <div className={styles.modalFooter}>
+              <button 
+                className={styles.btnCancel} 
+                onClick={() => setShowConfigModal(false)}
+                disabled={generatingPDF}
+              >
+                Cancelar
+              </button>
+              <button 
+                className={styles.btnConfirm} 
+                onClick={async () => {
+                  setShowConfigModal(false);
+                  await generatePDFReport();
+                }}
+                disabled={generatingPDF || (!includeLawyers && !includeClients)}
+              >
+                {generatingPDF ? "Gerando..." : "Gerar PDF"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

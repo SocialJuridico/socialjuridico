@@ -1818,7 +1818,7 @@ export default function ClienteDashboard() {
                 <>
                   <div className={styles.profileHeader}>
                     <div className={styles.profileAvatarLarge}>
-                      {profileData.name.substring(0, 2).toUpperCase()}
+                      {(profileData.name || "Cliente").substring(0, 2).toUpperCase()}
                     </div>
                     <div className={styles.profileHeaderText}>
                       <h2>{profileData.name}</h2>

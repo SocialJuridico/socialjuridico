@@ -39,6 +39,7 @@ import {
   deleteAccountAction,
 } from "@/app/actions/authActions";
 import { supabase } from "@/lib/supabase";
+import { formatPhone } from "@/lib/securityUtils";
 import toast from "react-hot-toast";
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
 import PesquisaSatisfacaoClientePopup from "@/components/PesquisaSatisfacaoClientePopup/PesquisaSatisfacaoClientePopup";

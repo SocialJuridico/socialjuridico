@@ -1310,7 +1310,7 @@ export default function ClienteDashboard() {
                         {caso.titulo}
                       </h3>
                       <p className={styles.caseDesc}>
-                        {caso.descricao.substring(0, 100)}...
+                        {caso.descricao?.substring(0, 100) || ""}...
                       </p>
                       <button
                         className={styles.caseShareCardBtn}

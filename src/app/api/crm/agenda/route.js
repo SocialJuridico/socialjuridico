@@ -5,12 +5,38 @@ import { cookies } from 'next/headers';
 import { google } from 'googleapis';
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 
-async function getSessionUser() {
+async function getSessionUser(request) {
+  // 1. Verificação via Bearer Token (para mobile)
+  if (request) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (user && !error) {
+        const { data: adv, error: advError } = await supabaseAdmin
+          .from("advogados")
+          .select("id, name, cargo, escritorio_id")
+          .eq("id", user.id)
+          .single();
+        
+        if (adv && !advError) {
+          return {
+            id: adv.id,
+            name: adv.name,
+            cargo: adv.cargo || "advogado",
+            escritorio_id: adv.escritorio_id || null,
+            isOfficeAdmin: false
+          };
+        }
+      }
+    }
+  }
+
   const cookieStore = await cookies();
   const supabase = createClient();
   const db = supabaseAdmin || supabase;
   
-  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
+  // 2. Verificação via Cookie do Escritório (Administrador / Gestor)
   const sessionCookie = cookieStore.get("sj_escritorio_session");
   if (sessionCookie?.value) {
     try {
@@ -27,7 +53,7 @@ async function getSessionUser() {
     }
   }
 
-  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
+  // 3. Verificação via Supabase Auth (Advogado / Membro Normal)
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (user && !error) {
@@ -56,7 +82,7 @@ async function getSessionUser() {
 
 export async function GET(request) {
   try {
-    const user = await getSessionUser();
+    const user = await getSessionUser(request);
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
@@ -114,7 +140,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const user = await getSessionUser();
+    const user = await getSessionUser(request);
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
@@ -253,7 +279,7 @@ export async function POST(request) {
 // PATCH /api/crm/agenda -> Atualiza compromisso existente
 export async function PATCH(request) {
   try {
-    const user = await getSessionUser();
+    const user = await getSessionUser(request);
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
@@ -345,7 +371,7 @@ export async function PATCH(request) {
 // DELETE /api/crm/agenda -> Exclui compromisso
 export async function DELETE(request) {
   try {
-    const user = await getSessionUser();
+    const user = await getSessionUser(request);
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });

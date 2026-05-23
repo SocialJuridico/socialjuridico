@@ -4,7 +4,33 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getUserPlanLimits } from "@/lib/planUtils";
 
-async function getSessionUser() {
+async function getSessionUser(request) {
+  // 3. Verificação via Bearer Token (para requisições mobile)
+  if (request) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (user && !error) {
+        const { data: adv, error: advError } = await supabaseAdmin
+          .from("advogados")
+          .select("id, name, cargo, escritorio_id")
+          .eq("id", user.id)
+          .single();
+        
+        if (adv && !advError) {
+          return {
+            id: adv.id,
+            name: adv.name,
+            cargo: adv.cargo || "advogado",
+            escritorio_id: adv.escritorio_id || null,
+            isOfficeAdmin: false
+          };
+        }
+      }
+    }
+  }
+
   const cookieStore = await cookies();
   const supabase = createClient();
   const db = supabaseAdmin || supabase;
@@ -56,7 +82,7 @@ async function getSessionUser() {
 // GET /api/crm -> lista clientes do advogado logado ou de todo o escritório
 export async function GET(request) {
   try {
-    const user = await getSessionUser();
+    const user = await getSessionUser(request);
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
@@ -106,7 +132,7 @@ export async function GET(request) {
 // POST /api/crm -> cadastra novo cliente
 export async function POST(request) {
   try {
-    const user = await getSessionUser();
+    const user = await getSessionUser(request);
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
@@ -176,7 +202,7 @@ export async function POST(request) {
 // PATCH /api/crm -> atualiza dados do cliente, incluindo delegação de responsável
 export async function PATCH(request) {
   try {
-    const user = await getSessionUser();
+    const user = await getSessionUser(request);
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });

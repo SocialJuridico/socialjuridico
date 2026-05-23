@@ -11825,7 +11825,13 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                           docPdf.setFontSize(10);
                           docPdf.setTextColor(50, 50, 50);
                           
-                          const splitContent = docPdf.splitTextToSize(draftedNotificacao, pageWidth - 40);
+                          const cleanedDraft = draftedNotificacao
+                            .replace(/\*\*/g, "")
+                            .replace(/#/g, "")
+                            .replace(/^---\s*$/gm, "")
+                            .trim();
+                          
+                          const splitContent = docPdf.splitTextToSize(cleanedDraft, pageWidth - 40);
                           docPdf.text(splitContent, 20, 40);
                           
                           const blob = docPdf.output('blob');

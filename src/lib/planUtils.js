@@ -29,13 +29,67 @@ export const PLAN_LIMITS = {
 };
 
 export async function getUserPlanLimits(supabaseDb, userId) {
-  const { data: user, error } = await supabaseDb
+  let { data: user, error } = await supabaseDb
     .from('advogados')
     .select('plan_type, is_premium, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
-  if (error) {
+  if (!user) {
+    const { data: office, error: officeError } = await supabaseDb
+      .from('escritorios')
+      .select('plano, limites')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (office && !officeError) {
+      const limitsObj = office.limites || {};
+      const maxIa = limitsObj.creditos_ia || 999999;
+      const maxStorage = limitsObj.storage_mb || 1024000;
+      
+      return {
+        planType: office.plano || 'PRO',
+        isLegacyPro: true,
+        
+        // CRM
+        maxCrmClients: Infinity,
+        
+        // Smart Docs
+        maxStorageMb: maxStorage,
+        usedStorageMb: 0,
+        canUploadDocs: function(fileSizeMb) {
+          return true;
+        },
+
+        // Redator IA
+        maxRedatorIa: maxIa,
+        usedRedatorIa: 0,
+        canUseRedatorIa: function() {
+          return true;
+        },
+
+        // Triagem
+        maxTriagem: limitsObj.osint || 999999,
+        usedTriagem: 0,
+        canUseTriagem: function() {
+          return true;
+        },
+
+        // Agenda
+        maxAgenda: Infinity,
+        usedAgenda: 0,
+        canUseAgenda: function() {
+          return true;
+        },
+
+        // Boolean features
+        hasCalculadora: true,
+        hasJurisprudencia: true,
+      };
+    }
+  }
+
+  if (error && !user) {
     console.error(`[getUserPlanLimits] Erro ao buscar limites para o usuário ${userId}:`, error);
   }
 

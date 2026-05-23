@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import OpenAI from "openai";
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 
@@ -8,15 +9,85 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+async function getSessionUser(request) {
+  if (request) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (user && !error) {
+        const { data: adv, error: advError } = await supabaseAdmin
+          .from("advogados")
+          .select("id, name, cargo, escritorio_id")
+          .eq("id", user.id)
+          .single();
+        
+        if (adv && !advError) {
+          return {
+            id: adv.id,
+            name: adv.name,
+            cargo: adv.cargo || "advogado",
+            escritorio_id: adv.escritorio_id || null,
+            isOfficeAdmin: false
+          };
+        }
+      }
+    }
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
+  
+  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
+  const sessionCookie = cookieStore.get("sj_escritorio_session");
+  if (sessionCookie?.value) {
+    try {
+      const decoded = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString("utf8"));
+      return {
+        id: decoded.id,
+        name: `${decoded.nome} (Gestor)`,
+        cargo: "admin",
+        escritorio_id: decoded.id,
+        isOfficeAdmin: true
+      };
+    } catch (e) {
+      console.error("Erro ao decodificar cookie de escritorio:", e);
+    }
+  }
+
+  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user && !error) {
+      const { data: adv, error: advError } = await db
+        .from("advogados")
+        .select("id, name, cargo, escritorio_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (adv && !advError) {
+        return {
+          id: adv.id,
+          name: adv.name,
+          cargo: adv.cargo || "advogado",
+          escritorio_id: adv.escritorio_id || null,
+          isOfficeAdmin: false
+        };
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao obter usuario autenticado:", e);
+  }
+
+  return null;
+}
+
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const user = await getSessionUser(request);
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
@@ -26,7 +97,7 @@ export async function POST(request) {
     const { type, clientName, facts, tone, clientData, advocateData } =
       await request.json();
 
-    const planLimits = await getUserPlanLimits(supabaseAdmin || supabase, user.id);
+    const planLimits = await getUserPlanLimits(supabaseAdmin, user.id);
     if (!planLimits) {
       return NextResponse.json({ success: false, message: "Erro ao ler limites do plano." }, { status: 400 });
     }
@@ -55,14 +126,36 @@ export async function POST(request) {
     `
       : `QUALIFICAÇÃO DA PARTE: ${clientName || "PARTE INTERESSADA"}`;
 
-    // ⚠️ SEGURANÇA: Apenas informações públicas (OAB) e nome
-    const advocateInfo = advocateData
-      ? `
+    // Buscar informações do advogado ou escritório direto do banco para segurança
+    let resolvedAdvName = advocateData?.name || "Advogado";
+    let resolvedAdvOab = advocateData?.oab || "Não informado";
+
+    const { data: realAdv } = await supabaseAdmin
+      .from("advogados")
+      .select("name, oab")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (realAdv) {
+      resolvedAdvName = realAdv.name || resolvedAdvName;
+      resolvedAdvOab = realAdv.oab || resolvedAdvOab;
+    } else {
+      const { data: realOffice } = await supabaseAdmin
+        .from("escritorios")
+        .select("nome")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (realOffice) {
+        resolvedAdvName = realOffice.nome || resolvedAdvName;
+      }
+    }
+
+    const advocateInfo = `
     QUALIFICAÇÃO DO ADVOGADO (Contratado/Patrono):
-    - Advogado(a): ${advocateData.name}
-    - OAB: ${advocateData.oab || "Não informado"}
-    `
-      : "";
+    - Advogado(a): ${resolvedAdvName}
+    - OAB: ${resolvedAdvOab}
+    `;
 
     const systemPrompt = `Você é um Redator Jurídico Sênior especializado em Direito Brasileiro. 
     Sua tarefa é gerar uma minuta de alta qualidade técnica, seguindo as normas da ABNT e o padrão culto da língua portuguesa.
@@ -82,6 +175,7 @@ export async function POST(request) {
        - Agressivo: Enfático nos direitos violados, assertivo nas punições e pedidos.
        - Conciliador: Foca em propostas, boa-fé e resolução amigável.
        - Técnico: Linguagem densa, foco em doutrina e jurisprudência.
+    5. NÃO utilize nenhuma formatação Markdown no texto (como asteriscos ** para negrito, hashtags # para títulos, ou divisores ---). Escreva o texto de forma limpa, utilizando caixa alta para destacar títulos e seções, pois ele será impresso diretamente em PDF.
     
     FATOS E CONTEXTO:
     ${facts}

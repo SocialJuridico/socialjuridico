@@ -5,10 +5,28 @@ import crypto from "crypto";
 
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let user = null;
 
-    if (authError || !user) {
+    // 1. Tentar Bearer Token (para mobile)
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user: u }, error } = await supabaseAdmin.auth.getUser(token);
+      if (u && !error) {
+        user = u;
+      }
+    }
+
+    // 2. Fallback para Cookie (web)
+    if (!user) {
+      const supabase = createClient();
+      const { data: { user: u }, error: authError } = await supabase.auth.getUser();
+      if (u && !authError) {
+        user = u;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 

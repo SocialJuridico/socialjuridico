@@ -2,18 +2,92 @@ import OpenAI from "openai";
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
+import { cookies } from 'next/headers';
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+async function getSessionUser(request) {
+  if (request) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (user && !error) {
+        const { data: adv, error: advError } = await supabaseAdmin
+          .from("advogados")
+          .select("id, name, cargo, escritorio_id")
+          .eq("id", user.id)
+          .single();
+        
+        if (adv && !advError) {
+          return {
+            id: adv.id,
+            name: adv.name,
+            cargo: adv.cargo || "advogado",
+            escritorio_id: adv.escritorio_id || null,
+            isOfficeAdmin: false
+          };
+        }
+      }
+    }
+  }
+
+  const cookieStore = await cookies();
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
+  
+  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
+  const sessionCookie = cookieStore.get("sj_escritorio_session");
+  if (sessionCookie?.value) {
+    try {
+      const decoded = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString("utf8"));
+      return {
+        id: decoded.id,
+        name: `${decoded.nome} (Gestor)`,
+        cargo: "admin",
+        escritorio_id: decoded.id,
+        isOfficeAdmin: true
+      };
+    } catch (e) {
+      console.error("Erro ao decodificar cookie de escritorio:", e);
+    }
+  }
+
+  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (user && !error) {
+      const { data: adv, error: advError } = await db
+        .from("advogados")
+        .select("id, name, cargo, escritorio_id")
+        .eq("id", user.id)
+        .single();
+      
+      if (adv && !advError) {
+        return {
+          id: adv.id,
+          name: adv.name,
+          cargo: adv.cargo || "advogado",
+          escritorio_id: adv.escritorio_id || null,
+          isOfficeAdmin: false
+        };
+      }
+    }
+  } catch (e) {
+    console.error("Erro ao obter usuario autenticado:", e);
+  }
+
+  return null;
+}
+
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const user = await getSessionUser(request);
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
@@ -23,20 +97,24 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Dados insuficientes" }, { status: 400 });
     }
 
-    const planLimits = await getUserPlanLimits(supabaseAdmin || supabase, user.id);
-    if (!planLimits) {
+    const planLimits = await getUserPlanLimits(supabaseAdmin, user.id);
+
+    // Tipos de análise de agenda não consomem limites, então se planLimits for null,
+    // verificamos se é uma requisição de agenda e permitimos prosseguir
+    const isAgendaRequest = clientData?.name && clientData.name.includes('Agenda');
+    if (!planLimits && !isAgendaRequest) {
       return NextResponse.json({ success: false, message: "Erro ao ler limites do plano." }, { status: 400 });
     }
 
     // 1. Bloqueio de Jurisprudência para START
     const isJuris = useType === 'JURIS' || clientData.name === "Análise Jurisprudencial Geral";
-    if (isJuris && !planLimits.hasJurisprudencia) {
+    if (isJuris && planLimits && !planLimits.hasJurisprudencia) {
       return NextResponse.json({ success: false, message: "Funcionalidade disponível apenas no Plano PRO", error_type: "UPGRADE_REQUIRED" }, { status: 403 });
     }
 
     // 2. Limite de Triagem para START
     const isTriagem = useType === 'TRIAGEM' || clientData.name === "Triagem Rápida";
-    if (isTriagem) {
+    if (isTriagem && planLimits) {
       if (!planLimits.canUseTriagem()) {
         return NextResponse.json({ success: false, message: "LIMIT_REACHED", error_type: "QUOTA_EXCEEDED" }, { status: 403 });
       }
@@ -46,7 +124,7 @@ export async function POST(request) {
     // Por enquanto não limitamos severamente além do Redator IA, 
     // mas se quiser limitar o chat geral, faríamos aqui.
 
-    const systemPrompt = `Você é um especialista sênior em direito brasileiro (SocialJurídico AI). 
+    let systemPrompt = `Você é um especialista sênior em direito brasileiro (SocialJurídico AI). 
     Analise estrategicamente o caso para o cliente: ${clientData.name}.
     ÁREAS DE ATUAÇÃO: Direito do Consumidor, Civil, Família, Penal, Trabalho, Previdenciário, Tributário, Empresarial, Administrativo, Bancário.
     OBJETIVOS:
@@ -54,6 +132,21 @@ export async function POST(request) {
     2. Detecte VÍCIOS PROCESSUAIS ou NULIDADES.
     3. Sugira TESES JURÍDICAS e JURISPRUDÊNCIA (STJ/STF) relevante.
     4. Avalie VIABILIDADE e RISCOS.`;
+
+    if (clientData.name && (
+      clientData.name.includes("Agenda") || 
+      clientData.name.includes("Agenda do Escritório") || 
+      clientData.name.includes("Agenda do Advogado")
+    )) {
+      systemPrompt = `Você é o assistente inteligente de gestão jurídica do SocialJurídico (SocialJurídico AI).
+      Seu objetivo é analisar ou resumir a agenda de compromissos e prazos de um advogado ou escritório jurídico.
+      
+      Diretrizes de Resposta:
+      1. Agrupe ou apresente as informações de forma clara, organizada e profissional em formato markdown.
+      2. Identifique conflitos de horários, acúmulo de prazos no mesmo dia e compromissos críticos (urgência alta).
+      3. Forneça recomendações práticas sobre o que deve ser priorizado ou preparado com antecedência.
+      4. Mantenha um tom profissional, corporativo e encorajador.`;
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -68,7 +161,7 @@ export async function POST(request) {
 
     // Incrementar uso se for Triagem
     if (isTriagem) {
-      await incrementUsage(supabaseAdmin || supabase, user.id, 'uso_triagem', 1);
+      await incrementUsage(supabaseAdmin, user.id, 'uso_triagem', 1);
     }
 
     return NextResponse.json({ 

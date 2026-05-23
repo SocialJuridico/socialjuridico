@@ -5,10 +5,22 @@ import { NextResponse } from 'next/server';
 // GET /api/crm/client-cases?email=...&cpf=...
 export async function GET(request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let user = null;
 
-    if (authError || !user) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user: u }, error } = await supabaseAdmin.auth.getUser(token);
+      if (!error && u) user = u;
+    }
+
+    if (!user) {
+      const supabase = createClient();
+      const { data: { user: u }, error: authError } = await supabase.auth.getUser();
+      if (!authError && u) user = u;
+    }
+
+    if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 

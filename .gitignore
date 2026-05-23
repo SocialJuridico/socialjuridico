@@ -11,10 +11,11 @@
 !.yarn/versions
 /supabaseteste
 /scripts
+/mobile
 
 # testing
 /coverage
-
+/supabase/migrations
 # next.js
 /.next/
 /out/

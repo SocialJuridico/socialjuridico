@@ -16,12 +16,38 @@ const generateVerificationCode = () => {
   return `SJ-${genPart(4)}-${genPart(4)}`;
 };
 
-async function getSessionUser() {
-  const cookieStore = await cookies();
+async function getSessionUser(req) {
   const supabase = createClient();
   const db = supabaseAdmin || supabase;
   
-  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
+  // 1. Tentar Bearer Token (para mobile)
+  if (req) {
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (user && !error) {
+        const { data: adv, error: advError } = await db
+          .from("advogados")
+          .select("id, name, cargo, escritorio_id")
+          .eq("id", user.id)
+          .single();
+        
+        if (adv && !advError) {
+          return {
+            id: adv.id,
+            name: adv.name,
+            cargo: adv.cargo || "advogado",
+            escritorio_id: adv.escritorio_id || null,
+            isOfficeAdmin: false
+          };
+        }
+      }
+    }
+  }
+
+  // 2. Verificação via Cookie do Escritório (Administrador / Gestor)
+  const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("sj_escritorio_session");
   if (sessionCookie?.value) {
     try {
@@ -38,7 +64,7 @@ async function getSessionUser() {
     }
   }
 
-  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
+  // 3. Verificação via Supabase Auth (Advogado / Membro Normal)
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (user && !error) {
@@ -106,7 +132,7 @@ export async function GET(request) {
     }
 
     // Listagem geral das assinaturas (apenas para advogados autenticados)
-    const userSession = await getSessionUser();
+    const userSession = await getSessionUser(request);
 
     if (!userSession) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
@@ -145,7 +171,7 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     await ensureDb();
-    const userSession = await getSessionUser();
+    const userSession = await getSessionUser(request);
 
     if (!userSession) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });

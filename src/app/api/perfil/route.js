@@ -12,8 +12,12 @@ const PROFILE_SELECT_FIELDS = {
 const PROFILE_UPDATE_FIELDS = {
   clientes: ["name", "phone", "bio", "avatar"],
   advogados: [
+    "name",
     "phone",
     "bio",
+    "oab",
+    "estado",
+    "email",
     "specialties",
     "consulta",
     "tempo",
@@ -39,19 +43,40 @@ function buildUpdateData(body, allowedFields) {
 
 export async function GET(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    let finalUser = null;
 
-    if (authError || !user) {
+    // 1. Tentar Bearer Token (para mobile)
+    if (request) {
+      const authHeader = request.headers.get("Authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+        if (user && !error) {
+          finalUser = user;
+        }
+      }
+    }
+
+    // 2. Fallback para cookies (web)
+    if (!finalUser) {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (!authError && user) {
+        finalUser = user;
+      }
+    }
+
+    if (!finalUser) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
       );
     }
 
+    const supabase = createClient();
     const db = supabaseAdmin || supabase;
     const tables = ["clientes", "advogados", "admins"];
     let profile = null;
@@ -61,7 +86,7 @@ export async function GET(request) {
       const { data, error } = await db
         .from(table)
         .select(getSelectFields(table))
-        .eq("id", user.id)
+        .eq("id", finalUser.id)
         .maybeSingle();
       if (data && !error) {
         profile = data;
@@ -71,12 +96,12 @@ export async function GET(request) {
 
     // 2ª tentativa: buscar por email (caso o ID Auth difira do ID no banco)
     if (!profile) {
-      // ⚠️ SEGURANÇA: Não logar user.email
+      // ⚠️ SEGURANÇA: Não logar finalUser.email
       for (const table of tables) {
         const { data, error } = await db
           .from(table)
           .select(getSelectFields(table))
-          .eq("email", user.email)
+          .eq("email", finalUser.email)
           .maybeSingle();
         if (data && !error) {
           profile = data;
@@ -87,11 +112,11 @@ export async function GET(request) {
 
     // 3ª tentativa: criar perfil padrão
     if (!profile) {
-      console.warn(`[perfil] Criando perfil padrão para ${user.email}`);
+      console.warn(`[perfil] Criando perfil padrão para ${finalUser.email}`);
       const newProfile = {
-        id: user.id,
-        email: user.email,
-        name: user.user_metadata?.full_name || user.email.split("@")[0],
+        id: finalUser.id,
+        email: finalUser.email,
+        name: finalUser.user_metadata?.full_name || finalUser.email.split("@")[0],
         role: "CLIENT",
         created_at: new Date().toISOString(),
       };
@@ -110,7 +135,7 @@ export async function GET(request) {
         const { data: retry } = await db
           .from("clientes")
           .select(getSelectFields("clientes"))
-          .eq("email", user.email)
+          .eq("email", finalUser.email)
           .maybeSingle();
         if (retry) profile = retry;
       }
@@ -182,18 +207,41 @@ export async function GET(request) {
 
 export async function PUT(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !user)
+    let finalUser = null;
+
+    // 1. Tentar Bearer Token (para mobile)
+    if (request) {
+      const authHeader = request.headers.get("Authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+        if (user && !error) {
+          finalUser = user;
+        }
+      }
+    }
+
+    // 2. Fallback para cookies (web)
+    if (!finalUser) {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (!authError && user) {
+        finalUser = user;
+      }
+    }
+
+    if (!finalUser) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
       );
+    }
 
     const body = await request.json();
+    const supabase = createClient();
     const db = supabaseAdmin || supabase;
 
     // Descobrir em qual tabela o perfil está
@@ -202,7 +250,7 @@ export async function PUT(request) {
       const { data } = await db
         .from(table)
         .select("id")
-        .eq("id", user.id)
+        .eq("id", finalUser.id)
         .maybeSingle();
       if (data) {
         profileTable = table;
@@ -225,7 +273,7 @@ export async function PUT(request) {
     const { error: updateError } = await db
       .from(profileTable)
       .update(updateData)
-      .eq("id", user.id);
+      .eq("id", finalUser.id);
 
     if (updateError) throw updateError;
 
@@ -233,7 +281,7 @@ export async function PUT(request) {
     if (body.password && body.password.length >= 6) {
       const authClient = supabaseAdmin || supabase;
       const { error: pwdError } = await authClient.auth.admin.updateUserById(
-        user.id,
+        finalUser.id,
         {
           password: body.password,
         },

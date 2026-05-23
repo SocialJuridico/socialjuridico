@@ -4,12 +4,38 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 
-async function getSessionUser() {
+async function getSessionUser(request) {
   const cookieStore = await cookies();
   const supabase = createClient();
   const db = supabaseAdmin || supabase;
+
+  // 1. Verificação via Bearer Token (para mobile)
+  if (request) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (user && !error) {
+        const { data: adv, error: advError } = await db
+          .from("advogados")
+          .select("id, name, cargo, escritorio_id")
+          .eq("id", user.id)
+          .single();
+        
+        if (adv && !advError) {
+          return {
+            id: adv.id,
+            name: adv.name,
+            cargo: adv.cargo || "advogado",
+            escritorio_id: adv.escritorio_id || null,
+            isOfficeAdmin: false
+          };
+        }
+      }
+    }
+  }
   
-  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
+  // 2. Verificação via Cookie do Escritório (Administrador / Gestor)
   const sessionCookie = cookieStore.get("sj_escritorio_session");
   if (sessionCookie?.value) {
     try {
@@ -26,7 +52,7 @@ async function getSessionUser() {
     }
   }
 
-  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
+  // 3. Verificação via Supabase Auth (Advogado / Membro Normal)
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
     if (user && !error) {
@@ -55,7 +81,7 @@ async function getSessionUser() {
 
 export async function GET(request) {
   try {
-    const userSession = await getSessionUser();
+    const userSession = await getSessionUser(request);
 
     if (!userSession) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
@@ -100,7 +126,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const userSession = await getSessionUser();
+    const userSession = await getSessionUser(request);
 
     if (!userSession) {
       return NextResponse.json(

@@ -3,19 +3,32 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
 // GET /api/notificacoes -> lista notificacoes do usuario autenticado
-export async function GET() {
+export async function GET(req) {
   try {
-    const supabase = createClient();
-    
-    // 1. Tentar pegar o usuário diretamente (mais seguro)
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    let finalUser = user;
+    let finalUser = null;
 
-    // 2. Fallback: Se getUser() falhar, tenta getSession() 
+    // 1. Tentar Bearer Token (para mobile)
+    if (req) {
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.slice(7);
+        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+        if (user && !error) {
+          finalUser = user;
+        }
+      }
+    }
+
+    // 2. Fallback para Cookies (web)
     if (!finalUser) {
-       const { data: { session } } = await supabase.auth.getSession();
-       finalUser = session?.user;
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      finalUser = user;
+
+      if (!finalUser) {
+        const { data: { session } } = await supabase.auth.getSession();
+        finalUser = session?.user;
+      }
     }
 
     if (!finalUser) {
@@ -26,6 +39,7 @@ export async function GET() {
       );
     }
     
+    const supabase = createClient();
     const db = supabaseAdmin || supabase;
 
     const { data, error } = await db
@@ -58,15 +72,25 @@ export async function DELETE(req) {
     const { searchParams } = new URL(req.url);
     const notificationId = searchParams.get("id");
 
-    if (!notificationId) {
-      return NextResponse.json(
-        { success: false, message: "ID da notificação é obrigatório" },
-        { status: 400 },
-      );
+    let user = null;
+
+    // 1. Tentar Bearer Token (para mobile)
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user: u }, error } = await supabaseAdmin.auth.getUser(token);
+      if (u && !error) {
+        user = u;
+      }
     }
 
-    // 1. Pega usuário logado
-    const { data: { user } } = await supabase.auth.getUser();
+    // 2. Fallback para Cookies (web)
+    if (!user) {
+      const supabase = createClient();
+      const { data: { user: u } } = await supabase.auth.getUser();
+      user = u;
+    }
+
     if (!user) {
       console.error("[DELETE Notif] No user session");
       return NextResponse.json(
@@ -76,6 +100,22 @@ export async function DELETE(req) {
     }
 
     const db = supabaseAdmin || supabase;
+
+    // Caso seja solicitado limpar todas as notificações (limpar tudo)
+    if (notificationId === "all" || !notificationId) {
+      console.log(`[DELETE Notif] Clearing all notifications for user: ${user.email}`);
+      const { error } = await db
+        .from("notificacoes")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      return NextResponse.json({ 
+        success: true, 
+        message: "Todas as notificações foram excluídas com sucesso" 
+      });
+    }
 
     // 2. Verifica se o usuário é ADMIN (Checa perfil e tb tabela admins)
     const [profileRes, adminRes] = await Promise.all([
@@ -146,8 +186,25 @@ export async function PATCH(req) {
   try {
     const supabase = createClient();
     
-    // 1. Pega usuário logado
-    const { data: { user } } = await supabase.auth.getUser();
+    let user = null;
+
+    // 1. Tentar Bearer Token (para mobile)
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user: u }, error } = await supabaseAdmin.auth.getUser(token);
+      if (u && !error) {
+        user = u;
+      }
+    }
+
+    // 2. Fallback para Cookies (web)
+    if (!user) {
+      const supabase = createClient();
+      const { data: { user: u } } = await supabase.auth.getUser();
+      user = u;
+    }
+
     if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
@@ -179,6 +236,70 @@ export async function PATCH(req) {
     console.error("Erro na API PATCH /api/notificacoes:", error);
     return NextResponse.json(
       { success: false, message: "Erro ao atualizar notificações" },
+      { status: 500 },
+    );
+  }
+}
+
+// POST /api/notificacoes -> registra token de push notification do usuário autenticado
+export async function POST(req) {
+  try {
+    let finalUser = null;
+
+    // 1. Tentar Bearer Token (para mobile)
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (user && !error) {
+        finalUser = user;
+      }
+    }
+
+    // 2. Fallback para Cookies (web)
+    if (!finalUser) {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      finalUser = user;
+    }
+
+    if (!finalUser) {
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 401 },
+      );
+    }
+
+    const { token } = await req.json().catch(() => ({}));
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Token é obrigatório" },
+        { status: 400 },
+      );
+    }
+
+    const supabase = createClient();
+    const db = supabaseAdmin || supabase;
+
+    // Upsert token in user_push_tokens table
+    const { error } = await db
+      .from("user_push_tokens")
+      .upsert(
+        { user_id: finalUser.id, token: token },
+        { onConflict: "token" }
+      );
+
+    if (error) {
+      console.error("[notificacoes] Error registering push token:", error);
+      throw error;
+    }
+
+    return NextResponse.json({ success: true, message: "Token registrado com sucesso" });
+  } catch (error) {
+    console.error("Erro na API POST /api/notificacoes:", error);
+    return NextResponse.json(
+      { success: false, message: "Erro ao registrar token" },
       { status: 500 },
     );
   }

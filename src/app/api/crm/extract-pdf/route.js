@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
@@ -8,10 +9,22 @@ const openai = new OpenAI({
 
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let user = null;
 
-    if (authError || !user) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user: u }, error } = await supabaseAdmin.auth.getUser(token);
+      if (!error && u) user = u;
+    }
+
+    if (!user) {
+      const supabase = createClient();
+      const { data: { user: u }, error: authError } = await supabase.auth.getUser();
+      if (!authError && u) user = u;
+    }
+
+    if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
@@ -101,7 +114,7 @@ Retorne APENAS um JSON:
         role: "user",
         content: [
           { type: "text", text: userPrompt },
-          { type: "image_url", image_url: { url: `data:${file.type};base64,${imageBase64}` } }
+          { type: "image_url", image_url: { url: `data:${fileType};base64,${imageBase64}` } }
         ]
       });
     } else {

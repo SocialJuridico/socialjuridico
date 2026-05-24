@@ -4,24 +4,47 @@ import { getRoleFromDatabase } from "@/lib/securityUtils";
 import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
-import { novoCasoTemplate, casoCanceladoTemplate, oportunidadeLocalTemplate } from "@/lib/emailTemplates";
+import {
+  novoCasoTemplate,
+  casoCanceladoTemplate,
+  oportunidadeLocalTemplate,
+} from "@/lib/emailTemplates";
 
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    let user = null;
 
-    if (authError || !user) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const {
+        data: { user: tokenUser },
+        error,
+      } = await supabaseAdmin.auth.getUser(token);
+      if (tokenUser && !error) {
+        user = tokenUser;
+      }
+    }
+
+    if (!user) {
+      const supabase = createClient();
+      const {
+        data: { user: cookieUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (!authError && cookieUser) {
+        user = cookieUser;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
       );
     }
 
-    const db = supabaseAdmin || supabase;
+    const db = supabaseAdmin;
     const role = (await getRoleFromDatabase(db, user.id)) || "CLIENT";
     if (role !== "CLIENT") {
       return NextResponse.json(
@@ -31,13 +54,21 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { titulo, descricao, area_atuacao, anexos, cidade, estado } = body || {};
+    const { titulo, descricao, area_atuacao, anexos, cidade, estado } =
+      body || {};
 
-    if (!titulo?.trim() || !descricao?.trim() || !area_atuacao?.trim() || !cidade?.trim() || !estado?.trim()) {
+    if (
+      !titulo?.trim() ||
+      !descricao?.trim() ||
+      !area_atuacao?.trim() ||
+      !cidade?.trim() ||
+      !estado?.trim()
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Título, descrição, área de atuação, cidade e estado em que se encontra o caso são obrigatórios",
+          message:
+            "Título, descrição, área de atuação, cidade e estado em que se encontra o caso são obrigatórios",
         },
         { status: 400 },
       );
@@ -71,7 +102,7 @@ export async function POST(request) {
       roles: ["LAWYER"],
       title: "SocialJurídico 📍",
       message: `🚩 Nova Oportunidade: ${titulo.substring(0, 50)}... em ${cidade}/${estado}.`,
-      url: "/dashboard/advogado"
+      url: "/dashboard/advogado",
     });
 
     // 📧 ENVIAR EMAIL PARA TODOS OS ADVOGADOS VIA RESEND (BATCH API)
@@ -84,17 +115,23 @@ export async function POST(request) {
       if (!advError && advogados && advogados.length > 0) {
         // Deduplicar emails (evita envios duplicados)
         const seenEmails = new Set();
-        const uniqueAdvogados = advogados.filter(adv => {
+        const uniqueAdvogados = advogados.filter((adv) => {
           const email = adv.email?.trim().toLowerCase();
           if (!email || seenEmails.has(email)) return false;
           seenEmails.add(email);
           return true;
         });
 
-        const localAdvogados = uniqueAdvogados.filter(a => a.estado === estado);
-        const otherAdvogados = uniqueAdvogados.filter(a => a.estado !== estado);
+        const localAdvogados = uniqueAdvogados.filter(
+          (a) => a.estado === estado,
+        );
+        const otherAdvogados = uniqueAdvogados.filter(
+          (a) => a.estado !== estado,
+        );
 
-        console.log(`📧 Enviando email de novo caso: ${localAdvogados.length} locais (${estado}) e ${otherAdvogados.length} de outros estados...`);
+        console.log(
+          `📧 Enviando email de novo caso: ${localAdvogados.length} locais (${estado}) e ${otherAdvogados.length} de outros estados...`,
+        );
 
         // Usar Resend Batch API: até 100 emails por chamada, com delay entre lotes
         const BATCH_SIZE = 100;
@@ -105,9 +142,9 @@ export async function POST(request) {
         // ============================================
         for (let i = 0; i < localAdvogados.length; i += BATCH_SIZE) {
           const batch = localAdvogados.slice(i, i + BATCH_SIZE);
-          
+
           const emailPayloads = batch.map((adv) => ({
-            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            from: "Social Jurídico <contato@socialjuridico.com.br>",
             to: [adv.email.trim()],
             subject: `📍 Oportunidade Exclusiva: Novo caso em ${cidade} / ${estado}`,
             html: oportunidadeLocalTemplate({
@@ -115,25 +152,30 @@ export async function POST(request) {
               area_atuacao: area_atuacao.trim(),
               cidade: cidade.trim(),
               estado: estado.trim(),
-              lawyerName: adv.name || 'Advogado(a)',
+              lawyerName: adv.name || "Advogado(a)",
             }),
           }));
 
           try {
-            const { error: batchError } = await resend.batch.send(emailPayloads);
+            const { error: batchError } =
+              await resend.batch.send(emailPayloads);
             if (batchError) console.error(`⚠️ Erro no lote local:`, batchError);
           } catch (batchErr) {
             console.error(`❌ Falha no lote local:`, batchErr.message);
           }
 
           if (i + BATCH_SIZE < localAdvogados.length) {
-            await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+            await new Promise((resolve) =>
+              setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS),
+            );
           }
         }
 
         // Delay antes de iniciar os envios gerais
         if (localAdvogados.length > 0 && otherAdvogados.length > 0) {
-          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+          await new Promise((resolve) =>
+            setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS),
+          );
         }
 
         // ============================================
@@ -141,9 +183,9 @@ export async function POST(request) {
         // ============================================
         for (let i = 0; i < otherAdvogados.length; i += BATCH_SIZE) {
           const batch = otherAdvogados.slice(i, i + BATCH_SIZE);
-          
+
           const emailPayloads = batch.map((adv) => ({
-            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            from: "Social Jurídico <contato@socialjuridico.com.br>",
             to: [adv.email.trim()],
             subject: `📍 Nova Oportunidade: ${area_atuacao} em ${cidade}/${estado}`,
             html: novoCasoTemplate({
@@ -151,26 +193,32 @@ export async function POST(request) {
               area_atuacao: area_atuacao.trim(),
               cidade: cidade.trim(),
               estado: estado.trim(),
-              lawyerName: adv.name || 'Advogado(a)',
+              lawyerName: adv.name || "Advogado(a)",
             }),
           }));
 
           try {
-            const { error: batchError } = await resend.batch.send(emailPayloads);
+            const { error: batchError } =
+              await resend.batch.send(emailPayloads);
             if (batchError) console.error(`⚠️ Erro no lote geral:`, batchError);
           } catch (batchErr) {
             console.error(`❌ Falha no lote geral:`, batchErr.message);
           }
 
           if (i + BATCH_SIZE < otherAdvogados.length) {
-            await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+            await new Promise((resolve) =>
+              setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS),
+            );
           }
         }
 
         console.log(`✅ Todos os emails de novo caso foram processados.`);
       }
     } catch (emailErr) {
-      console.error("⚠️ Erro ao enviar emails de novo caso (não-fatal):", emailErr.message);
+      console.error(
+        "⚠️ Erro ao enviar emails de novo caso (não-fatal):",
+        emailErr.message,
+      );
       // Não bloqueia a criação do caso se o email falhar
     }
 
@@ -437,8 +485,7 @@ export async function DELETE(request) {
         {
           user_id: caso.advogado_id,
           titulo: "Um caso foi cancelado",
-          mensagem:
-            `O cliente decidiu encerrar o caso "${caso.titulo}" que você estava atendendo.`,
+          mensagem: `O cliente decidiu encerrar o caso "${caso.titulo}" que você estava atendendo.`,
           tipo: "CASO_CANCELADO",
           meta: JSON.stringify({ case_id: casoId }),
         },
@@ -449,23 +496,35 @@ export async function DELETE(request) {
         userIds: [caso.advogado_id],
         title: "Caso cancelado 🚫",
         message: `O cliente decidiu encerrar o caso "${caso.titulo}" que você estava atendendo.`,
-        url: "/dashboard/advogado"
+        url: "/dashboard/advogado",
       });
 
       // 📧 ENVIAR EMAIL DE CANCELAMENTO PARA O ADVOGADO
       try {
-        const { data: advCancel } = await supabaseAdmin.from("advogados").select("name, email").eq("id", caso.advogado_id).single();
+        const { data: advCancel } = await supabaseAdmin
+          .from("advogados")
+          .select("name, email")
+          .eq("id", caso.advogado_id)
+          .single();
         if (advCancel?.email) {
           await resend.emails.send({
-            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            from: "Social Jurídico <contato@socialjuridico.com.br>",
             to: advCancel.email,
             subject: `🚫 Caso "${caso.titulo}" foi cancelado`,
-            html: casoCanceladoTemplate({ lawyerName: advCancel.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+            html: casoCanceladoTemplate({
+              lawyerName: advCancel.name || "Advogado(a)",
+              casoTitulo: caso.titulo,
+            }),
           });
-          console.log(`📧 Email de cancelamento enviado para ${advCancel.email}`);
+          console.log(
+            `📧 Email de cancelamento enviado para ${advCancel.email}`,
+          );
         }
       } catch (emailErr) {
-        console.error("⚠️ Erro ao enviar email de cancelamento (não-fatal):", emailErr.message);
+        console.error(
+          "⚠️ Erro ao enviar email de cancelamento (não-fatal):",
+          emailErr.message,
+        );
       }
 
       return NextResponse.json({
@@ -485,11 +544,11 @@ export async function DELETE(request) {
     // Notificar e enviar email para advogados com interesse
     if (interessados && interessados.length > 0) {
       try {
-        const lawyerIds = [...new Set(interessados.map(i => i.lawyer_id))];
+        const lawyerIds = [...new Set(interessados.map((i) => i.lawyer_id))];
 
         // 1. Inserir notificações de banco para todos os advogados interessados
         const now = new Date().toISOString();
-        const dbNotifs = lawyerIds.map(lawyerId => ({
+        const dbNotifs = lawyerIds.map((lawyerId) => ({
           id: crypto.randomUUID(),
           user_id: lawyerId,
           titulo: "Caso removido",
@@ -497,7 +556,7 @@ export async function DELETE(request) {
           tipo: "CASO_CANCELADO",
           meta: JSON.stringify({ case_id: casoId }),
           lida: false,
-          created_at: now
+          created_at: now,
         }));
         await supabaseAdmin.from("notificacoes").insert(dbNotifs);
 
@@ -506,25 +565,38 @@ export async function DELETE(request) {
           userIds: lawyerIds,
           title: "Caso removido 🚫",
           message: `O cliente removeu o caso "${caso.titulo}" no qual você tinha interesse.`,
-          url: "/dashboard/advogado"
+          url: "/dashboard/advogado",
         });
 
         // 3. Enviar email de cancelamento aos interessados
-        const { data: advs } = await supabaseAdmin.from("advogados").select("name, email").in("id", lawyerIds);
+        const { data: advs } = await supabaseAdmin
+          .from("advogados")
+          .select("name, email")
+          .in("id", lawyerIds);
         if (advs?.length > 0) {
-          const emailPayloads = advs.filter(a => a.email).map(a => ({
-            from: 'Social Jurídico <contato@socialjuridico.com.br>',
-            to: [a.email],
-            subject: `🚫 Caso "${caso.titulo}" foi removido`,
-            html: casoCanceladoTemplate({ lawyerName: a.name || 'Advogado(a)', casoTitulo: caso.titulo }),
-          }));
+          const emailPayloads = advs
+            .filter((a) => a.email)
+            .map((a) => ({
+              from: "Social Jurídico <contato@socialjuridico.com.br>",
+              to: [a.email],
+              subject: `🚫 Caso "${caso.titulo}" foi removido`,
+              html: casoCanceladoTemplate({
+                lawyerName: a.name || "Advogado(a)",
+                casoTitulo: caso.titulo,
+              }),
+            }));
           if (emailPayloads.length > 0) {
             await resend.batch.send(emailPayloads);
-            console.log(`📧 Email de cancelamento enviado para ${emailPayloads.length} advogado(s) interessado(s)`);
+            console.log(
+              `📧 Email de cancelamento enviado para ${emailPayloads.length} advogado(s) interessado(s)`,
+            );
           }
         }
       } catch (err) {
-        console.error("⚠️ Erro ao notificar interessados sobre cancelamento do caso:", err.message);
+        console.error(
+          "⚠️ Erro ao notificar interessados sobre cancelamento do caso:",
+          err.message,
+        );
       }
     }
 

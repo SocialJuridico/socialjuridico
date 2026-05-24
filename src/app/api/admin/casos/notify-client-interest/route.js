@@ -27,7 +27,7 @@ export async function POST(request) {
     if (authError || !user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -35,13 +35,16 @@ export async function POST(request) {
     if (!isAdmin) {
       return NextResponse.json(
         { success: false, message: "Acesso restrito a administradores" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     const { casoId } = await request.json();
     if (!casoId) {
-      return NextResponse.json({ success: false, message: "ID do caso ausente" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "ID do caso ausente" },
+        { status: 400 },
+      );
     }
 
     // Buscar o caso e o cliente associado
@@ -52,7 +55,10 @@ export async function POST(request) {
       .single();
 
     if (casoErr || !caso) {
-      return NextResponse.json({ success: false, message: "Caso não encontrado" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Caso não encontrado" },
+        { status: 404 },
+      );
     }
 
     const { data: cliente, error: cliErr } = await supabaseAdmin
@@ -62,7 +68,10 @@ export async function POST(request) {
       .single();
 
     if (cliErr || !cliente || !cliente.email) {
-       return NextResponse.json({ success: false, message: "Cliente não possui email cadastrado" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Cliente não possui email cadastrado" },
+        { status: 400 },
+      );
     }
 
     // Buscar os interesses pendentes deste caso
@@ -73,43 +82,73 @@ export async function POST(request) {
       .eq("status", "PENDING");
 
     if (intErr || !interests || interests.length === 0) {
-      return NextResponse.json({ success: false, message: "Este caso não possui interesses pendentes" }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Este caso não possui interesses pendentes",
+        },
+        { status: 400 },
+      );
     }
 
     // Buscar os nomes dos advogados usando join map
-    const lawyerIds = interests.map(i => i.lawyer_id);
+    const lawyerIds = interests.map((i) => i.lawyer_id);
     const { data: lawyers } = await supabaseAdmin
       .from("advogados")
       .select("name")
       .in("id", lawyerIds);
 
-    const lawyerNamesArr = (lawyers || []).map(l => l.name);
+    const lawyerNamesArr = (lawyers || []).map((l) => l.name);
 
     if (lawyerNamesArr.length === 0) {
-       return NextResponse.json({ success: false, message: "Nenhum advogado ativo encontrado." }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Nenhum advogado ativo encontrado." },
+        { status: 400 },
+      );
     }
 
     let namesStr = lawyerNamesArr[0];
     if (lawyerNamesArr.length > 1) {
-      namesStr = lawyerNamesArr.slice(0, -1).join(", ") + " e " + lawyerNamesArr[lawyerNamesArr.length - 1];
+      namesStr =
+        lawyerNamesArr.slice(0, -1).join(", ") +
+        " e " +
+        lawyerNamesArr[lawyerNamesArr.length - 1];
     }
 
     const html = interesseCasoTemplate({
-       clientName: cliente.name || "Cliente",
-       titulo: caso.titulo || "Caso sem título",
-       lawyerName: namesStr,
+      clientName: cliente.name || "Cliente",
+      titulo: caso.titulo || "Caso sem título",
+      lawyerName: namesStr,
     });
-    
+
     await resend.emails.send({
       from: "Social Jurídico <contato@socialjuridico.com.br>",
       to: cliente.email,
-      subject: lawyerNamesArr.length > 1 ? "⚖️ Advogados interessados no seu caso!" : "⚖️ Advogado interessado no seu caso!",
-      html
+      subject:
+        lawyerNamesArr.length > 1
+          ? "⚖️ Advogados interessados no seu caso!"
+          : "⚖️ Advogado interessado no seu caso!",
+      html,
     });
 
-    return NextResponse.json({ success: true, message: "Email enviado com sucesso!" });
+    return NextResponse.json({
+      success: true,
+      message: "Email enviado com sucesso!",
+    });
   } catch (error) {
     console.error("Erro na API notify-client-interest:", error);
-    return NextResponse.json({ success: false, message: "Erro interno: " + error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Erro interno: " + error.message },
+      { status: 500 },
+    );
   }
+}
+
+if (cliente?.id) {
+  await sendPushNotification({
+    userIds: [cliente.id],
+    title: "Novo interesse no seu caso",
+    message: `Um advogado demonstrou interesse no caso "${caso.titulo}".`,
+    url: "/dashboard/cliente",
+  });
 }

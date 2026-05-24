@@ -19,10 +19,20 @@ const PLANS_DATA = {
     ],
     juris: 7,
     prices: {
-      AVULSO: { value: 49.90, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_AVULSO },
-      MONTHLY: { value: 40.99, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_MENSAL },
-      ANNUAL: { value: 431.88, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_ANUAL, monthly: 35.99 },
-    }
+      AVULSO: {
+        value: 49.9,
+        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_AVULSO,
+      },
+      MONTHLY: {
+        value: 40.99,
+        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_MENSAL,
+      },
+      ANNUAL: {
+        value: 431.88,
+        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_ANUAL,
+        monthly: 35.99,
+      },
+    },
   },
   PRO: {
     name: "PRO",
@@ -39,11 +49,21 @@ const PLANS_DATA = {
     ],
     juris: 20,
     prices: {
-      AVULSO: { value: 97.90, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_AVULSO },
-      MONTHLY: { value: 87.90, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MENSAL },
-      ANNUAL: { value: 911.88, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANUAL, monthly: 75.99 },
-    }
-  }
+      AVULSO: {
+        value: 97.9,
+        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_AVULSO,
+      },
+      MONTHLY: {
+        value: 87.9,
+        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MENSAL,
+      },
+      ANNUAL: {
+        value: 911.88,
+        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANUAL,
+        monthly: 75.99,
+      },
+    },
+  },
 };
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
@@ -143,21 +163,36 @@ import {
 
 export default function AdvogadoDashboard() {
   const {
-    userName, setUserName,
-    activeTab, setActiveTab,
-    casos, setCasos,
-    loadingCasos, setLoadingCasos,
-    myInterests, setMyInterests,
-    loadingMyInterests, setLoadingMyInterests,
-    notificacoes, setNotificacoes,
-    loadingNotificacoes, setLoadingNotificacoes,
-    profileData, setProfileData,
-    loadingProfile, setLoadingProfile,
-    showBuyModal, setShowBuyModal,
-    showProModal, setShowProModal,
-    showTransparentCheckout, setShowTransparentCheckout,
-    isSidebarOpen, setIsSidebarOpen,
-    showAnunciosSubmenu, setShowAnunciosSubmenu,
+    userName,
+    setUserName,
+    activeTab,
+    setActiveTab,
+    casos,
+    setCasos,
+    loadingCasos,
+    setLoadingCasos,
+    myInterests,
+    setMyInterests,
+    loadingMyInterests,
+    setLoadingMyInterests,
+    notificacoes,
+    setNotificacoes,
+    loadingNotificacoes,
+    setLoadingNotificacoes,
+    profileData,
+    setProfileData,
+    loadingProfile,
+    setLoadingProfile,
+    showBuyModal,
+    setShowBuyModal,
+    showProModal,
+    setShowProModal,
+    showTransparentCheckout,
+    setShowTransparentCheckout,
+    isSidebarOpen,
+    setIsSidebarOpen,
+    showAnunciosSubmenu,
+    setShowAnunciosSubmenu,
     unreadMessagesCount,
     isPro,
     isPremium,
@@ -165,28 +200,41 @@ export default function AdvogadoDashboard() {
     logout,
     refreshProfile,
     refreshNotificacoes,
-    highlightedAds, setHighlightedAds,
-    currentAdIndex, setCurrentAdIndex,
-    anunciosData, setAnunciosData,
-    loadingAnuncios, setLoadingAnuncios,
-    activeAnuncioTab, setActiveAnuncioTab,
+    highlightedAds,
+    setHighlightedAds,
+    currentAdIndex,
+    setCurrentAdIndex,
+    anunciosData,
+    setAnunciosData,
+    loadingAnuncios,
+    setLoadingAnuncios,
+    activeAnuncioTab,
+    setActiveAnuncioTab,
     fetchAnuncios,
     fetchHighlightedAd,
     // CRM
-    interactions, setInteractions,
+    interactions,
+    setInteractions,
     isFetchingInteractions,
-    newInteraction, setNewInteraction,
+    newInteraction,
+    setNewInteraction,
     isSavingInteraction,
-    clientFinance, setClientFinance,
+    clientFinance,
+    setClientFinance,
     isFetchingFinance,
     isSavingFinance,
-    newFinance, setNewFinance,
-    newQuickReminder, setNewQuickReminder,
+    newFinance,
+    setNewFinance,
+    newQuickReminder,
+    setNewQuickReminder,
     isSavingReminder,
-    associatedCases, setAssociatedCases,
+    associatedCases,
+    setAssociatedCases,
     isFetchingAssociatedCases,
-    agendaItems, setAgendaItems,
-    membrosEscritorio, setMembrosEscritorio,
+    agendaItems,
+    setAgendaItems,
+    membrosEscritorio,
+    setMembrosEscritorio,
     fetchInteractions,
     handleSaveInteraction,
     fetchClientInsight,
@@ -205,30 +253,41 @@ export default function AdvogadoDashboard() {
     handleQuickDocGenerate,
     handleGenerateReport,
     // CRM Core
-    crmClients, setCrmClients,
-    loadingCrm, setLoadingCrm,
-    selectedClient, setSelectedClient,
-    showDossierModal, setShowDossierModal,
-    clientDocuments, setClientDocuments,
-    isUploading, setIsUploading,
-    isGeneratingReport, setIsGeneratingReport,
+    crmClients,
+    setCrmClients,
+    loadingCrm,
+    setLoadingCrm,
+    selectedClient,
+    setSelectedClient,
+    showDossierModal,
+    setShowDossierModal,
+    clientDocuments,
+    setClientDocuments,
+    isUploading,
+    setIsUploading,
+    isGeneratingReport,
+    setIsGeneratingReport,
     handleExtractPDF,
     isExtractingPDF,
     fetchCrmClients,
     // Doc Gen
-    showContratoModal, setShowContratoModal,
-    contractForm, setContractForm,
-    showProcuracaoModal, setShowProcuracaoModal,
-    procuracaoForm, setProcuracaoForm,
+    showContratoModal,
+    setShowContratoModal,
+    contractForm,
+    setContractForm,
+    showProcuracaoModal,
+    setShowProcuracaoModal,
+    procuracaoForm,
+    setProcuracaoForm,
   } = useDashboard();
 
-  
   const [searchQuery, setSearchQuery] = useState("");
   const [delegatingClient, setDelegatingClient] = useState(null);
   const [isDelegating, setIsDelegating] = useState(false);
   const [crmFilter, setCrmFilter] = useState("all"); // "my" or "all"
-  
-  const [transparentCheckoutAmount, setTransparentCheckoutAmount] = useState(null);
+
+  const [transparentCheckoutAmount, setTransparentCheckoutAmount] =
+    useState(null);
   const [appliedCouponData, setAppliedCouponData] = useState(null);
   const [isProCheckout, setIsProCheckout] = useState(false);
   const [showNewClientModal, setShowNewClientModal] = useState(false);
@@ -246,12 +305,12 @@ export default function AdvogadoDashboard() {
   });
   const [isSubmittingClient, setIsSubmittingClient] = useState(false);
   const [isBlindarProva, setIsBlindarProva] = useState(false);
-  
+
   // Voice CRM States
   const [isListening, setIsListening] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState("");
-  
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showNotifDeleteConfirm, setShowNotifDeleteConfirm] = useState(false);
   const [notifToDelete, setNotifToDelete] = useState(null);
@@ -259,7 +318,7 @@ export default function AdvogadoDashboard() {
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessages, setChatMessages] = useState([]);
   const [viewedOAB, setViewedOAB] = useState("");
-  
+
   const pdfInputRef = useRef(null);
   const recognitionRef = useRef(null);
   const isConcludedRef = useRef(false);
@@ -267,13 +326,22 @@ export default function AdvogadoDashboard() {
   const isListeningRef = useRef(false);
 
   // Communication States (Discord Copy / Jitsi Hub)
-  const [commData, setCommData] = useState({ canais: [], mensagens: [], participantesVoz: [], user: null });
+  const [commData, setCommData] = useState({
+    canais: [],
+    mensagens: [],
+    participantesVoz: [],
+    user: null,
+  });
   const [activeChannelId, setActiveChannelId] = useState(null);
   const [activeMeetingRoom, setActiveMeetingRoom] = useState(null);
   const [activeMeetingTitle, setActiveMeetingTitle] = useState("");
   const [commChatInput, setCommChatInput] = useState("");
   const [isAddChannelOpen, setIsAddChannelOpen] = useState(false);
-  const [newChannel, setNewChannel] = useState({ nome: "", tipo: "texto", limite: 0 });
+  const [newChannel, setNewChannel] = useState({
+    nome: "",
+    tipo: "texto",
+    limite: 0,
+  });
   const [showOabModal, setShowOabModal] = useState(false);
   const [calendarMemberFilter, setCalendarMemberFilter] = useState("TODOS");
 
@@ -297,26 +365,27 @@ export default function AdvogadoDashboard() {
     lawyer_email: "",
     client_name: "",
     client_email: "",
-    client_id: ""
+    client_id: "",
   });
   const [signatureFile, setSignatureFile] = useState(null);
   const [isCreatingSignature, setIsCreatingSignature] = useState(false);
 
- 
   const [generatedProcuracao, setGeneratedProcuracao] = useState("");
   const [isGeneratingProcuracao, setIsGeneratingProcuracao] = useState(false);
   const [showProcuracaoResult, setShowProcuracaoResult] = useState(false);
   const [procuracaoConfirmed, setProcuracaoConfirmed] = useState(false);
-  const [uploadedSignedProcuracao, setUploadedSignedProcuracao] = useState(null);
+  const [uploadedSignedProcuracao, setUploadedSignedProcuracao] =
+    useState(null);
   const [isShieldingProcuracao, setIsShieldingProcuracao] = useState(false);
   const [procuracaoCertificate, setProcuracaoCertificate] = useState(null);
-  
+
   // Provas Digitais States
   const [showProvasModal, setShowProvasModal] = useState(false);
   const [showJurisConfirmModal, setShowJurisConfirmModal] = useState(false);
   const [jurisConfirmAction, setJurisConfirmAction] = useState(null);
   // Modais de Manifesto de Interesse
-  const [showConfirmInterestModal, setShowConfirmInterestModal] = useState(false);
+  const [showConfirmInterestModal, setShowConfirmInterestModal] =
+    useState(false);
   const [confirmInterestCaseId, setConfirmInterestCaseId] = useState(null);
   const [confirmInterestCount, setConfirmInterestCount] = useState(0);
   const [isCheckingInterest, setIsCheckingInterest] = useState(false);
@@ -345,7 +414,7 @@ export default function AdvogadoDashboard() {
     notificante_cidade_estado: "",
     explicacao: "",
     conteudo: "",
-    logo: null
+    logo: null,
   });
   const [isGeneratingNotificacao, setIsGeneratingNotificacao] = useState(false);
   const [draftedNotificacao, setDraftedNotificacao] = useState("");
@@ -355,13 +424,12 @@ export default function AdvogadoDashboard() {
   const [notificacaoConfirmed, setNotificacaoConfirmed] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
 
-  const [billingCycle, setBillingCycle] = useState('MONTHLY'); // AVULSO, MONTHLY, ANNUAL
+  const [billingCycle, setBillingCycle] = useState("MONTHLY"); // AVULSO, MONTHLY, ANNUAL
   const [chatInput, setChatInput] = useState("");
   const [isTypingAI, setIsTypingAI] = useState(false);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
-  
 
   // CALCULADORA STATE
   const [activeCalculator, setActiveCalculator] = useState("rescisao");
@@ -504,12 +572,10 @@ export default function AdvogadoDashboard() {
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [selectedMsg, setSelectedMsg] = useState(null);
 
-  
-
   const handleApplyCoupon = async (tipo) => {
     let code = "";
-    if (tipo === 'PLANO_PRO') {
-      code = document.getElementById('plan_coupon_input')?.value;
+    if (tipo === "PLANO_PRO") {
+      code = document.getElementById("plan_coupon_input")?.value;
     } else {
       code = couponCode;
     }
@@ -517,34 +583,34 @@ export default function AdvogadoDashboard() {
     if (!code?.trim()) return;
     setIsValidatingCoupon(true);
     try {
-      const res = await fetch('/api/checkout/validate-coupon', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/checkout/validate-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           codigo: code,
           tipo,
-          advogado_id: profileData?.id
-        })
+          advogado_id: profileData?.id,
+        }),
       });
       const data = await res.json();
       if (data.success) {
-        if (tipo === 'PLANO_PRO') {
+        if (tipo === "PLANO_PRO") {
           // Formato esperado pelo TransparentCheckoutModal
           const proCoupon = {
-            status: 'success',
+            status: "success",
             id: code,
-            percent_off: data.desconto_tipo === 'PERCENTUAL' ? data.valor : 0,
-            amount_off: data.desconto_tipo === 'FIXO' ? data.valor * 100 : 0,
-            stripe_coupon_id: data.stripe_coupon_id
+            percent_off: data.desconto_tipo === "PERCENTUAL" ? data.valor : 0,
+            amount_off: data.desconto_tipo === "FIXO" ? data.valor * 100 : 0,
+            stripe_coupon_id: data.stripe_coupon_id,
           };
           setAppliedCouponData(proCoupon);
         } else {
-          setAppliedCoupon({ ...data, tipo_internal: tipo, status: 'success' });
+          setAppliedCoupon({ ...data, tipo_internal: tipo, status: "success" });
         }
         toast.success("Cupom aplicado com sucesso!");
       } else {
         toast.error(data.error || "Cupom inválido");
-        if (tipo === 'PLANO_PRO') setAppliedCouponData(null);
+        if (tipo === "PLANO_PRO") setAppliedCouponData(null);
         else setAppliedCoupon(null);
       }
     } catch (err) {
@@ -574,7 +640,7 @@ export default function AdvogadoDashboard() {
       const res = await fetch("/api/crm/blindagem");
       const data = await res.json();
       if (data.success) {
-        const mapped = data.data.map(doc => ({
+        const mapped = data.data.map((doc) => ({
           id: doc.id,
           name: doc.file_name || `${doc.type}: ${doc.protocol}`,
           protocol: doc.protocol,
@@ -585,7 +651,7 @@ export default function AdvogadoDashboard() {
           read_at: doc.read_at,
           read_ip: doc.read_ip,
           read_user_agent: doc.read_user_agent,
-          read_geo: doc.read_geo
+          read_geo: doc.read_geo,
         }));
         setBlindadosDocuments(mapped);
       }
@@ -625,11 +691,11 @@ export default function AdvogadoDashboard() {
             event: "*",
             schema: "public",
             table: "escritorio_mensagens",
-            filter: `escritorio_id=eq.${profileData.escritorio_id}`
+            filter: `escritorio_id=eq.${profileData.escritorio_id}`,
           },
           () => {
             loadCommunication();
-          }
+          },
         )
         .on(
           "postgres_changes",
@@ -637,11 +703,11 @@ export default function AdvogadoDashboard() {
             event: "*",
             schema: "public",
             table: "escritorio_canais",
-            filter: `escritorio_id=eq.${profileData.escritorio_id}`
+            filter: `escritorio_id=eq.${profileData.escritorio_id}`,
           },
           () => {
             loadCommunication();
-          }
+          },
         )
         .on(
           "postgres_changes",
@@ -649,11 +715,11 @@ export default function AdvogadoDashboard() {
             event: "*",
             schema: "public",
             table: "escritorio_voz_participantes",
-            filter: `escritorio_id=eq.${profileData.escritorio_id}`
+            filter: `escritorio_id=eq.${profileData.escritorio_id}`,
           },
           () => {
             loadCommunication();
-          }
+          },
         )
         .subscribe();
 
@@ -674,8 +740,8 @@ export default function AdvogadoDashboard() {
         body: JSON.stringify({
           action: "SEND_MESSAGE",
           channelId: activeChannelId,
-          mensagem: commChatInput
-        })
+          mensagem: commChatInput,
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -702,8 +768,8 @@ export default function AdvogadoDashboard() {
           action: "CREATE_CHANNEL",
           tipo: newChannel.tipo,
           nome: newChannel.nome,
-          limite: newChannel.limite
-        })
+          limite: newChannel.limite,
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -729,8 +795,8 @@ export default function AdvogadoDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "DELETE_CHANNEL",
-          channelId
-        })
+          channelId,
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -754,8 +820,8 @@ export default function AdvogadoDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "JOIN_VOICE",
-          channelId
-        })
+          channelId,
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -775,8 +841,8 @@ export default function AdvogadoDashboard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          action: "LEAVE_VOICE"
-        })
+          action: "LEAVE_VOICE",
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -797,8 +863,8 @@ export default function AdvogadoDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "TOGGLE_MUTE",
-          mutado: !isCurrentlyMuted
-        })
+          mutado: !isCurrentlyMuted,
+        }),
       });
       const json = await res.json();
       if (json.success) {
@@ -836,7 +902,13 @@ export default function AdvogadoDashboard() {
       toast.error("Por favor, selecione um arquivo PDF.");
       return;
     }
-    if (!newSignatureData.document_name || !newSignatureData.lawyer_name || !newSignatureData.lawyer_email || !newSignatureData.client_name || !newSignatureData.client_email) {
+    if (
+      !newSignatureData.document_name ||
+      !newSignatureData.lawyer_name ||
+      !newSignatureData.lawyer_email ||
+      !newSignatureData.client_name ||
+      !newSignatureData.client_email
+    ) {
       toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -848,9 +920,9 @@ export default function AdvogadoDashboard() {
         method: "POST",
         headers: {
           "Content-Type": "application/pdf",
-          "X-File-Name": encodeURIComponent(signatureFile.name)
+          "X-File-Name": encodeURIComponent(signatureFile.name),
         },
-        body: signatureFile
+        body: signatureFile,
       });
       const uploadResult = await uploadRes.json();
       if (!uploadResult.success) {
@@ -863,13 +935,13 @@ export default function AdvogadoDashboard() {
       const signaturePayload = {
         ...newSignatureData,
         document_url,
-        original_hash
+        original_hash,
       };
 
       const res = await fetch("/api/crm/assinatura", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(signaturePayload)
+        body: JSON.stringify(signaturePayload),
       });
       const data = await res.json();
 
@@ -884,14 +956,13 @@ export default function AdvogadoDashboard() {
           lawyer_email: profileData?.email || "",
           client_name: "",
           client_email: "",
-          client_id: ""
+          client_id: "",
         });
         setSignatureFile(null);
         fetchSignatures();
       } else {
         toast.error(data.message || "Erro ao criar processo de assinatura");
       }
-
     } catch (err) {
       console.error(err);
       toast.error(err.message || "Erro ao iniciar assinatura digital.");
@@ -903,10 +974,10 @@ export default function AdvogadoDashboard() {
   const handleResendOtp = async (signatureId, role) => {
     toast.success("Enviando código por e-mail...");
     try {
-      const res = await fetch('/api/crm/assinatura/enviar-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signature_id: signatureId, role })
+      const res = await fetch("/api/crm/assinatura/enviar-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signature_id: signatureId, role }),
       });
       const data = await res.json();
       if (data.success) {
@@ -930,57 +1001,65 @@ export default function AdvogadoDashboard() {
     const grayBg = [240, 245, 240];
 
     docPdf.setFillColor(greenHeader[0], greenHeader[1], greenHeader[2]);
-    docPdf.rect(10, 10, pageWidth - 20, 25, 'F');
-    
+    docPdf.rect(10, 10, pageWidth - 20, 25, "F");
+
     docPdf.setFont("helvetica", "bold");
     docPdf.setFontSize(16);
     docPdf.setTextColor(255, 255, 255);
-    docPdf.text("CERTIFICADO DE CADEIA DE CUSTÓDIA", pageWidth / 2, 22, { align: "center" });
-    
+    docPdf.text("CERTIFICADO DE CADEIA DE CUSTÓDIA", pageWidth / 2, 22, {
+      align: "center",
+    });
+
     docPdf.setFontSize(9);
-    docPdf.text("REGISTRO DE IMUTABILIDADE DE PROVA DIGITAL", pageWidth / 2, 29, { align: "center" });
+    docPdf.text(
+      "REGISTRO DE IMUTABILIDADE DE PROVA DIGITAL",
+      pageWidth / 2,
+      29,
+      { align: "center" },
+    );
 
     docPdf.setFont("helvetica", "normal");
     docPdf.setFontSize(9);
     docPdf.setTextColor(50, 50, 50);
-    const introText = "Certificamos, para os devidos fins de direito, que o arquivo digital individualizado neste documento foi submetido a procedimento de registro de metadados e ancoragem criptográfica, estabelecendo um marco temporal fidedigno e garantindo a sua imutabilidade desde o momento de sua custódia.";
+    const introText =
+      "Certificamos, para os devidos fins de direito, que o arquivo digital individualizado neste documento foi submetido a procedimento de registro de metadados e ancoragem criptográfica, estabelecendo um marco temporal fidedigno e garantindo a sua imutabilidade desde o momento de sua custódia.";
     const splitIntro = docPdf.splitTextToSize(introText, pageWidth - 40);
     docPdf.text(splitIntro, 20, 45);
 
-    let y = 45 + (splitIntro.length * 5) + 5;
+    let y = 45 + splitIntro.length * 5 + 5;
 
     const drawSection = (title, contentLines) => {
       const boxWidth = pageWidth - 40;
-      
+
       // Dividir linhas que forem muito longas para caber na caixa
       const splitLines = [];
-      contentLines.forEach(line => {
+      contentLines.forEach((line) => {
         const split = docPdf.splitTextToSize(line, boxWidth - 10);
-        split.forEach(s => splitLines.push(s));
+        split.forEach((s) => splitLines.push(s));
       });
-      
-      const boxHeight = (splitLines.length * 5) + 12;
-      
+
+      const boxHeight = splitLines.length * 5 + 12;
+
       docPdf.setDrawColor(greenBorder[0], greenBorder[1], greenBorder[2]);
       docPdf.setLineWidth(0.5);
       docPdf.rect(20, y, boxWidth, boxHeight);
-      
+
       docPdf.setFillColor(grayBg[0], grayBg[1], grayBg[2]);
-      docPdf.rect(20, y, boxWidth, 6, 'F');
-      
+      docPdf.rect(20, y, boxWidth, 6, "F");
+
       docPdf.setFont("helvetica", "bold");
       docPdf.setFontSize(8);
       docPdf.setTextColor(0, 0, 0);
       docPdf.text(title, 25, y + 4.5);
-      
+
       docPdf.setFont("helvetica", "normal");
       docPdf.setFontSize(8);
       let textY = y + 11;
-      splitLines.forEach(line => {
+      splitLines.forEach((line) => {
         docPdf.text(line, 25, textY);
         textY += 5;
       });
-      
+
       y += boxHeight + 5;
     };
 
@@ -988,7 +1067,7 @@ export default function AdvogadoDashboard() {
       `NOME DO ARQUIVO: ${docData.fileName || "N/I"}`,
       `PROTOCOLO INTERNO: ${docData.protocol}`,
       `PROPRIETÁRIO / CUSTODIANTE: ${docData.owner || "Social Jurídico"}`,
-      `DATA / HORA DO CARREGAMENTO: ${docData.date}`
+      `DATA / HORA DO CARREGAMENTO: ${docData.date}`,
     ];
     drawSection("I. IDENTIFICAÇÃO DA PROVA E PROPRIETÁRIO", sec1);
 
@@ -999,36 +1078,51 @@ export default function AdvogadoDashboard() {
       "ALGORITMO UTILIZADO: SHA-512 (Secure Hash Algorithm 512-bit)",
       "ASSINATURA DIGITAL (IMPRESSÃO DIGITAL DO ARQUIVO):",
       hashLine1,
-      hashLine2
+      hashLine2,
     ];
     drawSection("II. ANCORAGEM CRIPTOGRÁFICA (HASH)", sec2);
 
     const sec3 = [
       `ENDEREÇO IP REGISTRADO NO UPLOAD: ${docData.ip || "::1"}`,
-      `DISPOSITIVO/AGENTE: ${docData.agent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I')}`
+      `DISPOSITIVO/AGENTE: ${docData.agent || (typeof navigator !== "undefined" ? navigator.userAgent : "N/I")}`,
     ];
     drawSection("III. RASTREABILIDADE TÉCNICA", sec3);
 
     const sec4 = [
       "1. INTEGRIDADE: O Hash SHA-512 listado na Seção II é o identificador matemático único deste arquivo. Qualquer alteração no conteúdo digital original (como a mudança de 1 byte ou pixel) resultará em um Hash completamente distinto.",
       "2. LEGALIDADE: Este documento visa dar suporte à observância do Art. 158-A do Código de Processo Penal (Cadeia de Custódia) e ao Art. 369 do Código de Processo Civil, provendo meios técnicos idôneos para atestar o momento do registro e a não-adulteração da prova após este instante.",
-      "3. TERCEIRO DE CONFIANÇA: O SocialJurídico atua apenas como agente técnico neutro (terceira parte confiável) fornecendo a plataforma para extração e guarda segura dos metadados e da impressão digital do arquivo no exato momento da operação realizada pelo usuário."
+      "3. TERCEIRO DE CONFIANÇA: O SocialJurídico atua apenas como agente técnico neutro (terceira parte confiável) fornecendo a plataforma para extração e guarda segura dos metadados e da impressão digital do arquivo no exato momento da operação realizada pelo usuário.",
     ];
     const splitSec4 = [];
-    sec4.forEach(line => {
+    sec4.forEach((line) => {
       const split = docPdf.splitTextToSize(line, pageWidth - 50);
-      split.forEach(s => splitSec4.push(s));
+      split.forEach((s) => splitSec4.push(s));
     });
     drawSection("IV. EMBASAMENTO LEGAL E DECLARAÇÃO", splitSec4);
 
     docPdf.setFont("helvetica", "bold");
     docPdf.setFontSize(8);
-    docPdf.text("SOCIALJURÍDICO - PLATAFORMA DE TECNOLOGIA JURÍDICA", pageWidth / 2, pageHeight - 15, { align: "center" });
-    
+    docPdf.text(
+      "SOCIALJURÍDICO - PLATAFORMA DE TECNOLOGIA JURÍDICA",
+      pageWidth / 2,
+      pageHeight - 15,
+      { align: "center" },
+    );
+
     docPdf.setFont("helvetica", "normal");
     docPdf.setFontSize(7);
-    docPdf.text(`Certificado gerado e autenticado pelo sistema em ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 11, { align: "center" });
-    docPdf.text(`Código de Validação: SJ-CERT-${docData.protocol}`, pageWidth / 2, pageHeight - 7, { align: "center" });
+    docPdf.text(
+      `Certificado gerado e autenticado pelo sistema em ${new Date().toLocaleString()}`,
+      pageWidth / 2,
+      pageHeight - 11,
+      { align: "center" },
+    );
+    docPdf.text(
+      `Código de Validação: SJ-CERT-${docData.protocol}`,
+      pageWidth / 2,
+      pageHeight - 7,
+      { align: "center" },
+    );
 
     docPdf.save(`certificado_${docData.protocol}.pdf`);
   }, []);
@@ -1044,56 +1138,64 @@ export default function AdvogadoDashboard() {
     const grayBg = [248, 246, 240];
 
     docPdf.setFillColor(goldHeader[0], goldHeader[1], goldHeader[2]);
-    docPdf.rect(10, 10, pageWidth - 20, 25, 'F');
-    
+    docPdf.rect(10, 10, pageWidth - 20, 25, "F");
+
     docPdf.setFont("helvetica", "bold");
     docPdf.setFontSize(15);
     docPdf.setTextColor(255, 255, 255);
-    docPdf.text("CERTIFICADO DE ASSINATURA ELETRÔNICA", pageWidth / 2, 22, { align: "center" });
-    
+    docPdf.text("CERTIFICADO DE ASSINATURA ELETRÔNICA", pageWidth / 2, 22, {
+      align: "center",
+    });
+
     docPdf.setFontSize(9);
-    docPdf.text("PORTAL DE ASSINATURA DIGITAL - VALIDADE JURÍDICA MP 2.200-2/2001", pageWidth / 2, 29, { align: "center" });
+    docPdf.text(
+      "PORTAL DE ASSINATURA DIGITAL - VALIDADE JURÍDICA MP 2.200-2/2001",
+      pageWidth / 2,
+      29,
+      { align: "center" },
+    );
 
     docPdf.setFont("helvetica", "normal");
     docPdf.setFontSize(9);
     docPdf.setTextColor(50, 50, 50);
-    const introText = "Certificamos, para os devidos fins de direito, que o processo de assinatura eletrônica do documento digital abaixo especificado foi concluído e validado em nosso portal de segurança, tendo sido registrados os metadados e carimbos de tempo de cada signatário para comprovação de autoria e integridade.";
+    const introText =
+      "Certificamos, para os devidos fins de direito, que o processo de assinatura eletrônica do documento digital abaixo especificado foi concluído e validado em nosso portal de segurança, tendo sido registrados os metadados e carimbos de tempo de cada signatário para comprovação de autoria e integridade.";
     const splitIntro = docPdf.splitTextToSize(introText, pageWidth - 40);
     docPdf.text(splitIntro, 20, 45);
 
-    let y = 45 + (splitIntro.length * 5) + 5;
+    let y = 45 + splitIntro.length * 5 + 5;
 
     const drawSection = (title, contentLines) => {
       const boxWidth = pageWidth - 40;
-      
+
       const splitLines = [];
-      contentLines.forEach(line => {
+      contentLines.forEach((line) => {
         const split = docPdf.splitTextToSize(line, boxWidth - 10);
-        split.forEach(s => splitLines.push(s));
+        split.forEach((s) => splitLines.push(s));
       });
-      
-      const boxHeight = (splitLines.length * 5) + 12;
-      
+
+      const boxHeight = splitLines.length * 5 + 12;
+
       docPdf.setDrawColor(goldBorder[0], goldBorder[1], goldBorder[2]);
       docPdf.setLineWidth(0.5);
       docPdf.rect(20, y, boxWidth, boxHeight);
-      
+
       docPdf.setFillColor(grayBg[0], grayBg[1], grayBg[2]);
-      docPdf.rect(20, y, boxWidth, 6, 'F');
-      
+      docPdf.rect(20, y, boxWidth, 6, "F");
+
       docPdf.setFont("helvetica", "bold");
       docPdf.setFontSize(8);
       docPdf.setTextColor(0, 0, 0);
       docPdf.text(title, 25, y + 4.5);
-      
+
       docPdf.setFont("helvetica", "normal");
       docPdf.setFontSize(8);
       let textY = y + 11;
-      splitLines.forEach(line => {
+      splitLines.forEach((line) => {
         docPdf.text(line, 25, textY);
         textY += 5;
       });
-      
+
       y += boxHeight + 5;
     };
 
@@ -1101,22 +1203,25 @@ export default function AdvogadoDashboard() {
       `DOCUMENTO: ${sigData.document_name}`,
       `TIPO DE DOCUMENTO: ${sigData.document_type ? sigData.document_type.toUpperCase() : "CONTRATO"}`,
       `CÓDIGO DE VERIFICAÇÃO: ${sigData.verification_code}`,
-      `DATA DE CRIAÇÃO: ${new Date(sigData.created_at).toLocaleString('pt-BR')}`,
-      `STATUS DO PROCESSO: ${sigData.status === 'signed' ? 'ASSINADO TOTALMENTE' : 'PARCIALMENTE ASSINADO'}`
+      `DATA DE CRIAÇÃO: ${new Date(sigData.created_at).toLocaleString("pt-BR")}`,
+      `STATUS DO PROCESSO: ${sigData.status === "signed" ? "ASSINADO TOTALMENTE" : "PARCIALMENTE ASSINADO"}`,
     ];
     drawSection("I. IDENTIFICAÇÃO DO PROCESSO DE ASSINATURA", sec1);
 
-    const meta = typeof sigData.metadata === 'string' ? JSON.parse(sigData.metadata) : sigData.metadata;
-    
+    const meta =
+      typeof sigData.metadata === "string"
+        ? JSON.parse(sigData.metadata)
+        : sigData.metadata;
+
     // Signatário 1: Advogado
     const adv = meta?.lawyer;
     const sec2 = [
       `NOME DO ADVOGADO: ${adv?.name || "N/I"}`,
       `E-MAIL: ${adv?.email || "N/I"}`,
       `STATUS DA ASSINATURA: ${adv?.signed ? "ASSINADO" : "PENDENTE"}`,
-      `DATA DA ASSINATURA: ${adv?.signed_at ? new Date(adv.signed_at).toLocaleString('pt-BR') : "PENDENTE"}`,
+      `DATA DA ASSINATURA: ${adv?.signed_at ? new Date(adv.signed_at).toLocaleString("pt-BR") : "PENDENTE"}`,
       `IP DE ASSINATURA: ${adv?.ip || "N/I"}`,
-      `DISPOSITIVO DE ASSINATURA: ${adv?.agent || "N/I"}`
+      `DISPOSITIVO DE ASSINATURA: ${adv?.agent || "N/I"}`,
     ];
     drawSection("II. METADADOS DO ADVOGADO (SIGNATÁRIO 1)", sec2);
 
@@ -1126,9 +1231,9 @@ export default function AdvogadoDashboard() {
       `NOME DO CLIENTE: ${cli?.name || "N/I"}`,
       `E-MAIL: ${cli?.email || "N/I"}`,
       `STATUS DA ASSINATURA: ${cli?.signed ? "ASSINADO" : "PENDENTE"}`,
-      `DATA DA ASSINATURA: ${cli?.signed_at ? new Date(cli.signed_at).toLocaleString('pt-BR') : "PENDENTE"}`,
+      `DATA DA ASSINATURA: ${cli?.signed_at ? new Date(cli.signed_at).toLocaleString("pt-BR") : "PENDENTE"}`,
       `IP DE ASSINATURA: ${cli?.ip || "N/I"}`,
-      `DISPOSITIVO DE ASSINATURA: ${cli?.agent || "N/I"}`
+      `DISPOSITIVO DE ASSINATURA: ${cli?.agent || "N/I"}`,
     ];
     drawSection("III. METADADOS DO CLIENTE (SIGNATÁRIO 2)", sec3);
 
@@ -1137,7 +1242,9 @@ export default function AdvogadoDashboard() {
     // A simple deterministic hash generator for the signature process
     let calculatedHash = "";
     for (let i = 0; i < 64; i++) {
-      calculatedHash += Math.abs(Math.sin(i + hashBase.length) * 16).toString(16)[0];
+      calculatedHash += Math.abs(Math.sin(i + hashBase.length) * 16).toString(
+        16,
+      )[0];
     }
     const sec4 = [
       "ALGORITMO UTILIZADO: SHA-256 (Cadeia de Custódia Digital)",
@@ -1146,24 +1253,39 @@ export default function AdvogadoDashboard() {
       "",
       "1. INTEGRALIDADE JURÍDICA: As assinaturas deste certificado foram colhidas sob os termos do Art. 10, § 2º, da Medida Provisória nº 2.200-2, de 24 de agosto de 2001, garantindo a sua autenticidade, integridade e validade jurídica.",
       "2. CARIMBO DE TEMPO: O registro temporal e a associação IP garantem a tempestividade e a rastreabilidade absoluta das manifestações de vontade aqui expressadas.",
-      "3. AUDITORIA: Este certificado pode ser validado a qualquer momento no portal público inserindo o Código de Verificação listado na Seção I."
+      "3. AUDITORIA: Este certificado pode ser validado a qualquer momento no portal público inserindo o Código de Verificação listado na Seção I.",
     ];
-    
+
     const splitSec4 = [];
-    sec4.forEach(line => {
+    sec4.forEach((line) => {
       const split = docPdf.splitTextToSize(line, pageWidth - 50);
-      split.forEach(s => splitSec4.push(s));
+      split.forEach((s) => splitSec4.push(s));
     });
     drawSection("IV. INTEGRIDADE CRIPTOGRÁFICA E DECLARAÇÕES", splitSec4);
 
     docPdf.setFont("helvetica", "bold");
     docPdf.setFontSize(8);
-    docPdf.text("SOCIALJURÍDICO - PORTAL DE VALIDAÇÃO DIGITAL", pageWidth / 2, pageHeight - 15, { align: "center" });
-    
+    docPdf.text(
+      "SOCIALJURÍDICO - PORTAL DE VALIDAÇÃO DIGITAL",
+      pageWidth / 2,
+      pageHeight - 15,
+      { align: "center" },
+    );
+
     docPdf.setFont("helvetica", "normal");
     docPdf.setFontSize(7);
-    docPdf.text(`Certificado gerado e autenticado pelo sistema em ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 11, { align: "center" });
-    docPdf.text(`Código de Validação do Certificado: SJ-CERT-SIG-${sigData.verification_code}`, pageWidth / 2, pageHeight - 7, { align: "center" });
+    docPdf.text(
+      `Certificado gerado e autenticado pelo sistema em ${new Date().toLocaleString()}`,
+      pageWidth / 2,
+      pageHeight - 11,
+      { align: "center" },
+    );
+    docPdf.text(
+      `Código de Validação do Certificado: SJ-CERT-SIG-${sigData.verification_code}`,
+      pageWidth / 2,
+      pageHeight - 7,
+      { align: "center" },
+    );
 
     docPdf.save(`certificado_assinatura_${sigData.verification_code}.pdf`);
   }, []);
@@ -1178,54 +1300,59 @@ export default function AdvogadoDashboard() {
     const grayBg = [240, 245, 240];
 
     docPdf.setFillColor(greenHeader[0], greenHeader[1], greenHeader[2]);
-    docPdf.rect(10, 10, pageWidth - 20, 25, 'F');
-    
+    docPdf.rect(10, 10, pageWidth - 20, 25, "F");
+
     docPdf.setFont("helvetica", "bold");
     docPdf.setFontSize(16);
     docPdf.setTextColor(255, 255, 255);
-    docPdf.text("CERTIFICADO DE ENTREGA DIGITAL", pageWidth / 2, 22, { align: "center" });
-    
+    docPdf.text("CERTIFICADO DE ENTREGA DIGITAL", pageWidth / 2, 22, {
+      align: "center",
+    });
+
     docPdf.setFontSize(9);
-    docPdf.text("COMPROVAÇÃO DE LEITURA E RASTREAMENTO", pageWidth / 2, 29, { align: "center" });
+    docPdf.text("COMPROVAÇÃO DE LEITURA E RASTREAMENTO", pageWidth / 2, 29, {
+      align: "center",
+    });
 
     docPdf.setFont("helvetica", "normal");
     docPdf.setFontSize(9);
     docPdf.setTextColor(50, 50, 50);
-    const introText = "Certificamos, para os devidos fins de direito, que a Notificação Extrajudicial individualizada neste documento foi acessada e lida pelo destinatário, tendo sido registrados os metadados de acesso para fins de comprovação de entrega.";
+    const introText =
+      "Certificamos, para os devidos fins de direito, que a Notificação Extrajudicial individualizada neste documento foi acessada e lida pelo destinatário, tendo sido registrados os metadados de acesso para fins de comprovação de entrega.";
     const splitIntro = docPdf.splitTextToSize(introText, pageWidth - 40);
     docPdf.text(splitIntro, 20, 45);
 
-    let y = 45 + (splitIntro.length * 5) + 5;
+    let y = 45 + splitIntro.length * 5 + 5;
 
     const drawSection = (title, contentLines) => {
       const boxWidth = pageWidth - 40;
       const splitLines = [];
-      contentLines.forEach(line => {
+      contentLines.forEach((line) => {
         const split = docPdf.splitTextToSize(line, boxWidth - 10);
-        split.forEach(s => splitLines.push(s));
+        split.forEach((s) => splitLines.push(s));
       });
-      const boxHeight = (splitLines.length * 5) + 12;
-      
+      const boxHeight = splitLines.length * 5 + 12;
+
       docPdf.setDrawColor(greenBorder[0], greenBorder[1], greenBorder[2]);
       docPdf.setLineWidth(0.5);
       docPdf.rect(20, y, boxWidth, boxHeight);
-      
+
       docPdf.setFillColor(grayBg[0], grayBg[1], grayBg[2]);
-      docPdf.rect(20, y, boxWidth, 6, 'F');
-      
+      docPdf.rect(20, y, boxWidth, 6, "F");
+
       docPdf.setFont("helvetica", "bold");
       docPdf.setFontSize(8);
       docPdf.setTextColor(0, 0, 0);
       docPdf.text(title, 25, y + 4.5);
-      
+
       docPdf.setFont("helvetica", "normal");
       docPdf.setFontSize(8);
       let textY = y + 11;
-      splitLines.forEach(line => {
+      splitLines.forEach((line) => {
         docPdf.text(line, 25, textY);
         textY += 5;
       });
-      
+
       y += boxHeight + 5;
     };
 
@@ -1233,7 +1360,7 @@ export default function AdvogadoDashboard() {
       `DOCUMENTO NOTIFICADO: ${docData.fileName || "N/I"}`,
       `PROTOCOLO DE RASTREIO: ${docData.protocol}`,
       `NOTIFICANTE: ${docData.owner || "Social Jurídico"}`,
-      `DATA DE EMISSÃO: ${docData.date}`
+      `DATA DE EMISSÃO: ${docData.date}`,
     ];
     drawSection("I. IDENTIFICAÇÃO DA NOTIFICAÇÃO", sec1);
 
@@ -1241,20 +1368,30 @@ export default function AdvogadoDashboard() {
       `DATA / HORA DA LEITURA: ${docData.readAt || "N/I"}`,
       `ENDEREÇO IP DO DESTINATÁRIO: ${docData.readIp || "N/I"}`,
       `DISPOSITIVO / NAVEGADOR: ${docData.readAgent || "N/I"}`,
-      `GEOLOCALIZAÇÃO (LAT, LONG): ${docData.readGeo || "N/I"}`
+      `GEOLOCALIZAÇÃO (LAT, LONG): ${docData.readGeo || "N/I"}`,
     ];
     drawSection("II. RASTREAMENTO DE ENTREGA", sec2);
 
     const sec3 = [
       "1. VALIDADE JURÍDICA: Este certificado atesta que o destinatário acessou o link exclusivo enviado, gerando o registro dos metadados acima.",
-      "2. IMUTABILIDADE: Os dados aqui registrados estão vinculados ao hash do documento original, garantindo que a notificação lida é exatamente a mesma que foi gerada."
+      "2. IMUTABILIDADE: Os dados aqui registrados estão vinculados ao hash do documento original, garantindo que a notificação lida é exatamente a mesma que foi gerada.",
     ];
     drawSection("III. NOTAS LEGAIS", sec3);
 
     docPdf.setFont("helvetica", "normal");
     docPdf.setFontSize(7);
-    docPdf.text(`Certificado gerado e autenticado pelo sistema em ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 11, { align: "center" });
-    docPdf.text(`Código de Validação: SJ-CERT-${docData.protocol}`, pageWidth / 2, pageHeight - 7, { align: "center" });
+    docPdf.text(
+      `Certificado gerado e autenticado pelo sistema em ${new Date().toLocaleString()}`,
+      pageWidth / 2,
+      pageHeight - 11,
+      { align: "center" },
+    );
+    docPdf.text(
+      `Código de Validação: SJ-CERT-${docData.protocol}`,
+      pageWidth / 2,
+      pageHeight - 7,
+      { align: "center" },
+    );
 
     docPdf.save(`Certificado_Entrega_${docData.protocol}.pdf`);
   }, []);
@@ -1265,96 +1402,78 @@ export default function AdvogadoDashboard() {
     }
   }, [chatMessages, isTypingAI]);
 
+  const fetchAllDocuments = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    setLoadingAllDocs(true);
+    try {
+      const res = await fetch("/api/crm/documents");
+      const data = await res.json();
+      if (data.success) setAllDocuments(data.data);
+    } catch (e) {
+      console.error("Erro fetchAllDocs:", e);
+    } finally {
+      setLoadingAllDocs(false);
+    }
+  }, []);
 
-  const fetchAllDocuments = useCallback(
-    async (explicitId) => {
-      if (!explicitId && !profileData?.id) return;
-      setLoadingAllDocs(true);
-      try {
-        const res = await fetch("/api/crm/documents");
-        const data = await res.json();
-        if (data.success) setAllDocuments(data.data);
-      } catch (e) {
-        console.error("Erro fetchAllDocs:", e);
-      } finally {
-        setLoadingAllDocs(false);
+  const fetchMyInterests = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    setLoadingMyInterests(true);
+    try {
+      const res = await fetch("/api/advogado/interesses");
+      const data = await res.json();
+      if (data.success) setMyInterests(data.data);
+    } catch (err) {
+      console.error("Erro fetchMyInterests:", err);
+    } finally {
+      setLoadingMyInterests(false);
+    }
+  }, []);
+
+  const fetchIndicacoes = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    setLoadingIndicacoes(true);
+    try {
+      const res = await fetch("/api/advogado/indicacoes");
+      const data = await res.json();
+      if (data.success) {
+        setIndicacoes(data.data);
       }
-    },
-    [],
-  );
+    } catch (err) {
+      console.error("Erro fetchIndicacoes:", err);
+    } finally {
+      setLoadingIndicacoes(false);
+    }
+  }, []);
 
-  const fetchMyInterests = useCallback(
-    async (explicitId) => {
-      if (!explicitId && !profileData?.id) return;
-      setLoadingMyInterests(true);
-      try {
-        const res = await fetch("/api/advogado/interesses");
-        const data = await res.json();
-        if (data.success) setMyInterests(data.data);
-      } catch (err) {
-        console.error("Erro fetchMyInterests:", err);
-      } finally {
-        setLoadingMyInterests(false);
+  const fetchCasos = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    setLoadingCasos(true);
+    try {
+      const res = await fetch("/api/casos");
+      const data = await res.json();
+      if (data.success) setCasos(data.data);
+    } catch (err) {
+      console.error("Erro fetchCasos:", err);
+    } finally {
+      setLoadingCasos(false);
+    }
+  }, []);
+
+  const syncNotificacoes = useCallback(async (explicitId) => {
+    if (!explicitId && !profileData?.id) return;
+    try {
+      const res = await fetch("/api/notificacoes", { cache: "no-store" });
+      const response = await res.json();
+      if (response.success) {
+        setNotificacoes(response.data || []);
+      } else if (res.status === 401) {
+        console.warn("[LawyerDashboard] 401 no fetchNotificacoes...");
       }
-    },
-    [],
-  );
-
-  const fetchIndicacoes = useCallback(
-    async (explicitId) => {
-      if (!explicitId && !profileData?.id) return;
-      setLoadingIndicacoes(true);
-      try {
-        const res = await fetch("/api/advogado/indicacoes");
-        const data = await res.json();
-        if (data.success) {
-          setIndicacoes(data.data);
-        }
-      } catch (err) {
-        console.error("Erro fetchIndicacoes:", err);
-      } finally {
-        setLoadingIndicacoes(false);
-      }
-    },
-    [],
-  );
-
-  const fetchCasos = useCallback(
-    async (explicitId) => {
-      if (!explicitId && !profileData?.id) return;
-      setLoadingCasos(true);
-      try {
-        const res = await fetch("/api/casos");
-        const data = await res.json();
-        if (data.success) setCasos(data.data);
-      } catch (err) {
-        console.error("Erro fetchCasos:", err);
-      } finally {
-        setLoadingCasos(false);
-      }
-    },
-    [],
-  );
-
-  
-
-  const syncNotificacoes = useCallback(
-    async (explicitId) => {
-      if (!explicitId && !profileData?.id) return;
-      try {
-        const res = await fetch("/api/notificacoes", { cache: "no-store" });
-        const response = await res.json();
-        if (response.success) {
-          setNotificacoes(response.data || []);
-        } else if (res.status === 401) {
-          console.warn("[LawyerDashboard] 401 no fetchNotificacoes...");
-        }
-      } catch (error) {
-        console.error("Erro ao sincronizar notificações:", error);
-      }
-    },
-    [],
-  );
+    } catch (error) {
+      console.error("Erro ao sincronizar notificações:", error);
+    }
+  }, []);
 
   const fetchNotificacoes = useCallback(async () => {
     setLoadingNotificacoes(true);
@@ -1389,7 +1508,6 @@ export default function AdvogadoDashboard() {
       toast.error("Erro de conexão ao excluir.");
     }
   };
-
 
   const reloadPlanUsage = useCallback(async () => {
     try {
@@ -1464,12 +1582,10 @@ export default function AdvogadoDashboard() {
     syncNotificacoes,
   ]);
 
-  
-
   // Configurar filtro padrão do CRM com base no cargo (admin vê tudo, membro vê seus casos)
   useEffect(() => {
     if (profileData) {
-      setCrmFilter(profileData.cargo === 'admin' ? 'all' : 'my');
+      setCrmFilter(profileData.cargo === "admin" ? "all" : "my");
     }
   }, [profileData]);
 
@@ -1481,17 +1597,31 @@ export default function AdvogadoDashboard() {
       const googleSync = urlParams.get("google_sync");
 
       if (googleSync === "success") {
-        toast.success("✅ Google Calendar sincronizado com sucesso!", { duration: 4000 });
+        toast.success("✅ Google Calendar sincronizado com sucesso!", {
+          duration: 4000,
+        });
         // Limpar URL
-        window.history.replaceState({}, document.title, window.location.pathname);
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
       } else if (googleSync === "error") {
-        toast.error("❌ Falha ao sincronizar com Google. Tente novamente.", { duration: 4000 });
-        window.history.replaceState({}, document.title, window.location.pathname);
+        toast.error("❌ Falha ao sincronizar com Google. Tente novamente.", {
+          duration: 4000,
+        });
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname,
+        );
       }
-      
+
       if (paymentStatus === "success") {
-        toast.success("Pagamento aprovado! Atualizando sua carteira...", { duration: 4000 });
-        
+        toast.success("Pagamento aprovado! Atualizando sua carteira...", {
+          duration: 4000,
+        });
+
         // Polling the profile api 3 times, every 2s, to catch the async webhook update
         let attempts = 0;
         const interval = setInterval(async () => {
@@ -1512,7 +1642,7 @@ export default function AdvogadoDashboard() {
             window.history.replaceState({}, document.title, newUrl);
           }
         }, 2000);
-        
+
         return () => clearInterval(interval);
       } else if (paymentStatus === "cancel") {
         toast.error("O pagamento foi cancelado.");
@@ -1573,8 +1703,6 @@ export default function AdvogadoDashboard() {
     };
   }, [profileData?.id]);
 
-
-
   const parseNotificationMeta = (notification) => {
     const rawMeta = notification?.meta;
     if (!rawMeta) return {};
@@ -1597,15 +1725,20 @@ export default function AdvogadoDashboard() {
       "CHAT_INICIADO",
       "CASO_CANCELADO",
       "CASO_ENCERRADO",
-      "MEET_INVITE"
+      "MEET_INVITE",
     ];
 
     // Redirecionamento inteligente para casos/chats
     if (CASE_RELATED_TYPES.includes(msg.tipo)) {
-      if (msg.tipo === "MENSAGEM" || msg.tipo === "NEGOCIACAO" || msg.tipo === "CONTRATACAO" || msg.tipo === "CHAT_INICIADO") {
+      if (
+        msg.tipo === "MENSAGEM" ||
+        msg.tipo === "NEGOCIACAO" ||
+        msg.tipo === "CONTRATACAO" ||
+        msg.tipo === "CHAT_INICIADO"
+      ) {
         const caseId = meta.case_id || meta.caso_id;
         const interestId = meta.interest_id || meta.interesse_id;
-        
+
         if (caseId) {
           let url = `/chat/${caseId}`;
           if (interestId) url += `?interest=${interestId}`;
@@ -1613,13 +1746,13 @@ export default function AdvogadoDashboard() {
           return;
         }
       }
-      
+
       // Se for apenas sobre o caso (ex: cancelado, interesse) e não tiver chat específico
       const caseId = meta.case_id || meta.caso_id;
       if (caseId && msg.tipo !== "MENSAGEM") {
-         setActiveTab("meus-casos"); // Ou outra aba relevante
-         window.scrollTo({ top: 0, behavior: 'smooth' });
-         // Talvez marcar como lida e não abrir modal
+        setActiveTab("meus-casos"); // Ou outra aba relevante
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        // Talvez marcar como lida e não abrir modal
       }
     }
 
@@ -1738,10 +1871,10 @@ export default function AdvogadoDashboard() {
   // Filtros estritos para garantir a separação correta
   // Oportunidades: Casos SEM advogado vinculado, status ABERTO ou NEGOCIANDO (e que eu AINDA não manifestei interesse)
   const openCases = casos.filter(
-    (c) => 
-      (!c.advogado_id || c.advogado_id === null) && 
+    (c) =>
+      (!c.advogado_id || c.advogado_id === null) &&
       ["ABERTO", "NEGOCIANDO"].includes(c.status) &&
-      !myInterests.some((i) => i.case_id === c.id)
+      !myInterests.some((i) => i.case_id === c.id),
   );
 
   // Meus Casos: Somente casos vinculados ao MEU ID
@@ -1754,23 +1887,29 @@ export default function AdvogadoDashboard() {
     .filter((i) => i.status === "NEGOTIATING" || i.status === "PENDING")
     .map((interest) => {
       const casoDoc = casos.find((c) => c.id === interest.case_id);
-      if (casoDoc) {
-        return { 
-          ...casoDoc, 
-          interest_id: interest.id, 
-          interest_status: interest.status,
-          is_negotiation: interest.status === "NEGOTIATING" 
-        };
-      }
-      return null;
+      return {
+        ...casoDoc,
+        id: interest.case_id,
+        titulo: interest.caso_titulo || casoDoc?.titulo || "Caso desconhecido",
+        area_atuacao: interest.caso_area || casoDoc?.area_atuacao || "",
+        cidade: interest.caso_cidade || casoDoc?.cidade || "",
+        estado: interest.caso_estado || casoDoc?.estado || "",
+        status: interest.caso_status || casoDoc?.status || "ABERTO",
+        created_at:
+          interest.caso_created_at ||
+          casoDoc?.created_at ||
+          interest.created_at,
+        interest_id: interest.id,
+        interest_status: interest.status,
+        is_negotiation: interest.status === "NEGOTIATING",
+      };
     })
     .filter(Boolean);
 
-
-  
-
   const renderQueroSite = () => {
-    const whatsappMsg = encodeURIComponent("Olá sou advogado pró do site Social Jurídico, e gostaria de contratar o meu site com o desconto de 50%.");
+    const whatsappMsg = encodeURIComponent(
+      "Olá sou advogado pró do site Social Jurídico, e gostaria de contratar o meu site com o desconto de 50%.",
+    );
     const whatsappUrl = `https://wa.me/5551993392983?text=${whatsappMsg}`;
 
     return (
@@ -1780,48 +1919,65 @@ export default function AdvogadoDashboard() {
             <Sparkles size={14} /> OPORTUNIDADE EXCLUSIVA PRO
           </div>
           <h2 className={styles.queroSiteTitle}>
-            Seja a Autoridade que seus Clientes Procuram: Seu Site Profissional com 50% de Desconto!
+            Seja a Autoridade que seus Clientes Procuram: Seu Site Profissional
+            com 50% de Desconto!
           </h2>
-          
+
           <div className={styles.queroSiteContent}>
             <p className={styles.queroSiteText}>
-              No mundo jurídico moderno, quem não tem um site de alta performance não existe para o Google. 
-              Como advogado(a) PRO do SocialJurídico, você garante as melhores ferramentas de gestão, e agora, a melhor vitrine digital.
+              No mundo jurídico moderno, quem não tem um site de alta
+              performance não existe para o Google. Como advogado(a) PRO do
+              SocialJurídico, você garante as melhores ferramentas de gestão, e
+              agora, a melhor vitrine digital.
             </p>
-            
+
             <div className={styles.queroSiteFeatureGrid}>
               <div className={styles.queroSiteFeature}>
                 <Zap size={20} color="var(--color-gold)" />
                 <div>
                   <h4>Tecnologia Next.js</h4>
-                  <p>A mesma tecnologia da Netflix e TikTok. Velocidade extrema e estabilidade.</p>
+                  <p>
+                    A mesma tecnologia da Netflix e TikTok. Velocidade extrema e
+                    estabilidade.
+                  </p>
                 </div>
               </div>
               <div className={styles.queroSiteFeature}>
                 <Search size={20} color="var(--color-gold)" />
                 <div>
                   <h4>SEO Avançado</h4>
-                  <p>Estrutura otimizada para você aparecer no topo das buscas orgânicas.</p>
+                  <p>
+                    Estrutura otimizada para você aparecer no topo das buscas
+                    orgânicas.
+                  </p>
                 </div>
               </div>
               <div className={styles.queroSiteFeature}>
                 <Shield size={20} color="var(--color-gold)" />
                 <div>
                   <h4>Hospedagem Gratuita</h4>
-                  <p>Esqueça mensalidades de servidor. Hospedagem gratuita vitalícia inclusa.</p>
+                  <p>
+                    Esqueça mensalidades de servidor. Hospedagem gratuita
+                    vitalícia inclusa.
+                  </p>
                 </div>
               </div>
               <div className={styles.queroSiteFeature}>
                 <Paperclip size={20} color="var(--color-gold)" />
                 <div>
                   <h4>Código Fonte</h4>
-                  <p>O site é seu de verdade. Entregamos o código fonte completo e original.</p>
+                  <p>
+                    O site é seu de verdade. Entregamos o código fonte completo
+                    e original.
+                  </p>
                 </div>
               </div>
             </div>
 
             <div className={styles.queroSitePromoBox}>
-              <div className={styles.promoLabel}>INVESTIMENTO EXCLUSIVO PRO</div>
+              <div className={styles.promoLabel}>
+                INVESTIMENTO EXCLUSIVO PRO
+              </div>
               <div className={styles.promoPrices}>
                 <span className={styles.oldPrice}>R$ 1.000,00</span>
                 <span className={styles.newPrice}>R$ 500,00</span>
@@ -1836,15 +1992,27 @@ export default function AdvogadoDashboard() {
                 <User size={30} />
               </div>
               <div className={styles.devInfo}>
-                <span className={styles.devName}>Desenvolvedor: <strong>Saulo Pavanello</strong></span>
-                <a href="https://www.saulopavanello.com.br" target="_blank" rel="noopener noreferrer" className={styles.devLink}>
-                   www.saulopavanello.com.br
+                <span className={styles.devName}>
+                  Desenvolvedor: <strong>Saulo Pavanello</strong>
+                </span>
+                <a
+                  href="https://www.saulopavanello.com.br"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.devLink}
+                >
+                  www.saulopavanello.com.br
                 </a>
               </div>
             </div>
 
-            <div style={{ marginTop: '40px', textAlign: 'center' }}>
-              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className={styles.wppBtn}>
+            <div style={{ marginTop: "40px", textAlign: "center" }}>
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.wppBtn}
+              >
                 <MessageSquare size={20} /> Contratar Agora via WhatsApp
               </a>
             </div>
@@ -1855,12 +2023,20 @@ export default function AdvogadoDashboard() {
   };
 
   const renderIndicacoes = () => {
-    const referralLink = typeof window !== 'undefined' ? `${window.location.origin}/cadastro?ref=${profileData?.id}` : "";
-    
+    const referralLink =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/cadastro?ref=${profileData?.id}`
+        : "";
+
     const stats = {
       totalIndicados: indicacoes.length,
-      assinantesPro: indicacoes.filter(i => i.status === 'ASSINOU_PRO' || i.status === 'COMISSIONADO').length,
-      jurisGanhos: indicacoes.reduce((acc, i) => acc + (Number(i.valor_comissao) || 0), 0)
+      assinantesPro: indicacoes.filter(
+        (i) => i.status === "ASSINOU_PRO" || i.status === "COMISSIONADO",
+      ).length,
+      jurisGanhos: indicacoes.reduce(
+        (acc, i) => acc + (Number(i.valor_comissao) || 0),
+        0,
+      ),
     };
 
     return (
@@ -1868,7 +2044,8 @@ export default function AdvogadoDashboard() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Indique e Ganhe</h2>
           <p className={styles.sectionDesc}>
-            Fortaleça a comunidade e ganhe créditos em Juris por cada assinatura PRO indicada.
+            Fortaleça a comunidade e ganhe créditos em Juris por cada assinatura
+            PRO indicada.
           </p>
         </div>
 
@@ -1883,25 +2060,30 @@ export default function AdvogadoDashboard() {
               <li>
                 <span className={styles.ruleIcon}>1</span>
                 <div>
-                  <strong>Compartilhe seu link:</strong> Envie seu link único para colegas advogados ou clientes.
+                  <strong>Compartilhe seu link:</strong> Envie seu link único
+                  para colegas advogados ou clientes.
                 </div>
               </li>
               <li>
                 <span className={styles.ruleIcon}>2</span>
                 <div>
-                  <strong>Assinatura PRO:</strong> Quando seu indicado assinar o plano <strong>SocialJurídico PRO</strong>...
+                  <strong>Assinatura PRO:</strong> Quando seu indicado assinar o
+                  plano <strong>SocialJurídico PRO</strong>...
                 </div>
               </li>
               <li>
                 <span className={styles.ruleIcon}>3</span>
                 <div>
-                  <strong>Ganhe 50%:</strong> Você recebe <strong>50% do valor pago</strong> revertido em créditos de <strong>Juri</strong>.
+                  <strong>Ganhe 50%:</strong> Você recebe{" "}
+                  <strong>50% do valor pago</strong> revertido em créditos de{" "}
+                  <strong>Juri</strong>.
                 </div>
               </li>
               <li>
                 <span className={styles.ruleIcon}>4</span>
                 <div>
-                  <strong>Crédito em 48h:</strong> O valor será validado e creditado pela administração em até 48 horas úteis.
+                  <strong>Crédito em 48h:</strong> O valor será validado e
+                  creditado pela administração em até 48 horas úteis.
                 </div>
               </li>
             </ul>
@@ -1912,8 +2094,13 @@ export default function AdvogadoDashboard() {
             <div className={styles.linkShareArea}>
               <label>Seu Link de Indicação Único</label>
               <div className={styles.copyLinkRow}>
-                <input type="text" readOnly value={referralLink} className={styles.referralInput} />
-                <button 
+                <input
+                  type="text"
+                  readOnly
+                  value={referralLink}
+                  className={styles.referralInput}
+                />
+                <button
                   className={styles.copyBtn}
                   onClick={() => {
                     navigator.clipboard.writeText(referralLink);
@@ -1923,7 +2110,9 @@ export default function AdvogadoDashboard() {
                   <Copy size={18} /> Copiar
                 </button>
               </div>
-              <p className={styles.linkHint}>Divulgue em grupos de WhatsApp, LinkedIn ou Instagram.</p>
+              <p className={styles.linkHint}>
+                Divulgue em grupos de WhatsApp, LinkedIn ou Instagram.
+              </p>
             </div>
 
             <div className={styles.miniStatsRow}>
@@ -1935,8 +2124,13 @@ export default function AdvogadoDashboard() {
                 <span className={styles.statVal}>{stats.assinantesPro}</span>
                 <span className={styles.statLabel}>Assinantes PRO</span>
               </div>
-              <div className={styles.miniStat} style={{ border: 'none' }}>
-                <span className={styles.statVal} style={{ color: 'var(--color-gold)' }}>{stats.jurisGanhos}</span>
+              <div className={styles.miniStat} style={{ border: "none" }}>
+                <span
+                  className={styles.statVal}
+                  style={{ color: "var(--color-gold)" }}
+                >
+                  {stats.jurisGanhos}
+                </span>
                 <span className={styles.statLabel}>Juris Ganhos</span>
               </div>
             </div>
@@ -1946,10 +2140,12 @@ export default function AdvogadoDashboard() {
         {/* Tabela de Transparência */}
         <div className={styles.transparencySection}>
           <div className={styles.transparencyHeader}>
-            <h3><Users size={20} /> Histórico de Indicações</h3>
+            <h3>
+              <Users size={20} /> Histórico de Indicações
+            </h3>
             <p>Acompanhe em tempo real quem utilizou seu link.</p>
           </div>
-          
+
           <div className={styles.tableWrapper}>
             <table className={styles.referralTable}>
               <thead>
@@ -1961,28 +2157,49 @@ export default function AdvogadoDashboard() {
                 </tr>
               </thead>
               <tbody>
-                 {indicacoes.length > 0 ? (
-                    indicacoes.map((ind) => (
-                      <tr key={ind.id}>
-                        <td>{new Date(ind.created_at).toLocaleDateString()}</td>
-                        <td>{ind.nome_indicado}</td>
-                        <td>
-                          <span className={`${styles.badge} ${ind.status === 'COMISSIONADO' ? styles.badgeHigh : ind.status === 'ASSINOU_PRO' ? styles.badgeMed : styles.badgeLow}`}>
-                            {ind.status}
-                          </span>
-                        </td>
-                        <td style={{ color: ind.valor_comissao > 0 ? 'var(--color-gold)' : 'inherit', fontWeight: 800 }}>
-                          {ind.valor_comissao > 0 ? `+${ind.valor_comissao} Juris` : '-'}
-                        </td>
-                      </tr>
-                    ))
-                 ) : (
-                    <tr>
-                       <td colSpan="4" style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.3)' }}>
-                          {loadingIndicacoes ? "Carregando..." : "Nenhuma indicação registrada até o momento. Comece a compartilhar seu link!"}
-                       </td>
+                {indicacoes.length > 0 ? (
+                  indicacoes.map((ind) => (
+                    <tr key={ind.id}>
+                      <td>{new Date(ind.created_at).toLocaleDateString()}</td>
+                      <td>{ind.nome_indicado}</td>
+                      <td>
+                        <span
+                          className={`${styles.badge} ${ind.status === "COMISSIONADO" ? styles.badgeHigh : ind.status === "ASSINOU_PRO" ? styles.badgeMed : styles.badgeLow}`}
+                        >
+                          {ind.status}
+                        </span>
+                      </td>
+                      <td
+                        style={{
+                          color:
+                            ind.valor_comissao > 0
+                              ? "var(--color-gold)"
+                              : "inherit",
+                          fontWeight: 800,
+                        }}
+                      >
+                        {ind.valor_comissao > 0
+                          ? `+${ind.valor_comissao} Juris`
+                          : "-"}
+                      </td>
                     </tr>
-                 )}
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="4"
+                      style={{
+                        textAlign: "center",
+                        padding: "40px",
+                        color: "rgba(255,255,255,0.3)",
+                      }}
+                    >
+                      {loadingIndicacoes
+                        ? "Carregando..."
+                        : "Nenhuma indicação registrada até o momento. Comece a compartilhar seu link!"}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -1993,193 +2210,361 @@ export default function AdvogadoDashboard() {
 
   const renderBlindagem = () => {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', color: '#fff' }}>
-        <div style={{ marginBottom: '20px' }}>
-          <Shield size={64} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '10px' }}>Blindagem de Documentos</h2>
-          <p style={{ color: '#a0a0a0', fontSize: '1rem', maxWidth: '600px', margin: '0 auto' }}>
-            Esta ferramenta permite proteger seus documentos jurídicos contra fraudes e adulterações usando tecnologia de ponta.
+      <div style={{ padding: "20px", textAlign: "center", color: "#fff" }}>
+        <div style={{ marginBottom: "20px" }}>
+          <Shield
+            size={64}
+            color="var(--color-gold)"
+            style={{ marginBottom: "15px" }}
+          />
+          <h2
+            style={{
+              fontSize: "1.8rem",
+              fontWeight: "bold",
+              marginBottom: "10px",
+            }}
+          >
+            Blindagem de Documentos
+          </h2>
+          <p
+            style={{
+              color: "#a0a0a0",
+              fontSize: "1rem",
+              maxWidth: "600px",
+              margin: "0 auto",
+            }}
+          >
+            Esta ferramenta permite proteger seus documentos jurídicos contra
+            fraudes e adulterações usando tecnologia de ponta.
           </p>
         </div>
-        
-        <div style={{ 
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-          maxWidth: '1200px',
-          margin: '30px auto 0 auto',
-          padding: '0 10px'
-        }}>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+            gap: "20px",
+            maxWidth: "1200px",
+            margin: "30px auto 0 auto",
+            padding: "0 10px",
+          }}
+        >
           {/* Card 1 */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '12px',
-            padding: '25px',
-            textAlign: 'left',
-            cursor: 'pointer',
-            transition: 'transform(0.2s), background 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-            e.currentTarget.style.transform = 'translateY(-5px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
-          onClick={() => setShowContratoModal(true)}
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.02)",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              borderRadius: "12px",
+              padding: "25px",
+              textAlign: "left",
+              cursor: "pointer",
+              transition: "transform(0.2s), background 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.transform = "translateY(-5px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            onClick={() => setShowContratoModal(true)}
           >
-            <PenTool size={32} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>Blindagem de Contratos</h3>
-            <p style={{ color: '#808080', fontSize: '0.85rem', lineHeight: '1.4' }}>
-              Proteja seus contratos contra alterações não autorizadas e garanta a autenticidade das assinaturas.
+            <PenTool
+              size={32}
+              color="var(--color-gold)"
+              style={{ marginBottom: "15px" }}
+            />
+            <h3
+              style={{
+                fontSize: "1.1rem",
+                fontWeight: "bold",
+                marginBottom: "10px",
+                color: "#fff",
+              }}
+            >
+              Blindagem de Contratos
+            </h3>
+            <p
+              style={{
+                color: "#808080",
+                fontSize: "0.85rem",
+                lineHeight: "1.4",
+              }}
+            >
+              Proteja seus contratos contra alterações não autorizadas e garanta
+              a autenticidade das assinaturas.
             </p>
           </div>
 
           {/* Card 2 */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '12px',
-            padding: '25px',
-            textAlign: 'left',
-            cursor: 'pointer',
-            transition: 'transform 0.2s, background 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-            e.currentTarget.style.transform = 'translateY(-5px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
-          onClick={() => {
-            setProcuracaoForm(prev => ({
-              ...prev,
-              outorgado: {
-                nome: profileData?.name || "",
-                oab: profileData?.oab || "",
-                cpf: "",
-                endereco: ""
-              }
-            }));
-            setShowProcuracaoModal(true);
-          }}
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.02)",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              borderRadius: "12px",
+              padding: "25px",
+              textAlign: "left",
+              cursor: "pointer",
+              transition: "transform 0.2s, background 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.transform = "translateY(-5px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            onClick={() => {
+              setProcuracaoForm((prev) => ({
+                ...prev,
+                outorgado: {
+                  nome: profileData?.name || "",
+                  oab: profileData?.oab || "",
+                  cpf: "",
+                  endereco: "",
+                },
+              }));
+              setShowProcuracaoModal(true);
+            }}
           >
-            <ShieldHalf size={32} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>Blindagem de Procuração</h3>
-            <p style={{ color: '#808080', fontSize: '0.85rem', lineHeight: '1.4' }}>
-              Evite fraudes em procurações com registro digital seguro e verificação em tempo real.
+            <ShieldHalf
+              size={32}
+              color="var(--color-gold)"
+              style={{ marginBottom: "15px" }}
+            />
+            <h3
+              style={{
+                fontSize: "1.1rem",
+                fontWeight: "bold",
+                marginBottom: "10px",
+                color: "#fff",
+              }}
+            >
+              Blindagem de Procuração
+            </h3>
+            <p
+              style={{
+                color: "#808080",
+                fontSize: "0.85rem",
+                lineHeight: "1.4",
+              }}
+            >
+              Evite fraudes em procurações com registro digital seguro e
+              verificação em tempo real.
             </p>
           </div>
 
           {/* Card 3 */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '12px',
-            padding: '25px',
-            textAlign: 'left',
-            cursor: 'pointer',
-            transition: 'transform 0.2s, background 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-            e.currentTarget.style.transform = 'translateY(-5px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
-          onClick={() => setShowProvasModal(true)}
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.02)",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              borderRadius: "12px",
+              padding: "25px",
+              textAlign: "left",
+              cursor: "pointer",
+              transition: "transform 0.2s, background 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.transform = "translateY(-5px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
+            onClick={() => setShowProvasModal(true)}
           >
-            <Eye size={32} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>Blindagem de Provas Digitais</h3>
-            <p style={{ color: '#808080', fontSize: '0.85rem', lineHeight: '1.4' }}>
-              Registre prints, áudios e vídeos com validade jurídica e carimbo de tempo.
+            <Eye
+              size={32}
+              color="var(--color-gold)"
+              style={{ marginBottom: "15px" }}
+            />
+            <h3
+              style={{
+                fontSize: "1.1rem",
+                fontWeight: "bold",
+                marginBottom: "10px",
+                color: "#fff",
+              }}
+            >
+              Blindagem de Provas Digitais
+            </h3>
+            <p
+              style={{
+                color: "#808080",
+                fontSize: "0.85rem",
+                lineHeight: "1.4",
+              }}
+            >
+              Registre prints, áudios e vídeos com validade jurídica e carimbo
+              de tempo.
             </p>
           </div>
 
           {/* Card 4 */}
-          <div style={{
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            borderRadius: '12px',
-            padding: '25px',
-            textAlign: 'left',
-            cursor: 'pointer',
-            transition: 'transform 0.2s, background 0.2s',
-          }}
-          onClick={() => setShowNotificacaoModal(true)}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-            e.currentTarget.style.transform = 'translateY(-5px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
+          <div
+            style={{
+              background: "rgba(255, 255, 255, 0.02)",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              borderRadius: "12px",
+              padding: "25px",
+              textAlign: "left",
+              cursor: "pointer",
+              transition: "transform 0.2s, background 0.2s",
+            }}
+            onClick={() => setShowNotificacaoModal(true)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.transform = "translateY(-5px)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.02)";
+              e.currentTarget.style.transform = "translateY(0)";
+            }}
           >
-            <Send size={32} color="var(--color-gold)" style={{ marginBottom: '15px' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>Notificação ExtraJudicial</h3>
-            <p style={{ color: '#808080', fontSize: '0.85rem', lineHeight: '1.4' }}>
-              Envie notificações com comprovação de entrega e leitura com validade jurídica.
+            <Send
+              size={32}
+              color="var(--color-gold)"
+              style={{ marginBottom: "15px" }}
+            />
+            <h3
+              style={{
+                fontSize: "1.1rem",
+                fontWeight: "bold",
+                marginBottom: "10px",
+                color: "#fff",
+              }}
+            >
+              Notificação ExtraJudicial
+            </h3>
+            <p
+              style={{
+                color: "#808080",
+                fontSize: "0.85rem",
+                lineHeight: "1.4",
+              }}
+            >
+              Envie notificações com comprovação de entrega e leitura com
+              validade jurídica.
             </p>
           </div>
         </div>
 
         {/* Lista de Documentos Blindados */}
-        <div style={{ 
-          marginTop: '40px', 
-          maxWidth: '1200px', 
-          margin: '40px auto 0 auto',
-          padding: '20px',
-          background: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          borderRadius: '12px',
-          textAlign: 'left'
-        }}>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '15px', color: '#fff' }}>📄 Documentos Blindados</h3>
-          
+        <div
+          style={{
+            marginTop: "40px",
+            maxWidth: "1200px",
+            margin: "40px auto 0 auto",
+            padding: "20px",
+            background: "rgba(255, 255, 255, 0.02)",
+            border: "1px solid rgba(255, 255, 255, 0.05)",
+            borderRadius: "12px",
+            textAlign: "left",
+          }}
+        >
+          <h3
+            style={{
+              fontSize: "1.2rem",
+              fontWeight: "bold",
+              marginBottom: "15px",
+              color: "#fff",
+            }}
+          >
+            📄 Documentos Blindados
+          </h3>
+
           {blindadosDocuments.length === 0 ? (
-            <p style={{ color: '#808080', fontSize: '0.9rem' }}>Nenhum documento blindado ainda.</p>
+            <p style={{ color: "#808080", fontSize: "0.9rem" }}>
+              Nenhum documento blindado ainda.
+            </p>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  fontSize: "0.9rem",
+                }}
+              >
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #333', textAlign: 'left' }}>
-                    <th style={{ padding: '10px', color: '#aaa' }}>Documento</th>
-                    <th style={{ padding: '10px', color: '#aaa' }}>Protocolo</th>
-                    <th style={{ padding: '10px', color: '#aaa' }}>Data</th>
-                    <th style={{ padding: '10px', color: '#aaa' }}>Hash</th>
-                    <th style={{ padding: '10px', color: '#aaa' }}>Ações</th>
+                  <tr
+                    style={{
+                      borderBottom: "1px solid #333",
+                      textAlign: "left",
+                    }}
+                  >
+                    <th style={{ padding: "10px", color: "#aaa" }}>
+                      Documento
+                    </th>
+                    <th style={{ padding: "10px", color: "#aaa" }}>
+                      Protocolo
+                    </th>
+                    <th style={{ padding: "10px", color: "#aaa" }}>Data</th>
+                    <th style={{ padding: "10px", color: "#aaa" }}>Hash</th>
+                    <th style={{ padding: "10px", color: "#aaa" }}>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {blindadosDocuments.map((doc) => (
-                    <tr key={doc.id} style={{ borderBottom: '1px solid #222' }}>
-                      <td style={{ padding: '10px', color: '#fff' }}>
+                    <tr key={doc.id} style={{ borderBottom: "1px solid #222" }}>
+                      <td style={{ padding: "10px", color: "#fff" }}>
                         {doc.name}
-                        {doc.type === 'Notificação' && (
-                          <span style={{ marginLeft: '10px', padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', background: doc.status === 'lido' ? '#00e676' : '#ffc107', color: '#000', fontWeight: 'bold' }}>
-                            {doc.status === 'lido' ? 'LIDO' : 'ENVIADO'}
+                        {doc.type === "Notificação" && (
+                          <span
+                            style={{
+                              marginLeft: "10px",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontSize: "0.7rem",
+                              background:
+                                doc.status === "lido" ? "#00e676" : "#ffc107",
+                              color: "#000",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {doc.status === "lido" ? "LIDO" : "ENVIADO"}
                           </span>
                         )}
                       </td>
-                      <td style={{ padding: '10px', color: '#00e676' }}>{doc.protocol}</td>
-                      <td style={{ padding: '10px', color: '#ccc' }}>{doc.date}</td>
-                      <td style={{ padding: '10px', color: '#aaa', fontSize: '0.8rem', fontFamily: 'monospace' }}>
-                        {doc.hash ? doc.hash.substring(0, 20) + '...' : 'N/I'}
+                      <td style={{ padding: "10px", color: "#00e676" }}>
+                        {doc.protocol}
                       </td>
-                      <td style={{ padding: '10px', display: 'flex', gap: '10px' }}>
+                      <td style={{ padding: "10px", color: "#ccc" }}>
+                        {doc.date}
+                      </td>
+                      <td
+                        style={{
+                          padding: "10px",
+                          color: "#aaa",
+                          fontSize: "0.8rem",
+                          fontFamily: "monospace",
+                        }}
+                      >
+                        {doc.hash ? doc.hash.substring(0, 20) + "..." : "N/I"}
+                      </td>
+                      <td
+                        style={{
+                          padding: "10px",
+                          display: "flex",
+                          gap: "10px",
+                        }}
+                      >
                         <button
                           type="button"
-                          style={{ background: 'none', border: 'none', color: 'var(--color-gold)', cursor: 'pointer', fontSize: '0.9rem' }}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "var(--color-gold)",
+                            cursor: "pointer",
+                            fontSize: "0.9rem",
+                          }}
                           onClick={() => {
                             toast.success("Gerando certificado...");
-                            
+
                             generateCertificatePDF({
                               fileName: doc.name,
                               protocol: doc.protocol,
@@ -2187,36 +2572,48 @@ export default function AdvogadoDashboard() {
                               date: doc.date,
                               hash: doc.hash,
                               ip: "::1",
-                              agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I'
+                              agent:
+                                typeof navigator !== "undefined"
+                                  ? navigator.userAgent
+                                  : "N/I",
                             });
                           }}
                         >
                           Baixar Certificado
                         </button>
 
-                        {doc.type === 'Notificação' && doc.status === 'lido' && (
-                          <button
-                            type="button"
-                            style={{ background: 'none', border: 'none', color: '#00e676', cursor: 'pointer', fontSize: '0.9rem' }}
-                            onClick={() => {
-                              toast.success("Gerando certificado de entrega...");
-                              
-                              generateDeliveryCertificatePDF({
-                                fileName: doc.name,
-                                protocol: doc.protocol,
-                                owner: `${profileData?.name || "Advogado"} (OAB: ${profileData?.oab || "N/I"})`,
-                                date: doc.date,
-                                hash: doc.hash,
-                                readAt: doc.read_at,
-                                readIp: doc.read_ip,
-                                readAgent: doc.read_user_agent,
-                                readGeo: doc.read_geo
-                              });
-                            }}
-                          >
-                            Certificado de Entrega
-                          </button>
-                        )}
+                        {doc.type === "Notificação" &&
+                          doc.status === "lido" && (
+                            <button
+                              type="button"
+                              style={{
+                                background: "none",
+                                border: "none",
+                                color: "#00e676",
+                                cursor: "pointer",
+                                fontSize: "0.9rem",
+                              }}
+                              onClick={() => {
+                                toast.success(
+                                  "Gerando certificado de entrega...",
+                                );
+
+                                generateDeliveryCertificatePDF({
+                                  fileName: doc.name,
+                                  protocol: doc.protocol,
+                                  owner: `${profileData?.name || "Advogado"} (OAB: ${profileData?.oab || "N/I"})`,
+                                  date: doc.date,
+                                  hash: doc.hash,
+                                  readAt: doc.read_at,
+                                  readIp: doc.read_ip,
+                                  readAgent: doc.read_user_agent,
+                                  readGeo: doc.read_geo,
+                                });
+                              }}
+                            >
+                              Certificado de Entrega
+                            </button>
+                          )}
                       </td>
                     </tr>
                   ))}
@@ -2233,13 +2630,35 @@ export default function AdvogadoDashboard() {
     return (
       <div className={styles.toolContainer}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "30px",
+          }}
+        >
           <div>
-            <h2 className={styles.sectionTitle} style={{ fontSize: '1.8rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <PenTool color="var(--color-gold)" size={28} /> Central de Assinaturas Digitais
+            <h2
+              className={styles.sectionTitle}
+              style={{
+                fontSize: "1.8rem",
+                fontWeight: 800,
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
+              <PenTool color="var(--color-gold)" size={28} /> Central de
+              Assinaturas Digitais
             </h2>
-            <p className={styles.sectionDesc} style={{ color: 'var(--color-silver-dark)', marginTop: '4px' }}>
-              Assine documentos com carimbo de tempo eletrônico e validade jurídica equivalente à assinatura física.
+            <p
+              className={styles.sectionDesc}
+              style={{ color: "var(--color-silver-dark)", marginTop: "4px" }}
+            >
+              Assine documentos com carimbo de tempo eletrônico e validade
+              jurídica equivalente à assinatura física.
             </p>
           </div>
           <button
@@ -2251,38 +2670,171 @@ export default function AdvogadoDashboard() {
                 lawyer_email: profileData?.email || "",
                 client_name: "",
                 client_email: "",
-                client_id: ""
+                client_id: "",
               });
               setSignatureFile(null);
               setShowSignatureModal(true);
             }}
             className={styles.newClientBtn}
-            style={{ background: 'linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%)', color: '#000', fontWeight: 'bold' }}
+            style={{
+              background:
+                "linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%)",
+              color: "#000",
+              fontWeight: "bold",
+            }}
           >
             <Plus size={18} /> Iniciar Novo Processo
           </button>
         </div>
 
         {/* Metrics Row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', backdropFilter: 'blur(10px)' }}>
-            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-silver-dark)', fontWeight: 600 }}>Total de Processos</span>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', marginTop: '5px' }}>{signatures.length}</div>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0, 230, 118, 0.1)', borderRadius: '16px', padding: '20px', backdropFilter: 'blur(10px)' }}>
-            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#00e676', fontWeight: 600 }}>Assinados por Completo</span>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#00e676', marginTop: '5px' }}>{signatures.filter(s => s.status === 'signed').length}</div>
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255, 152, 0, 0.1)', borderRadius: '16px', padding: '20px', backdropFilter: 'blur(10px)' }}>
-            <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#ff9800', fontWeight: 600 }}>Aguardando Assinaturas</span>
-            <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ff9800', marginTop: '5px' }}>{signatures.filter(s => s.status !== 'signed').length}</div>
-          </div>
-          <div style={{ background: 'rgba(212,175,55,0.03)', border: '1px solid rgba(212,175,55,0.15)', borderRadius: '16px', padding: '20px', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-            <div>
-              <span style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-gold)', fontWeight: 600 }}>Validador de Assinaturas</span>
-              <p style={{ fontSize: '0.8rem', color: 'var(--color-silver-dark)', marginTop: '2px', margin: 0 }}>Verifique a validade de um código.</p>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "20px",
+            marginBottom: "30px",
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.05)",
+              borderRadius: "16px",
+              padding: "20px",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.75rem",
+                textTransform: "uppercase",
+                color: "var(--color-silver-dark)",
+                fontWeight: 600,
+              }}
+            >
+              Total de Processos
+            </span>
+            <div
+              style={{
+                fontSize: "2rem",
+                fontWeight: 800,
+                color: "#fff",
+                marginTop: "5px",
+              }}
+            >
+              {signatures.length}
             </div>
-            <a href="/validar" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '0.85rem', color: 'var(--color-gold)', textDecoration: 'none', fontWeight: 'bold', marginTop: '10px' }}>
+          </div>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(0, 230, 118, 0.1)",
+              borderRadius: "16px",
+              padding: "20px",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.75rem",
+                textTransform: "uppercase",
+                color: "#00e676",
+                fontWeight: 600,
+              }}
+            >
+              Assinados por Completo
+            </span>
+            <div
+              style={{
+                fontSize: "2rem",
+                fontWeight: 800,
+                color: "#00e676",
+                marginTop: "5px",
+              }}
+            >
+              {signatures.filter((s) => s.status === "signed").length}
+            </div>
+          </div>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255, 152, 0, 0.1)",
+              borderRadius: "16px",
+              padding: "20px",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.75rem",
+                textTransform: "uppercase",
+                color: "#ff9800",
+                fontWeight: 600,
+              }}
+            >
+              Aguardando Assinaturas
+            </span>
+            <div
+              style={{
+                fontSize: "2rem",
+                fontWeight: 800,
+                color: "#ff9800",
+                marginTop: "5px",
+              }}
+            >
+              {signatures.filter((s) => s.status !== "signed").length}
+            </div>
+          </div>
+          <div
+            style={{
+              background: "rgba(212,175,55,0.03)",
+              border: "1px solid rgba(212,175,55,0.15)",
+              borderRadius: "16px",
+              padding: "20px",
+              backdropFilter: "blur(10px)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <div>
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  textTransform: "uppercase",
+                  color: "var(--color-gold)",
+                  fontWeight: 600,
+                }}
+              >
+                Validador de Assinaturas
+              </span>
+              <p
+                style={{
+                  fontSize: "0.8rem",
+                  color: "var(--color-silver-dark)",
+                  marginTop: "2px",
+                  margin: 0,
+                }}
+              >
+                Verifique a validade de um código.
+              </p>
+            </div>
+            <a
+              href="/validar"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                fontSize: "0.85rem",
+                color: "var(--color-gold)",
+                textDecoration: "none",
+                fontWeight: "bold",
+                marginTop: "10px",
+              }}
+            >
               Acessar Validador <ExternalLink size={14} />
             </a>
           </div>
@@ -2290,16 +2842,61 @@ export default function AdvogadoDashboard() {
 
         {/* Content Listing */}
         {loadingSignatures ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: '15px' }}>
-            <Loader2 size={40} className={styles.spin} color="var(--color-gold)" />
-            <p style={{ color: 'var(--color-silver-dark)' }}>Carregando seus processos de assinatura...</p>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "80px 0",
+              gap: "15px",
+            }}
+          >
+            <Loader2
+              size={40}
+              className={styles.spin}
+              color="var(--color-gold)"
+            />
+            <p style={{ color: "var(--color-silver-dark)" }}>
+              Carregando seus processos de assinatura...
+            </p>
           </div>
         ) : signatures.length === 0 ? (
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: '16px', padding: '60px 20px', textAlign: 'center' }}>
-            <PenTool size={48} color="rgba(255,255,255,0.1)" style={{ marginBottom: '15px' }} />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>Nenhuma Assinatura Registrada</h3>
-            <p style={{ color: 'var(--color-silver-dark)', maxWidth: '500px', margin: '0 auto 20px auto', fontSize: '0.9rem' }}>
-              Inicie um novo processo de assinatura enviando um contrato ou procuração PDF para coletar assinaturas eletrônicas com validade jurídica de tempo e hash.
+          <div
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px dashed rgba(255,255,255,0.05)",
+              borderRadius: "16px",
+              padding: "60px 20px",
+              textAlign: "center",
+            }}
+          >
+            <PenTool
+              size={48}
+              color="rgba(255,255,255,0.1)"
+              style={{ marginBottom: "15px" }}
+            />
+            <h3
+              style={{
+                fontSize: "1.2rem",
+                fontWeight: "bold",
+                color: "#fff",
+                marginBottom: "8px",
+              }}
+            >
+              Nenhuma Assinatura Registrada
+            </h3>
+            <p
+              style={{
+                color: "var(--color-silver-dark)",
+                maxWidth: "500px",
+                margin: "0 auto 20px auto",
+                fontSize: "0.9rem",
+              }}
+            >
+              Inicie um novo processo de assinatura enviando um contrato ou
+              procuração PDF para coletar assinaturas eletrônicas com validade
+              jurídica de tempo e hash.
             </p>
             <button
               onClick={() => {
@@ -2310,56 +2907,196 @@ export default function AdvogadoDashboard() {
                   lawyer_email: profileData?.email || "",
                   client_name: "",
                   client_email: "",
-                  client_id: ""
+                  client_id: "",
                 });
                 setSignatureFile(null);
                 setShowSignatureModal(true);
               }}
               className={styles.newClientBtn}
-              style={{ background: 'linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%)', color: '#000', fontWeight: 'bold' }}
+              style={{
+                background:
+                  "linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%)",
+                color: "#000",
+                fontWeight: "bold",
+              }}
             >
               <Plus size={16} /> Iniciar Primeira Assinatura
             </button>
           </div>
         ) : (
-          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '16px', overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <div
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.05)",
+              borderRadius: "16px",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  textAlign: "left",
+                }}
+              >
                 <thead>
-                  <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Documento / Código</th>
-                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Signatários</th>
-                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Status Geral</th>
-                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700 }}>Criado em</th>
-                    <th style={{ padding: '15px 20px', color: 'var(--color-silver-dark)', fontSize: '0.75rem', textTransform: 'uppercase', fontWeight: 700, textAlign: 'right' }}>Ações</th>
+                  <tr
+                    style={{
+                      background: "rgba(255,255,255,0.02)",
+                      borderBottom: "1px solid rgba(255,255,255,0.05)",
+                    }}
+                  >
+                    <th
+                      style={{
+                        padding: "15px 20px",
+                        color: "var(--color-silver-dark)",
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Documento / Código
+                    </th>
+                    <th
+                      style={{
+                        padding: "15px 20px",
+                        color: "var(--color-silver-dark)",
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Signatários
+                    </th>
+                    <th
+                      style={{
+                        padding: "15px 20px",
+                        color: "var(--color-silver-dark)",
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Status Geral
+                    </th>
+                    <th
+                      style={{
+                        padding: "15px 20px",
+                        color: "var(--color-silver-dark)",
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Criado em
+                    </th>
+                    <th
+                      style={{
+                        padding: "15px 20px",
+                        color: "var(--color-silver-dark)",
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                        textAlign: "right",
+                      }}
+                    >
+                      Ações
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {signatures.map((sig) => {
-                    const meta = typeof sig.metadata === 'string' ? JSON.parse(sig.metadata) : sig.metadata;
+                    const meta =
+                      typeof sig.metadata === "string"
+                        ? JSON.parse(sig.metadata)
+                        : sig.metadata;
                     const lawyerSigned = meta?.lawyer?.signed;
                     const clientSigned = meta?.client?.signed;
-                    const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+                    const siteUrl =
+                      typeof window !== "undefined"
+                        ? window.location.origin
+                        : "";
                     const clientSignLink = `${siteUrl}/assinatura/${sig.id}?role=client`;
                     const lawyerSignLink = `${siteUrl}/assinatura/${sig.id}?role=lawyer`;
 
                     return (
-                      <tr key={sig.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.01)'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-                        <td style={{ padding: '20px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{ background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)', borderRadius: '8px', padding: '8px', display: 'flex', alignItems: 'center' }}>
+                      <tr
+                        key={sig.id}
+                        style={{
+                          borderBottom: "1px solid rgba(255,255,255,0.03)",
+                          transition: "background 0.2s",
+                        }}
+                        onMouseEnter={(e) =>
+                          (e.currentTarget.style.background =
+                            "rgba(255,255,255,0.01)")
+                        }
+                        onMouseLeave={(e) =>
+                          (e.currentTarget.style.background = "transparent")
+                        }
+                      >
+                        <td style={{ padding: "20px" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "12px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                background: "rgba(212,175,55,0.1)",
+                                color: "var(--color-gold)",
+                                borderRadius: "8px",
+                                padding: "8px",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                            >
                               <FileText size={18} />
                             </div>
                             <div>
-                              <div style={{ fontWeight: 'bold', color: '#fff', fontSize: '0.9rem', marginBottom: '4px' }}>{sig.document_name}</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--color-silver-dark)', fontFamily: 'monospace' }}>{sig.verification_code}</span>
+                              <div
+                                style={{
+                                  fontWeight: "bold",
+                                  color: "#fff",
+                                  fontSize: "0.9rem",
+                                  marginBottom: "4px",
+                                }}
+                              >
+                                {sig.document_name}
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontSize: "0.75rem",
+                                    color: "var(--color-silver-dark)",
+                                    fontFamily: "monospace",
+                                  }}
+                                >
+                                  {sig.verification_code}
+                                </span>
                                 <button
                                   onClick={() => {
-                                    navigator.clipboard.writeText(sig.verification_code);
+                                    navigator.clipboard.writeText(
+                                      sig.verification_code,
+                                    );
                                     toast.success("Código copiado!");
                                   }}
-                                  style={{ background: 'none', border: 'none', color: 'var(--color-silver-dark)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                                  style={{
+                                    background: "none",
+                                    border: "none",
+                                    color: "var(--color-silver-dark)",
+                                    cursor: "pointer",
+                                    padding: "2px",
+                                    display: "flex",
+                                  }}
                                   title="Copiar código"
                                 >
                                   <Copy size={12} />
@@ -2368,66 +3105,224 @@ export default function AdvogadoDashboard() {
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '20px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
-                              <span style={{ color: 'var(--color-silver-dark)', fontWeight: 600 }}>ADV:</span>
-                              <span style={{ color: '#fff' }}>{meta?.lawyer?.name}</span>
+                        <td style={{ padding: "20px" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: "8px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                fontSize: "0.8rem",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  color: "var(--color-silver-dark)",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                ADV:
+                              </span>
+                              <span style={{ color: "#fff" }}>
+                                {meta?.lawyer?.name}
+                              </span>
                               {lawyerSigned ? (
-                                <span style={{ color: '#00e676', fontSize: '0.7rem', background: 'rgba(0, 230, 118, 0.1)', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '3px' }}><Check size={10} /> Assinado</span>
+                                <span
+                                  style={{
+                                    color: "#00e676",
+                                    fontSize: "0.7rem",
+                                    background: "rgba(0, 230, 118, 0.1)",
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                  }}
+                                >
+                                  <Check size={10} /> Assinado
+                                </span>
                               ) : (
-                                <span style={{ color: '#ff9800', fontSize: '0.7rem', background: 'rgba(255, 152, 0, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>Pendente</span>
+                                <span
+                                  style={{
+                                    color: "#ff9800",
+                                    fontSize: "0.7rem",
+                                    background: "rgba(255, 152, 0, 0.1)",
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                  }}
+                                >
+                                  Pendente
+                                </span>
                               )}
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
-                              <span style={{ color: 'var(--color-silver-dark)', fontWeight: 600 }}>CLI:</span>
-                              <span style={{ color: '#fff' }}>{meta?.client?.name}</span>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "8px",
+                                fontSize: "0.8rem",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  color: "var(--color-silver-dark)",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                CLI:
+                              </span>
+                              <span style={{ color: "#fff" }}>
+                                {meta?.client?.name}
+                              </span>
                               {clientSigned ? (
-                                <span style={{ color: '#00e676', fontSize: '0.7rem', background: 'rgba(0, 230, 118, 0.1)', padding: '2px 6px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '3px' }}><Check size={10} /> Assinado</span>
+                                <span
+                                  style={{
+                                    color: "#00e676",
+                                    fontSize: "0.7rem",
+                                    background: "rgba(0, 230, 118, 0.1)",
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "3px",
+                                  }}
+                                >
+                                  <Check size={10} /> Assinado
+                                </span>
                               ) : (
-                                <span style={{ color: '#ff9800', fontSize: '0.7rem', background: 'rgba(255, 152, 0, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>Pendente</span>
+                                <span
+                                  style={{
+                                    color: "#ff9800",
+                                    fontSize: "0.7rem",
+                                    background: "rgba(255, 152, 0, 0.1)",
+                                    padding: "2px 6px",
+                                    borderRadius: "4px",
+                                  }}
+                                >
+                                  Pendente
+                                </span>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: '20px' }}>
-                          {sig.status === 'signed' ? (
-                            <span style={{ padding: '6px 12px', background: 'rgba(0, 230, 118, 0.1)', color: '#00e676', borderRadius: '30px', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <td style={{ padding: "20px" }}>
+                          {sig.status === "signed" ? (
+                            <span
+                              style={{
+                                padding: "6px 12px",
+                                background: "rgba(0, 230, 118, 0.1)",
+                                color: "#00e676",
+                                borderRadius: "30px",
+                                fontSize: "0.75rem",
+                                fontWeight: "bold",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
                               <CheckCircle2 size={12} /> Assinado
                             </span>
-                          ) : sig.status === 'partially_signed' ? (
-                            <span style={{ padding: '6px 12px', background: 'rgba(0, 140, 255, 0.1)', color: '#00b0ff', borderRadius: '30px', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          ) : sig.status === "partially_signed" ? (
+                            <span
+                              style={{
+                                padding: "6px 12px",
+                                background: "rgba(0, 140, 255, 0.1)",
+                                color: "#00b0ff",
+                                borderRadius: "30px",
+                                fontSize: "0.75rem",
+                                fontWeight: "bold",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
                               <Clock size={12} /> Parcialmente
                             </span>
                           ) : (
-                            <span style={{ padding: '6px 12px', background: 'rgba(255, 152, 0, 0.1)', color: '#ff9800', borderRadius: '30px', fontSize: '0.75rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span
+                              style={{
+                                padding: "6px 12px",
+                                background: "rgba(255, 152, 0, 0.1)",
+                                color: "#ff9800",
+                                borderRadius: "30px",
+                                fontSize: "0.75rem",
+                                fontWeight: "bold",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
                               <Clock size={12} /> Pendente
                             </span>
                           )}
                         </td>
-                        <td style={{ padding: '20px', color: 'var(--color-silver-dark)', fontSize: '0.85rem' }}>
-                          {new Date(sig.created_at).toLocaleDateString('pt-BR')}
+                        <td
+                          style={{
+                            padding: "20px",
+                            color: "var(--color-silver-dark)",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {new Date(sig.created_at).toLocaleDateString("pt-BR")}
                         </td>
-                        <td style={{ padding: '20px', textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                        <td style={{ padding: "20px", textAlign: "right" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              justifyContent: "flex-end",
+                              flexWrap: "wrap",
+                            }}
+                          >
                             {!lawyerSigned && (
                               <a
                                 href={lawyerSignLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                style={{ padding: '6px 12px', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', color: 'var(--color-gold)', borderRadius: '6px', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                style={{
+                                  padding: "6px 12px",
+                                  background: "rgba(212,175,55,0.1)",
+                                  border: "1px solid rgba(212,175,55,0.3)",
+                                  color: "var(--color-gold)",
+                                  borderRadius: "6px",
+                                  fontSize: "0.8rem",
+                                  textDecoration: "none",
+                                  fontWeight: "bold",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
                               >
                                 <PenTool size={12} /> Assinar
                               </a>
                             )}
-                            
+
                             {!clientSigned && (
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(clientSignLink);
                                   toast.success("Link do cliente copiado!");
                                 }}
-                                style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                style={{
+                                  padding: "6px 12px",
+                                  background: "rgba(255,255,255,0.05)",
+                                  border: "1px solid rgba(255,255,255,0.1)",
+                                  color: "#fff",
+                                  borderRadius: "6px",
+                                  fontSize: "0.8rem",
+                                  fontWeight: "bold",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
                               >
                                 <Copy size={12} /> Link Cliente
                               </button>
@@ -2435,19 +3330,45 @@ export default function AdvogadoDashboard() {
 
                             {!clientSigned && (
                               <button
-                                onClick={() => handleResendOtp(sig.id, 'client')}
-                                style={{ padding: '6px 12px', background: 'rgba(0, 140, 255, 0.1)', border: '1px solid rgba(0, 140, 255, 0.2)', color: '#00b0ff', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                onClick={() =>
+                                  handleResendOtp(sig.id, "client")
+                                }
+                                style={{
+                                  padding: "6px 12px",
+                                  background: "rgba(0, 140, 255, 0.1)",
+                                  border: "1px solid rgba(0, 140, 255, 0.2)",
+                                  color: "#00b0ff",
+                                  borderRadius: "6px",
+                                  fontSize: "0.8rem",
+                                  fontWeight: "bold",
+                                  cursor: "pointer",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
                               >
                                 <Send size={12} /> Reenviar E-mail
                               </button>
                             )}
 
-                            {sig.status === 'signed' && sig.document_url && (
+                            {sig.status === "signed" && sig.document_url && (
                               <a
-                                href={`${sig.document_url}${sig.document_url.includes('?') ? '&' : '?'}t=${Date.now()}`}
+                                href={`${sig.document_url}${sig.document_url.includes("?") ? "&" : "?"}t=${Date.now()}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                style={{ padding: '6px 12px', background: 'rgba(0, 230, 118, 0.1)', border: '1px solid rgba(0, 230, 118, 0.2)', color: '#00e676', borderRadius: '6px', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                style={{
+                                  padding: "6px 12px",
+                                  background: "rgba(0, 230, 118, 0.1)",
+                                  border: "1px solid rgba(0, 230, 118, 0.2)",
+                                  color: "#00e676",
+                                  borderRadius: "6px",
+                                  fontSize: "0.8rem",
+                                  textDecoration: "none",
+                                  fontWeight: "bold",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                }}
                               >
                                 <Download size={12} /> Baixar PDF
                               </a>
@@ -2455,10 +3376,24 @@ export default function AdvogadoDashboard() {
 
                             <button
                               onClick={() => {
-                                toast.success("Gerando certificado de assinatura...");
+                                toast.success(
+                                  "Gerando certificado de assinatura...",
+                                );
                                 generateSignatureCertificatePDF(sig);
                               }}
-                              style={{ padding: '6px 12px', background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.2)', color: 'var(--color-gold)', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              style={{
+                                padding: "6px 12px",
+                                background: "rgba(212,175,55,0.1)",
+                                border: "1px solid rgba(212,175,55,0.2)",
+                                color: "var(--color-gold)",
+                                borderRadius: "6px",
+                                fontSize: "0.8rem",
+                                fontWeight: "bold",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
                             >
                               <FileDown size={12} /> Certificado
                             </button>
@@ -2467,7 +3402,18 @@ export default function AdvogadoDashboard() {
                               href={`/validar?code=${sig.verification_code}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: 'var(--color-silver)', borderRadius: '6px', fontSize: '0.8rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              style={{
+                                padding: "6px 12px",
+                                background: "rgba(255,255,255,0.02)",
+                                border: "1px solid rgba(255,255,255,0.05)",
+                                color: "var(--color-silver)",
+                                borderRadius: "6px",
+                                fontSize: "0.8rem",
+                                textDecoration: "none",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
                             >
                               <Eye size={12} /> Validar
                             </a>
@@ -2484,149 +3430,485 @@ export default function AdvogadoDashboard() {
 
         {/* Modal Novo Processo */}
         {showSignatureModal && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-            <div style={{ background: '#09090b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '30px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <PenTool color="var(--color-gold)" size={22} /> Iniciar Assinatura Digital
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.8)",
+              backdropFilter: "blur(8px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              padding: "20px",
+            }}
+          >
+            <div
+              style={{
+                background: "#09090b",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: "20px",
+                width: "100%",
+                maxWidth: "600px",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                padding: "30px",
+                boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: "25px",
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: "1.4rem",
+                    fontWeight: 800,
+                    color: "#fff",
+                    margin: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <PenTool color="var(--color-gold)" size={22} /> Iniciar
+                  Assinatura Digital
                 </h3>
-                <button onClick={() => setShowSignatureModal(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0.7, padding: '5px' }}>
+                <button
+                  onClick={() => setShowSignatureModal(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#fff",
+                    cursor: "pointer",
+                    opacity: 0.7,
+                    padding: "5px",
+                  }}
+                >
                   <X size={20} />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateSignature} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <form
+                onSubmit={handleCreateSignature}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "20px",
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-silver)', fontWeight: 600, marginBottom: '6px' }}>Nome do Documento *</label>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.8rem",
+                      color: "var(--color-silver)",
+                      fontWeight: 600,
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Nome do Documento *
+                  </label>
                   <input
                     type="text"
                     required
                     placeholder="Ex: Contrato de Honorários Advocatícios - João Silva"
                     value={newSignatureData.document_name}
-                    onChange={(e) => setNewSignatureData(prev => ({ ...prev, document_name: e.target.value }))}
-                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px', color: '#fff', fontSize: '0.9rem' }}
+                    onChange={(e) =>
+                      setNewSignatureData((prev) => ({
+                        ...prev,
+                        document_name: e.target.value,
+                      }))
+                    }
+                    style={{
+                      width: "100%",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      color: "#fff",
+                      fontSize: "0.9rem",
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-silver)', fontWeight: 600, marginBottom: '6px' }}>Tipo de Documento</label>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.8rem",
+                      color: "var(--color-silver)",
+                      fontWeight: 600,
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Tipo de Documento
+                  </label>
                   <select
                     value={newSignatureData.document_type}
-                    onChange={(e) => setNewSignatureData(prev => ({ ...prev, document_type: e.target.value }))}
-                    style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px', color: '#fff', fontSize: '0.9rem' }}
+                    onChange={(e) =>
+                      setNewSignatureData((prev) => ({
+                        ...prev,
+                        document_type: e.target.value,
+                      }))
+                    }
+                    style={{
+                      width: "100%",
+                      background: "rgba(255,255,255,0.03)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "10px",
+                      padding: "12px",
+                      color: "#fff",
+                      fontSize: "0.9rem",
+                    }}
                   >
-                    <option value="contrato" style={{ background: '#09090b' }}>Contrato</option>
-                    <option value="procuracao" style={{ background: '#09090b' }}>Procuração</option>
-                    <option value="outro" style={{ background: '#09090b' }}>Outro</option>
+                    <option value="contrato" style={{ background: "#09090b" }}>
+                      Contrato
+                    </option>
+                    <option
+                      value="procuracao"
+                      style={{ background: "#09090b" }}
+                    >
+                      Procuração
+                    </option>
+                    <option value="outro" style={{ background: "#09090b" }}>
+                      Outro
+                    </option>
                   </select>
                 </div>
 
-                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '15px' }}>
-                  <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--color-gold)', marginBottom: '10px' }}>Advogado (Você)</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.01)",
+                    border: "1px solid rgba(255,255,255,0.03)",
+                    borderRadius: "12px",
+                    padding: "15px",
+                  }}
+                >
+                  <h4
+                    style={{
+                      fontSize: "0.9rem",
+                      fontWeight: "bold",
+                      color: "var(--color-gold)",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    Advogado (Você)
+                  </h4>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "15px",
+                    }}
+                  >
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-silver-dark)', marginBottom: '4px' }}>Nome completo</label>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "0.75rem",
+                          color: "var(--color-silver-dark)",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Nome completo
+                      </label>
                       <input
                         type="text"
                         required
                         value={newSignatureData.lawyer_name}
-                        onChange={(e) => setNewSignatureData(prev => ({ ...prev, lawyer_name: e.target.value }))}
-                        style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '0.85rem' }}
+                        onChange={(e) =>
+                          setNewSignatureData((prev) => ({
+                            ...prev,
+                            lawyer_name: e.target.value,
+                          }))
+                        }
+                        style={{
+                          width: "100%",
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "8px",
+                          padding: "8px 12px",
+                          color: "#fff",
+                          fontSize: "0.85rem",
+                        }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-silver-dark)', marginBottom: '4px' }}>E-mail</label>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "0.75rem",
+                          color: "var(--color-silver-dark)",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        E-mail
+                      </label>
                       <input
                         type="email"
                         required
                         value={newSignatureData.lawyer_email}
-                        onChange={(e) => setNewSignatureData(prev => ({ ...prev, lawyer_email: e.target.value }))}
-                        style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '0.85rem' }}
+                        onChange={(e) =>
+                          setNewSignatureData((prev) => ({
+                            ...prev,
+                            lawyer_email: e.target.value,
+                          }))
+                        }
+                        style={{
+                          width: "100%",
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "8px",
+                          padding: "8px 12px",
+                          color: "#fff",
+                          fontSize: "0.85rem",
+                        }}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px', padding: '15px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <h4 style={{ fontSize: '0.9rem', fontWeight: 'bold', color: 'var(--color-gold)', margin: 0 }}>Cliente / Outra Parte</h4>
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.01)",
+                    border: "1px solid rgba(255,255,255,0.03)",
+                    borderRadius: "12px",
+                    padding: "15px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    <h4
+                      style={{
+                        fontSize: "0.9rem",
+                        fontWeight: "bold",
+                        color: "var(--color-gold)",
+                        margin: 0,
+                      }}
+                    >
+                      Cliente / Outra Parte
+                    </h4>
                     {crmClients.length > 0 && (
                       <select
                         onChange={(e) => {
-                          const selected = crmClients.find(c => c.id === e.target.value);
+                          const selected = crmClients.find(
+                            (c) => c.id === e.target.value,
+                          );
                           if (selected) {
-                            setNewSignatureData(prev => ({
+                            setNewSignatureData((prev) => ({
                               ...prev,
                               client_id: selected.id,
                               client_name: selected.name,
-                              client_email: selected.email || ""
+                              client_email: selected.email || "",
                             }));
                           }
                         }}
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px 8px', color: '#fff', fontSize: '0.75rem' }}
+                        style={{
+                          background: "rgba(255,255,255,0.05)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "6px",
+                          padding: "4px 8px",
+                          color: "#fff",
+                          fontSize: "0.75rem",
+                        }}
                       >
                         <option value="">Selecionar do CRM...</option>
-                        {crmClients.map(c => (
-                          <option key={c.id} value={c.id} style={{ background: '#09090b' }}>{c.name}</option>
+                        {crmClients.map((c) => (
+                          <option
+                            key={c.id}
+                            value={c.id}
+                            style={{ background: "#09090b" }}
+                          >
+                            {c.name}
+                          </option>
                         ))}
                       </select>
                     )}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "15px",
+                    }}
+                  >
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-silver-dark)', marginBottom: '4px' }}>Nome completo *</label>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "0.75rem",
+                          color: "var(--color-silver-dark)",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        Nome completo *
+                      </label>
                       <input
                         type="text"
                         required
                         value={newSignatureData.client_name}
-                        onChange={(e) => setNewSignatureData(prev => ({ ...prev, client_name: e.target.value }))}
-                        style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '0.85rem' }}
+                        onChange={(e) =>
+                          setNewSignatureData((prev) => ({
+                            ...prev,
+                            client_name: e.target.value,
+                          }))
+                        }
+                        style={{
+                          width: "100%",
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "8px",
+                          padding: "8px 12px",
+                          color: "#fff",
+                          fontSize: "0.85rem",
+                        }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--color-silver-dark)', marginBottom: '4px' }}>E-mail *</label>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "0.75rem",
+                          color: "var(--color-silver-dark)",
+                          marginBottom: "4px",
+                        }}
+                      >
+                        E-mail *
+                      </label>
                       <input
                         type="email"
                         required
                         value={newSignatureData.client_email}
-                        onChange={(e) => setNewSignatureData(prev => ({ ...prev, client_email: e.target.value }))}
-                        style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '8px 12px', color: '#fff', fontSize: '0.85rem' }}
+                        onChange={(e) =>
+                          setNewSignatureData((prev) => ({
+                            ...prev,
+                            client_email: e.target.value,
+                          }))
+                        }
+                        style={{
+                          width: "100%",
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "8px",
+                          padding: "8px 12px",
+                          color: "#fff",
+                          fontSize: "0.85rem",
+                        }}
                       />
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--color-silver)', fontWeight: 600, marginBottom: '6px' }}>Arquivo PDF do Documento *</label>
-                  <div style={{ border: '2px dashed rgba(255,255,255,0.1)', borderRadius: '10px', padding: '20px', textAlign: 'center', cursor: 'pointer', background: 'rgba(255,255,255,0.01)' }} onClick={() => document.getElementById('signature-file-picker').click()}>
-                    <Upload size={24} style={{ color: 'var(--color-silver-dark)', marginBottom: '8px' }} />
-                    <p style={{ fontSize: '0.8rem', color: 'var(--color-silver)', margin: 0 }}>
-                      {signatureFile ? signatureFile.name : "Clique para selecionar o PDF original do documento"}
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.8rem",
+                      color: "var(--color-silver)",
+                      fontWeight: 600,
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Arquivo PDF do Documento *
+                  </label>
+                  <div
+                    style={{
+                      border: "2px dashed rgba(255,255,255,0.1)",
+                      borderRadius: "10px",
+                      padding: "20px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      background: "rgba(255,255,255,0.01)",
+                    }}
+                    onClick={() =>
+                      document.getElementById("signature-file-picker").click()
+                    }
+                  >
+                    <Upload
+                      size={24}
+                      style={{
+                        color: "var(--color-silver-dark)",
+                        marginBottom: "8px",
+                      }}
+                    />
+                    <p
+                      style={{
+                        fontSize: "0.8rem",
+                        color: "var(--color-silver)",
+                        margin: 0,
+                      }}
+                    >
+                      {signatureFile
+                        ? signatureFile.name
+                        : "Clique para selecionar o PDF original do documento"}
                     </p>
                     <input
                       id="signature-file-picker"
                       type="file"
                       accept="application/pdf"
-                      style={{ display: 'none' }}
+                      style={{ display: "none" }}
                       onChange={(e) => setSignatureFile(e.target.files[0])}
                     />
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
+                <div
+                  style={{ display: "flex", gap: "15px", marginTop: "10px" }}
+                >
                   <button
                     type="button"
                     onClick={() => setShowSignatureModal(false)}
-                    style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '10px', cursor: 'pointer', fontWeight: 600 }}
+                    style={{
+                      flex: 1,
+                      padding: "12px",
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "#fff",
+                      borderRadius: "10px",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={isCreatingSignature}
-                    style={{ flex: 1, padding: '12px', background: 'linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%)', border: 'none', color: '#000', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    style={{
+                      flex: 1,
+                      padding: "12px",
+                      background:
+                        "linear-gradient(135deg, var(--color-gold-dark) 0%, var(--color-gold) 100%)",
+                      border: "none",
+                      color: "#000",
+                      borderRadius: "10px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                    }}
                   >
-                    {isCreatingSignature ? <Loader2 className={styles.spin} size={18} /> : <PenTool size={18} />}
+                    {isCreatingSignature ? (
+                      <Loader2 className={styles.spin} size={18} />
+                    ) : (
+                      <PenTool size={18} />
+                    )}
                     {isCreatingSignature ? "Iniciando..." : "Iniciar Processo"}
                   </button>
                 </div>
@@ -2693,9 +3975,12 @@ export default function AdvogadoDashboard() {
       <div className={styles.toolContainer}>
         <div className={styles.crmHeader} style={{ marginBottom: "20px" }}>
           <div>
-            <h2 className={styles.sectionTitle}>💬 Comunicação Interna (Hub Corporativo)</h2>
+            <h2 className={styles.sectionTitle}>
+              💬 Comunicação Interna (Hub Corporativo)
+            </h2>
             <p className={styles.sectionSubtitle}>
-              Canais de texto, voz e videoconferência Jitsi integrados para o seu escritório.
+              Canais de texto, voz e videoconferência Jitsi integrados para o
+              seu escritório.
             </p>
           </div>
         </div>
@@ -2706,9 +3991,9 @@ export default function AdvogadoDashboard() {
             <div className={styles.sidebarHeader}>
               <h3>Canais</h3>
               {profileData?.cargo === "admin" && (
-                <button 
-                  className={styles.addChannelBtn} 
-                  onClick={() => setIsAddChannelOpen(true)} 
+                <button
+                  className={styles.addChannelBtn}
+                  onClick={() => setIsAddChannelOpen(true)}
                   title="Criar Canal"
                 >
                   <Plus size={16} />
@@ -2721,7 +4006,7 @@ export default function AdvogadoDashboard() {
               <div className={styles.channelCategory}>
                 <span className={styles.categoryTitle}>💬 Canais de Texto</span>
                 {/* Chat Geral */}
-                <div 
+                <div
                   className={`${styles.channelItem} ${activeChannelId === null ? styles.activeChannelItem : ""}`}
                   onClick={() => {
                     setActiveChannelId(null);
@@ -2732,9 +4017,9 @@ export default function AdvogadoDashboard() {
                 </div>
                 {/* Canais criados */}
                 {(commData.canais || [])
-                  .filter(c => c.tipo === "texto")
-                  .map(chan => (
-                    <div 
+                  .filter((c) => c.tipo === "texto")
+                  .map((chan) => (
+                    <div
                       key={chan.id}
                       className={`${styles.channelItem} ${activeChannelId === chan.id ? styles.activeChannelItem : ""}`}
                       onClick={() => {
@@ -2742,9 +4027,14 @@ export default function AdvogadoDashboard() {
                         setActiveMeetingRoom(null);
                       }}
                     >
-                      <span className={styles.channelItemLeft}># {chan.nome}</span>
+                      <span className={styles.channelItemLeft}>
+                        # {chan.nome}
+                      </span>
                       {profileData?.cargo === "admin" && (
-                        <button className={styles.deleteChanBtn} onClick={(e) => handleDeleteChannel(e, chan.id)}>
+                        <button
+                          className={styles.deleteChanBtn}
+                          onClick={(e) => handleDeleteChannel(e, chan.id)}
+                        >
                           <Trash2 size={12} />
                         </button>
                       )}
@@ -2755,41 +4045,64 @@ export default function AdvogadoDashboard() {
               {/* Canais de Voz (Discord Style) */}
               <div className={styles.channelCategory}>
                 <span className={styles.categoryTitle}>🔊 Canais de Voz</span>
-                {(commData.canais || []).filter(c => c.tipo === "voz").length === 0 && (
-                  <div style={{ fontSize: "0.78rem", color: "#6b7280", paddingLeft: "8px", fontStyle: "italic" }}>
+                {(commData.canais || []).filter((c) => c.tipo === "voz")
+                  .length === 0 && (
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      color: "#6b7280",
+                      paddingLeft: "8px",
+                      fontStyle: "italic",
+                    }}
+                  >
                     Nenhuma sala de voz ativa.
                   </div>
                 )}
                 {(commData.canais || [])
-                  .filter(c => c.tipo === "voz")
-                  .map(chan => {
-                    const roomParticipants = (commData.participantesVoz || []).filter(p => p.canal_id === chan.id);
-                    const isUserInThisRoom = roomParticipants.some(p => p.member_id === profileData?.id);
-                    
+                  .filter((c) => c.tipo === "voz")
+                  .map((chan) => {
+                    const roomParticipants = (
+                      commData.participantesVoz || []
+                    ).filter((p) => p.canal_id === chan.id);
+                    const isUserInThisRoom = roomParticipants.some(
+                      (p) => p.member_id === profileData?.id,
+                    );
+
                     return (
                       <div key={chan.id} className={styles.channelCategory}>
-                        <div 
+                        <div
                           className={`${styles.channelItem} ${isUserInThisRoom ? styles.activeChannelItem : ""}`}
                           onClick={() => handleJoinVoice(chan.id)}
                         >
                           <span className={styles.channelItemLeft}>
-                            🔊 {chan.nome} ({roomParticipants.length}/{chan.limite_pessoas || "∞"})
+                            🔊 {chan.nome} ({roomParticipants.length}/
+                            {chan.limite_pessoas || "∞"})
                           </span>
                           {profileData?.cargo === "admin" && (
-                            <button className={styles.deleteChanBtn} onClick={(e) => handleDeleteChannel(e, chan.id)}>
+                            <button
+                              className={styles.deleteChanBtn}
+                              onClick={(e) => handleDeleteChannel(e, chan.id)}
+                            >
                               <Trash2 size={12} />
                             </button>
                           )}
                         </div>
-                        
+
                         {/* Membros na sala */}
                         {roomParticipants.length > 0 && (
                           <div className={styles.voiceUsersList}>
-                            {roomParticipants.map(participant => (
-                              <div key={participant.id} className={styles.voiceUserItem}>
+                            {roomParticipants.map((participant) => (
+                              <div
+                                key={participant.id}
+                                className={styles.voiceUserItem}
+                              >
                                 <span className={styles.voiceUserLeft}>
-                                  <div className={`${styles.voiceAvatar} ${!participant.mutado ? styles.activeSpeaker : ""}`}>
-                                    {participant.member_name.charAt(0).toUpperCase()}
+                                  <div
+                                    className={`${styles.voiceAvatar} ${!participant.mutado ? styles.activeSpeaker : ""}`}
+                                  >
+                                    {participant.member_name
+                                      .charAt(0)
+                                      .toUpperCase()}
                                   </div>
                                   {participant.member_name}
                                 </span>
@@ -2811,16 +4124,26 @@ export default function AdvogadoDashboard() {
 
               {/* Salas de Reunião por Vídeo */}
               <div className={styles.channelCategory}>
-                <span className={styles.categoryTitle}>🎥 Salas de Reunião</span>
-                {(commData.canais || []).filter(c => c.tipo === "video").length === 0 && (
-                  <div style={{ fontSize: "0.78rem", color: "#6b7280", paddingLeft: "8px", fontStyle: "italic" }}>
+                <span className={styles.categoryTitle}>
+                  🎥 Salas de Reunião
+                </span>
+                {(commData.canais || []).filter((c) => c.tipo === "video")
+                  .length === 0 && (
+                  <div
+                    style={{
+                      fontSize: "0.78rem",
+                      color: "#6b7280",
+                      paddingLeft: "8px",
+                      fontStyle: "italic",
+                    }}
+                  >
                     Nenhuma sala de reunião ativa.
                   </div>
                 )}
                 {(commData.canais || [])
-                  .filter(c => c.tipo === "video")
-                  .map(chan => (
-                    <div 
+                  .filter((c) => c.tipo === "video")
+                  .map((chan) => (
+                    <div
                       key={chan.id}
                       className={`${styles.channelItem} ${activeMeetingRoom === chan.id ? styles.activeChannelItem : ""}`}
                       onClick={() => {
@@ -2829,9 +4152,14 @@ export default function AdvogadoDashboard() {
                         setActiveMeetingTitle(chan.nome);
                       }}
                     >
-                      <span className={styles.channelItemLeft}>🎥 {chan.nome}</span>
+                      <span className={styles.channelItemLeft}>
+                        🎥 {chan.nome}
+                      </span>
                       {profileData?.cargo === "admin" && (
-                        <button className={styles.deleteChanBtn} onClick={(e) => handleDeleteChannel(e, chan.id)}>
+                        <button
+                          className={styles.deleteChanBtn}
+                          onClick={(e) => handleDeleteChannel(e, chan.id)}
+                        >
                           <Trash2 size={12} />
                         </button>
                       )}
@@ -2841,147 +4169,245 @@ export default function AdvogadoDashboard() {
             </div>
 
             {/* Rodapé da Voz (Status Conectado) */}
-            {(commData.participantesVoz || []).some(p => p.member_id === profileData?.id) && (() => {
-              const myVoice = (commData.participantesVoz || []).find(p => p.member_id === profileData?.id);
-              const room = (commData.canais || []).find(c => c.id === myVoice?.canal_id);
-              return (
-                <div className={styles.voiceStatusPanel}>
-                  <div className={styles.voiceStatusHeader}>
-                    <Volume2 size={14} /> Voz: {room?.nome}
+            {(commData.participantesVoz || []).some(
+              (p) => p.member_id === profileData?.id,
+            ) &&
+              (() => {
+                const myVoice = (commData.participantesVoz || []).find(
+                  (p) => p.member_id === profileData?.id,
+                );
+                const room = (commData.canais || []).find(
+                  (c) => c.id === myVoice?.canal_id,
+                );
+                return (
+                  <div className={styles.voiceStatusPanel}>
+                    <div className={styles.voiceStatusHeader}>
+                      <Volume2 size={14} /> Voz: {room?.nome}
+                    </div>
+                    <div className={styles.voiceStatusActions}>
+                      <button
+                        className={`${styles.micBtn} ${myVoice?.mutado ? styles.micMuted : ""}`}
+                        onClick={() => handleToggleMute(myVoice?.mutado)}
+                      >
+                        {myVoice?.mutado ? (
+                          <MicOff size={14} />
+                        ) : (
+                          <Mic size={14} />
+                        )}
+                        {myVoice?.mutado ? "Mutado" : "Falar"}
+                      </button>
+                      <button
+                        className={styles.disconnectBtn}
+                        onClick={handleLeaveVoice}
+                      >
+                        <PhoneOff size={14} /> Sair
+                      </button>
+                    </div>
                   </div>
-                  <div className={styles.voiceStatusActions}>
-                    <button 
-                      className={`${styles.micBtn} ${myVoice?.mutado ? styles.micMuted : ""}`} 
-                      onClick={() => handleToggleMute(myVoice?.mutado)}
-                    >
-                      {myVoice?.mutado ? <MicOff size={14} /> : <Mic size={14} />} 
-                      {myVoice?.mutado ? "Mutado" : "Falar"}
-                    </button>
-                    <button className={styles.disconnectBtn} onClick={handleLeaveVoice}>
-                      <PhoneOff size={14} /> Sair
-                    </button>
-                  </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
           </aside>
 
           {/* MAIN CHAT AREA */}
-          {activeMeetingRoom ? (() => {
-            const secureMeetingRoomName = `sj-meet-${profileData.escritorio_id}-${activeMeetingRoom}`;
-            return (
-              <div className={styles.chatArea}>
-                <div className={styles.chatAreaHeader}>
-                  <h2>🎥 Sala de Reunião: {activeMeetingTitle}</h2>
-                </div>
-                <div className={styles.meetingPreScreen}>
-                  <div className={styles.meetingCard}>
-                    <Video size={48} color="#10b981" />
-                    <h3>Preparar Videoconferência</h3>
-                    <p style={{ fontSize: "0.85rem", color: "#9ca3af", margin: 0, lineHeight: "1.4" }}>
-                      Esta sala de reuniões suporta áudio, vídeo, chat de texto e compartilhamento de tela com criptografia. A videoconferência será aberta em uma tela integrada.
-                    </p>
-                    <button 
-                      className={styles.meetingBtn} 
-                      onClick={() => {
-                        window.open(`https://meet.jit.si/${secureMeetingRoomName}#config.startWithVideoMuted=true`, "_blank");
-                      }}
-                    >
-                      <Video size={18} /> Iniciar Vídeo / Entrar na Reunião
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })() : (() => {
-            const channelObj = (commData.canais || []).find(c => c.id === activeChannelId);
-            const channelName = channelObj ? `# ${channelObj.nome}` : "# geral";
-            const filteredMessages = (commData.mensagens || []).filter(m => m.canal_id === activeChannelId);
-
-            return (
-              <div className={styles.chatArea}>
-                <div className={styles.chatAreaHeader}>
-                  <h2>💬 {channelName}</h2>
-                  <span style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
-                    Histórico do canal ({filteredMessages.length} msgs)
-                  </span>
-                </div>
-
-                <div className={styles.messageList}>
-                  {filteredMessages.length === 0 ? (
-                    <div style={{ padding: "40px", fontStyle: "italic", textAlign: "center", color: "#6b7280", fontSize: "0.85rem" }}>
-                      Nenhuma mensagem enviada neste canal ainda. Envie a primeira mensagem!
+          {activeMeetingRoom
+            ? (() => {
+                const secureMeetingRoomName = `sj-meet-${profileData.escritorio_id}-${activeMeetingRoom}`;
+                return (
+                  <div className={styles.chatArea}>
+                    <div className={styles.chatAreaHeader}>
+                      <h2>🎥 Sala de Reunião: {activeMeetingTitle}</h2>
                     </div>
-                  ) : (
-                    filteredMessages.map(msg => (
-                      <div key={msg.id} className={styles.messageItem}>
-                        <div className={styles.msgAvatar}>
-                          {msg.sender_name.charAt(0).toUpperCase()}
-                        </div>
-                        <div className={styles.msgContent}>
-                          <div className={styles.msgHeader}>
-                            <span className={styles.msgSender}>{msg.sender_name}</span>
-                            <span className={`${styles.msgBadge} ${styles[`badge_${msg.sender_cargo}`]}`}>
-                              {msg.sender_cargo === "admin" ? "Gestor" : (msg.sender_cargo === "secretaria" ? "Secretária" : (msg.sender_cargo === "estagiario" ? "Estagiário" : "Advogado"))}
-                            </span>
-                            <span className={styles.msgTime}>
-                              {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                          </div>
-                          <div className={styles.msgText}>{msg.mensagem}</div>
-                        </div>
+                    <div className={styles.meetingPreScreen}>
+                      <div className={styles.meetingCard}>
+                        <Video size={48} color="#10b981" />
+                        <h3>Preparar Videoconferência</h3>
+                        <p
+                          style={{
+                            fontSize: "0.85rem",
+                            color: "#9ca3af",
+                            margin: 0,
+                            lineHeight: "1.4",
+                          }}
+                        >
+                          Esta sala de reuniões suporta áudio, vídeo, chat de
+                          texto e compartilhamento de tela com criptografia. A
+                          videoconferência será aberta em uma tela integrada.
+                        </p>
+                        <button
+                          className={styles.meetingBtn}
+                          onClick={() => {
+                            window.open(
+                              `https://meet.jit.si/${secureMeetingRoomName}#config.startWithVideoMuted=true`,
+                              "_blank",
+                            );
+                          }}
+                        >
+                          <Video size={18} /> Iniciar Vídeo / Entrar na Reunião
+                        </button>
                       </div>
-                    ))
-                  )}
-                </div>
+                    </div>
+                  </div>
+                );
+              })()
+            : (() => {
+                const channelObj = (commData.canais || []).find(
+                  (c) => c.id === activeChannelId,
+                );
+                const channelName = channelObj
+                  ? `# ${channelObj.nome}`
+                  : "# geral";
+                const filteredMessages = (commData.mensagens || []).filter(
+                  (m) => m.canal_id === activeChannelId,
+                );
 
-                <div className={styles.chatInputWrapper}>
-                  <form className={styles.chatInputBar} onSubmit={handleSendCommMessage}>
-                    <input 
-                      type="text"
-                      className={styles.chatInput}
-                      placeholder={`Enviar mensagem em ${channelName}...`}
-                      value={commChatInput}
-                      onChange={(e) => setCommChatInput(e.target.value)}
-                    />
-                    <button type="submit" className={styles.chatSendBtn}>
-                      <Send size={14} /> Enviar
-                    </button>
-                  </form>
-                </div>
-              </div>
-            );
-          })()}
+                return (
+                  <div className={styles.chatArea}>
+                    <div className={styles.chatAreaHeader}>
+                      <h2>💬 {channelName}</h2>
+                      <span style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+                        Histórico do canal ({filteredMessages.length} msgs)
+                      </span>
+                    </div>
+
+                    <div className={styles.messageList}>
+                      {filteredMessages.length === 0 ? (
+                        <div
+                          style={{
+                            padding: "40px",
+                            fontStyle: "italic",
+                            textAlign: "center",
+                            color: "#6b7280",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Nenhuma mensagem enviada neste canal ainda. Envie a
+                          primeira mensagem!
+                        </div>
+                      ) : (
+                        filteredMessages.map((msg) => (
+                          <div key={msg.id} className={styles.messageItem}>
+                            <div className={styles.msgAvatar}>
+                              {msg.sender_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className={styles.msgContent}>
+                              <div className={styles.msgHeader}>
+                                <span className={styles.msgSender}>
+                                  {msg.sender_name}
+                                </span>
+                                <span
+                                  className={`${styles.msgBadge} ${styles[`badge_${msg.sender_cargo}`]}`}
+                                >
+                                  {msg.sender_cargo === "admin"
+                                    ? "Gestor"
+                                    : msg.sender_cargo === "secretaria"
+                                      ? "Secretária"
+                                      : msg.sender_cargo === "estagiario"
+                                        ? "Estagiário"
+                                        : "Advogado"}
+                                </span>
+                                <span className={styles.msgTime}>
+                                  {new Date(msg.created_at).toLocaleTimeString(
+                                    "pt-BR",
+                                    { hour: "2-digit", minute: "2-digit" },
+                                  )}
+                                </span>
+                              </div>
+                              <div className={styles.msgText}>
+                                {msg.mensagem}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className={styles.chatInputWrapper}>
+                      <form
+                        className={styles.chatInputBar}
+                        onSubmit={handleSendCommMessage}
+                      >
+                        <input
+                          type="text"
+                          className={styles.chatInput}
+                          placeholder={`Enviar mensagem em ${channelName}...`}
+                          value={commChatInput}
+                          onChange={(e) => setCommChatInput(e.target.value)}
+                        />
+                        <button type="submit" className={styles.chatSendBtn}>
+                          <Send size={14} /> Enviar
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                );
+              })()}
         </main>
 
         {/* MODAL: CRIAR CANAL */}
         {isAddChannelOpen && (
-          <div className={styles.modalOverlay} onClick={() => setIsAddChannelOpen(false)}>
-            <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: "450px" }}>
+          <div
+            className={styles.modalOverlay}
+            onClick={() => setIsAddChannelOpen(false)}
+          >
+            <div
+              className={styles.modalContent}
+              onClick={(e) => e.stopPropagation()}
+              style={{ maxWidth: "450px" }}
+            >
               <div className={styles.modalHeader}>
                 <h2 className={styles.modalTitle}>Criar Novo Canal</h2>
-                <p className={styles.modalSubtitle}>Crie espaços para chat, voz ou videoconferência</p>
+                <p className={styles.modalSubtitle}>
+                  Crie espaços para chat, voz ou videoconferência
+                </p>
               </div>
 
-              <form onSubmit={handleCreateChannel} style={{ display: "flex", flexDirection: "column", gap: "15px", marginTop: "15px" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                  <label style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Nome do Canal</label>
-                  <input 
-                    type="text" 
+              <form
+                onSubmit={handleCreateChannel}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px",
+                  marginTop: "15px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "5px",
+                  }}
+                >
+                  <label style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>
+                    Nome do Canal
+                  </label>
+                  <input
+                    type="text"
                     placeholder="ex: societario-geral"
                     className={styles.formInput}
                     value={newChannel.nome}
-                    onChange={e => setNewChannel({ ...newChannel, nome: e.target.value })}
+                    onChange={(e) =>
+                      setNewChannel({ ...newChannel, nome: e.target.value })
+                    }
                     required
                   />
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                  <label style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tipo de Canal</label>
-                  <select 
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "5px",
+                  }}
+                >
+                  <label style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>
+                    Tipo de Canal
+                  </label>
+                  <select
                     className={styles.formInput}
                     value={newChannel.tipo}
-                    onChange={e => setNewChannel({ ...newChannel, tipo: e.target.value })}
+                    onChange={(e) =>
+                      setNewChannel({ ...newChannel, tipo: e.target.value })
+                    }
                   >
                     <option value="texto">💬 Canal de Texto (Chat)</option>
                     <option value="voz">🔊 Canal de Voz (Discord Style)</option>
@@ -2990,21 +4416,49 @@ export default function AdvogadoDashboard() {
                 </div>
 
                 {newChannel.tipo === "voz" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                    <label style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Limite de Pessoas (0 = Ilimitado)</label>
-                    <input 
-                      type="number" 
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "5px",
+                    }}
+                  >
+                    <label style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>
+                      Limite de Pessoas (0 = Ilimitado)
+                    </label>
+                    <input
+                      type="number"
                       className={styles.formInput}
                       value={newChannel.limite}
-                      onChange={e => setNewChannel({ ...newChannel, limite: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setNewChannel({
+                          ...newChannel,
+                          limite: Number(e.target.value),
+                        })
+                      }
                       min="0"
                     />
                   </div>
                 )}
 
-                <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                  <button type="submit" className={styles.submitBtn} style={{ flex: 1 }}>Criar Canal</button>
-                  <button type="button" className={styles.closeModalBtn} onClick={() => setIsAddChannelOpen(false)} style={{ flex: 1, margin: 0 }}>Cancelar</button>
+                <div
+                  style={{ display: "flex", gap: "10px", marginTop: "10px" }}
+                >
+                  <button
+                    type="submit"
+                    className={styles.submitBtn}
+                    style={{ flex: 1 }}
+                  >
+                    Criar Canal
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.closeModalBtn}
+                    onClick={() => setIsAddChannelOpen(false)}
+                    style={{ flex: 1, margin: 0 }}
+                  >
+                    Cancelar
+                  </button>
                 </div>
               </form>
             </div>
@@ -3020,11 +4474,14 @@ export default function AdvogadoDashboard() {
         <div className={styles.anunciosHeader}>
           <div>
             <h2 className={styles.sectionTitle}>Anúncios de Serviços</h2>
-              <p className={styles.sectionDesc}>
-                Encontre parceiros e serviços para sua prática jurídica ({activeAnuncioTab.replace("anuncios-", "")})
-              </p>
+            <p className={styles.sectionDesc}>
+              Encontre parceiros e serviços para sua prática jurídica (
+              {activeAnuncioTab.replace("anuncios-", "")})
+            </p>
           </div>
-          <div className={styles.categoryBadge}>{activeAnuncioTab.replace("anuncios-", "")}</div>
+          <div className={styles.categoryBadge}>
+            {activeAnuncioTab.replace("anuncios-", "")}
+          </div>
         </div>
 
         {loadingAnuncios ? (
@@ -3033,7 +4490,9 @@ export default function AdvogadoDashboard() {
           <div className={styles.anuncioGrid}>
             {anunciosData.map((anuncio) => (
               <div key={anuncio.id} className={styles.anuncioCard}>
-                {anuncio.em_destaque && <span className={styles.adBadge}>Destaque</span>}
+                {anuncio.em_destaque && (
+                  <span className={styles.adBadge}>Destaque</span>
+                )}
                 <div className={styles.adHeader}>
                   <span className={styles.adCategory}>{anuncio.categoria}</span>
                   <h3 className={styles.adTitle}>{anuncio.titulo}</h3>
@@ -3042,20 +4501,30 @@ export default function AdvogadoDashboard() {
                 <div className={styles.adFooter}>
                   <div className={styles.adVendor}>
                     <div className={styles.vendorInitials}>
-                      {anuncio.anunciante?.nome_empresa?.substring(0, 2).toUpperCase() || "AN"}
+                      {anuncio.anunciante?.nome_empresa
+                        ?.substring(0, 2)
+                        .toUpperCase() || "AN"}
                     </div>
-                    <span className={styles.vendorName}>{anuncio.anunciante?.nome_empresa}</span>
+                    <span className={styles.vendorName}>
+                      {anuncio.anunciante?.nome_empresa}
+                    </span>
                   </div>
-                  <button 
-                     className={styles.adContactBtn}
-                     onClick={() => {
-                       const phone = anuncio.anunciante?.whatsapp?.replace(/\D/g, "");
-                       if (phone) {
-                         window.open(`https://wa.me/55${phone}?text=Olá, vi seu anúncio "${anuncio.titulo}" no SocialJurídico e gostaria de mais informações.`, "_blank");
-                       } else {
-                         toast.error("Contato não disponível");
-                       }
-                     }}
+                  <button
+                    className={styles.adContactBtn}
+                    onClick={() => {
+                      const phone = anuncio.anunciante?.whatsapp?.replace(
+                        /\D/g,
+                        "",
+                      );
+                      if (phone) {
+                        window.open(
+                          `https://wa.me/55${phone}?text=Olá, vi seu anúncio "${anuncio.titulo}" no SocialJurídico e gostaria de mais informações.`,
+                          "_blank",
+                        );
+                      } else {
+                        toast.error("Contato não disponível");
+                      }
+                    }}
                   >
                     <MessageSquare size={16} /> Contatar
                   </button>
@@ -3120,13 +4589,20 @@ export default function AdvogadoDashboard() {
           ) : openCases.length > 0 ? (
             openCases
               .filter((c) =>
-                (c.titulo || "").toLowerCase().includes(searchQuery.toLowerCase()),
+                (c.titulo || "")
+                  .toLowerCase()
+                  .includes(searchQuery.toLowerCase()),
               )
               .map((caso) => {
                 const isNegociando = caso.status === "NEGOCIANDO";
                 const negotiatingLawyers = caso.negotiating_lawyers || [];
                 return (
-                  <div key={caso.id} className={styles.opCard} onClick={() => setSelectedCasoModal(caso)} style={{ cursor: 'pointer' }}>
+                  <div
+                    key={caso.id}
+                    className={styles.opCard}
+                    onClick={() => setSelectedCasoModal(caso)}
+                    style={{ cursor: "pointer" }}
+                  >
                     <div className={styles.opHeader}>
                       <div className={styles.opArea}>
                         <div className={styles.opIcon}>
@@ -3135,44 +4611,111 @@ export default function AdvogadoDashboard() {
                         <div className={styles.opTitleGroup}>
                           <h3>{caso.titulo || "Caso Jurídico"}</h3>
                           <span className={styles.opLocation}>
-                            {caso.area_atuacao || "Direito Geral"} • {caso.cidade || "N/A"} - {caso.estado || "UF"}
+                            {caso.area_atuacao || "Direito Geral"} •{" "}
+                            {caso.cidade || "N/A"} - {caso.estado || "UF"}
                           </span>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "flex-end",
+                          gap: "6px",
+                        }}
+                      >
                         <span className={styles.opDate}>
                           {new Date(caso.created_at).toLocaleDateString()}
                         </span>
                         {isNegociando && (
-                          <span style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', padding: '3px 10px', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.5px', textTransform: 'uppercase', animation: 'pulse 2s ease-in-out infinite' }}>
+                          <span
+                            style={{
+                              background:
+                                "linear-gradient(135deg, #f59e0b, #d97706)",
+                              color: "#000",
+                              padding: "3px 10px",
+                              borderRadius: "20px",
+                              fontSize: "0.68rem",
+                              fontWeight: 800,
+                              letterSpacing: "0.5px",
+                              textTransform: "uppercase",
+                              animation: "pulse 2s ease-in-out infinite",
+                            }}
+                          >
                             🔥 Negociando
                           </span>
                         )}
                       </div>
                     </div>
-                    <p className={styles.opDesc}>{caso.descricao && caso.descricao.length > 120 ? caso.descricao.substring(0, 120) + '...' : caso.descricao}</p>
+                    <p className={styles.opDesc}>
+                      {caso.descricao && caso.descricao.length > 120
+                        ? caso.descricao.substring(0, 120) + "..."
+                        : caso.descricao}
+                    </p>
 
                     {/* Avatares dos advogados negociando */}
                     {isNegociando && negotiatingLawyers.length > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px', paddingLeft: '4px' }}>
-                        <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginRight: '6px' }}>Em negociação:</span>
-                        <div style={{ display: 'flex' }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          marginBottom: "10px",
+                          paddingLeft: "4px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.72rem",
+                            color: "rgba(255,255,255,0.5)",
+                            marginRight: "6px",
+                          }}
+                        >
+                          Em negociação:
+                        </span>
+                        <div style={{ display: "flex" }}>
                           {negotiatingLawyers.slice(0, 5).map((lawyer, idx) => (
-                            <div key={lawyer.id || idx} title={lawyer.name} style={{
-                              width: '28px', height: '28px', borderRadius: '50%', background: 'linear-gradient(135deg, #d4af37, #b8860b)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 700,
-                              color: '#000', border: '2px solid #1a1a2e', marginLeft: idx > 0 ? '-8px' : '0', zIndex: 10 - idx,
-                              position: 'relative'
-                            }}>
+                            <div
+                              key={lawyer.id || idx}
+                              title={lawyer.name}
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "50%",
+                                background:
+                                  "linear-gradient(135deg, #d4af37, #b8860b)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "0.6rem",
+                                fontWeight: 700,
+                                color: "#000",
+                                border: "2px solid #1a1a2e",
+                                marginLeft: idx > 0 ? "-8px" : "0",
+                                zIndex: 10 - idx,
+                                position: "relative",
+                              }}
+                            >
                               {lawyer.initials || "AD"}
                             </div>
                           ))}
                           {negotiatingLawyers.length > 5 && (
-                            <div style={{
-                              width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem',
-                              color: '#fff', border: '2px solid #1a1a2e', marginLeft: '-8px', zIndex: 1
-                            }}>
+                            <div
+                              style={{
+                                width: "28px",
+                                height: "28px",
+                                borderRadius: "50%",
+                                background: "rgba(255,255,255,0.1)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: "0.6rem",
+                                color: "#fff",
+                                border: "2px solid #1a1a2e",
+                                marginLeft: "-8px",
+                                zIndex: 1,
+                              }}
+                            >
                               +{negotiatingLawyers.length - 5}
                             </div>
                           )}
@@ -3186,7 +4729,10 @@ export default function AdvogadoDashboard() {
                       </div>
                       <button
                         className={styles.applyBtn}
-                        onClick={(e) => { e.stopPropagation(); vincularCaso(caso.id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          vincularCaso(caso.id);
+                        }}
                       >
                         Manifestar Interesse
                       </button>
@@ -3216,93 +4762,292 @@ export default function AdvogadoDashboard() {
 
       {/* MODAL DETALHES DO CASO */}
       {selectedCasoModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}
-          onClick={() => setSelectedCasoModal(null)}>
-          <div style={{ background: '#1a1a2e', borderRadius: '24px', border: '1px solid rgba(212,175,55,0.2)', maxWidth: '640px', width: '100%', maxHeight: '80vh', overflowY: 'auto', padding: '36px' }}
-            onClick={(e) => e.stopPropagation()}>
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "20px",
+          }}
+          onClick={() => setSelectedCasoModal(null)}
+        >
+          <div
+            style={{
+              background: "#1a1a2e",
+              borderRadius: "24px",
+              border: "1px solid rgba(212,175,55,0.2)",
+              maxWidth: "640px",
+              width: "100%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              padding: "36px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: "24px",
+              }}
+            >
               <div>
-                <h2 style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 700, marginBottom: '6px' }}>{selectedCasoModal.titulo}</h2>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ background: 'rgba(212,175,55,0.15)', color: '#d4af37', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600 }}>
-                    {selectedCasoModal.area_atuacao || 'Direito Geral'}
+                <h2
+                  style={{
+                    color: "#fff",
+                    fontSize: "1.4rem",
+                    fontWeight: 700,
+                    marginBottom: "6px",
+                  }}
+                >
+                  {selectedCasoModal.titulo}
+                </h2>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <span
+                    style={{
+                      background: "rgba(212,175,55,0.15)",
+                      color: "#d4af37",
+                      padding: "4px 12px",
+                      borderRadius: "20px",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {selectedCasoModal.area_atuacao || "Direito Geral"}
                   </span>
-                    <span style={{ 
-                      background: selectedCasoModal.status === 'NEGOCIANDO' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'rgba(16,185,129,0.15)', 
-                      color: selectedCasoModal.status === 'NEGOCIANDO' ? '#000' : '#10b981',
-                      padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 
-                    }}>
-                      {selectedCasoModal.status}
+                  <span
+                    style={{
+                      background:
+                        selectedCasoModal.status === "NEGOCIANDO"
+                          ? "linear-gradient(135deg, #f59e0b, #d97706)"
+                          : "rgba(16,185,129,0.15)",
+                      color:
+                        selectedCasoModal.status === "NEGOCIANDO"
+                          ? "#000"
+                          : "#10b981",
+                      padding: "4px 12px",
+                      borderRadius: "20px",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {selectedCasoModal.status}
+                  </span>
+                  {selectedCasoModal.cidade && (
+                    <span
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        color: "rgba(255,255,255,0.7)",
+                        padding: "4px 12px",
+                        borderRadius: "20px",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      📍 {selectedCasoModal.cidade} - {selectedCasoModal.estado}
                     </span>
-                    {selectedCasoModal.cidade && (
-                      <span style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600, border: '1px solid rgba(255,255,255,0.1)' }}>
-                        📍 {selectedCasoModal.cidade} - {selectedCasoModal.estado}
-                      </span>
-                    )}
-                  </div>
+                  )}
+                </div>
               </div>
-              <button onClick={() => setSelectedCasoModal(null)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '12px', padding: '8px 12px', color: '#fff', cursor: 'pointer', fontSize: '1.2rem' }}>
+              <button
+                onClick={() => setSelectedCasoModal(null)}
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  border: "none",
+                  borderRadius: "12px",
+                  padding: "8px 12px",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: "1.2rem",
+                }}
+              >
                 ✕
               </button>
             </div>
 
             {/* Data */}
-            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginBottom: '20px' }}>
-              Publicado em: {new Date(selectedCasoModal.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+            <div
+              style={{
+                color: "rgba(255,255,255,0.5)",
+                fontSize: "0.8rem",
+                marginBottom: "20px",
+              }}
+            >
+              Publicado em:{" "}
+              {new Date(selectedCasoModal.created_at).toLocaleDateString(
+                "pt-BR",
+                { day: "2-digit", month: "long", year: "numeric" },
+              )}
             </div>
 
             {/* Descrição */}
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ color: '#d4af37', fontSize: '0.9rem', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Relato do Cliente</h3>
-              <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.95rem', lineHeight: '1.7', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', whiteSpace: 'pre-wrap' }}>
-                {selectedCasoModal.descricao || 'Sem descrição fornecida.'}
+            <div style={{ marginBottom: "24px" }}>
+              <h3
+                style={{
+                  color: "#d4af37",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  marginBottom: "10px",
+                  textTransform: "uppercase",
+                  letterSpacing: "1px",
+                }}
+              >
+                Relato do Cliente
+              </h3>
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.85)",
+                  fontSize: "0.95rem",
+                  lineHeight: "1.7",
+                  background: "rgba(255,255,255,0.03)",
+                  padding: "16px",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {selectedCasoModal.descricao || "Sem descrição fornecida."}
               </p>
             </div>
 
             {/* Anexos */}
-            {selectedCasoModal.anexos && selectedCasoModal.anexos.length > 0 && (
-              <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ color: '#d4af37', fontSize: '0.9rem', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Documentos Anexados</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {selectedCasoModal.anexos.map((anexo, idx) => (
-                    <a key={idx} href={anexo} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', fontSize: '0.85rem', textDecoration: 'underline' }}>
-                      📎 Anexo {idx + 1}
-                    </a>
-                  ))}
+            {selectedCasoModal.anexos &&
+              selectedCasoModal.anexos.length > 0 && (
+                <div style={{ marginBottom: "24px" }}>
+                  <h3
+                    style={{
+                      color: "#d4af37",
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      marginBottom: "10px",
+                      textTransform: "uppercase",
+                      letterSpacing: "1px",
+                    }}
+                  >
+                    Documentos Anexados
+                  </h3>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                    }}
+                  >
+                    {selectedCasoModal.anexos.map((anexo, idx) => (
+                      <a
+                        key={idx}
+                        href={anexo}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          color: "#6366f1",
+                          fontSize: "0.85rem",
+                          textDecoration: "underline",
+                        }}
+                      >
+                        📎 Anexo {idx + 1}
+                      </a>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Advogados em negociação */}
-            {selectedCasoModal.status === 'NEGOCIANDO' && (selectedCasoModal.negotiating_lawyers || []).length > 0 && (
-              <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ color: '#d4af37', fontSize: '0.9rem', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Advogados em Negociação</h3>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {selectedCasoModal.negotiating_lawyers.map((lawyer, idx) => (
-                    <div key={lawyer.id || idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px' }}>
-                      <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, #d4af37, #b8860b)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 700, color: '#000' }}>
-                        {lawyer.initials || "AD"}
-                      </div>
-                      <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem' }}>{lawyer.name}</span>
-                    </div>
-                  ))}
+            {selectedCasoModal.status === "NEGOCIANDO" &&
+              (selectedCasoModal.negotiating_lawyers || []).length > 0 && (
+                <div style={{ marginBottom: "24px" }}>
+                  <h3
+                    style={{
+                      color: "#d4af37",
+                      fontSize: "0.9rem",
+                      fontWeight: 600,
+                      marginBottom: "10px",
+                      textTransform: "uppercase",
+                      letterSpacing: "1px",
+                    }}
+                  >
+                    Advogados em Negociação
+                  </h3>
+                  <div
+                    style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}
+                  >
+                    {selectedCasoModal.negotiating_lawyers.map(
+                      (lawyer, idx) => (
+                        <div
+                          key={lawyer.id || idx}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            background: "rgba(255,255,255,0.05)",
+                            padding: "6px 12px",
+                            borderRadius: "20px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "24px",
+                              height: "24px",
+                              borderRadius: "50%",
+                              background:
+                                "linear-gradient(135deg, #d4af37, #b8860b)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "0.55rem",
+                              fontWeight: 700,
+                              color: "#000",
+                            }}
+                          >
+                            {lawyer.initials || "AD"}
+                          </div>
+                          <span
+                            style={{
+                              color: "rgba(255,255,255,0.7)",
+                              fontSize: "0.8rem",
+                            }}
+                          >
+                            {lawyer.name}
+                          </span>
+                        </div>
+                      ),
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Botão de interesse */}
-            <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+            <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
               <button
                 className={styles.applyBtn}
-                style={{ flex: 1, padding: '14px' }}
-                onClick={() => { setSelectedCasoModal(null); vincularCaso(selectedCasoModal.id); }}
+                style={{ flex: 1, padding: "14px" }}
+                onClick={() => {
+                  setSelectedCasoModal(null);
+                  vincularCaso(selectedCasoModal.id);
+                }}
               >
                 <Coins size={16} /> Manifestar Interesse (1 Juri)
               </button>
               <button
                 onClick={() => setSelectedCasoModal(null)}
-                style={{ flex: 0.4, padding: '14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+                style={{
+                  flex: 0.4,
+                  padding: "14px",
+                  background: "rgba(255,255,255,0.05)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "12px",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
               >
                 Fechar
               </button>
@@ -3354,7 +5099,7 @@ export default function AdvogadoDashboard() {
       setShowBuyModal(true);
       return;
     }
-    
+
     setIsCheckingInterest(true);
     try {
       const res = await fetch(`/api/casos/vincular?casoId=${casoId}`);
@@ -3383,9 +5128,12 @@ export default function AdvogadoDashboard() {
     if (!cancelInterestCaseId) return;
     setIsCancelingInterest(true);
     try {
-      const res = await fetch(`/api/casos/vincular?casoId=${cancelInterestCaseId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/casos/vincular?casoId=${cancelInterestCaseId}`,
+        {
+          method: "DELETE",
+        },
+      );
       const data = await res.json();
       if (data.success) {
         toast.success(data.message || "Interesse cancelado com sucesso!");
@@ -3433,7 +5181,6 @@ export default function AdvogadoDashboard() {
       toast.error("Erro ao abrir chat de negociação.");
     }
   };
-
 
   const handleAbrirConversa = async (caso) => {
     // Se o chat já foi iniciado, vai direto
@@ -3577,13 +5324,23 @@ export default function AdvogadoDashboard() {
                 <div className={styles.opArea}>
                   <div
                     className={styles.opIcon}
-                    style={{ background: isNegotiating ? "#f59e0b" : "var(--color-gold)" }}
+                    style={{
+                      background: isNegotiating
+                        ? "#f59e0b"
+                        : "var(--color-gold)",
+                    }}
                   >
-                    {isNegotiating ? <MessageSquare size={16} /> : <Clock size={16} />}
+                    {isNegotiating ? (
+                      <MessageSquare size={16} />
+                    ) : (
+                      <Clock size={16} />
+                    )}
                   </div>
                   <div className={styles.opTitleGroup}>
                     <h3>{caso.titulo}</h3>
-                    <span className={styles.opLocation}>{caso.area_atuacao}</span>
+                    <span className={styles.opLocation}>
+                      {caso.area_atuacao}
+                    </span>
                   </div>
                 </div>
                 <span className={styles.opDate}>
@@ -3595,7 +5352,9 @@ export default function AdvogadoDashboard() {
                 <span
                   className={styles.badge}
                   style={{
-                    background: isNegotiating ? "rgba(245, 158, 11, 0.1)" : "rgba(212, 175, 55, 0.1)",
+                    background: isNegotiating
+                      ? "rgba(245, 158, 11, 0.1)"
+                      : "rgba(212, 175, 55, 0.1)",
                     color: isNegotiating ? "#f59e0b" : "var(--color-gold)",
                     border: "none",
                   }}
@@ -3606,23 +5365,40 @@ export default function AdvogadoDashboard() {
                 {isNegotiating ? (
                   <button
                     className={styles.applyBtn}
-                    style={{ background: "#f59e0b", color: "#000", fontWeight: 700 }}
+                    style={{
+                      background: "#f59e0b",
+                      color: "#000",
+                      fontWeight: 700,
+                    }}
                     onClick={() => handleAbrirConversaNegociacao(caso)}
                   >
                     Conversar com Cliente
                   </button>
                 ) : (
-                  <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                  <div style={{ display: "flex", gap: "8px", flex: 1 }}>
                     <button
                       className={styles.applyBtn}
-                      style={{ background: "transparent", color: "#888", border: "1px solid #444", cursor: "not-allowed", flex: 1 }}
+                      style={{
+                        background: "transparent",
+                        color: "#888",
+                        border: "1px solid #444",
+                        cursor: "not-allowed",
+                        flex: 1,
+                      }}
                       disabled
                     >
                       Aguardando...
                     </button>
                     <button
                       className={styles.applyBtn}
-                      style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.3)", fontWeight: 600, flex: 1, cursor: 'pointer' }}
+                      style={{
+                        background: "rgba(239, 68, 68, 0.1)",
+                        color: "#ef4444",
+                        border: "1px solid rgba(239, 68, 68, 0.3)",
+                        fontWeight: 600,
+                        flex: 1,
+                        cursor: "pointer",
+                      }}
                       onClick={() => handleDesfazerInteresse(caso.id)}
                     >
                       Desfazer
@@ -3641,7 +5417,6 @@ export default function AdvogadoDashboard() {
       </div>
     </div>
   );
-
 
   const renderMinhasMensagens = () => (
     <div className={styles.toolContainer}>
@@ -3669,8 +5444,8 @@ export default function AdvogadoDashboard() {
                   "NEGOCIACAO",
                   "CONTRATACAO",
                   "CHAT_INICIADO",
-                  "INTERESSE"
-                ].includes(msg.tipo) 
+                  "INTERESSE",
+                ].includes(msg.tipo)
                   ? "rgba(59, 130, 246, 0.08)" // Sutil destaque azul para casos/clientes
                   : "transparent",
                 border: [
@@ -3678,26 +5453,28 @@ export default function AdvogadoDashboard() {
                   "NEGOCIACAO",
                   "CONTRATACAO",
                   "CHAT_INICIADO",
-                  "INTERESSE"
-                ].includes(msg.tipo) 
-                  ? "1px solid rgba(59, 130, 246, 0.2)" 
+                  "INTERESSE",
+                ].includes(msg.tipo)
+                  ? "1px solid rgba(59, 130, 246, 0.2)"
                   : "1px solid rgba(255, 255, 255, 0.05)",
               }}
             >
               {!msg.lida && (
-                <div style={{
-                  position: 'absolute',
-                  top: '-10px',
-                  left: '10px',
-                  background: '#ef4444',
-                  color: '#white',
-                  fontSize: '0.6rem',
-                  fontWeight: 900,
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
-                  zIndex: 2
-                }}>
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "-10px",
+                    left: "10px",
+                    background: "#ef4444",
+                    color: "#white",
+                    fontSize: "0.6rem",
+                    fontWeight: 900,
+                    padding: "2px 8px",
+                    borderRadius: "4px",
+                    boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+                    zIndex: 2,
+                  }}
+                >
                   NOVA
                 </div>
               )}
@@ -3705,14 +5482,16 @@ export default function AdvogadoDashboard() {
                 <div className={styles.opArea}>
                   <div
                     className={styles.opIcon}
-                    style={{ 
+                    style={{
                       background: [
                         "MENSAGEM",
                         "NEGOCIACAO",
                         "CONTRATACAO",
                         "CHAT_INICIADO",
-                        "INTERESSE"
-                      ].includes(msg.tipo) ? "#3b82f6" : "#f59e0b" 
+                        "INTERESSE",
+                      ].includes(msg.tipo)
+                        ? "#3b82f6"
+                        : "#f59e0b",
                     }}
                   >
                     <Bell size={16} />
@@ -3725,12 +5504,16 @@ export default function AdvogadoDashboard() {
                         "NEGOCIACAO",
                         "CONTRATACAO",
                         "CHAT_INICIADO",
-                        "INTERESSE"
-                      ].includes(msg.tipo) ? "Cliente" : "Administrador"}
+                        "INTERESSE",
+                      ].includes(msg.tipo)
+                        ? "Cliente"
+                        : "Administrador"}
                     </span>
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "15px" }}
+                >
                   <span className={styles.opDate}>
                     {msg.created_at
                       ? new Date(msg.created_at).toLocaleString("pt-BR")
@@ -3752,8 +5535,12 @@ export default function AdvogadoDashboard() {
                       justifyContent: "center",
                       transition: "all 0.2s",
                     }}
-                    onMouseOver={(e) => (e.currentTarget.style.color = "#ff4d4d")}
-                    onMouseOut={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.3)")}
+                    onMouseOver={(e) =>
+                      (e.currentTarget.style.color = "#ff4d4d")
+                    }
+                    onMouseOut={(e) =>
+                      (e.currentTarget.style.color = "rgba(255,255,255,0.3)")
+                    }
                   >
                     <Trash2 size={16} />
                   </button>
@@ -3762,7 +5549,6 @@ export default function AdvogadoDashboard() {
               <p className={styles.opDesc}>{msg.mensagem || "Sem conteúdo."}</p>
             </div>
           ))
-
         ) : (
           <div className={styles.emptyState}>
             Você ainda não recebeu mensagens.
@@ -3973,136 +5759,468 @@ export default function AdvogadoDashboard() {
 
     const normalizedText = voiceTranscript.toLowerCase();
     const checklist = [
-      { id: "nome", label: "Nome do Cliente", matched: normalizedText.trim().length > 5 },
-      { id: "tipo", label: "Tipo (Fís./Jur.)", matched: normalizedText.includes("física") || normalizedText.includes("jurídica") || normalizedText.includes("empresa") || normalizedText.includes("limitada") || normalizedText.includes("ltda") },
-      { id: "cpf", label: "CPF / CNPJ", matched: /\d{3}/.test(normalizedText) || normalizedText.includes("cpf") || normalizedText.includes("cnpj") },
-      { id: "rg", label: "RG / IE", matched: normalizedText.includes("rg") || normalizedText.includes("ie") || normalizedText.includes("identidade") || normalizedText.includes("inscrição estadual") },
-      { id: "estado_civil", label: "Estado Civil", matched: normalizedText.includes("solteir") || normalizedText.includes("casad") || normalizedText.includes("divorciad") || normalizedText.includes("viúv") || normalizedText.includes("união estável") || normalizedText.includes("estado civil") },
-      { id: "profissao", label: "Profissão", matched: normalizedText.includes("profissão") || normalizedText.includes("trabalha") || normalizedText.includes("autônomo") || normalizedText.includes("aposentado") || normalizedText.includes("empresário") || normalizedText.includes("advogado") || normalizedText.includes("engenheiro") || normalizedText.includes("médico") || normalizedText.includes("professor") },
-      { id: "telefone", label: "Telefone", matched: normalizedText.includes("telefone") || normalizedText.includes("celular") || normalizedText.includes("whats") || /\d{8}/.test(normalizedText) },
-      { id: "email", label: "E-mail", matched: normalizedText.includes("@") || normalizedText.includes("email") || normalizedText.includes("e-mail") },
-      { id: "endereco", label: "Endereço", matched: normalizedText.includes("rua") || normalizedText.includes("avenida") || normalizedText.includes("reside") || normalizedText.includes("mora") || normalizedText.includes("bairro") || normalizedText.includes("cidade") },
-      { id: "caso", label: "Fatos do Caso", matched: normalizedText.includes("caso") || normalizedText.includes("danos") || normalizedText.includes("processo") || normalizedText.includes("contrato") || normalizedText.includes("ação") || normalizedText.includes("fato") }
+      {
+        id: "nome",
+        label: "Nome do Cliente",
+        matched: normalizedText.trim().length > 5,
+      },
+      {
+        id: "tipo",
+        label: "Tipo (Fís./Jur.)",
+        matched:
+          normalizedText.includes("física") ||
+          normalizedText.includes("jurídica") ||
+          normalizedText.includes("empresa") ||
+          normalizedText.includes("limitada") ||
+          normalizedText.includes("ltda"),
+      },
+      {
+        id: "cpf",
+        label: "CPF / CNPJ",
+        matched:
+          /\d{3}/.test(normalizedText) ||
+          normalizedText.includes("cpf") ||
+          normalizedText.includes("cnpj"),
+      },
+      {
+        id: "rg",
+        label: "RG / IE",
+        matched:
+          normalizedText.includes("rg") ||
+          normalizedText.includes("ie") ||
+          normalizedText.includes("identidade") ||
+          normalizedText.includes("inscrição estadual"),
+      },
+      {
+        id: "estado_civil",
+        label: "Estado Civil",
+        matched:
+          normalizedText.includes("solteir") ||
+          normalizedText.includes("casad") ||
+          normalizedText.includes("divorciad") ||
+          normalizedText.includes("viúv") ||
+          normalizedText.includes("união estável") ||
+          normalizedText.includes("estado civil"),
+      },
+      {
+        id: "profissao",
+        label: "Profissão",
+        matched:
+          normalizedText.includes("profissão") ||
+          normalizedText.includes("trabalha") ||
+          normalizedText.includes("autônomo") ||
+          normalizedText.includes("aposentado") ||
+          normalizedText.includes("empresário") ||
+          normalizedText.includes("advogado") ||
+          normalizedText.includes("engenheiro") ||
+          normalizedText.includes("médico") ||
+          normalizedText.includes("professor"),
+      },
+      {
+        id: "telefone",
+        label: "Telefone",
+        matched:
+          normalizedText.includes("telefone") ||
+          normalizedText.includes("celular") ||
+          normalizedText.includes("whats") ||
+          /\d{8}/.test(normalizedText),
+      },
+      {
+        id: "email",
+        label: "E-mail",
+        matched:
+          normalizedText.includes("@") ||
+          normalizedText.includes("email") ||
+          normalizedText.includes("e-mail"),
+      },
+      {
+        id: "endereco",
+        label: "Endereço",
+        matched:
+          normalizedText.includes("rua") ||
+          normalizedText.includes("avenida") ||
+          normalizedText.includes("reside") ||
+          normalizedText.includes("mora") ||
+          normalizedText.includes("bairro") ||
+          normalizedText.includes("cidade"),
+      },
+      {
+        id: "caso",
+        label: "Fatos do Caso",
+        matched:
+          normalizedText.includes("caso") ||
+          normalizedText.includes("danos") ||
+          normalizedText.includes("processo") ||
+          normalizedText.includes("contrato") ||
+          normalizedText.includes("ação") ||
+          normalizedText.includes("fato"),
+      },
     ];
 
     return (
-      <div className={styles.modalOverlay} style={{ zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-        <div style={{ display: 'flex', gap: '20px', maxWidth: '950px', width: '100%', alignItems: 'stretch', flexWrap: 'wrap', justifyContent: 'center' }}>
-          
+      <div
+        className={styles.modalOverlay}
+        style={{
+          zIndex: 10001,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: "20px",
+            maxWidth: "950px",
+            width: "100%",
+            alignItems: "stretch",
+            flexWrap: "wrap",
+            justifyContent: "center",
+          }}
+        >
           {/* PAINEL ESQUERDO: O GRAVADOR */}
-          <div className={styles.modalContent} style={{ flex: '1.2', minWidth: '320px', textAlign: 'center', padding: '35px', borderRadius: '24px', background: '#111116', border: '1px solid rgba(212, 175, 55, 0.2)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', margin: 0 }}>
+          <div
+            className={styles.modalContent}
+            style={{
+              flex: "1.2",
+              minWidth: "320px",
+              textAlign: "center",
+              padding: "35px",
+              borderRadius: "24px",
+              background: "#111116",
+              border: "1px solid rgba(212, 175, 55, 0.2)",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              margin: 0,
+            }}
+          >
             <div>
-              <div className={styles.voicePulseContainer} style={{ marginBottom: '20px', position: 'relative', display: 'inline-block' }}>
-                <div className={styles.pulseMic} style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(212,175,55,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', border: '2px solid rgba(212,175,55,0.3)' }}>
+              <div
+                className={styles.voicePulseContainer}
+                style={{
+                  marginBottom: "20px",
+                  position: "relative",
+                  display: "inline-block",
+                }}
+              >
+                <div
+                  className={styles.pulseMic}
+                  style={{
+                    width: "80px",
+                    height: "80px",
+                    borderRadius: "50%",
+                    background: "rgba(212,175,55,0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto",
+                    border: "2px solid rgba(212,175,55,0.3)",
+                  }}
+                >
                   <Mic size={40} color="var(--color-gold)" />
                 </div>
                 {isListening && (
                   <>
-                    <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid var(--color-gold)', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', opacity: 0.6 }}></div>
-                    <div className={styles.voiceWave} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: '50%', border: '2px solid var(--color-gold)', animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite', animationDelay: '0.5s', opacity: 0.4 }}></div>
+                    <div
+                      className={styles.voiceWave}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderRadius: "50%",
+                        border: "2px solid var(--color-gold)",
+                        animation:
+                          "ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
+                        opacity: 0.6,
+                      }}
+                    ></div>
+                    <div
+                      className={styles.voiceWave}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        borderRadius: "50%",
+                        border: "2px solid var(--color-gold)",
+                        animation:
+                          "ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite",
+                        animationDelay: "0.5s",
+                        opacity: 0.4,
+                      }}
+                    ></div>
                   </>
                 )}
               </div>
-              
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '10px', color: '#fff' }}>
+
+              <h2
+                style={{
+                  fontSize: "1.4rem",
+                  fontWeight: 800,
+                  marginBottom: "10px",
+                  color: "#fff",
+                }}
+              >
                 {isListening ? "Estou ouvindo..." : "Processando áudio..."}
               </h2>
-              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', marginBottom: '20px' }}>
-                Fale os dados do cliente naturalmente. A IA cuidará de estruturar tudo nos campos certos do CRM.
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.5)",
+                  fontSize: "0.8rem",
+                  marginBottom: "20px",
+                }}
+              >
+                Fale os dados do cliente naturalmente. A IA cuidará de
+                estruturar tudo nos campos certos do CRM.
               </p>
 
-              <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '12px', padding: '15px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '25px', minHeight: '120px', maxHeight: '180px', overflowY: 'auto', textAlign: 'left' }}>
-                <p style={{ color: '#fff', fontSize: '0.9rem', margin: 0, lineHeight: '1.5', fontStyle: voiceTranscript ? 'normal' : 'italic', opacity: voiceTranscript ? 1 : 0.4 }}>
-                  {voiceTranscript || "Sua fala aparecerá aqui em tempo real..."}
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  borderRadius: "12px",
+                  padding: "15px",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                  marginBottom: "25px",
+                  minHeight: "120px",
+                  maxHeight: "180px",
+                  overflowY: "auto",
+                  textAlign: "left",
+                }}
+              >
+                <p
+                  style={{
+                    color: "#fff",
+                    fontSize: "0.9rem",
+                    margin: 0,
+                    lineHeight: "1.5",
+                    fontStyle: voiceTranscript ? "normal" : "italic",
+                    opacity: voiceTranscript ? 1 : 0.4,
+                  }}
+                >
+                  {voiceTranscript ||
+                    "Sua fala aparecerá aqui em tempo real..."}
                 </p>
               </div>
             </div>
-            
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+
+            <div
+              style={{ display: "flex", gap: "12px", justifyContent: "center" }}
+            >
               {isListening ? (
                 <>
-                  <button 
+                  <button
                     type="button"
                     onClick={handleCancelVoiceCRM}
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "#fff",
+                      padding: "12px 24px",
+                      borderRadius: "12px",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      fontSize: "0.9rem",
+                    }}
                   >
                     <X size={16} /> Cancelar
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={handleStopVoiceCRM}
-                    style={{ background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', border: 'none', color: '#fff', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', boxShadow: '0 4px 12px rgba(0, 230, 118, 0.2)' }}
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #00e676 0%, #00c853 100%)",
+                      border: "none",
+                      color: "#fff",
+                      padding: "12px 24px",
+                      borderRadius: "12px",
+                      cursor: "pointer",
+                      fontWeight: 700,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      fontSize: "0.9rem",
+                      boxShadow: "0 4px 12px rgba(0, 230, 118, 0.2)",
+                    }}
                   >
-                    <Square size={14} fill="currentColor" /> Concluir e Processar
+                    <Square size={14} fill="currentColor" /> Concluir e
+                    Processar
                   </button>
                 </>
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-gold)', fontWeight: 600 }}>
-                  <Loader2 size={20} className={styles.spin} /> Processando dados...
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    color: "var(--color-gold)",
+                    fontWeight: 600,
+                  }}
+                >
+                  <Loader2 size={20} className={styles.spin} /> Processando
+                  dados...
                 </div>
               )}
             </div>
           </div>
 
           {/* PAINEL DIREITO: A DOBRA / GABARITO */}
-          <div style={{ flex: '1.2', minWidth: '340px', background: '#161622', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '24px', padding: '30px', textAlign: 'left', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 20px 40px rgba(0,0,0,0.4)', margin: 0 }}>
+          <div
+            style={{
+              flex: "1.2",
+              minWidth: "340px",
+              background: "#161622",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              borderRadius: "24px",
+              padding: "30px",
+              textAlign: "left",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+              margin: 0,
+            }}
+          >
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
-                <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--color-gold)', fontWeight: 800, letterSpacing: '1px' }}>📋 Gabarito de Informações</span>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "15px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "0.8rem",
+                    textTransform: "uppercase",
+                    color: "var(--color-gold)",
+                    fontWeight: 800,
+                    letterSpacing: "1px",
+                  }}
+                >
+                  📋 Gabarito de Informações
+                </span>
               </div>
-              
+
               {/* CHECKLIST EM 2 COLUNAS */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '25px' }}>
-                {checklist.map(item => (
-                  <div 
-                    key={item.id} 
-                    style={{ 
-                      background: item.matched ? 'rgba(0, 230, 118, 0.08)' : 'rgba(255,255,255,0.02)',
-                      border: `1px solid ${item.matched ? '#00e676' : 'rgba(255,255,255,0.05)'}`,
-                      borderRadius: '10px', 
-                      padding: '8px 12px', 
-                      fontSize: '0.78rem',
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px",
+                  marginBottom: "25px",
+                }}
+              >
+                {checklist.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      background: item.matched
+                        ? "rgba(0, 230, 118, 0.08)"
+                        : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${item.matched ? "#00e676" : "rgba(255,255,255,0.05)"}`,
+                      borderRadius: "10px",
+                      padding: "8px 12px",
+                      fontSize: "0.78rem",
                       fontWeight: 600,
-                      color: item.matched ? '#00e676' : 'rgba(255,255,255,0.4)',
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      transition: 'all 0.3s ease'
+                      color: item.matched ? "#00e676" : "rgba(255,255,255,0.4)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      transition: "all 0.3s ease",
                     }}
                   >
-                    <div style={{
-                      width: '18px',
-                      height: '18px',
-                      borderRadius: '50%',
-                      background: item.matched ? 'rgba(0, 230, 118, 0.15)' : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${item.matched ? '#00e676' : 'rgba(255,255,255,0.2)'}`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.3s ease',
-                      flexShrink: 0
-                    }}>
+                    <div
+                      style={{
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        background: item.matched
+                          ? "rgba(0, 230, 118, 0.15)"
+                          : "rgba(255,255,255,0.05)",
+                        border: `1px solid ${item.matched ? "#00e676" : "rgba(255,255,255,0.2)"}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "all 0.3s ease",
+                        flexShrink: 0,
+                      }}
+                    >
                       {item.matched ? (
                         <Check size={10} strokeWidth={3} />
                       ) : (
-                        <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(255,255,255,0.4)' }} />
+                        <div
+                          style={{
+                            width: "4px",
+                            height: "4px",
+                            borderRadius: "50%",
+                            background: "rgba(255,255,255,0.4)",
+                          }}
+                        />
                       )}
                     </div>
-                    <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{item.label}</span>
+                    <span
+                      style={{
+                        textOverflow: "ellipsis",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.label}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* ROTEIRO SUGERIDO */}
-            <div style={{ background: 'rgba(212,175,55,0.03)', border: '1px solid rgba(212,175,55,0.08)', borderRadius: '14px', padding: '15px' }}>
-              <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: 'var(--color-gold)', fontWeight: 700, display: 'block', marginBottom: '6px' }}>💡 Dica de Roteiro</span>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', margin: 0, lineHeight: '1.45', fontStyle: 'italic' }}>
-                &quot;Cadastra o **[Nome]**, do tipo **[Física/Jurídica]**, solteiro, profissão **[Profissão]**, CPF **[Número]**, RG **[Número]**, telefone **[Número]**, email **[Endereço]**, residente na **[Rua/Número]**. O caso dele é sobre **[Descreva o Fato]**...&quot;
+            <div
+              style={{
+                background: "rgba(212,175,55,0.03)",
+                border: "1px solid rgba(212,175,55,0.08)",
+                borderRadius: "14px",
+                padding: "15px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  textTransform: "uppercase",
+                  color: "var(--color-gold)",
+                  fontWeight: 700,
+                  display: "block",
+                  marginBottom: "6px",
+                }}
+              >
+                💡 Dica de Roteiro
+              </span>
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.6)",
+                  fontSize: "0.75rem",
+                  margin: 0,
+                  lineHeight: "1.45",
+                  fontStyle: "italic",
+                }}
+              >
+                &quot;Cadastra o **[Nome]**, do tipo **[Física/Jurídica]**,
+                solteiro, profissão **[Profissão]**, CPF **[Número]**, RG
+                **[Número]**, telefone **[Número]**, email **[Endereço]**,
+                residente na **[Rua/Número]**. O caso dele é sobre **[Descreva o
+                Fato]**...&quot;
               </p>
             </div>
           </div>
-
         </div>
       </div>
     );
@@ -4111,7 +6229,7 @@ export default function AdvogadoDashboard() {
   const filteredClients = useMemo(() => {
     if (!profileData?.escritorio_id) return crmClients || [];
     if (crmFilter === "my") {
-      return (crmClients || []).filter(c => c.lawyer_id === profileData.id);
+      return (crmClients || []).filter((c) => c.lawyer_id === profileData.id);
     }
     return crmClients || [];
   }, [crmClients, crmFilter, profileData]);
@@ -4125,10 +6243,14 @@ export default function AdvogadoDashboard() {
             Gestão de carteira e análise de risco.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div style={{ display: "flex", gap: "10px" }}>
           <button
             className={styles.newClientBtn}
-            style={{ background: 'rgba(255, 69, 58, 0.1)', color: '#ff453a', border: '1px solid rgba(255, 69, 58, 0.2)' }}
+            style={{
+              background: "rgba(255, 69, 58, 0.1)",
+              color: "#ff453a",
+              border: "1px solid rgba(255, 69, 58, 0.2)",
+            }}
             onClick={() => {
               if (!isPro) {
                 setShowProModal(true);
@@ -4143,7 +6265,11 @@ export default function AdvogadoDashboard() {
           </button>
           <button
             className={styles.newClientBtn}
-            style={{ background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              color: "#fff",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
             onClick={() => {
               if (!isPro) {
                 setShowProModal(true);
@@ -4153,13 +6279,23 @@ export default function AdvogadoDashboard() {
             }}
             disabled={isExtractingPDF}
           >
-            {isExtractingPDF ? <Loader2 size={18} className={styles.animateSpin} /> : <Sparkles size={18} />} 
-            {isExtractingPDF ? "Lendo documento..." : "Extração com IA (PDF/Foto)"}
+            {isExtractingPDF ? (
+              <Loader2 size={18} className={styles.animateSpin} />
+            ) : (
+              <Sparkles size={18} />
+            )}
+            {isExtractingPDF
+              ? "Lendo documento..."
+              : "Extração com IA (PDF/Foto)"}
           </button>
           {profileData?.escritorio_id && (
             <button
               className={styles.newClientBtn}
-              style={{ background: 'rgba(212, 175, 55, 0.1)', color: 'var(--color-gold)', border: '1px solid rgba(212, 175, 55, 0.3)' }}
+              style={{
+                background: "rgba(212, 175, 55, 0.1)",
+                color: "var(--color-gold)",
+                border: "1px solid rgba(212, 175, 55, 0.3)",
+              }}
               onClick={() => {
                 setShowOabModal(true);
               }}
@@ -4176,10 +6312,10 @@ export default function AdvogadoDashboard() {
         </div>
       </div>
 
-      <input 
-        type="file" 
-        ref={pdfInputRef} 
-        style={{ display: 'none' }} 
+      <input
+        type="file"
+        ref={pdfInputRef}
+        style={{ display: "none" }}
         accept="application/pdf,image/*"
         onChange={handlePDFExtraction}
       />
@@ -4215,47 +6351,174 @@ export default function AdvogadoDashboard() {
       </div>
 
       {/* FINANCE DASHBOARD CONSOLIDATED */}
-      <div className={styles.financeConsolidated} style={{ marginBottom: '30px', background: 'var(--color-black-light)', border: '1px solid rgba(212,175,55,0.1)', borderRadius: '16px', overflow: 'hidden' }}>
-        <div className={styles.financeConsolidatedHeader} style={{ padding: '15px 24px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(212,175,55,0.03)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div
+        className={styles.financeConsolidated}
+        style={{
+          marginBottom: "30px",
+          background: "var(--color-black-light)",
+          border: "1px solid rgba(212,175,55,0.1)",
+          borderRadius: "16px",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          className={styles.financeConsolidatedHeader}
+          style={{
+            padding: "15px 24px",
+            borderBottom: "1px solid rgba(255,255,255,0.05)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            background: "rgba(212,175,55,0.03)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             <TrendingUp size={20} color="var(--color-gold)" />
-            <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 800 }}>Desempenho Financeiro do Mês</h4>
+            <h4 style={{ margin: 0, fontSize: "0.9rem", fontWeight: 800 }}>
+              Desempenho Financeiro do Mês
+            </h4>
           </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-silver-dark)', fontWeight: 600 }}>
-            {new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).toUpperCase()}
+          <span
+            style={{
+              fontSize: "0.75rem",
+              color: "var(--color-silver-dark)",
+              fontWeight: 600,
+            }}
+          >
+            {new Date()
+              .toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+              .toUpperCase()}
           </span>
         </div>
 
-        <div className={styles.financeConsolidatedGrid} style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }}>
+        <div
+          className={styles.financeConsolidatedGrid}
+          style={{
+            padding: "24px",
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: "24px",
+          }}
+        >
           <div className={styles.financeStatCard}>
-            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-silver-dark)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Previsto Total</label>
-            <div className={styles.financeStatValue} style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-white)' }}>
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialStats.previsto)}
-            </div>
-          </div>
-          
-          <div className={styles.financeStatCard}>
-            <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-silver-dark)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>Recebido (Pago)</label>
-            <div className={styles.financeStatValue} style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981' }}>
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(financialStats.recebido)}
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.7rem",
+                color: "var(--color-silver-dark)",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                marginBottom: "8px",
+              }}
+            >
+              Previsto Total
+            </label>
+            <div
+              className={styles.financeStatValue}
+              style={{
+                fontSize: "1.4rem",
+                fontWeight: 800,
+                color: "var(--color-white)",
+              }}
+            >
+              {new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(financialStats.previsto)}
             </div>
           </div>
 
-          <div className={styles.financeStatCard} style={{ gridColumn: 'span 2' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--color-silver-dark)', fontWeight: 700, textTransform: 'uppercase' }}>Progresso de Recebimento</label>
-              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--color-gold)' }}>
-                {financialStats.previsto > 0 ? Math.round((financialStats.recebido / financialStats.previsto) * 100) : 0}%
+          <div className={styles.financeStatCard}>
+            <label
+              style={{
+                display: "block",
+                fontSize: "0.7rem",
+                color: "var(--color-silver-dark)",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                marginBottom: "8px",
+              }}
+            >
+              Recebido (Pago)
+            </label>
+            <div
+              className={styles.financeStatValue}
+              style={{ fontSize: "1.4rem", fontWeight: 800, color: "#10b981" }}
+            >
+              {new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(financialStats.recebido)}
+            </div>
+          </div>
+
+          <div
+            className={styles.financeStatCard}
+            style={{ gridColumn: "span 2" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+              }}
+            >
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.7rem",
+                  color: "var(--color-silver-dark)",
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                }}
+              >
+                Progresso de Recebimento
+              </label>
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  fontWeight: 800,
+                  color: "var(--color-gold)",
+                }}
+              >
+                {financialStats.previsto > 0
+                  ? Math.round(
+                      (financialStats.recebido / financialStats.previsto) * 100,
+                    )
+                  : 0}
+                %
               </span>
             </div>
-            <div className={styles.financeProgressBar} style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-              <div 
-                className={styles.financeProgressFill} 
-                style={{ height: '100%', background: 'linear-gradient(90deg, var(--color-gold-dark), var(--color-gold))', transition: 'width 1s ease-out', width: `${financialStats.previsto > 0 ? Math.min(100, (financialStats.recebido / financialStats.previsto) * 100) : 0}%` }}
+            <div
+              className={styles.financeProgressBar}
+              style={{
+                height: "8px",
+                background: "rgba(255,255,255,0.05)",
+                borderRadius: "4px",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                className={styles.financeProgressFill}
+                style={{
+                  height: "100%",
+                  background:
+                    "linear-gradient(90deg, var(--color-gold-dark), var(--color-gold))",
+                  transition: "width 1s ease-out",
+                  width: `${financialStats.previsto > 0 ? Math.min(100, (financialStats.recebido / financialStats.previsto) * 100) : 0}%`,
+                }}
               ></div>
             </div>
-            <p style={{ fontSize: '0.7rem', color: 'var(--color-silver-dark)', marginTop: '8px', margin: '8px 0 0 0' }}>
-              {financialStats.count} lançamentos financeiros identificados neste período.
+            <p
+              style={{
+                fontSize: "0.7rem",
+                color: "var(--color-silver-dark)",
+                marginTop: "8px",
+                margin: "8px 0 0 0",
+              }}
+            >
+              {financialStats.count} lançamentos financeiros identificados neste
+              período.
             </p>
           </div>
         </div>
@@ -4263,23 +6526,51 @@ export default function AdvogadoDashboard() {
 
       {/* SELETOR DE FILTRO CRM (APENAS PARA USUÁRIOS DE ESCRITÓRIO) */}
       {profileData?.escritorio_id && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'var(--color-black-light)', padding: '12px 20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--color-silver-dark)', fontWeight: 600 }}>Visualização:</span>
-            <div style={{ display: 'flex', gap: '8px' }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "20px",
+            background: "var(--color-black-light)",
+            padding: "12px 20px",
+            borderRadius: "12px",
+            border: "1px solid rgba(255,255,255,0.05)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <span
+              style={{
+                fontSize: "0.85rem",
+                color: "var(--color-silver-dark)",
+                fontWeight: 600,
+              }}
+            >
+              Visualização:
+            </span>
+            <div style={{ display: "flex", gap: "8px" }}>
               <button
                 type="button"
                 className={styles.tabBtn}
                 style={{
-                  padding: '6px 16px',
-                  fontSize: '0.75rem',
-                  borderRadius: '20px',
-                  border: crmFilter === 'my' ? '1px solid var(--color-gold)' : '1px solid transparent',
-                  background: crmFilter === 'my' ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.03)',
-                  color: crmFilter === 'my' ? 'var(--color-gold)' : 'var(--color-silver)',
-                  cursor: 'pointer'
+                  padding: "6px 16px",
+                  fontSize: "0.75rem",
+                  borderRadius: "20px",
+                  border:
+                    crmFilter === "my"
+                      ? "1px solid var(--color-gold)"
+                      : "1px solid transparent",
+                  background:
+                    crmFilter === "my"
+                      ? "rgba(212,175,55,0.1)"
+                      : "rgba(255,255,255,0.03)",
+                  color:
+                    crmFilter === "my"
+                      ? "var(--color-gold)"
+                      : "var(--color-silver)",
+                  cursor: "pointer",
                 }}
-                onClick={() => setCrmFilter('my')}
+                onClick={() => setCrmFilter("my")}
               >
                 👤 Meus Casos (Prioridade)
               </button>
@@ -4287,22 +6578,34 @@ export default function AdvogadoDashboard() {
                 type="button"
                 className={styles.tabBtn}
                 style={{
-                  padding: '6px 16px',
-                  fontSize: '0.75rem',
-                  borderRadius: '20px',
-                  border: crmFilter === 'all' ? '1px solid var(--color-gold)' : '1px solid transparent',
-                  background: crmFilter === 'all' ? 'rgba(212,175,55,0.1)' : 'rgba(255,255,255,0.03)',
-                  color: crmFilter === 'all' ? 'var(--color-gold)' : 'var(--color-silver)',
-                  cursor: 'pointer'
+                  padding: "6px 16px",
+                  fontSize: "0.75rem",
+                  borderRadius: "20px",
+                  border:
+                    crmFilter === "all"
+                      ? "1px solid var(--color-gold)"
+                      : "1px solid transparent",
+                  background:
+                    crmFilter === "all"
+                      ? "rgba(212,175,55,0.1)"
+                      : "rgba(255,255,255,0.03)",
+                  color:
+                    crmFilter === "all"
+                      ? "var(--color-gold)"
+                      : "var(--color-silver)",
+                  cursor: "pointer",
                 }}
-                onClick={() => setCrmFilter('all')}
+                onClick={() => setCrmFilter("all")}
               >
                 🏢 Todos do Escritório
               </button>
             </div>
           </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--color-silver-dark)' }}>
-            Mostrando <strong>{filteredClients.length}</strong> de {crmClients.length} clientes.
+          <span
+            style={{ fontSize: "0.75rem", color: "var(--color-silver-dark)" }}
+          >
+            Mostrando <strong>{filteredClients.length}</strong> de{" "}
+            {crmClients.length} clientes.
           </span>
         </div>
       )}
@@ -4358,25 +6661,44 @@ export default function AdvogadoDashboard() {
                 {profileData?.escritorio_id && (
                   <div className={styles.infoGroup}>
                     <span className={styles.infoLabel}>Responsável</span>
-                    <span className={styles.infoValue} style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '150px' }}>
-                      <span style={{ color: client.lawyer_id ? 'var(--color-silver)' : 'var(--color-silver-dark)', fontStyle: client.lawyer_id ? 'normal' : 'italic' }}>
+                    <span
+                      className={styles.infoValue}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        minWidth: "150px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: client.lawyer_id
+                            ? "var(--color-silver)"
+                            : "var(--color-silver-dark)",
+                          fontStyle: client.lawyer_id ? "normal" : "italic",
+                        }}
+                      >
                         {(() => {
-                          const responsible = (membrosEscritorio || []).find(m => m.id === client.lawyer_id);
-                          return responsible ? `💼 ${responsible.name}` : "⚠️ Sem Responsável";
+                          const responsible = (membrosEscritorio || []).find(
+                            (m) => m.id === client.lawyer_id,
+                          );
+                          return responsible
+                            ? `💼 ${responsible.name}`
+                            : "⚠️ Sem Responsável";
                         })()}
                       </span>
-                      {profileData?.cargo === 'admin' && (
+                      {profileData?.cargo === "admin" && (
                         <button
                           type="button"
                           style={{
-                            background: 'rgba(212,175,55,0.1)',
-                            color: 'var(--color-gold)',
-                            border: '1px solid rgba(212,175,55,0.3)',
-                            borderRadius: '4px',
-                            padding: '2px 8px',
-                            fontSize: '0.65rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            background: "rgba(212,175,55,0.1)",
+                            color: "var(--color-gold)",
+                            border: "1px solid rgba(212,175,55,0.3)",
+                            borderRadius: "4px",
+                            padding: "2px 8px",
+                            fontSize: "0.65rem",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
                           }}
                           onClick={() => setDelegatingClient(client)}
                         >
@@ -4430,8 +6752,8 @@ export default function AdvogadoDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: clientId,
-          lawyer_id: targetLawyerId
-        })
+          lawyer_id: targetLawyerId,
+        }),
       });
 
       const data = await res.json();
@@ -4478,14 +6800,17 @@ export default function AdvogadoDashboard() {
   };
 
   const handleStartVoiceCRM = async () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       toast.error("Seu navegador não suporta reconhecimento de voz.");
       return;
     }
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      toast.error("Ambiente inseguro detectado. O reconhecimento de voz exige conexão segura HTTPS em produção.");
+      toast.error(
+        "Ambiente inseguro detectado. O reconhecimento de voz exige conexão segura HTTPS em produção.",
+      );
       return;
     }
 
@@ -4493,15 +6818,27 @@ export default function AdvogadoDashboard() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       // Para todos os tracks do stream para não travar o dispositivo de áudio
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((track) => track.stop());
     } catch (err) {
       console.error("Erro ao obter permissão do microfone:", err);
-      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-        toast.error("Acesso ao microfone negado. Por favor, permita o acesso ao microfone nas configurações do seu navegador para usar o comando de voz.");
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        toast.error("Nenhum microfone físico foi encontrado no seu dispositivo.");
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError"
+      ) {
+        toast.error(
+          "Acesso ao microfone negado. Por favor, permita o acesso ao microfone nas configurações do seu navegador para usar o comando de voz.",
+        );
+      } else if (
+        err.name === "NotFoundError" ||
+        err.name === "DevicesNotFoundError"
+      ) {
+        toast.error(
+          "Nenhum microfone físico foi encontrado no seu dispositivo.",
+        );
       } else {
-        toast.error("Erro ao acessar o microfone. Certifique-se de estar acessando via conexão segura (HTTPS).");
+        toast.error(
+          "Erro ao acessar o microfone. Certifique-se de estar acessando via conexão segura (HTTPS).",
+        );
       }
       return;
     }
@@ -4535,7 +6872,7 @@ export default function AdvogadoDashboard() {
         .map((result) => result[0])
         .map((result) => result.transcript)
         .join("");
-      
+
       const fullTranscript = pastTranscriptsRef.current
         ? `${pastTranscriptsRef.current} ${currentTranscript}`
         : currentTranscript;
@@ -4546,7 +6883,7 @@ export default function AdvogadoDashboard() {
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error", event.error);
-      
+
       // No-speech é comum em mobiles quando o advogado faz uma pausa longa para pensar
       if (event.error === "no-speech") {
         return; // Ignora o erro e deixa o onend lidar com o auto-restart
@@ -4556,13 +6893,17 @@ export default function AdvogadoDashboard() {
         setIsListening(false);
         isListeningRef.current = false;
         recognition.shouldProcess = false;
-        toast.error("Permissão de microfone negada. Certifique-se de acessar via HTTPS e permitir o acesso ao microfone nas configurações do seu navegador.");
+        toast.error(
+          "Permissão de microfone negada. Certifique-se de acessar via HTTPS e permitir o acesso ao microfone nas configurações do seu navegador.",
+        );
         setShowVoiceModal(false);
       } else if (event.error === "service-not-allowed") {
         setIsListening(false);
         isListeningRef.current = false;
         recognition.shouldProcess = false;
-        toast.error("Serviço de reconhecimento de voz não disponível ou bloqueado neste navegador.");
+        toast.error(
+          "Serviço de reconhecimento de voz não disponível ou bloqueado neste navegador.",
+        );
         setShowVoiceModal(false);
       } else if (event.error !== "aborted") {
         console.warn("Erro não fatal detectado:", event.error);
@@ -4588,7 +6929,9 @@ export default function AdvogadoDashboard() {
         } else {
           const duration = Date.now() - startTime;
           if (duration < 2000) {
-            toast.error("Conexão encerrada muito rápido pelo navegador. Recomendamos usar o Google Chrome ou Edge.");
+            toast.error(
+              "Conexão encerrada muito rápido pelo navegador. Recomendamos usar o Google Chrome ou Edge.",
+            );
           } else {
             toast.error("Nenhuma fala detectada ou áudio muito curto.");
           }
@@ -4603,7 +6946,10 @@ export default function AdvogadoDashboard() {
         try {
           recognition.start();
         } catch (e) {
-          console.log("Reiniciando captura SpeechRecognition após pausa de silêncio móvel:", e);
+          console.log(
+            "Reiniciando captura SpeechRecognition após pausa de silêncio móvel:",
+            e,
+          );
         }
       } else {
         setIsListening(false);
@@ -4626,9 +6972,9 @@ export default function AdvogadoDashboard() {
       const data = await res.json();
       toast.dismiss(tid);
       if (data.success) {
-        setNewClientData(prev => ({
+        setNewClientData((prev) => ({
           ...prev,
-          ...data.data
+          ...data.data,
         }));
         setShowNewClientModal(true);
         toast.success("Dados extraídos com sucesso!");
@@ -5100,11 +7446,15 @@ export default function AdvogadoDashboard() {
   const renderRedator = () => {
     if (profileData?.cargo === "secretaria") {
       return (
-        <div className={styles.emptyState} style={{ padding: "40px", textAlign: "center" }}>
+        <div
+          className={styles.emptyState}
+          style={{ padding: "40px", textAlign: "center" }}
+        >
           <Lock size={48} style={{ color: "#ef4444", marginBottom: "15px" }} />
           <h3>Acesso Restrito</h3>
           <p style={{ color: "#aaa" }}>
-            Seu cargo de Secretária não possui permissão para acessar o Redator IA.
+            Seu cargo de Secretária não possui permissão para acessar o Redator
+            IA.
           </p>
         </div>
       );
@@ -5372,13 +7722,16 @@ export default function AdvogadoDashboard() {
   };
 
   const renderCalculadora = () => {
-    const isStart = profileData?.plan_type === 'START';
-    const isFree = !profileData?.is_premium && profileData?.plan_type !== 'START' && profileData?.plan_type !== 'PRO';
-    
+    const isStart = profileData?.plan_type === "START";
+    const isFree =
+      !profileData?.is_premium &&
+      profileData?.plan_type !== "START" &&
+      profileData?.plan_type !== "PRO";
+
     if (isStart || isFree) {
       return (
-        <PlanLock 
-          title="Calculadora Jurídica" 
+        <PlanLock
+          title="Calculadora Jurídica"
           description="Acesso exclusivo para membros do Plano PRO. No Plano START, você tem acesso às ferramentas de CRM e IA básica."
           onUpgrade={() => setShowProModal(true)}
         />
@@ -6137,11 +8490,15 @@ export default function AdvogadoDashboard() {
   const renderJuris = () => {
     if (profileData?.cargo === "secretaria") {
       return (
-        <div className={styles.emptyState} style={{ padding: "40px", textAlign: "center" }}>
+        <div
+          className={styles.emptyState}
+          style={{ padding: "40px", textAlign: "center" }}
+        >
           <Lock size={48} style={{ color: "#ef4444", marginBottom: "15px" }} />
           <h3>Acesso Restrito</h3>
           <p style={{ color: "#aaa" }}>
-            Seu cargo de Secretária não possui permissão para acessar a Inteligência Jurisprudencial.
+            Seu cargo de Secretária não possui permissão para acessar a
+            Inteligência Jurisprudencial.
           </p>
         </div>
       );
@@ -6255,23 +8612,32 @@ export default function AdvogadoDashboard() {
                   const doc = new jsPDF();
                   const pageWidth = doc.internal.pageSize.getWidth();
                   const pageHeight = doc.internal.pageSize.getHeight();
-                  
+
                   // HEADER
                   doc.setFillColor(11, 11, 14); // Dark background
-                  doc.rect(0, 0, pageWidth, 45, 'F');
-                  
+                  doc.rect(0, 0, pageWidth, 45, "F");
+
                   doc.setTextColor(212, 175, 55); // Gold
                   doc.setFont("helvetica", "bold");
                   doc.setFontSize(24);
                   doc.text("SocialJurídico", 14, 22);
-                  
+
                   doc.setTextColor(255, 255, 255);
                   doc.setFontSize(12);
                   doc.setFont("helvetica", "normal");
-                  doc.text("Relatório de Pesquisa e Análise Jurisprudencial IA", 14, 32);
-                  
+                  doc.text(
+                    "Relatório de Pesquisa e Análise Jurisprudencial IA",
+                    14,
+                    32,
+                  );
+
                   doc.setFontSize(10);
-                  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 32, { align: 'right' });
+                  doc.text(
+                    `Gerado em: ${new Date().toLocaleString("pt-BR")}`,
+                    pageWidth - 14,
+                    32,
+                    { align: "right" },
+                  );
 
                   // PESQUISA REALIZADA
                   doc.setTextColor(40, 40, 40);
@@ -6280,17 +8646,20 @@ export default function AdvogadoDashboard() {
                   doc.text("Consulta Realizada:", 14, 58);
                   doc.setFont("helvetica", "italic");
                   doc.setFontSize(10);
-                  const splitSearch = doc.splitTextToSize(jurisSearchQuery || "Pesquisa geral", pageWidth - 28);
+                  const splitSearch = doc.splitTextToSize(
+                    jurisSearchQuery || "Pesquisa geral",
+                    pageWidth - 28,
+                  );
                   doc.text(splitSearch, 14, 65);
-                  
-                  let currentY = 65 + (splitSearch.length * 5) + 15;
+
+                  let currentY = 65 + splitSearch.length * 5 + 15;
 
                   // RESULTADOS
                   doc.setTextColor(40, 40, 40);
                   doc.setFontSize(14);
                   doc.setFont("helvetica", "bold");
                   doc.text("Análise de Precedentes e Teses", 14, currentY);
-                  
+
                   doc.setDrawColor(212, 175, 55);
                   doc.setLineWidth(0.5);
                   doc.line(14, currentY + 3, 60, currentY + 3);
@@ -6298,17 +8667,20 @@ export default function AdvogadoDashboard() {
                   doc.setFont("helvetica", "normal");
                   doc.setFontSize(11);
                   doc.setTextColor(60, 60, 60);
-                  
+
                   currentY += 15;
-                  const cleanResult = jurisResult.replace(/\*\*/g, ''); // Remove asteriscos de negrito do Markdown
-                  const splitResult = doc.splitTextToSize(cleanResult, pageWidth - 28);
-                  
-                  splitResult.forEach(line => {
+                  const cleanResult = jurisResult.replace(/\*\*/g, ""); // Remove asteriscos de negrito do Markdown
+                  const splitResult = doc.splitTextToSize(
+                    cleanResult,
+                    pageWidth - 28,
+                  );
+
+                  splitResult.forEach((line) => {
                     if (currentY > pageHeight - 30) {
                       doc.addPage();
                       currentY = 20;
                     }
-                    
+
                     // Se a linha começar com número ou marcador, dar destaque
                     if (/^\d+\./.test(line.trim())) {
                       doc.setFont("helvetica", "bold");
@@ -6326,12 +8698,17 @@ export default function AdvogadoDashboard() {
                     doc.setPage(i);
                     doc.setFontSize(9);
                     doc.setTextColor(150, 150, 150);
-                    doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+                    doc.line(
+                      14,
+                      pageHeight - 20,
+                      pageWidth - 14,
+                      pageHeight - 20,
+                    );
                     doc.text(
                       `SocialJurídico PRO - Inteligência Jurisprudencial | Página ${i} de ${pageCount}`,
                       pageWidth / 2,
                       pageHeight - 12,
-                      { align: "center" }
+                      { align: "center" },
                     );
                   }
 
@@ -6382,9 +8759,10 @@ export default function AdvogadoDashboard() {
       return "Próximos Dias";
     };
 
-    const filteredAgendaItems = calendarMemberFilter === "TODOS"
-      ? agendaItems
-      : agendaItems.filter(i => i.lawyer_id === calendarMemberFilter);
+    const filteredAgendaItems =
+      calendarMemberFilter === "TODOS"
+        ? agendaItems
+        : agendaItems.filter((i) => i.lawyer_id === calendarMemberFilter);
 
     const grouped = {
       Hoje: filteredAgendaItems.filter((i) => getGroup(i.date) === "Hoje"),
@@ -6404,19 +8782,21 @@ export default function AdvogadoDashboard() {
             </p>
           </div>
           <div className={styles.redatorActions}>
-            <button 
+            <button
               className={styles.actionBtn}
               onClick={handleAnalyseAgenda}
               disabled={isAnalyzingAgenda}
             >
-              <AlertTriangle size={16} /> {isAnalyzingAgenda ? "Analisando..." : "Analisar"}
+              <AlertTriangle size={16} />{" "}
+              {isAnalyzingAgenda ? "Analisando..." : "Analisar"}
             </button>
-            <button 
+            <button
               className={styles.actionBtn}
               onClick={handleSummarizeAgenda}
               disabled={isAnalyzingAgenda}
             >
-              <BarChart3 size={16} /> {isAnalyzingAgenda ? "Resumindo..." : "Resumo"}
+              <BarChart3 size={16} />{" "}
+              {isAnalyzingAgenda ? "Resumindo..." : "Resumo"}
             </button>
             <button
               className={styles.redatorGenerateBtn}
@@ -6451,7 +8831,15 @@ export default function AdvogadoDashboard() {
                 <Calendar size={16} /> Conectar Google Agenda
               </button>
             ) : (
-              <span style={{ fontSize: "0.8rem", color: "#10b981", display: "flex", alignItems: "center", gap: "5px" }}>
+              <span
+                style={{
+                  fontSize: "0.8rem",
+                  color: "#10b981",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                }}
+              >
                 <CheckCircle2 size={14} /> Google Sincronizado
               </span>
             )}
@@ -6460,9 +8848,30 @@ export default function AdvogadoDashboard() {
 
         {/* FILTROS DE MEMBROS DO ESCRITÓRIO */}
         {profileData?.escritorio_id && membrosEscritorio.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px", padding: "12px", marginBottom: "20px", background: "rgba(255, 255, 255, 0.02)", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-            <span style={{ fontSize: "0.8rem", color: "#94a3b8", display: "flex", alignItems: "center", marginRight: "10px" }}>
-              <Filter size={14} style={{ marginRight: "5px" }} /> Filtrar Membro:
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              gap: "8px",
+              padding: "12px",
+              marginBottom: "20px",
+              background: "rgba(255, 255, 255, 0.02)",
+              borderRadius: "8px",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "0.8rem",
+                color: "#94a3b8",
+                display: "flex",
+                alignItems: "center",
+                marginRight: "10px",
+              }}
+            >
+              <Filter size={14} style={{ marginRight: "5px" }} /> Filtrar
+              Membro:
             </span>
             <button
               onClick={() => setCalendarMemberFilter("TODOS")}
@@ -6472,16 +8881,21 @@ export default function AdvogadoDashboard() {
                 fontSize: "0.75rem",
                 border: "none",
                 cursor: "pointer",
-                background: calendarMemberFilter === "TODOS" ? "var(--brand-gold)" : "rgba(255, 255, 255, 0.05)",
+                background:
+                  calendarMemberFilter === "TODOS"
+                    ? "var(--brand-gold)"
+                    : "rgba(255, 255, 255, 0.05)",
                 color: calendarMemberFilter === "TODOS" ? "#000" : "#fff",
                 fontWeight: "600",
-                transition: "all 0.2s"
+                transition: "all 0.2s",
               }}
             >
               Todos ({agendaItems.length})
             </button>
-            {membrosEscritorio.map(member => {
-              const count = agendaItems.filter(i => i.lawyer_id === member.id).length;
+            {membrosEscritorio.map((member) => {
+              const count = agendaItems.filter(
+                (i) => i.lawyer_id === member.id,
+              ).length;
               return (
                 <button
                   key={member.id}
@@ -6492,10 +8906,13 @@ export default function AdvogadoDashboard() {
                     fontSize: "0.75rem",
                     border: "none",
                     cursor: "pointer",
-                    background: calendarMemberFilter === member.id ? "var(--brand-gold)" : "rgba(255, 255, 255, 0.05)",
+                    background:
+                      calendarMemberFilter === member.id
+                        ? "var(--brand-gold)"
+                        : "rgba(255, 255, 255, 0.05)",
                     color: calendarMemberFilter === member.id ? "#000" : "#fff",
                     fontWeight: "600",
-                    transition: "all 0.2s"
+                    transition: "all 0.2s",
                   }}
                 >
                   {member.name} ({count})
@@ -6583,21 +9000,30 @@ export default function AdvogadoDashboard() {
                         </span>
                       </div>
                       <h4 className={styles.agendaTitle}>{item.title}</h4>
-                      
+
                       {item.client_id && (
                         <div className={styles.agendaClient}>
                           <User size={12} />{" "}
                           <span>
-                            {crmClients.find((c) => c.id === item.client_id)?.name || "Cliente"}
+                            {crmClients.find((c) => c.id === item.client_id)
+                              ?.name || "Cliente"}
                           </span>
                         </div>
                       )}
 
                       {profileData?.escritorio_id && (
-                        <div className={styles.agendaClient} style={{ color: "var(--brand-gold)", marginTop: "4px" }}>
+                        <div
+                          className={styles.agendaClient}
+                          style={{
+                            color: "var(--brand-gold)",
+                            marginTop: "4px",
+                          }}
+                        >
                           <User size={12} color="var(--brand-gold)" />{" "}
                           <span>
-                            {membrosEscritorio.find((m) => m.id === item.lawyer_id)?.name || "Atribuído a você"}
+                            {membrosEscritorio.find(
+                              (m) => m.id === item.lawyer_id,
+                            )?.name || "Atribuído a você"}
                           </span>
                         </div>
                       )}
@@ -6916,54 +9342,70 @@ export default function AdvogadoDashboard() {
               onClick={() => {
                 const doc = new jsPDF();
                 const pageWidth = doc.internal.pageSize.getWidth();
-                
+
                 // HEADER
                 doc.setFillColor(11, 11, 14); // Cor de fundo do site
-                doc.rect(0, 0, pageWidth, 40, 'F');
-                
+                doc.rect(0, 0, pageWidth, 40, "F");
+
                 doc.setTextColor(212, 175, 55); // Cor Gold
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(24);
                 doc.text("SocialJurídico", 14, 20);
-                
+
                 doc.setTextColor(255, 255, 255);
                 doc.setFontSize(12);
                 doc.setFont("helvetica", "normal");
                 doc.text("Relatório de Triagem Inteligente IA", 14, 30);
-                
+
                 doc.setFontSize(10);
-                doc.text(`Gerado em: ${new Date().toLocaleString()}`, pageWidth - 60, 30);
+                doc.text(
+                  `Gerado em: ${new Date().toLocaleString()}`,
+                  pageWidth - 60,
+                  30,
+                );
 
                 // RELATO ORIGINAL
                 doc.setTextColor(0, 0, 0);
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(14);
                 doc.text("1. Relato do Cliente (Original)", 14, 55);
-                
+
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(10);
-                const splitRelato = doc.splitTextToSize(triagemAnswers || "Não informado", pageWidth - 28);
+                const splitRelato = doc.splitTextToSize(
+                  triagemAnswers || "Não informado",
+                  pageWidth - 28,
+                );
                 doc.text(splitRelato, 14, 65);
-                
-                let currentY = 65 + (splitRelato.length * 5) + 10;
+
+                let currentY = 65 + splitRelato.length * 5 + 10;
 
                 // TABELA DE DIAGNÓSTICO
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(14);
                 doc.text("2. Diagnóstico Estratégico", 14, currentY);
-                
+
                 autoTable(doc, {
                   startY: currentY + 5,
-                  theme: 'grid',
-                  headStyles: { fillColor: [212, 175, 55], textColor: [0, 0, 0] },
+                  theme: "grid",
+                  headStyles: {
+                    fillColor: [212, 175, 55],
+                    textColor: [0, 0, 0],
+                  },
                   body: [
                     ["Área Jurídica", triagemDiagnosis?.area || "N/A"],
                     ["Urgência", triagemDiagnosis?.urgency || "N/A"],
                     ["Nível de Viabilidade", triagemViability?.level || "N/A"],
-                    ["Valor Estimado da Causa", triagemCaseValue?.range || "Consultivo"],
-                    ["Ação Recomendada", triagemDiagnosis?.suggestedAction || "N/A"],
+                    [
+                      "Valor Estimado da Causa",
+                      triagemCaseValue?.range || "Consultivo",
+                    ],
+                    [
+                      "Ação Recomendada",
+                      triagemDiagnosis?.suggestedAction || "N/A",
+                    ],
                   ],
-                  margin: { left: 14, right: 14 }
+                  margin: { left: 14, right: 14 },
                 });
 
                 currentY = doc.lastAutoTable.finalY + 15;
@@ -6972,27 +9414,31 @@ export default function AdvogadoDashboard() {
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(14);
                 doc.text("3. Análise de Viabilidade", 14, currentY);
-                
+
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(10);
-                const splitReasoning = doc.splitTextToSize(triagemViability?.reasoning || "Sem justificativa detalhada.", pageWidth - 28);
+                const splitReasoning = doc.splitTextToSize(
+                  triagemViability?.reasoning || "Sem justificativa detalhada.",
+                  pageWidth - 28,
+                );
                 doc.text(splitReasoning, 14, currentY + 8);
-                
-                currentY += 8 + (splitReasoning.length * 5) + 15;
+
+                currentY += 8 + splitReasoning.length * 5 + 15;
 
                 // DOCUMENTOS NECESSÁRIOS
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(14);
                 doc.text("4. Documentos Necessários", 14, currentY);
-                
-                const docsList = triagemDiagnosis?.requiredDocuments?.map(d => [d]) || [];
+
+                const docsList =
+                  triagemDiagnosis?.requiredDocuments?.map((d) => [d]) || [];
                 autoTable(doc, {
                   startY: currentY + 5,
-                  theme: 'plain',
+                  theme: "plain",
                   body: docsList,
                   bodyStyles: { fontSize: 10 },
                   columnStyles: { 0: { cellWidth: pageWidth - 28 } },
-                  margin: { left: 14 }
+                  margin: { left: 14 },
                 });
 
                 currentY = doc.lastAutoTable.finalY + 15;
@@ -7006,15 +9452,19 @@ export default function AdvogadoDashboard() {
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(14);
                 doc.text("5. Próximos Passos Recomendados", 14, currentY);
-                
-                const stepsList = triagemDiagnosis?.nextSteps?.map((s, i) => [`Passo ${i+1}`, s]) || [];
+
+                const stepsList =
+                  triagemDiagnosis?.nextSteps?.map((s, i) => [
+                    `Passo ${i + 1}`,
+                    s,
+                  ]) || [];
                 autoTable(doc, {
                   startY: currentY + 5,
-                  theme: 'striped',
+                  theme: "striped",
                   head: [["Ordem", "Ação"]],
                   headStyles: { fillColor: [40, 40, 40] },
                   body: stepsList,
-                  margin: { left: 14 }
+                  margin: { left: 14 },
                 });
 
                 // FOOTER
@@ -7027,7 +9477,7 @@ export default function AdvogadoDashboard() {
                     `SocialJurídico - Inteligência Artificial para Advogados | Página ${i} de ${pageCount}`,
                     pageWidth / 2,
                     doc.internal.pageSize.getHeight() - 10,
-                    { align: "center" }
+                    { align: "center" },
                   );
                 }
 
@@ -7166,41 +9616,115 @@ export default function AdvogadoDashboard() {
                     <UserCheck size={14} /> Verificado
                   </span>
                 ) : profileData.oab_verification_status === "ERROR" ? (
-                  <span className={styles.errorSeal} style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.3)", padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span
+                    className={styles.errorSeal}
+                    style={{
+                      background: "rgba(239, 68, 68, 0.1)",
+                      color: "#ef4444",
+                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                      padding: "4px 10px",
+                      borderRadius: "20px",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
                     <X size={14} /> Erro na OAB
                   </span>
                 ) : (
-                  <span className={styles.pendingSeal} style={{ background: "rgba(234, 179, 8, 0.1)", color: "#eab308", border: "1px solid rgba(234, 179, 8, 0.3)", padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: 800, display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span
+                    className={styles.pendingSeal}
+                    style={{
+                      background: "rgba(234, 179, 8, 0.1)",
+                      color: "#eab308",
+                      border: "1px solid rgba(234, 179, 8, 0.3)",
+                      padding: "4px 10px",
+                      borderRadius: "20px",
+                      fontSize: "0.75rem",
+                      fontWeight: 800,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
                     <Clock size={14} /> Verificação Pendente
                   </span>
                 )}
               </div>
 
               {/* Card de Avaliação */}
-              <div style={{
-                background: "rgba(212,175,55,0.06)",
-                border: "1px solid rgba(212,175,55,0.2)",
-                borderRadius: "12px",
-                padding: "14px 16px",
-                marginTop: "12px",
-                textAlign: "center",
-              }}>
-                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "8px" }}>
+              <div
+                style={{
+                  background: "rgba(212,175,55,0.06)",
+                  border: "1px solid rgba(212,175,55,0.2)",
+                  borderRadius: "12px",
+                  padding: "14px 16px",
+                  marginTop: "12px",
+                  textAlign: "center",
+                }}
+              >
+                <p
+                  style={{
+                    color: "rgba(255,255,255,0.5)",
+                    fontSize: "0.72rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    marginBottom: "8px",
+                  }}
+                >
                   Minha Avaliação
                 </p>
                 {avgRating && avgRating.total > 0 ? (
                   <>
-                    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        gap: "6px",
+                        marginBottom: "4px",
+                      }}
+                    >
                       <Star size={20} fill="#d4af37" color="#d4af37" />
-                      <span style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--color-gold)" }}>{avgRating.media}</span>
-                      <span style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.85rem" }}>/5</span>
+                      <span
+                        style={{
+                          fontSize: "1.6rem",
+                          fontWeight: 800,
+                          color: "var(--color-gold)",
+                        }}
+                      >
+                        {avgRating.media}
+                      </span>
+                      <span
+                        style={{
+                          color: "rgba(255,255,255,0.4)",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        /5
+                      </span>
                     </div>
-                    <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.78rem", margin: 0 }}>
-                      {avgRating.total} avaliação{avgRating.total !== 1 ? "es" : ""}
+                    <p
+                      style={{
+                        color: "rgba(255,255,255,0.5)",
+                        fontSize: "0.78rem",
+                        margin: 0,
+                      }}
+                    >
+                      {avgRating.total} avaliação
+                      {avgRating.total !== 1 ? "es" : ""}
                     </p>
                   </>
                 ) : (
-                  <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.82rem", margin: 0 }}>
+                  <p
+                    style={{
+                      color: "rgba(255,255,255,0.35)",
+                      fontSize: "0.82rem",
+                      margin: 0,
+                    }}
+                  >
                     Ainda sem avaliações
                   </p>
                 )}
@@ -7949,7 +10473,8 @@ export default function AdvogadoDashboard() {
                       <h4>Redator IA Jurídico</h4>
                     </div>
                     <p style={{ fontSize: "0.85rem", marginBottom: 15 }}>
-                      Gera peças jurídicas profissionais com múltiplos tons:                      formal, técnico ou persuasivo. Inclui fundamentação legal,
+                      Gera peças jurídicas profissionais com múltiplos tons:
+                      formal, técnico ou persuasivo. Inclui fundamentação legal,
                       jurisprudência e argumentações estruturadas. Suporta todas
                       as áreas.
                     </p>
@@ -8722,7 +11247,11 @@ export default function AdvogadoDashboard() {
     const file = e.target.files[0];
     if (!file || !selectedClient) return;
 
-    if (isBlindarProva && profileData?.plan_type === 'START' && (profileData?.balance || 0) < 3) {
+    if (
+      isBlindarProva &&
+      profileData?.plan_type === "START" &&
+      (profileData?.balance || 0) < 3
+    ) {
       toast.error("Saldo insuficiente. A certificação requer 3 Juris.");
       setShowBuyModal(true);
       e.target.value = "";
@@ -8744,33 +11273,44 @@ export default function AdvogadoDashboard() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(isBlindarProva ? "Documento blindado e anexado!" : "Documento anexado!");
+        toast.success(
+          isBlindarProva
+            ? "Documento blindado e anexado!"
+            : "Documento anexado!",
+        );
         fetchClientDocuments(selectedClient.id);
-        if (isBlindarProva && profileData?.plan_type === 'START') {
-           reloadPlanUsage();
+        if (isBlindarProva && profileData?.plan_type === "START") {
+          reloadPlanUsage();
         }
 
         // Silent timeline audit log
         try {
-          const cargoFriendly = profileData?.cargo === "admin" ? "Gestor(a)" :
-                                profileData?.cargo === "secretaria" ? "Secretária" :
-                                profileData?.cargo === "estagiario" ? "Estagiário(a)" :
-                                "Advogado(a)";
+          const cargoFriendly =
+            profileData?.cargo === "admin"
+              ? "Gestor(a)"
+              : profileData?.cargo === "secretaria"
+                ? "Secretária"
+                : profileData?.cargo === "estagiario"
+                  ? "Estagiário(a)"
+                  : "Advogado(a)";
           const userNameStr = profileData?.name || "Membro";
           const logMsg = `Documento '${file.name}' anexado por ${cargoFriendly} ${userNameStr}`;
-          
+
           await fetch("/api/crm/interactions", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               client_id: selectedClient.id,
               content: logMsg,
-              type: "auditoria"
-            })
+              type: "auditoria",
+            }),
           });
           fetchInteractions(selectedClient.id);
         } catch (auditErr) {
-          console.error("Erro ao registrar log de auditoria de upload:", auditErr);
+          console.error(
+            "Erro ao registrar log de auditoria de upload:",
+            auditErr,
+          );
         }
       } else {
         toast.error(data.message || "Erro no upload");
@@ -8790,7 +11330,9 @@ export default function AdvogadoDashboard() {
 
   const executeDeleteDocument = async () => {
     if (profileData?.cargo === "estagiario") {
-      toast.error("Acesso restrito: Estagiários não possuem permissão para excluir documentos ou históricos.");
+      toast.error(
+        "Acesso restrito: Estagiários não possuem permissão para excluir documentos ou históricos.",
+      );
       setShowDeleteConfirm(false);
       setDocToDelete(null);
       return;
@@ -8817,25 +11359,32 @@ export default function AdvogadoDashboard() {
 
         // Silent timeline audit log
         try {
-          const cargoFriendly = profileData?.cargo === "admin" ? "Gestor(a)" :
-                                profileData?.cargo === "secretaria" ? "Secretária" :
-                                profileData?.cargo === "estagiario" ? "Estagiário(a)" :
-                                "Advogado(a)";
+          const cargoFriendly =
+            profileData?.cargo === "admin"
+              ? "Gestor(a)"
+              : profileData?.cargo === "secretaria"
+                ? "Secretária"
+                : profileData?.cargo === "estagiario"
+                  ? "Estagiário(a)"
+                  : "Advogado(a)";
           const userNameStr = profileData?.name || "Membro";
           const logMsg = `Documento '${fileName}' excluído por ${cargoFriendly} ${userNameStr}`;
-          
+
           await fetch("/api/crm/interactions", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               client_id: selectedClient.id,
               content: logMsg,
-              type: "auditoria"
-            })
+              type: "auditoria",
+            }),
           });
           fetchInteractions(selectedClient.id);
         } catch (auditErr) {
-          console.error("Erro ao registrar log de auditoria de exclusão:", auditErr);
+          console.error(
+            "Erro ao registrar log de auditoria de exclusão:",
+            auditErr,
+          );
         }
       } else {
         toast.error(data.message || "Erro ao excluir");
@@ -8857,7 +11406,7 @@ export default function AdvogadoDashboard() {
   const handleDownloadCertificate = (docFile) => {
     try {
       const doc = new jsPDF();
-      
+
       // Page Border
       doc.setDrawColor(16, 185, 129);
       doc.setLineWidth(1);
@@ -8865,14 +11414,18 @@ export default function AdvogadoDashboard() {
 
       // Header Banner
       doc.setFillColor(16, 185, 129);
-      doc.rect(5, 5, 200, 25, 'F');
-      
+      doc.rect(5, 5, 200, 25, "F");
+
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("CERTIFICADO DE CADEIA DE CUSTÓDIA", 105, 16, { align: 'center' });
+      doc.text("CERTIFICADO DE CADEIA DE CUSTÓDIA", 105, 16, {
+        align: "center",
+      });
       doc.setFontSize(10);
-      doc.text("REGISTRO DE IMUTABILIDADE DE PROVA DIGITAL", 105, 23, { align: 'center' });
+      doc.text("REGISTRO DE IMUTABILIDADE DE PROVA DIGITAL", 105, 23, {
+        align: "center",
+      });
 
       let currentY = 40;
       doc.setTextColor(0, 0, 0);
@@ -8881,122 +11434,158 @@ export default function AdvogadoDashboard() {
 
       const emitidoEm = new Date().toLocaleString("pt-BR");
       const dataUpload = new Date(docFile.created_at).toLocaleString("pt-BR");
-      const protocolo = docFile.id ? docFile.id.split('-')[0].toUpperCase() : "DOC-PROVA-DIGITAL";
+      const protocolo = docFile.id
+        ? docFile.id.split("-")[0].toUpperCase()
+        : "DOC-PROVA-DIGITAL";
 
       const introText = `Certificamos, para os devidos fins de direito, que o arquivo digital individualizado neste documento foi submetido a procedimento de registro de metadados e ancoragem criptográfica, estabelecendo um marco temporal fidedigno e garantindo a sua imutabilidade técnica desde o momento de sua custódia.`;
       const splitIntro = doc.splitTextToSize(introText, 180);
       doc.text(splitIntro, 14, currentY);
-      currentY += (splitIntro.length * 5) + 10;
+      currentY += splitIntro.length * 5 + 10;
 
       // Section I
       doc.setFillColor(240, 245, 240);
-      doc.rect(10, currentY, 190, 8, 'F');
+      doc.rect(10, currentY, 190, 8, "F");
       doc.setDrawColor(16, 185, 129);
       doc.setLineWidth(0.5);
       doc.rect(10, currentY, 190, 32);
-      
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text("I. IDENTIFICAÇÃO DA PROVA E PROPRIETÁRIO", 14, currentY + 6);
-      
+
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       currentY += 14;
       doc.text(`NOME DO ARQUIVO: ${docFile.file_name}`, 14, currentY);
       doc.text(`PROTOCOLO INTERNO: ${protocolo}`, 120, currentY);
       currentY += 6;
-      doc.text(`PROPRIETÁRIO / CUSTODIANTE: ${profileData?.name || "Advogado(a)"} (OAB: ${profileData?.oab || "N/I"})`, 14, currentY);
+      doc.text(
+        `PROPRIETÁRIO / CUSTODIANTE: ${profileData?.name || "Advogado(a)"} (OAB: ${profileData?.oab || "N/I"})`,
+        14,
+        currentY,
+      );
       currentY += 6;
-      doc.text(`DATA / HORA DO CARREGAMENTO (UTC-3): ${dataUpload}`, 14, currentY);
-      
+      doc.text(
+        `DATA / HORA DO CARREGAMENTO (UTC-3): ${dataUpload}`,
+        14,
+        currentY,
+      );
+
       currentY += 12;
 
       // Section II
       doc.setFillColor(240, 245, 240);
-      doc.rect(10, currentY, 190, 8, 'F');
-      
-      const hashText = docFile.hash_sha512 || "HASH_NÃO_PROCESSADO_CONTATE_O_SUPORTE";
+      doc.rect(10, currentY, 190, 8, "F");
+
+      const hashText =
+        docFile.hash_sha512 || "HASH_NÃO_PROCESSADO_CONTATE_O_SUPORTE";
       doc.setFont("courier", "bold");
       doc.setFontSize(8);
       const splitHash = doc.splitTextToSize(hashText, 180);
-      
-      doc.rect(10, currentY, 190, 30 + (splitHash.length * 4)); // Outline
-      
+
+      doc.rect(10, currentY, 190, 30 + splitHash.length * 4); // Outline
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text("II. ANCORAGEM CRIPTOGRÁFICA (HASH)", 14, currentY + 6);
-      
+
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       currentY += 14;
-      doc.text("ALGORITMO UTILIZADO: SHA-512 (Secure Hash Algorithm 512-bit)", 14, currentY);
+      doc.text(
+        "ALGORITMO UTILIZADO: SHA-512 (Secure Hash Algorithm 512-bit)",
+        14,
+        currentY,
+      );
       currentY += 6;
       doc.setFont("helvetica", "bold");
-      doc.text("ASSINATURA DIGITAL (IMPRESSÃO DIGITAL DO ARQUIVO):", 14, currentY);
+      doc.text(
+        "ASSINATURA DIGITAL (IMPRESSÃO DIGITAL DO ARQUIVO):",
+        14,
+        currentY,
+      );
       currentY += 5;
-      
+
       doc.setFont("courier", "bold");
       doc.setFontSize(8);
       doc.text(splitHash, 14, currentY);
-      
-      currentY += (splitHash.length * 4) + 5;
+
+      currentY += splitHash.length * 4 + 5;
 
       // Section III
       doc.setFillColor(240, 245, 240);
-      doc.rect(10, currentY, 190, 8, 'F');
-      
+      doc.rect(10, currentY, 190, 8, "F");
+
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       const uaStr = `DISPOSITIVO/AGENTE: ${docFile.user_agent || "N/A"}`;
       const splitUa = doc.splitTextToSize(uaStr, 180);
-      
-      doc.rect(10, currentY, 190, 24 + (splitUa.length * 4)); // Outline
-      
+
+      doc.rect(10, currentY, 190, 24 + splitUa.length * 4); // Outline
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text("III. RASTREABILIDADE TÉCNICA", 14, currentY + 6);
-      
+
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       currentY += 14;
-      doc.text(`ENDEREÇO IP REGISTRADO NO UPLOAD: ${docFile.upload_ip || "N/A"}`, 14, currentY);
+      doc.text(
+        `ENDEREÇO IP REGISTRADO NO UPLOAD: ${docFile.upload_ip || "N/A"}`,
+        14,
+        currentY,
+      );
       currentY += 6;
       doc.text(splitUa, 14, currentY);
-      
-      currentY += (splitUa.length * 4) + 8;
+
+      currentY += splitUa.length * 4 + 8;
 
       // Section IV
       doc.setFillColor(240, 245, 240);
-      doc.rect(10, currentY, 190, 8, 'F');
-      
+      doc.rect(10, currentY, 190, 8, "F");
+
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      const disclaimer = "1. INTEGRIDADE: O Hash SHA-512 listado na Seção II é o identificador matemático único deste arquivo. Qualquer alteração no conteúdo digital original (como a mudança de 1 byte ou pixel) resultará em um Hash completamente distinto.\n\n2. LEGALIDADE: Este documento visa dar suporte à observância do Art. 158-A do Código de Processo Penal (Cadeia de Custódia) e ao Art. 369 do Código de Processo Civil, provendo meios técnicos idôneos para atestar o momento do registro e a não-adulteração da prova após este instante.\n\n3. TERCEIRO DE CONFIANÇA: O SocialJurídico atua apenas como agente técnico neutro (terceira parte confiável) fornecendo a plataforma para extração e guarda segura dos metadados e da impressão digital do arquivo no exato momento da operação realizada pelo usuário.";
+      const disclaimer =
+        "1. INTEGRIDADE: O Hash SHA-512 listado na Seção II é o identificador matemático único deste arquivo. Qualquer alteração no conteúdo digital original (como a mudança de 1 byte ou pixel) resultará em um Hash completamente distinto.\n\n2. LEGALIDADE: Este documento visa dar suporte à observância do Art. 158-A do Código de Processo Penal (Cadeia de Custódia) e ao Art. 369 do Código de Processo Civil, provendo meios técnicos idôneos para atestar o momento do registro e a não-adulteração da prova após este instante.\n\n3. TERCEIRO DE CONFIANÇA: O SocialJurídico atua apenas como agente técnico neutro (terceira parte confiável) fornecendo a plataforma para extração e guarda segura dos metadados e da impressão digital do arquivo no exato momento da operação realizada pelo usuário.";
       const splitDisclaimer = doc.splitTextToSize(disclaimer, 180);
-      
-      doc.rect(10, currentY, 190, 12 + (splitDisclaimer.length * 3.5));
-      
+
+      doc.rect(10, currentY, 190, 12 + splitDisclaimer.length * 3.5);
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text("IV. EMBASAMENTO LEGAL E DECLARAÇÃO", 14, currentY + 6);
-      
+
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       currentY += 14;
       doc.text(splitDisclaimer, 14, currentY);
 
-      currentY += (splitDisclaimer.length * 3.5) + 16;
+      currentY += splitDisclaimer.length * 3.5 + 16;
 
       // Signatures / Footers
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      doc.text("SOCIALJURÍDICO - PLATAFORMA DE TECNOLOGIA JURÍDICA", 105, currentY, { align: "center" });
+      doc.text(
+        "SOCIALJURÍDICO - PLATAFORMA DE TECNOLOGIA JURÍDICA",
+        105,
+        currentY,
+        { align: "center" },
+      );
       currentY += 4;
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.text(`Certificado gerado e autenticado pelo sistema em ${emitidoEm}`, 105, currentY, { align: "center" });
+      doc.text(
+        `Certificado gerado e autenticado pelo sistema em ${emitidoEm}`,
+        105,
+        currentY,
+        { align: "center" },
+      );
       currentY += 4;
-      doc.text(`Código de Validação: SJ-CERT-${protocolo}`, 105, currentY, { align: "center" });
+      doc.text(`Código de Validação: SJ-CERT-${protocolo}`, 105, currentY, {
+        align: "center",
+      });
 
       doc.save(`Certificado_Blindagem_${docFile.file_name}.pdf`);
       toast.success("Certificado baixado com sucesso!");
@@ -9199,7 +11788,12 @@ export default function AdvogadoDashboard() {
     setAgendaAnalysis("");
     setShowAgendaAnalysisModal(true);
 
-    const agendaSummary = agendaItems.map(i => `- ${i.title} (${new Date(i.date).toLocaleString('pt-BR')}): ${i.description || 'Sem descrição'}`).join('\n');
+    const agendaSummary = agendaItems
+      .map(
+        (i) =>
+          `- ${i.title} (${new Date(i.date).toLocaleString("pt-BR")}): ${i.description || "Sem descrição"}`,
+      )
+      .join("\n");
 
     try {
       const res = await fetch("/api/crm/chat", {
@@ -9232,7 +11826,9 @@ export default function AdvogadoDashboard() {
     setAgendaAnalysis("");
     setShowAgendaAnalysisModal(true);
 
-    const agendaSummary = agendaItems.map(i => `- ${i.title} (${new Date(i.date).toLocaleString('pt-BR')})`).join('\n');
+    const agendaSummary = agendaItems
+      .map((i) => `- ${i.title} (${new Date(i.date).toLocaleString("pt-BR")})`)
+      .join("\n");
 
     try {
       const res = await fetch("/api/crm/chat", {
@@ -9352,7 +11948,12 @@ export default function AdvogadoDashboard() {
                   }
                 />
               </div>
-              <div className={styles.formItem} style={{ gridColumn: profileData?.escritorio_id ? "span 1" : "span 2" }}>
+              <div
+                className={styles.formItem}
+                style={{
+                  gridColumn: profileData?.escritorio_id ? "span 1" : "span 2",
+                }}
+              >
                 <label className={styles.formLabel}>Cliente (Opcional)</label>
                 <select
                   className={styles.formSelect}
@@ -9375,8 +11976,13 @@ export default function AdvogadoDashboard() {
             </div>
 
             {profileData?.escritorio_id && (
-              <div className={styles.formItemFull} style={{ marginTop: "15px" }}>
-                <label className={styles.formLabel}>Responsável Atribuído *</label>
+              <div
+                className={styles.formItemFull}
+                style={{ marginTop: "15px" }}
+              >
+                <label className={styles.formLabel}>
+                  Responsável Atribuído *
+                </label>
                 <select
                   className={styles.formSelect}
                   value={newAgendaItem.lawyerId}
@@ -9387,10 +11993,20 @@ export default function AdvogadoDashboard() {
                     })
                   }
                 >
-                  <option value="">-- Selecione o Membro do Escritório --</option>
+                  <option value="">
+                    -- Selecione o Membro do Escritório --
+                  </option>
                   {membrosEscritorio.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name} ({m.cargo === "admin" ? "Administrador" : m.cargo === "advogado" ? "Advogado" : m.cargo === "secretaria" ? "Secretária" : "Estagiário"})
+                      {m.name} (
+                      {m.cargo === "admin"
+                        ? "Administrador"
+                        : m.cargo === "advogado"
+                          ? "Advogado"
+                          : m.cargo === "secretaria"
+                            ? "Secretária"
+                            : "Estagiário"}
+                      )
                     </option>
                   ))}
                 </select>
@@ -9620,19 +12236,61 @@ export default function AdvogadoDashboard() {
             </div>
             <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
               {profileData?.escritorio_id && (
-                <div style={{ marginRight: '15px', paddingRight: '15px', borderRight: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--color-silver-dark)', textTransform: 'uppercase', fontWeight: 'bold' }}>Responsável</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-gold)', fontWeight: 600 }}>
+                <div
+                  style={{
+                    marginRight: "15px",
+                    paddingRight: "15px",
+                    borderRight: "1px solid rgba(255,255,255,0.1)",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    textAlign: "right",
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.65rem",
+                      color: "var(--color-silver-dark)",
+                      textTransform: "uppercase",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Responsável
+                  </span>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginTop: "2px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "0.85rem",
+                        color: "var(--color-gold)",
+                        fontWeight: 600,
+                      }}
+                    >
                       {(() => {
-                        const r = (membrosEscritorio || []).find(m => m.id === selectedClient.lawyer_id);
+                        const r = (membrosEscritorio || []).find(
+                          (m) => m.id === selectedClient.lawyer_id,
+                        );
                         return r ? `💼 ${r.name}` : "⚠️ Sem Responsável";
                       })()}
                     </span>
-                    {profileData?.cargo === 'admin' && (
+                    {profileData?.cargo === "admin" && (
                       <button
                         className={styles.newClientBtn}
-                        style={{ padding: '2px 8px', fontSize: '0.65rem', background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)', border: '1px solid rgba(212,175,55,0.2)', marginLeft: '4px', cursor: 'pointer' }}
+                        style={{
+                          padding: "2px 8px",
+                          fontSize: "0.65rem",
+                          background: "rgba(212,175,55,0.1)",
+                          color: "var(--color-gold)",
+                          border: "1px solid rgba(212,175,55,0.2)",
+                          marginLeft: "4px",
+                          cursor: "pointer",
+                        }}
                         onClick={() => setDelegatingClient(selectedClient)}
                       >
                         Delegar
@@ -9641,20 +12299,42 @@ export default function AdvogadoDashboard() {
                   </div>
                 </div>
               )}
-              <div style={{ display: 'flex', gap: '8px', marginRight: '15px', borderRight: '1px solid rgba(255,255,255,0.1)', paddingRight: '15px' }}>
-                <button 
-                  className={styles.newClientBtn} 
-                  style={{ padding: '6px 12px', fontSize: '0.75rem', background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}
-                  onClick={() => handleQuickDocGenerate('PROCURACAO')}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  marginRight: "15px",
+                  borderRight: "1px solid rgba(255,255,255,0.1)",
+                  paddingRight: "15px",
+                }}
+              >
+                <button
+                  className={styles.newClientBtn}
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: "0.75rem",
+                    background: "rgba(16,185,129,0.1)",
+                    color: "#10b981",
+                    border: "1px solid rgba(16,185,129,0.2)",
+                  }}
+                  onClick={() => handleQuickDocGenerate("PROCURACAO")}
                 >
-                  <FileText size={14} style={{ marginRight: '6px' }} /> Gerar Procuração
+                  <FileText size={14} style={{ marginRight: "6px" }} /> Gerar
+                  Procuração
                 </button>
-                <button 
-                  className={styles.newClientBtn} 
-                  style={{ padding: '6px 12px', fontSize: '0.75rem', background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)', border: '1px solid rgba(212,175,55,0.2)' }}
-                  onClick={() => handleQuickDocGenerate('CONTRATO')}
+                <button
+                  className={styles.newClientBtn}
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: "0.75rem",
+                    background: "rgba(212,175,55,0.1)",
+                    color: "var(--color-gold)",
+                    border: "1px solid rgba(212,175,55,0.2)",
+                  }}
+                  onClick={() => handleQuickDocGenerate("CONTRATO")}
                 >
-                  <Shield size={14} style={{ marginRight: '6px' }} /> Gerar Contrato
+                  <Shield size={14} style={{ marginRight: "6px" }} /> Gerar
+                  Contrato
                 </button>
               </div>
               <button
@@ -9676,21 +12356,69 @@ export default function AdvogadoDashboard() {
           </div>
 
           {/* AI INSIGHTS */}
-          <div style={{ padding: '10px 20px', background: 'rgba(212,175,55,0.05)', borderBottom: '1px solid rgba(212,175,55,0.1)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <div
+            style={{
+              padding: "10px 20px",
+              background: "rgba(212,175,55,0.05)",
+              borderBottom: "1px solid rgba(212,175,55,0.1)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                marginBottom: "4px",
+              }}
+            >
               <Zap size={14} color="var(--color-gold)" />
-              <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: 'var(--color-gold)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  fontWeight: "bold",
+                  color: "var(--color-gold)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
                 IA Insights (KYC Avançado)
               </span>
             </div>
-            <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', margin: 0 }}>
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "rgba(255,255,255,0.8)",
+                fontStyle: "italic",
+                margin: 0,
+              }}
+            >
               {isGeneratingInsight ? (
-                <span className={styles.loadingPulse}>Gerando análise estratégica...</span>
+                <span className={styles.loadingPulse}>
+                  Gerando análise estratégica...
+                </span>
               ) : clientInsight === "LIMIT_REACHED" ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <span style={{ color: 'var(--color-silver-dark)' }}>Você atingiu o limite de 5 insights do Plano START.</span>
-                  <button 
-                    style={{ background: 'var(--color-gold)', color: 'var(--color-black)', border: 'none', padding: '4px 12px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer' }}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
+                >
+                  <span style={{ color: "var(--color-silver-dark)" }}>
+                    Você atingiu o limite de 5 insights do Plano START.
+                  </span>
+                  <button
+                    style={{
+                      background: "var(--color-gold)",
+                      color: "var(--color-black)",
+                      border: "none",
+                      padding: "4px 12px",
+                      borderRadius: "4px",
+                      fontSize: "0.7rem",
+                      fontWeight: 800,
+                      cursor: "pointer",
+                    }}
                     onClick={() => {
                       // Trigger upgrade flow
                       toast("Upgrade para o PRO disponível nas configurações!");
@@ -9699,7 +12427,10 @@ export default function AdvogadoDashboard() {
                     FAZER UPGRADE PARA PRO
                   </button>
                 </div>
-              ) : clientInsight || "Selecione um cliente com histórico para gerar insights automáticos."}
+              ) : (
+                clientInsight ||
+                "Selecione um cliente com histórico para gerar insights automáticos."
+              )}
             </p>
           </div>
 
@@ -9774,138 +12505,254 @@ export default function AdvogadoDashboard() {
                 <span className={styles.dossierSectionTitle}>
                   Linha do Tempo de Interações
                 </span>
-                
+
                 {/* Form para nova interação - Estilo Premium */}
-                <div style={{ 
-                  marginBottom: '20px', 
-                  background: 'rgba(255,255,255,0.02)', 
-                  padding: '16px', 
-                  borderRadius: '12px', 
-                  border: '1px solid rgba(212,175,55,0.15)',
-                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)'
-                }}>
+                <div
+                  style={{
+                    marginBottom: "20px",
+                    background: "rgba(255,255,255,0.02)",
+                    padding: "16px",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(212,175,55,0.15)",
+                    boxShadow: "inset 0 2px 4px rgba(0,0,0,0.2)",
+                  }}
+                >
                   <textarea
                     placeholder="Registrar nova interação (ex: Cliente ligou, Reunião feita...)"
                     value={newInteraction.content}
-                    onChange={(e) => setNewInteraction({...newInteraction, content: e.target.value})}
-                    style={{ 
-                      width: '100%',
-                      height: '80px', 
-                      marginBottom: '12px', 
-                      resize: 'none',
-                      background: 'rgba(0,0,0,0.2)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '8px',
-                      color: '#fff',
-                      padding: '10px',
-                      fontSize: '0.85rem',
-                      outline: 'none',
-                      transition: 'border-color 0.2s'
+                    onChange={(e) =>
+                      setNewInteraction({
+                        ...newInteraction,
+                        content: e.target.value,
+                      })
+                    }
+                    style={{
+                      width: "100%",
+                      height: "80px",
+                      marginBottom: "12px",
+                      resize: "none",
+                      background: "rgba(0,0,0,0.2)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: "8px",
+                      color: "#fff",
+                      padding: "10px",
+                      fontSize: "0.85rem",
+                      outline: "none",
+                      transition: "border-color 0.2s",
                     }}
-                    onFocus={(e) => e.target.style.borderColor = 'var(--color-gold)'}
-                    onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    onFocus={(e) =>
+                      (e.target.style.borderColor = "var(--color-gold)")
+                    }
+                    onBlur={(e) =>
+                      (e.target.style.borderColor = "rgba(255,255,255,0.1)")
+                    }
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
                     <select
                       value={newInteraction.type}
-                      onChange={(e) => setNewInteraction({...newInteraction, type: e.target.value})}
-                      style={{ 
+                      onChange={(e) =>
+                        setNewInteraction({
+                          ...newInteraction,
+                          type: e.target.value,
+                        })
+                      }
+                      style={{
                         flex: 1,
-                        background: '#1a1a1a', // Fundo sólido escuro para evitar transparências estranhas no select
-                        border: '1px solid rgba(212,175,55,0.3)', // Borda levemente dourada
-                        borderRadius: '8px',
-                        color: '#fff',
-                        fontSize: '0.85rem',
-                        padding: '10px 12px',
-                        cursor: 'pointer',
-                        outline: 'none',
-                        appearance: 'none', // Remove a seta padrão do browser
-                        backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23d4af37\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E")',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'right 12px center',
-                        backgroundSize: '16px'
+                        background: "#1a1a1a", // Fundo sólido escuro para evitar transparências estranhas no select
+                        border: "1px solid rgba(212,175,55,0.3)", // Borda levemente dourada
+                        borderRadius: "8px",
+                        color: "#fff",
+                        fontSize: "0.85rem",
+                        padding: "10px 12px",
+                        cursor: "pointer",
+                        outline: "none",
+                        appearance: "none", // Remove a seta padrão do browser
+                        backgroundImage:
+                          "url(\"data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "right 12px center",
+                        backgroundSize: "16px",
                       }}
                     >
-                      <option value="nota" style={{ background: '#1a1a1a', color: '#fff' }}>📝 Nota Interna</option>
-                      <option value="reunião" style={{ background: '#1a1a1a', color: '#fff' }}>🤝 Reunião com Cliente</option>
-                      <option value="ligação" style={{ background: '#1a1a1a', color: '#fff' }}>📞 Chamada Telefônica</option>
-                      <option value="email" style={{ background: '#1a1a1a', color: '#fff' }}>📧 E-mail Enviado/Recebido</option>
-                      <option value="whatsapp" style={{ background: '#1a1a1a', color: '#fff' }}>💬 Mensagem de WhatsApp</option>
+                      <option
+                        value="nota"
+                        style={{ background: "#1a1a1a", color: "#fff" }}
+                      >
+                        📝 Nota Interna
+                      </option>
+                      <option
+                        value="reunião"
+                        style={{ background: "#1a1a1a", color: "#fff" }}
+                      >
+                        🤝 Reunião com Cliente
+                      </option>
+                      <option
+                        value="ligação"
+                        style={{ background: "#1a1a1a", color: "#fff" }}
+                      >
+                        📞 Chamada Telefônica
+                      </option>
+                      <option
+                        value="email"
+                        style={{ background: "#1a1a1a", color: "#fff" }}
+                      >
+                        📧 E-mail Enviado/Recebido
+                      </option>
+                      <option
+                        value="whatsapp"
+                        style={{ background: "#1a1a1a", color: "#fff" }}
+                      >
+                        💬 Mensagem de WhatsApp
+                      </option>
                     </select>
                     <button
                       onClick={handleSaveInteraction}
                       disabled={isSavingInteraction || !newInteraction.content}
-                      style={{ 
-                        padding: '8px 20px', 
-                        fontSize: '0.8rem',
-                        fontWeight: '600',
-                        borderRadius: '6px',
-                        background: isSavingInteraction || !newInteraction.content ? '#444' : 'linear-gradient(135deg, var(--color-gold), #b8860b)',
-                        color: '#000',
-                        border: 'none',
-                        cursor: isSavingInteraction || !newInteraction.content ? 'not-allowed' : 'pointer',
-                        transition: 'transform 0.2s, opacity 0.2s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px'
+                      style={{
+                        padding: "8px 20px",
+                        fontSize: "0.8rem",
+                        fontWeight: "600",
+                        borderRadius: "6px",
+                        background:
+                          isSavingInteraction || !newInteraction.content
+                            ? "#444"
+                            : "linear-gradient(135deg, var(--color-gold), #b8860b)",
+                        color: "#000",
+                        border: "none",
+                        cursor:
+                          isSavingInteraction || !newInteraction.content
+                            ? "not-allowed"
+                            : "pointer",
+                        transition: "transform 0.2s, opacity 0.2s",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
                       }}
-                      onMouseEnter={(e) => { if(!isSavingInteraction && newInteraction.content) e.target.style.transform = 'scale(1.02)' }}
-                      onMouseLeave={(e) => { e.target.style.transform = 'scale(1)' }}
+                      onMouseEnter={(e) => {
+                        if (!isSavingInteraction && newInteraction.content)
+                          e.target.style.transform = "scale(1.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.transform = "scale(1)";
+                      }}
                     >
-                      {isSavingInteraction ? 'Salvando...' : 'Registrar'}
+                      {isSavingInteraction ? "Salvando..." : "Registrar"}
                       <CheckCircle2 size={14} />
                     </button>
                   </div>
                 </div>
 
                 {/* Lista da Timeline */}
-                <div className={styles.timelineList} style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
+                <div
+                  className={styles.timelineList}
+                  style={{
+                    maxHeight: "300px",
+                    overflowY: "auto",
+                    paddingRight: "5px",
+                  }}
+                >
                   {isFetchingInteractions ? (
-                    <div style={{ textAlign: 'center', padding: '20px', color: '#888' }}>Carregando histórico...</div>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "20px",
+                        color: "#888",
+                      }}
+                    >
+                      Carregando histórico...
+                    </div>
                   ) : interactions.length > 0 ? (
                     interactions.map((item) => (
-                      <div key={item.id} style={{ 
-                        display: 'flex', 
-                        gap: '12px', 
-                        marginBottom: '15px', 
-                        paddingBottom: '15px', 
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        position: 'relative'
-                      }}>
-                        <div style={{ 
-                          width: '32px', 
-                          height: '32px', 
-                          borderRadius: '50%', 
-                          background: 'rgba(212,175,55,0.1)', 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          color: 'var(--color-gold)',
-                          flexShrink: 0
-                        }}>
-                          {item.type === 'ligação' ? <Phone size={14} /> : 
-                           item.type === 'reunião' ? <Users size={14} /> : 
-                           item.type === 'email' ? <Mail size={14} /> :
-                           item.type === 'whatsapp' ? <MessageSquare size={14} /> :
-                           <FileText size={14} />}
+                      <div
+                        key={item.id}
+                        style={{
+                          display: "flex",
+                          gap: "12px",
+                          marginBottom: "15px",
+                          paddingBottom: "15px",
+                          borderBottom: "1px solid rgba(255,255,255,0.05)",
+                          position: "relative",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "32px",
+                            height: "32px",
+                            borderRadius: "50%",
+                            background: "rgba(212,175,55,0.1)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "var(--color-gold)",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {item.type === "ligação" ? (
+                            <Phone size={14} />
+                          ) : item.type === "reunião" ? (
+                            <Users size={14} />
+                          ) : item.type === "email" ? (
+                            <Mail size={14} />
+                          ) : item.type === "whatsapp" ? (
+                            <MessageSquare size={14} />
+                          ) : (
+                            <FileText size={14} />
+                          )}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                            <span style={{ fontWeight: 600, fontSize: '0.85rem', textTransform: 'capitalize', color: 'var(--color-gold)' }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "flex-start",
+                              marginBottom: "4px",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontWeight: 600,
+                                fontSize: "0.85rem",
+                                textTransform: "capitalize",
+                                color: "var(--color-gold)",
+                              }}
+                            >
                               {item.type}
                             </span>
-                            <span style={{ fontSize: '0.7rem', color: '#666' }}>
-                              {new Date(item.created_at).toLocaleString('pt-BR')}
+                            <span style={{ fontSize: "0.7rem", color: "#666" }}>
+                              {new Date(item.created_at).toLocaleString(
+                                "pt-BR",
+                              )}
                             </span>
                           </div>
-                          <p style={{ fontSize: '0.85rem', color: '#ccc', margin: 0, lineHeight: '1.4' }}>
+                          <p
+                            style={{
+                              fontSize: "0.85rem",
+                              color: "#ccc",
+                              margin: 0,
+                              lineHeight: "1.4",
+                            }}
+                          >
                             {item.content}
                           </p>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '20px', color: '#555', fontSize: '0.85rem' }}>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "20px",
+                        color: "#555",
+                        fontSize: "0.85rem",
+                      }}
+                    >
                       Nenhuma interação registrada ainda.
                     </div>
                   )}
@@ -9913,284 +12760,622 @@ export default function AdvogadoDashboard() {
               </div>
 
               {/* PROCESSOS E CASOS ASSOCIADOS (MARKETPLACE) */}
-              <div className={styles.dossierSection} style={{ marginTop: '20px' }}>
+              <div
+                className={styles.dossierSection}
+                style={{ marginTop: "20px" }}
+              >
                 <span className={styles.dossierSectionTitle}>
                   Processos e Casos Associados
                 </span>
-                
+
                 <div className={styles.associatedCasesList}>
                   {isFetchingAssociatedCases ? (
-                    <div style={{ textAlign: 'center', padding: '15px', color: '#888' }}>Buscando processos no marketplace...</div>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "15px",
+                        color: "#888",
+                      }}
+                    >
+                      Buscando processos no marketplace...
+                    </div>
                   ) : associatedCases.length > 0 ? (
                     associatedCases.map((caso) => (
-                      <div key={caso.id} style={{ 
-                        background: 'rgba(255,255,255,0.03)', 
-                        borderRadius: '10px', 
-                        padding: '12px', 
-                        border: '1px solid rgba(212,175,55,0.1)',
-                        marginBottom: '10px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
+                      <div
+                        key={caso.id}
+                        style={{
+                          background: "rgba(255,255,255,0.03)",
+                          borderRadius: "10px",
+                          padding: "12px",
+                          border: "1px solid rgba(212,175,55,0.1)",
+                          marginBottom: "10px",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
                         <div style={{ flex: 1 }}>
-                          <h4 style={{ margin: 0, fontSize: '0.9rem', color: '#fff' }}>{caso.titulo}</h4>
-                          <div style={{ display: 'flex', gap: '10px', marginTop: '4px', fontSize: '0.75rem', color: '#888' }}>
+                          <h4
+                            style={{
+                              margin: 0,
+                              fontSize: "0.9rem",
+                              color: "#fff",
+                            }}
+                          >
+                            {caso.titulo}
+                          </h4>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "10px",
+                              marginTop: "4px",
+                              fontSize: "0.75rem",
+                              color: "#888",
+                            }}
+                          >
                             <span>⚖️ {caso.area_atuacao}</span>
-                            <span>📅 {new Date(caso.created_at).toLocaleDateString('pt-BR')}</span>
+                            <span>
+                              📅{" "}
+                              {new Date(caso.created_at).toLocaleDateString(
+                                "pt-BR",
+                              )}
+                            </span>
                           </div>
-                          <div style={{ marginTop: '5px' }}>
-                            <span className={styles.miniBadge} style={{ 
-                              background: caso.status === 'CONCLUIDO' ? 'rgba(16,185,129,0.1)' : 'rgba(212,175,55,0.1)',
-                              color: caso.status === 'CONCLUIDO' ? '#10b981' : 'var(--color-gold)',
-                              fontSize: '0.65rem'
-                            }}>
+                          <div style={{ marginTop: "5px" }}>
+                            <span
+                              className={styles.miniBadge}
+                              style={{
+                                background:
+                                  caso.status === "CONCLUIDO"
+                                    ? "rgba(16,185,129,0.1)"
+                                    : "rgba(212,175,55,0.1)",
+                                color:
+                                  caso.status === "CONCLUIDO"
+                                    ? "#10b981"
+                                    : "var(--color-gold)",
+                                fontSize: "0.65rem",
+                              }}
+                            >
                               {caso.status}
                             </span>
                           </div>
                         </div>
-                        <button 
-                          className={styles.newClientBtn} 
-                          style={{ padding: '6px 12px', fontSize: '0.7rem' }}
+                        <button
+                          className={styles.newClientBtn}
+                          style={{ padding: "6px 12px", fontSize: "0.7rem" }}
                           onClick={() => {
                             // Abrir chat ou detalhes do caso
                             setShowDossierModal(false);
-                            setActiveTab('minhas-mensagens');
+                            setActiveTab("minhas-mensagens");
                             // Aqui poderíamos setar o chat ativo se tivéssemos essa lógica global
                           }}
                         >
-                          Abrir Chat <ExternalLink size={12} style={{ marginLeft: '4px' }} />
+                          Abrir Chat{" "}
+                          <ExternalLink
+                            size={12}
+                            style={{ marginLeft: "4px" }}
+                          />
                         </button>
                       </div>
                     ))
                   ) : (
-                    <div style={{ 
-                      textAlign: 'center', 
-                      padding: '20px', 
-                      background: 'rgba(255,255,255,0.02)', 
-                      borderRadius: '10px',
-                      border: '1px dashed rgba(255,255,255,0.1)',
-                      color: '#555',
-                      fontSize: '0.8rem'
-                    }}>
-                      <Gavel size={24} style={{ opacity: 0.2, marginBottom: '8px' }} />
-                      <p style={{ margin: 0 }}>Nenhum caso do Marketplace vinculado a este cliente.</p>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "20px",
+                        background: "rgba(255,255,255,0.02)",
+                        borderRadius: "10px",
+                        border: "1px dashed rgba(255,255,255,0.1)",
+                        color: "#555",
+                        fontSize: "0.8rem",
+                      }}
+                    >
+                      <Gavel
+                        size={24}
+                        style={{ opacity: 0.2, marginBottom: "8px" }}
+                      />
+                      <p style={{ margin: 0 }}>
+                        Nenhum caso do Marketplace vinculado a este cliente.
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* GESTÃO FINANCEIRA DO CLIENTE */}
-              <div className={styles.dossierSection} style={{ marginTop: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-                  <span className={styles.dossierSectionTitle} style={{ margin: 0 }}>
+              <div
+                className={styles.dossierSection}
+                style={{ marginTop: "20px" }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "15px",
+                  }}
+                >
+                  <span
+                    className={styles.dossierSectionTitle}
+                    style={{ margin: 0 }}
+                  >
                     Gestão Financeira & Honorários
                   </span>
-                  <div style={{ display: 'flex', gap: '15px' }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '0.65rem', color: '#888', display: 'block' }}>TOTAL PAGO</span>
-                      <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.9rem' }}>
-                        R$ {clientFinance.filter(f => f.status === 'PAGO').reduce((acc, curr) => acc + parseFloat(curr.amount), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div style={{ display: "flex", gap: "15px" }}>
+                    <div style={{ textAlign: "right" }}>
+                      <span
+                        style={{
+                          fontSize: "0.65rem",
+                          color: "#888",
+                          display: "block",
+                        }}
+                      >
+                        TOTAL PAGO
+                      </span>
+                      <span
+                        style={{
+                          color: "#10b981",
+                          fontWeight: 700,
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        R${" "}
+                        {clientFinance
+                          .filter((f) => f.status === "PAGO")
+                          .reduce(
+                            (acc, curr) => acc + parseFloat(curr.amount),
+                            0,
+                          )
+                          .toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
                       </span>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '0.65rem', color: '#888', display: 'block' }}>PENDENTE</span>
-                      <span style={{ color: '#ef4444', fontWeight: 700, fontSize: '0.9rem' }}>
-                        R$ {clientFinance.filter(f => f.status === 'PENDENTE').reduce((acc, curr) => acc + parseFloat(curr.amount), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <div style={{ textAlign: "right" }}>
+                      <span
+                        style={{
+                          fontSize: "0.65rem",
+                          color: "#888",
+                          display: "block",
+                        }}
+                      >
+                        PENDENTE
+                      </span>
+                      <span
+                        style={{
+                          color: "#ef4444",
+                          fontWeight: 700,
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        R${" "}
+                        {clientFinance
+                          .filter((f) => f.status === "PENDENTE")
+                          .reduce(
+                            (acc, curr) => acc + parseFloat(curr.amount),
+                            0,
+                          )
+                          .toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Form para novo lançamento financeiro */}
-                <div style={{ 
-                  marginBottom: '15px', 
-                  background: 'rgba(255,255,255,0.02)', 
-                  padding: '12px', 
-                  borderRadius: '10px', 
-                  border: '1px solid rgba(16,185,129,0.1)' 
-                }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                <div
+                  style={{
+                    marginBottom: "15px",
+                    background: "rgba(255,255,255,0.02)",
+                    padding: "12px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(16,185,129,0.1)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "2fr 1fr 1fr",
+                      gap: "8px",
+                      marginBottom: "8px",
+                    }}
+                  >
                     <input
                       type="text"
                       className={styles.docFilterInput}
                       placeholder="Descrição (ex: Parcela 1)"
                       value={newFinance.description}
-                      onChange={(e) => setNewFinance({...newFinance, description: e.target.value})}
-                      style={{ fontSize: '0.75rem', padding: '6px' }}
+                      onChange={(e) =>
+                        setNewFinance({
+                          ...newFinance,
+                          description: e.target.value,
+                        })
+                      }
+                      style={{ fontSize: "0.75rem", padding: "6px" }}
                     />
                     <input
                       type="number"
                       className={styles.docFilterInput}
                       placeholder="Valor (R$)"
                       value={newFinance.amount}
-                      onChange={(e) => setNewFinance({...newFinance, amount: e.target.value})}
-                      style={{ fontSize: '0.75rem', padding: '6px' }}
+                      onChange={(e) =>
+                        setNewFinance({ ...newFinance, amount: e.target.value })
+                      }
+                      style={{ fontSize: "0.75rem", padding: "6px" }}
                     />
                     <input
                       type="date"
                       className={styles.docFilterInput}
                       value={newFinance.due_date}
-                      onChange={(e) => setNewFinance({...newFinance, due_date: e.target.value})}
-                      style={{ fontSize: '0.75rem', padding: '6px', color: '#888' }}
+                      onChange={(e) =>
+                        setNewFinance({
+                          ...newFinance,
+                          due_date: e.target.value,
+                        })
+                      }
+                      style={{
+                        fontSize: "0.75rem",
+                        padding: "6px",
+                        color: "#888",
+                      }}
                     />
                   </div>
-                  <button 
-                    className={styles.newClientBtn} 
+                  <button
+                    className={styles.newClientBtn}
                     onClick={handleSaveFinance}
-                    disabled={isSavingFinance || !newFinance.description || !newFinance.amount}
-                    style={{ width: '100%', padding: '6px', fontSize: '0.75rem', background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}
+                    disabled={
+                      isSavingFinance ||
+                      !newFinance.description ||
+                      !newFinance.amount
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "6px",
+                      fontSize: "0.75rem",
+                      background: "rgba(16,185,129,0.1)",
+                      color: "#10b981",
+                      border: "1px solid rgba(16,185,129,0.2)",
+                    }}
                   >
-                    {isSavingFinance ? 'Registrando...' : '+ Novo Lançamento'}
+                    {isSavingFinance ? "Registrando..." : "+ Novo Lançamento"}
                   </button>
                 </div>
 
                 {/* Lista Financeira */}
-                <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                <div style={{ maxHeight: "200px", overflowY: "auto" }}>
                   {isFetchingFinance ? (
-                    <div style={{ textAlign: 'center', padding: '10px', color: '#888' }}>Carregando finanças...</div>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "10px",
+                        color: "#888",
+                      }}
+                    >
+                      Carregando finanças...
+                    </div>
                   ) : clientFinance.length > 0 ? (
                     clientFinance.map((item) => (
-                      <div key={item.id} style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        padding: '10px', 
-                        background: 'rgba(255,255,255,0.01)', 
-                        borderBottom: '1px solid rgba(255,255,255,0.05)'
-                      }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div style={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            borderRadius: '50%', 
-                            background: item.status === 'PAGO' ? '#10b981' : '#ef4444' 
-                          }} />
+                      <div
+                        key={item.id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "10px",
+                          background: "rgba(255,255,255,0.01)",
+                          borderBottom: "1px solid rgba(255,255,255,0.05)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              background:
+                                item.status === "PAGO" ? "#10b981" : "#ef4444",
+                            }}
+                          />
                           <div>
-                            <span style={{ fontSize: '0.8rem', color: '#fff', fontWeight: 600 }}>{item.description}</span>
-                            <span style={{ fontSize: '0.65rem', color: '#666', display: 'block' }}>Vence em: {new Date(item.due_date).toLocaleDateString('pt-BR')}</span>
+                            <span
+                              style={{
+                                fontSize: "0.8rem",
+                                color: "#fff",
+                                fontWeight: 600,
+                              }}
+                            >
+                              {item.description}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "0.65rem",
+                                color: "#666",
+                                display: "block",
+                              }}
+                            >
+                              Vence em:{" "}
+                              {new Date(item.due_date).toLocaleDateString(
+                                "pt-BR",
+                              )}
+                            </span>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ fontSize: '0.85rem', color: item.status === 'PAGO' ? '#10b981' : '#fff', fontWeight: 700 }}>
-                            R$ {parseFloat(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                          <button 
-                            onClick={() => handleTogglePaymentStatus(item)}
-                            style={{ 
-                              padding: '4px 8px', 
-                              fontSize: '0.6rem', 
-                              borderRadius: '4px', 
-                              border: '1px solid',
-                              borderColor: item.status === 'PAGO' ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)',
-                              background: item.status === 'PAGO' ? 'rgba(16,185,129,0.1)' : 'transparent',
-                              color: item.status === 'PAGO' ? '#10b981' : '#888',
-                              cursor: 'pointer'
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "0.85rem",
+                              color:
+                                item.status === "PAGO" ? "#10b981" : "#fff",
+                              fontWeight: 700,
                             }}
                           >
-                            {item.status === 'PAGO' ? 'PAGO ✓' : 'ABERTO'}
+                            R${" "}
+                            {parseFloat(item.amount).toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                            })}
+                          </span>
+                          <button
+                            onClick={() => handleTogglePaymentStatus(item)}
+                            style={{
+                              padding: "4px 8px",
+                              fontSize: "0.6rem",
+                              borderRadius: "4px",
+                              border: "1px solid",
+                              borderColor:
+                                item.status === "PAGO"
+                                  ? "rgba(16,185,129,0.3)"
+                                  : "rgba(255,255,255,0.1)",
+                              background:
+                                item.status === "PAGO"
+                                  ? "rgba(16,185,129,0.1)"
+                                  : "transparent",
+                              color:
+                                item.status === "PAGO" ? "#10b981" : "#888",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {item.status === "PAGO" ? "PAGO ✓" : "ABERTO"}
                           </button>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '15px', color: '#444', fontSize: '0.75rem' }}>Nenhum lançamento financeiro para este cliente.</div>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "15px",
+                        color: "#444",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      Nenhum lançamento financeiro para este cliente.
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* PRÓXIMOS PASSOS E LEMBRETES (AGENDA) */}
-              <div className={styles.dossierSection} style={{ marginTop: '20px' }}>
+              <div
+                className={styles.dossierSection}
+                style={{ marginTop: "20px" }}
+              >
                 <span className={styles.dossierSectionTitle}>
                   Próximos Passos & Lembretes
                 </span>
-                
-                <div style={{ 
-                  background: 'rgba(255,255,255,0.02)', 
-                  padding: '12px', 
-                  borderRadius: '10px', 
-                  border: '1px solid rgba(212,175,55,0.1)',
-                  marginBottom: '15px'
-                }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.02)",
+                    padding: "12px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(212,175,55,0.1)",
+                    marginBottom: "15px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "2fr 1fr 1fr",
+                      gap: "8px",
+                      marginBottom: "8px",
+                    }}
+                  >
                     <input
                       type="text"
                       className={styles.docFilterInput}
                       placeholder="O que fazer? (ex: Ligar para feedback)"
                       value={newQuickReminder.title}
-                      onChange={(e) => setNewQuickReminder({...newQuickReminder, title: e.target.value})}
-                      style={{ fontSize: '0.75rem', padding: '6px' }}
+                      onChange={(e) =>
+                        setNewQuickReminder({
+                          ...newQuickReminder,
+                          title: e.target.value,
+                        })
+                      }
+                      style={{ fontSize: "0.75rem", padding: "6px" }}
                     />
                     <input
                       type="date"
                       className={styles.docFilterInput}
                       value={newQuickReminder.date}
-                      onChange={(e) => setNewQuickReminder({...newQuickReminder, date: e.target.value})}
-                      style={{ fontSize: '0.75rem', padding: '6px', color: '#888' }}
+                      onChange={(e) =>
+                        setNewQuickReminder({
+                          ...newQuickReminder,
+                          date: e.target.value,
+                        })
+                      }
+                      style={{
+                        fontSize: "0.75rem",
+                        padding: "6px",
+                        color: "#888",
+                      }}
                     />
                     <input
                       type="time"
                       className={styles.docFilterInput}
                       value={newQuickReminder.time}
-                      onChange={(e) => setNewQuickReminder({...newQuickReminder, time: e.target.value})}
-                      style={{ fontSize: '0.75rem', padding: '6px', color: '#888' }}
+                      onChange={(e) =>
+                        setNewQuickReminder({
+                          ...newQuickReminder,
+                          time: e.target.value,
+                        })
+                      }
+                      style={{
+                        fontSize: "0.75rem",
+                        padding: "6px",
+                        color: "#888",
+                      }}
                     />
                   </div>
-                  <button 
-                    className={styles.newClientBtn} 
+                  <button
+                    className={styles.newClientBtn}
                     onClick={handleSaveQuickReminder}
-                    disabled={isSavingReminder || !newQuickReminder.title || !newQuickReminder.date}
-                    style={{ width: '100%', padding: '6px', fontSize: '0.75rem', background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)', border: '1px solid rgba(212,175,55,0.2)' }}
+                    disabled={
+                      isSavingReminder ||
+                      !newQuickReminder.title ||
+                      !newQuickReminder.date
+                    }
+                    style={{
+                      width: "100%",
+                      padding: "6px",
+                      fontSize: "0.75rem",
+                      background: "rgba(212,175,55,0.1)",
+                      color: "var(--color-gold)",
+                      border: "1px solid rgba(212,175,55,0.2)",
+                    }}
                   >
-                    {isSavingReminder ? 'Agendando...' : 'Agendar Lembrete na Agenda'}
+                    {isSavingReminder
+                      ? "Agendando..."
+                      : "Agendar Lembrete na Agenda"}
                   </button>
                 </div>
 
                 {/* Listagem de lembretes ativos para este cliente */}
-                <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                  {agendaItems.filter(item => item.client_id === selectedClient.id && item.status === 'PENDING').length > 0 ? (
-                    agendaItems.filter(item => item.client_id === selectedClient.id && item.status === 'PENDING').map((task) => (
-                      <div key={task.id} style={{ 
-                        display: 'flex', 
-                        gap: '10px', 
-                        padding: '8px', 
-                        background: 'rgba(255,255,255,0.01)', 
-                        borderBottom: '1px solid rgba(255,255,255,0.05)',
-                        alignItems: 'center'
-                      }}>
-                        <Calendar size={14} color="var(--color-gold)" style={{ opacity: 0.6 }} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '0.8rem', color: '#fff' }}>{task.title.replace(`CRM: ${selectedClient.name} - `, '')}</div>
-                          <div style={{ fontSize: '0.65rem', color: '#666' }}>{new Date(task.date).toLocaleString('pt-BR')}</div>
+                <div style={{ maxHeight: "150px", overflowY: "auto" }}>
+                  {agendaItems.filter(
+                    (item) =>
+                      item.client_id === selectedClient.id &&
+                      item.status === "PENDING",
+                  ).length > 0 ? (
+                    agendaItems
+                      .filter(
+                        (item) =>
+                          item.client_id === selectedClient.id &&
+                          item.status === "PENDING",
+                      )
+                      .map((task) => (
+                        <div
+                          key={task.id}
+                          style={{
+                            display: "flex",
+                            gap: "10px",
+                            padding: "8px",
+                            background: "rgba(255,255,255,0.01)",
+                            borderBottom: "1px solid rgba(255,255,255,0.05)",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Calendar
+                            size={14}
+                            color="var(--color-gold)"
+                            style={{ opacity: 0.6 }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: "0.8rem", color: "#fff" }}>
+                              {task.title.replace(
+                                `CRM: ${selectedClient.name} - `,
+                                "",
+                              )}
+                            </div>
+                            <div style={{ fontSize: "0.65rem", color: "#666" }}>
+                              {new Date(task.date).toLocaleString("pt-BR")}
+                            </div>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "0.6rem",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              background: "rgba(212,175,55,0.1)",
+                              color: "var(--color-gold)",
+                            }}
+                          >
+                            AGENDADO
+                          </span>
                         </div>
-                        <span style={{ fontSize: '0.6rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(212,175,55,0.1)', color: 'var(--color-gold)' }}>
-                          AGENDADO
-                        </span>
-                      </div>
-                    ))
+                      ))
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '10px', color: '#444', fontSize: '0.75rem' }}>Nenhum lembrete pendente para este cliente.</div>
+                    <div
+                      style={{
+                        textAlign: "center",
+                        padding: "10px",
+                        color: "#444",
+                        fontSize: "0.75rem",
+                      }}
+                    >
+                      Nenhum lembrete pendente para este cliente.
+                    </div>
                   )}
                 </div>
               </div>
 
               <div className={styles.dossierSection}>
                 <div className={styles.documentsSectionHeader}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
                     <span
                       className={styles.dossierSectionTitle}
                       style={{ margin: 0 }}
                     >
                       Documentos Vinculados
                     </span>
-                    <label style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", background: "rgba(16,185,129,0.1)", padding: "4px 8px", borderRadius: "8px", border: "1px solid rgba(16,185,129,0.2)" }}>
-                      <input 
-                        type="checkbox" 
-                        checked={isBlindarProva} 
-                        onChange={(e) => setIsBlindarProva(e.target.checked)} 
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        cursor: "pointer",
+                        background: "rgba(16,185,129,0.1)",
+                        padding: "4px 8px",
+                        borderRadius: "8px",
+                        border: "1px solid rgba(16,185,129,0.2)",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isBlindarProva}
+                        onChange={(e) => setIsBlindarProva(e.target.checked)}
                         style={{ accentColor: "#10b981", cursor: "pointer" }}
                       />
-                      <span style={{ fontSize: "0.75rem", color: "#10b981", fontWeight: 700 }}>🛡️ Blindar Prova {profileData?.plan_type === 'START' ? "(3 Juris)" : "(Grátis PRO)"}</span>
+                      <span
+                        style={{
+                          fontSize: "0.75rem",
+                          color: "#10b981",
+                          fontWeight: 700,
+                        }}
+                      >
+                        🛡️ Blindar Prova{" "}
+                        {profileData?.plan_type === "START"
+                          ? "(3 Juris)"
+                          : "(Grátis PRO)"}
+                      </span>
                     </label>
                   </div>
                   <button
@@ -10234,10 +13419,29 @@ export default function AdvogadoDashboard() {
                             }}
                           >
                             <FileText size={16} color="var(--color-gold)" />
-                            <span style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span
+                              style={{
+                                fontSize: "0.8rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                              }}
+                            >
                               {doc.file_name}
                               {doc.is_blindado && (
-                                <span title="Prova Blindada" style={{ color: "#10b981", display: "flex", alignItems: "center", background: "rgba(16,185,129,0.1)", padding: "2px 6px", borderRadius: "12px", fontSize: "0.6rem", fontWeight: 800 }}>
+                                <span
+                                  title="Prova Blindada"
+                                  style={{
+                                    color: "#10b981",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    background: "rgba(16,185,129,0.1)",
+                                    padding: "2px 6px",
+                                    borderRadius: "12px",
+                                    fontSize: "0.6rem",
+                                    fontWeight: 800,
+                                  }}
+                                >
                                   🛡️ BLINDADO
                                 </span>
                               )}
@@ -10264,7 +13468,7 @@ export default function AdvogadoDashboard() {
                                   cursor: "pointer",
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: "4px"
+                                  gap: "4px",
                                 }}
                               >
                                 <FileDown size={12} /> Certificado
@@ -10314,7 +13518,8 @@ export default function AdvogadoDashboard() {
           <div className={styles.dossierFooterIA}>
             <div className={styles.iaHeader}>
               <div className={styles.iaTitle}>
-                <Sparkles size={18} color="var(--color-gold)" /> IA Insights {"&"}
+                <Sparkles size={18} color="var(--color-gold)" /> IA Insights{" "}
+                {"&"}
                 Ações
               </div>
               {/* <button className={styles.updateIABtn}><Zap size={12} /> Atualizar IA</button> */}
@@ -10352,21 +13557,70 @@ export default function AdvogadoDashboard() {
     if (!delegatingClient) return null;
 
     return (
-      <div className={styles.modalOverlay} onClick={() => setDelegatingClient(null)} style={{ zIndex: 11000 }}>
-        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px', border: '1px solid rgba(212,175,55,0.2)', padding: '20px' }}>
-          <div className={styles.modalHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: 0, color: 'var(--color-gold)', fontSize: '1.1rem' }}>
+      <div
+        className={styles.modalOverlay}
+        onClick={() => setDelegatingClient(null)}
+        style={{ zIndex: 11000 }}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            maxWidth: "450px",
+            border: "1px solid rgba(212,175,55,0.2)",
+            padding: "20px",
+          }}
+        >
+          <div
+            className={styles.modalHeader}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "15px",
+            }}
+          >
+            <h3
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                margin: 0,
+                color: "var(--color-gold)",
+                fontSize: "1.1rem",
+              }}
+            >
               🤝 Delegar Responsável
             </h3>
-            <button className={styles.closeBtn} onClick={() => setDelegatingClient(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
+            <button
+              className={styles.closeBtn}
+              onClick={() => setDelegatingClient(null)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
               <X size={18} />
             </button>
           </div>
           <div className={styles.modalBody}>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-silver)', margin: '0 0 15px 0', lineHeight: '1.4' }}>
-              Selecione o advogado membro do escritório que ficará responsável pelo caso do cliente <strong>{delegatingClient.name}</strong>.
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "var(--color-silver)",
+                margin: "0 0 15px 0",
+                lineHeight: "1.4",
+              }}
+            >
+              Selecione o advogado membro do escritório que ficará responsável
+              pelo caso do cliente <strong>{delegatingClient.name}</strong>.
             </p>
-            <div className={styles.formItemFull} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div
+              className={styles.formItemFull}
+              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+            >
               <label className={styles.formLabel}>Advogado Responsável</label>
               <select
                 className={styles.formSelect}
@@ -10432,12 +13686,16 @@ export default function AdvogadoDashboard() {
     return (
       <div className={styles.modalOverlay} style={{ zIndex: 20000 }}>
         <div className={styles.confirmModal}>
-          <div className={styles.confirmIcon} style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444" }}>
+          <div
+            className={styles.confirmIcon}
+            style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444" }}
+          >
             <Trash2 size={32} />
           </div>
           <h3 className={styles.confirmTitle}>Excluir Mensagem?</h3>
           <p className={styles.confirmText}>
-            Esta ação removerá a mensagem permanentemente da sua caixa de entrada.
+            Esta ação removerá a mensagem permanentemente da sua caixa de
+            entrada.
           </p>
           <div className={styles.confirmActions}>
             <button
@@ -10599,131 +13857,448 @@ export default function AdvogadoDashboard() {
             </button>
           </div>
 
-          <div className={styles.modalBody} style={{ padding: '20px' }}>
+          <div className={styles.modalBody} style={{ padding: "20px" }}>
             {!showContractResult ? (
               /* Passo 1: Formulário */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px",
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', color: '#ccc' }}>Tipo de Contrato</label>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "5px",
+                      color: "#ccc",
+                    }}
+                  >
+                    Tipo de Contrato
+                  </label>
                   <input
                     type="text"
                     value={contractForm.tipo}
-                    onChange={(e) => setContractForm({ ...contractForm, tipo: e.target.value })}
+                    onChange={(e) =>
+                      setContractForm({ ...contractForm, tipo: e.target.value })
+                    }
                     placeholder="Ex: Prestação de Serviços, Locação, etc."
-                    style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid #333', borderRadius: '6px', color: '#fff' }}
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      background: "#222",
+                      border: "1px solid #333",
+                      borderRadius: "6px",
+                      color: "#fff",
+                    }}
                   />
                 </div>
 
-                <div style={{ display: 'flex', gap: '20px' }}>
+                <div style={{ display: "flex", gap: "20px" }}>
                   {/* Parte 1 */}
-                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.01)', padding: '15px', borderRadius: '8px', border: '1px solid #333' }}>
-                    <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: 'var(--color-gold)' }}>Parte 1 (Contratante)</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div
+                    style={{
+                      flex: 1,
+                      background: "rgba(255,255,255,0.01)",
+                      padding: "15px",
+                      borderRadius: "8px",
+                      border: "1px solid #333",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: "1rem",
+                        marginBottom: "10px",
+                        color: "var(--color-gold)",
+                      }}
+                    >
+                      Parte 1 (Contratante)
+                    </h3>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Nome Completo</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Nome Completo
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte1.nome}
-                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, nome: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte1: {
+                                ...contractForm.parte1,
+                                nome: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="Nome completo"
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>CPF ou CNPJ</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          CPF ou CNPJ
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte1.cpf_cnpj}
-                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, cpf_cnpj: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte1: {
+                                ...contractForm.parte1,
+                                cpf_cnpj: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="000.000.000-00"
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Estado Civil</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Estado Civil
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte1.estado_civil}
-                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, estado_civil: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte1: {
+                                ...contractForm.parte1,
+                                estado_civil: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="Solteiro, Casado, etc."
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Profissão</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Profissão
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte1.profissao}
-                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, profissao: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte1: {
+                                ...contractForm.parte1,
+                                profissao: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="Advogado, Engenheiro, etc."
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Endereço Completo</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Endereço Completo
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte1.endereco}
-                          onChange={(e) => setContractForm({ ...contractForm, parte1: { ...contractForm.parte1, endereco: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte1: {
+                                ...contractForm.parte1,
+                                endereco: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="Rua, número, bairro, cidade-UF"
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                     </div>
                   </div>
 
                   {/* Parte 2 */}
-                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.01)', padding: '15px', borderRadius: '8px', border: '1px solid #333' }}>
-                    <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: 'var(--color-gold)' }}>Parte 2 (Contratado)</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div
+                    style={{
+                      flex: 1,
+                      background: "rgba(255,255,255,0.01)",
+                      padding: "15px",
+                      borderRadius: "8px",
+                      border: "1px solid #333",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: "1rem",
+                        marginBottom: "10px",
+                        color: "var(--color-gold)",
+                      }}
+                    >
+                      Parte 2 (Contratado)
+                    </h3>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Nome Completo</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Nome Completo
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte2.nome}
-                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, nome: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte2: {
+                                ...contractForm.parte2,
+                                nome: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="Nome completo"
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>CPF ou CNPJ</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          CPF ou CNPJ
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte2.cpf_cnpj}
-                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, cpf_cnpj: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte2: {
+                                ...contractForm.parte2,
+                                cpf_cnpj: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="000.000.000-00"
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Estado Civil</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Estado Civil
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte2.estado_civil}
-                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, estado_civil: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte2: {
+                                ...contractForm.parte2,
+                                estado_civil: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="Solteiro, Casado, etc."
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Profissão</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Profissão
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte2.profissao}
-                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, profissao: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte2: {
+                                ...contractForm.parte2,
+                                profissao: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="Advogado, Engenheiro, etc."
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '3px', color: '#ccc', fontSize: '0.85rem' }}>Endereço Completo</label>
+                        <label
+                          style={{
+                            display: "block",
+                            marginBottom: "3px",
+                            color: "#ccc",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          Endereço Completo
+                        </label>
                         <input
                           type="text"
                           value={contractForm.parte2.endereco}
-                          onChange={(e) => setContractForm({ ...contractForm, parte2: { ...contractForm.parte2, endereco: e.target.value } })}
+                          onChange={(e) =>
+                            setContractForm({
+                              ...contractForm,
+                              parte2: {
+                                ...contractForm.parte2,
+                                endereco: e.target.value,
+                              },
+                            })
+                          }
                           placeholder="Rua, número, bairro, cidade-UF"
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                          }}
                         />
                       </div>
                     </div>
@@ -10731,21 +14306,35 @@ export default function AdvogadoDashboard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', color: '#ccc' }}>Personalidade da IA</label>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    {['Técnica', 'Formal', 'Conciliadora'].map((p) => (
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "5px",
+                      color: "#ccc",
+                    }}
+                  >
+                    Personalidade da IA
+                  </label>
+                  <div style={{ display: "flex", gap: "10px" }}>
+                    {["Técnica", "Formal", "Conciliadora"].map((p) => (
                       <button
                         key={p}
                         type="button"
-                        onClick={() => setContractForm({ ...contractForm, personality: p })}
+                        onClick={() =>
+                          setContractForm({ ...contractForm, personality: p })
+                        }
                         style={{
                           flex: 1,
-                          padding: '10px',
-                          background: contractForm.personality === p ? 'var(--color-gold)' : '#222',
-                          color: contractForm.personality === p ? '#000' : '#fff',
-                          border: '1px solid #333',
-                          borderRadius: '6px',
-                          cursor: 'pointer'
+                          padding: "10px",
+                          background:
+                            contractForm.personality === p
+                              ? "var(--color-gold)"
+                              : "#222",
+                          color:
+                            contractForm.personality === p ? "#000" : "#fff",
+                          border: "1px solid #333",
+                          borderRadius: "6px",
+                          cursor: "pointer",
                         }}
                       >
                         {p}
@@ -10754,45 +14343,133 @@ export default function AdvogadoDashboard() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: "flex", gap: "10px" }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '5px', color: '#ccc', fontSize: '0.85rem' }}>Comarca</label>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "5px",
+                        color: "#ccc",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      Comarca
+                    </label>
                     <input
                       type="text"
                       value={contractForm.comarca}
-                      onChange={(e) => setContractForm({ ...contractForm, comarca: e.target.value })}
+                      onChange={(e) =>
+                        setContractForm({
+                          ...contractForm,
+                          comarca: e.target.value,
+                        })
+                      }
                       placeholder="Ex: São Paulo - SP"
-                      style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        background: "#222",
+                        border: "1px solid #444",
+                        borderRadius: "4px",
+                        color: "#fff",
+                        fontSize: "0.9rem",
+                      }}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '5px', color: '#ccc', fontSize: '0.85rem' }}>Local</label>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "5px",
+                        color: "#ccc",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      Local
+                    </label>
                     <input
                       type="text"
                       value={contractForm.local}
-                      onChange={(e) => setContractForm({ ...contractForm, local: e.target.value })}
+                      onChange={(e) =>
+                        setContractForm({
+                          ...contractForm,
+                          local: e.target.value,
+                        })
+                      }
                       placeholder="Ex: São Paulo"
-                      style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        background: "#222",
+                        border: "1px solid #444",
+                        borderRadius: "4px",
+                        color: "#fff",
+                        fontSize: "0.9rem",
+                      }}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '5px', color: '#ccc', fontSize: '0.85rem' }}>Data</label>
+                    <label
+                      style={{
+                        display: "block",
+                        marginBottom: "5px",
+                        color: "#ccc",
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      Data
+                    </label>
                     <input
                       type="date"
                       value={contractForm.data}
-                      onChange={(e) => setContractForm({ ...contractForm, data: e.target.value })}
-                      style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem' }}
+                      onChange={(e) =>
+                        setContractForm({
+                          ...contractForm,
+                          data: e.target.value,
+                        })
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        background: "#222",
+                        border: "1px solid #444",
+                        borderRadius: "4px",
+                        color: "#fff",
+                        fontSize: "0.9rem",
+                      }}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '5px', color: '#ccc' }}>Objetivo do Contrato</label>
+                  <label
+                    style={{
+                      display: "block",
+                      marginBottom: "5px",
+                      color: "#ccc",
+                    }}
+                  >
+                    Objetivo do Contrato
+                  </label>
                   <textarea
                     value={contractForm.purpose}
-                    onChange={(e) => setContractForm({ ...contractForm, purpose: e.target.value })}
+                    onChange={(e) =>
+                      setContractForm({
+                        ...contractForm,
+                        purpose: e.target.value,
+                      })
+                    }
                     placeholder="Descreva detalhadamente o que você precisa que conste no contrato..."
-                    style={{ width: '100%', height: '150px', padding: '10px', background: '#222', border: '1px solid #333', borderRadius: '6px', color: '#fff', resize: 'vertical' }}
+                    style={{
+                      width: "100%",
+                      height: "150px",
+                      padding: "10px",
+                      background: "#222",
+                      border: "1px solid #333",
+                      borderRadius: "6px",
+                      color: "#fff",
+                      resize: "vertical",
+                    }}
                   />
                 </div>
 
@@ -10800,20 +14477,22 @@ export default function AdvogadoDashboard() {
                   type="button"
                   disabled={isGeneratingContract || !contractForm.purpose}
                   style={{
-                    padding: '12px',
-                    background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    opacity: (isGeneratingContract || !contractForm.purpose) ? 0.7 : 1
+                    padding: "12px",
+                    background:
+                      "linear-gradient(135deg, #00e676 0%, #00c853 100%)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    opacity:
+                      isGeneratingContract || !contractForm.purpose ? 0.7 : 1,
                   }}
                   onClick={async () => {
                     setIsGeneratingContract(true);
                     try {
                       const payload = {
-                        type: `Contrato de ${contractForm.tipo || 'Prestação de Serviços'}`,
+                        type: `Contrato de ${contractForm.tipo || "Prestação de Serviços"}`,
                         tone: contractForm.personality,
                         facts: `Objetivo do Contrato: ${contractForm.purpose}\n\nComarca: ${contractForm.comarca}\nLocal: ${contractForm.local}\nData: ${contractForm.data}\n\nParte 1 (Contratante): ${contractForm.parte1.nome}, CPF/CNPJ: ${contractForm.parte1.cpf_cnpj}, Estado Civil: ${contractForm.parte1.estado_civil}, Profissão: ${contractForm.parte1.profissao}, Endereço: ${contractForm.parte1.endereco}\n\nParte 2 (Contratado): ${contractForm.parte2.nome}, CPF/CNPJ: ${contractForm.parte2.cpf_cnpj}, Estado Civil: ${contractForm.parte2.estado_civil}, Profissão: ${contractForm.parte2.profissao}, Endereço: ${contractForm.parte2.endereco}`,
                         advocateData: profileData,
@@ -10824,7 +14503,7 @@ export default function AdvogadoDashboard() {
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(payload),
                       });
-                      
+
                       const data = await res.json();
                       if (data.success) {
                         setGeneratedContract(data.draft);
@@ -10842,35 +14521,63 @@ export default function AdvogadoDashboard() {
                   }}
                 >
                   {isGeneratingContract ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                      <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <Loader2
+                        size={16}
+                        style={{ animation: "spin 1s linear infinite" }}
+                      />
                       Gerando Contrato...
                     </div>
-                  ) : "Gerar Contrato"}
+                  ) : (
+                    "Gerar Contrato"
+                  )}
                 </button>
               </div>
             ) : (
               /* Passo 2: Resultado e Ações */
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div style={{ 
-                  background: '#222', 
-                  border: '1px solid #333', 
-                  borderRadius: '6px', 
-                  padding: '15px', 
-                  maxHeight: '300px', 
-                  overflowY: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  color: '#fff',
-                  fontFamily: 'monospace'
-                }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px",
+                }}
+              >
+                <div
+                  style={{
+                    background: "#222",
+                    border: "1px solid #333",
+                    borderRadius: "6px",
+                    padding: "15px",
+                    maxHeight: "300px",
+                    overflowY: "auto",
+                    whiteSpace: "pre-wrap",
+                    color: "#fff",
+                    fontFamily: "monospace",
+                  }}
+                >
                   {generatedContract}
                 </div>
 
                 {!contractConfirmed ? (
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                  <div style={{ display: "flex", gap: "10px" }}>
                     <button
                       type="button"
-                      style={{ flex: 1, padding: '10px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                      style={{
+                        flex: 1,
+                        padding: "10px",
+                        background: "#333",
+                        color: "#fff",
+                        border: "none",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                      }}
                       onClick={() => {
                         setShowContractResult(false);
                         setContractConfirmed(false);
@@ -10880,7 +14587,16 @@ export default function AdvogadoDashboard() {
                     </button>
                     <button
                       type="button"
-                      style={{ flex: 1, padding: '10px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                      style={{
+                        flex: 1,
+                        padding: "10px",
+                        background: "var(--color-gold)",
+                        color: "#000",
+                        border: "none",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                      }}
                       onClick={() => {
                         setContractConfirmed(true);
                         toast.success("Contrato confirmado!");
@@ -10890,55 +14606,69 @@ export default function AdvogadoDashboard() {
                     </button>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "15px",
+                    }}
+                  >
                     <button
                       type="button"
-                      style={{ 
-                        width: '100%', 
-                        padding: '12px', 
-                        background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)', 
-                        color: '#000', 
-                        border: 'none', 
-                        borderRadius: '6px', 
-                        cursor: 'pointer', 
-                        fontWeight: 'bold',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '10px'
+                      style={{
+                        width: "100%",
+                        padding: "12px",
+                        background:
+                          "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                        color: "#000",
+                        border: "none",
+                        borderRadius: "6px",
+                        cursor: "pointer",
+                        fontWeight: "bold",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "10px",
                       }}
                       onClick={() => {
                         toast.success("Gerando PDF do Contrato...");
-                        
+
                         const doc = new jsPDF();
                         const margin = 20;
                         const pageWidth = doc.internal.pageSize.getWidth();
                         const pageHeight = doc.internal.pageSize.getHeight();
                         const contentWidth = pageWidth - margin * 2;
-                        
+
                         let y = margin;
-                        
+
                         // Título
                         doc.setFont("helvetica", "bold");
                         doc.setFontSize(16);
                         doc.setTextColor(0, 0, 0);
-                        const title = contractForm.tipo?.toUpperCase() || 'CONTRATO';
+                        const title =
+                          contractForm.tipo?.toUpperCase() || "CONTRATO";
                         const titleWidth = doc.getTextWidth(title);
                         doc.text(title, (pageWidth - titleWidth) / 2, y);
                         y += 20;
-                        
+
                         // Qualificação
                         doc.setFont("helvetica", "normal");
                         doc.setFontSize(11);
                         const qualifText = `CONTRATANTE: ${contractForm.parte1.nome}, CPF/CNPJ: ${contractForm.parte1.cpf_cnpj}, Estado Civil: ${contractForm.parte1.estado_civil}, Profissão: ${contractForm.parte1.profissao}, residente em ${contractForm.parte1.endereco}.\n\nCONTRATADO: ${contractForm.parte2.nome}, CPF/CNPJ: ${contractForm.parte2.cpf_cnpj}, Estado Civil: ${contractForm.parte2.estado_civil}, Profissão: ${contractForm.parte2.profissao}, residente em ${contractForm.parte2.endereco}.`;
-                        
-                        const splitQualif = doc.splitTextToSize(qualifText, contentWidth);
+
+                        const splitQualif = doc.splitTextToSize(
+                          qualifText,
+                          contentWidth,
+                        );
                         doc.text(splitQualif, margin, y);
                         y += splitQualif.length * 5 + 10;
-                        
+
                         // Conteúdo do Contrato
-                        const splitContent = doc.splitTextToSize(generatedContract, contentWidth);
-                        
+                        const splitContent = doc.splitTextToSize(
+                          generatedContract,
+                          contentWidth,
+                        );
+
                         // Loop para adicionar texto e páginas se necessário
                         for (let i = 0; i < splitContent.length; i++) {
                           if (y > pageHeight - margin - 10) {
@@ -10948,27 +14678,44 @@ export default function AdvogadoDashboard() {
                           doc.text(splitContent[i], margin, y);
                           y += 5;
                         }
-                        
+
                         // Assinaturas
                         y += 20;
                         if (y > pageHeight - margin - 30) {
                           doc.addPage();
                           y = margin;
                         }
-                        
+
                         const sigWidth = 80;
                         doc.line(margin, y, margin + sigWidth, y);
-                        doc.line(pageWidth - margin - sigWidth, y, pageWidth - margin, y);
-                        
+                        doc.line(
+                          pageWidth - margin - sigWidth,
+                          y,
+                          pageWidth - margin,
+                          y,
+                        );
+
                         y += 5;
                         doc.setFontSize(10);
-                        doc.text(contractForm.parte1.nome || "Contratante", margin, y);
-                        doc.text(contractForm.parte2.nome || "Contratado", pageWidth - margin - sigWidth, y);
-                        
+                        doc.text(
+                          contractForm.parte1.nome || "Contratante",
+                          margin,
+                          y,
+                        );
+                        doc.text(
+                          contractForm.parte2.nome || "Contratado",
+                          pageWidth - margin - sigWidth,
+                          y,
+                        );
+
                         y += 5;
                         doc.text("CONTRATANTE", margin, y);
-                        doc.text("CONTRATADO", pageWidth - margin - sigWidth, y);
-                        
+                        doc.text(
+                          "CONTRATADO",
+                          pageWidth - margin - sigWidth,
+                          y,
+                        );
+
                         const fileName = `${contractForm.tipo?.replace(/\s+/g, "_") || "Contrato"}.pdf`;
                         doc.save(fileName);
                         toast.success("PDF baixado com sucesso!");
@@ -10981,192 +14728,288 @@ export default function AdvogadoDashboard() {
 
                 {/* Fluxo de Upload e Blindagem - Só aparece após confirmar */}
                 {contractConfirmed && (
-                  <div style={{ 
-                    background: 'rgba(255, 255, 255, 0.02)', 
-                    border: '1px solid rgba(255, 255, 255, 0.05)', 
-                    borderRadius: '12px', 
-                    padding: '20px',
-                    marginTop: '10px'
-                  }}>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>🛡️ Blindar Contrato Assinado</h3>
-                  <p style={{ color: '#808080', fontSize: '0.85rem', marginBottom: '15px' }}>
-                    Faça o upload do contrato assinado pelas partes para gerar a blindagem digital com Hash SHA-512.
-                  </p>
-
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <input
-                      type="file"
-                      id="signed-contract-upload"
-                      style={{ display: 'none' }}
-                      onChange={(e) => setUploadedSignedContract(e.target.files[0])}
-                    />
-                    <label
-                      htmlFor="signed-contract-upload"
+                  <div
+                    style={{
+                      background: "rgba(255, 255, 255, 0.02)",
+                      border: "1px solid rgba(255, 255, 255, 0.05)",
+                      borderRadius: "12px",
+                      padding: "20px",
+                      marginTop: "10px",
+                    }}
+                  >
+                    <h3
                       style={{
-                        padding: '10px 15px',
-                        background: '#333',
-                        color: '#fff',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem'
+                        fontSize: "1rem",
+                        fontWeight: "bold",
+                        marginBottom: "10px",
+                        color: "#fff",
                       }}
                     >
-                      {uploadedSignedContract ? "Alterar Arquivo" : "Selecionar Arquivo"}
-                    </label>
-                    {uploadedSignedContract && (
-                      <span style={{ color: '#00e676', fontSize: '0.9rem' }}>{uploadedSignedContract.name}</span>
-                    )}
-                  </div>
-
-                  {uploadedSignedContract && (
-                    <button
-                      type="button"
-                      disabled={isShielding}
+                      🛡️ Blindar Contrato Assinado
+                    </h3>
+                    <p
                       style={{
-                        marginTop: '15px',
-                        width: '100%',
-                        padding: '12px',
-                        background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        opacity: isShielding ? 0.7 : 1
+                        color: "#808080",
+                        fontSize: "0.85rem",
+                        marginBottom: "15px",
                       }}
-                      onClick={async () => {
-                        // VERIFICAR JURIS
-                        const isStart = profileData?.plan_type === 'START';
-                        const currentBalance = profileData?.balance || 0;
-                        
-                        const proceedWithShielding = async () => {
-                          if (isStart && currentBalance < 4) {
-                            toast.error("Saldo de Juris insuficiente! Você precisa de 4 Juris.");
-                            return;
-                          }
-                          setIsShielding(true);
-                          try {
-                            const formData = new FormData();
-                            formData.append("file", uploadedSignedContract);
-                            formData.append("type", "contrato");
-                            
-                            const res = await fetch("/api/crm/blindagem", {
-                              method: "POST",
-                              body: formData,
-                            });
-                            
-                            const data = await res.json();
-                            
-                            if (data.success) {
-                              setShieldingCertificate({
-                                protocol: data.data.protocol,
-                                hash: data.data.hash,
-                                date: new Date(data.data.date).toLocaleString()
-                              });
-                              toast.success("Contrato blindado com sucesso!");
-                              
-                              if (isStart) {
-                                setProfileData(prev => ({ ...prev, balance: (prev.balance || 0) - 4 }));
-                                toast.info("4 Juris deduzidos pelo serviço.");
-                              }
-                            } else {
-                              toast.error(data.message || "Erro ao blindar contrato");
-                            }
-                          } catch (error) {
-                            console.error("Erro ao blindar contrato:", error);
-                            toast.error("Erro de conexão ao blindar contrato");
-                          } finally {
-                            setIsShielding(false);
-                          }
-                        };
+                    >
+                      Faça o upload do contrato assinado pelas partes para gerar
+                      a blindagem digital com Hash SHA-512.
+                    </p>
 
-                        if (isStart) {
-                          setJurisConfirmAction(() => proceedWithShielding);
-                          setShowJurisConfirmModal(true);
-                        } else {
-                          proceedWithShielding();
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "center",
+                      }}
+                    >
+                      <input
+                        type="file"
+                        id="signed-contract-upload"
+                        style={{ display: "none" }}
+                        onChange={(e) =>
+                          setUploadedSignedContract(e.target.files[0])
                         }
-                      }}
-                    >
-                      {isShielding ? (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                          <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                          Blindando Documento...
-                        </div>
-                      ) : "Blindar Contrato (Gerar Hash SHA-512)"}
-                    </button>
-                  )}
-
-                  {shieldingCertificate && (
-                    <div style={{ marginTop: '15px', padding: '15px', background: 'rgba(0, 230, 118, 0.05)', borderRadius: '6px', border: '1px solid rgba(0, 230, 118, 0.2)' }}>
-                      <p style={{ color: '#00e676', fontWeight: 'bold', marginBottom: '5px' }}>✓ Documento Blindado!</p>
-                      <p style={{ color: '#aaa', fontSize: '0.8rem' }}>Protocolo: {shieldingCertificate.protocol}</p>
-                      <p style={{ color: '#aaa', fontSize: '0.8rem', wordBreak: 'break-all' }}>Hash: {shieldingCertificate.hash}</p>
-                      
-                      <button
-                        type="button"
+                      />
+                      <label
+                        htmlFor="signed-contract-upload"
                         style={{
-                          marginTop: '10px',
-                          width: '100%',
-                          padding: '10px',
-                          background: 'var(--color-gold)',
-                          color: '#000',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: 'bold'
-                        }}
-                        onClick={() => {
-                          toast.success("Gerando Certificado...");
-                          
-                          const doc = new jsPDF();
-                          const pageWidth = doc.internal.pageSize.getWidth();
-                          const pageHeight = doc.internal.pageSize.getHeight();
-                          
-                          // Desenhar borda elegante
-                          doc.setDrawColor(212, 175, 55); // Cor Ouro
-                          doc.setLineWidth(2);
-                          doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
-                          doc.setLineWidth(0.5);
-                          doc.rect(12, 12, pageWidth - 24, pageHeight - 24);
-                          
-                          generateCertificatePDF({
-                            fileName: `Contrato_${contractForm.tipo}_${contractForm.parte1.nome}_${contractForm.parte2.nome}.pdf`,
-                            protocol: shieldingCertificate.protocol,
-                            owner: `${profileData?.name || "Advogado"} (OAB: ${profileData?.oab || "N/I"})`,
-                            date: shieldingCertificate.date,
-                            hash: shieldingCertificate.hash,
-                            ip: "::1",
-                            agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I'
-                          });
-                          toast.success("Certificado baixado com sucesso!");
-                          
-                          // FECHAR MODAL E LIMPAR DADOS
-                          setTimeout(() => {
-                            setShowContratoModal(false);
-                            setContractForm({
-                              tipo: "",
-                              parte1: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
-                              parte2: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" },
-                              personality: "Técnica",
-                              purpose: "",
-                            });
-                            setGeneratedContract("");
-                            setShowContractResult(false);
-                            setContractConfirmed(false);
-                            setUploadedSignedContract(null);
-                            setShieldingCertificate(null);
-                            
-                            // Recarregar lista de blindados!
-                            fetchBlindados();
-                          }, 1000);
+                          padding: "10px 15px",
+                          background: "#333",
+                          color: "#fff",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontSize: "0.9rem",
                         }}
                       >
-                        Baixar Certificado de Cadeia de Custódia
-                      </button>
+                        {uploadedSignedContract
+                          ? "Alterar Arquivo"
+                          : "Selecionar Arquivo"}
+                      </label>
+                      {uploadedSignedContract && (
+                        <span style={{ color: "#00e676", fontSize: "0.9rem" }}>
+                          {uploadedSignedContract.name}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
+
+                    {uploadedSignedContract && (
+                      <button
+                        type="button"
+                        disabled={isShielding}
+                        style={{
+                          marginTop: "15px",
+                          width: "100%",
+                          padding: "12px",
+                          background:
+                            "linear-gradient(135deg, #00e676 0%, #00c853 100%)",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                          opacity: isShielding ? 0.7 : 1,
+                        }}
+                        onClick={async () => {
+                          // VERIFICAR JURIS
+                          const isStart = profileData?.plan_type === "START";
+                          const currentBalance = profileData?.balance || 0;
+
+                          const proceedWithShielding = async () => {
+                            if (isStart && currentBalance < 4) {
+                              toast.error(
+                                "Saldo de Juris insuficiente! Você precisa de 4 Juris.",
+                              );
+                              return;
+                            }
+                            setIsShielding(true);
+                            try {
+                              const formData = new FormData();
+                              formData.append("file", uploadedSignedContract);
+                              formData.append("type", "contrato");
+
+                              const res = await fetch("/api/crm/blindagem", {
+                                method: "POST",
+                                body: formData,
+                              });
+
+                              const data = await res.json();
+
+                              if (data.success) {
+                                setShieldingCertificate({
+                                  protocol: data.data.protocol,
+                                  hash: data.data.hash,
+                                  date: new Date(
+                                    data.data.date,
+                                  ).toLocaleString(),
+                                });
+                                toast.success("Contrato blindado com sucesso!");
+
+                                if (isStart) {
+                                  setProfileData((prev) => ({
+                                    ...prev,
+                                    balance: (prev.balance || 0) - 4,
+                                  }));
+                                  toast.info("4 Juris deduzidos pelo serviço.");
+                                }
+                              } else {
+                                toast.error(
+                                  data.message || "Erro ao blindar contrato",
+                                );
+                              }
+                            } catch (error) {
+                              console.error("Erro ao blindar contrato:", error);
+                              toast.error(
+                                "Erro de conexão ao blindar contrato",
+                              );
+                            } finally {
+                              setIsShielding(false);
+                            }
+                          };
+
+                          if (isStart) {
+                            setJurisConfirmAction(() => proceedWithShielding);
+                            setShowJurisConfirmModal(true);
+                          } else {
+                            proceedWithShielding();
+                          }
+                        }}
+                      >
+                        {isShielding ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "10px",
+                            }}
+                          >
+                            <Loader2
+                              size={16}
+                              style={{ animation: "spin 1s linear infinite" }}
+                            />
+                            Blindando Documento...
+                          </div>
+                        ) : (
+                          "Blindar Contrato (Gerar Hash SHA-512)"
+                        )}
+                      </button>
+                    )}
+
+                    {shieldingCertificate && (
+                      <div
+                        style={{
+                          marginTop: "15px",
+                          padding: "15px",
+                          background: "rgba(0, 230, 118, 0.05)",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(0, 230, 118, 0.2)",
+                        }}
+                      >
+                        <p
+                          style={{
+                            color: "#00e676",
+                            fontWeight: "bold",
+                            marginBottom: "5px",
+                          }}
+                        >
+                          ✓ Documento Blindado!
+                        </p>
+                        <p style={{ color: "#aaa", fontSize: "0.8rem" }}>
+                          Protocolo: {shieldingCertificate.protocol}
+                        </p>
+                        <p
+                          style={{
+                            color: "#aaa",
+                            fontSize: "0.8rem",
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          Hash: {shieldingCertificate.hash}
+                        </p>
+
+                        <button
+                          type="button"
+                          style={{
+                            marginTop: "10px",
+                            width: "100%",
+                            padding: "10px",
+                            background: "var(--color-gold)",
+                            color: "#000",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontWeight: "bold",
+                          }}
+                          onClick={() => {
+                            toast.success("Gerando Certificado...");
+
+                            const doc = new jsPDF();
+                            const pageWidth = doc.internal.pageSize.getWidth();
+                            const pageHeight =
+                              doc.internal.pageSize.getHeight();
+
+                            // Desenhar borda elegante
+                            doc.setDrawColor(212, 175, 55); // Cor Ouro
+                            doc.setLineWidth(2);
+                            doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+                            doc.setLineWidth(0.5);
+                            doc.rect(12, 12, pageWidth - 24, pageHeight - 24);
+
+                            generateCertificatePDF({
+                              fileName: `Contrato_${contractForm.tipo}_${contractForm.parte1.nome}_${contractForm.parte2.nome}.pdf`,
+                              protocol: shieldingCertificate.protocol,
+                              owner: `${profileData?.name || "Advogado"} (OAB: ${profileData?.oab || "N/I"})`,
+                              date: shieldingCertificate.date,
+                              hash: shieldingCertificate.hash,
+                              ip: "::1",
+                              agent:
+                                typeof navigator !== "undefined"
+                                  ? navigator.userAgent
+                                  : "N/I",
+                            });
+                            toast.success("Certificado baixado com sucesso!");
+
+                            // FECHAR MODAL E LIMPAR DADOS
+                            setTimeout(() => {
+                              setShowContratoModal(false);
+                              setContractForm({
+                                tipo: "",
+                                parte1: {
+                                  nome: "",
+                                  cpf_cnpj: "",
+                                  endereco: "",
+                                  estado_civil: "",
+                                  profissao: "",
+                                },
+                                parte2: {
+                                  nome: "",
+                                  cpf_cnpj: "",
+                                  endereco: "",
+                                  estado_civil: "",
+                                  profissao: "",
+                                },
+                                personality: "Técnica",
+                                purpose: "",
+                              });
+                              setGeneratedContract("");
+                              setShowContractResult(false);
+                              setContractConfirmed(false);
+                              setUploadedSignedContract(null);
+                              setShieldingCertificate(null);
+
+                              // Recarregar lista de blindados!
+                              fetchBlindados();
+                            }, 1000);
+                          }}
+                        >
+                          Baixar Certificado de Cadeia de Custódia
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -11179,24 +15022,66 @@ export default function AdvogadoDashboard() {
   const renderProcuracaoModal = () => {
     if (!showProcuracaoModal) return null;
     return (
-      <div className={styles.modalOverlay} onClick={() => setShowProcuracaoModal(false)}>
-        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "800px", width: "90%" }}>
+      <div
+        className={styles.modalOverlay}
+        onClick={() => setShowProcuracaoModal(false)}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: "800px", width: "90%" }}
+        >
           <div className={styles.modalHeader}>
             <h2 className={styles.modalTitle}>🛡️ Blindagem de Procuração</h2>
-            <button className={styles.modalClose} onClick={() => setShowProcuracaoModal(false)}><X size={20} /></button>
+            <button
+              className={styles.modalClose}
+              onClick={() => setShowProcuracaoModal(false)}
+            >
+              <X size={20} />
+            </button>
           </div>
-          <div className={styles.modalBody} style={{ padding: '20px' }}>
+          <div className={styles.modalBody} style={{ padding: "20px" }}>
             {!showProcuracaoResult ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div style={{ display: 'flex', gap: '15px' }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px",
+                }}
+              >
+                <div style={{ display: "flex", gap: "15px" }}>
                   {/* Outorgante */}
-                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.01)', padding: '15px', borderRadius: '8px', border: '1px solid #333' }}>
-                    <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: 'var(--color-gold)' }}>Outorgante</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div
+                    style={{
+                      flex: 1,
+                      background: "rgba(255,255,255,0.01)",
+                      padding: "15px",
+                      borderRadius: "8px",
+                      border: "1px solid #333",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: "1rem",
+                        marginBottom: "10px",
+                        color: "var(--color-gold)",
+                      }}
+                    >
+                      Outorgante
+                    </h3>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
                       {crmClients.length > 0 && (
                         <select
                           onChange={(e) => {
-                            const client = crmClients.find(c => c.id === e.target.value);
+                            const client = crmClients.find(
+                              (c) => c.id === e.target.value,
+                            );
                             if (client) {
                               setProcuracaoForm({
                                 ...procuracaoForm,
@@ -11205,49 +15090,356 @@ export default function AdvogadoDashboard() {
                                   cpf_cnpj: client.cpf_cnpj || "",
                                   endereco: "",
                                   estado_civil: "",
-                                  profissao: ""
-                                }
+                                  profissao: "",
+                                },
                               });
                             }
                           }}
-                          style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff', fontSize: '0.9rem', marginBottom: '5px' }}
+                          style={{
+                            width: "100%",
+                            padding: "8px",
+                            background: "#222",
+                            border: "1px solid #444",
+                            borderRadius: "4px",
+                            color: "#fff",
+                            fontSize: "0.9rem",
+                            marginBottom: "5px",
+                          }}
                         >
                           <option value="">Puxar do CRM (Opcional)</option>
-                          {crmClients.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
+                          {crmClients.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
                           ))}
                         </select>
                       )}
-                      <input type="text" placeholder="Nome Completo" value={procuracaoForm.outorgante.nome} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, nome: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
-                      <input type="text" placeholder="CPF ou CNPJ" value={procuracaoForm.outorgante.cpf_cnpj} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, cpf_cnpj: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
-                      <input type="text" placeholder="Estado Civil" value={procuracaoForm.outorgante.estado_civil} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, estado_civil: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
-                      <input type="text" placeholder="Profissão" value={procuracaoForm.outorgante.profissao} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, profissao: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
-                      <input type="text" placeholder="Endereço Completo" value={procuracaoForm.outorgante.endereco} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgante: {...procuracaoForm.outorgante, endereco: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                      <input
+                        type="text"
+                        placeholder="Nome Completo"
+                        value={procuracaoForm.outorgante.nome}
+                        onChange={(e) =>
+                          setProcuracaoForm({
+                            ...procuracaoForm,
+                            outorgante: {
+                              ...procuracaoForm.outorgante,
+                              nome: e.target.value,
+                            },
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          background: "#222",
+                          border: "1px solid #444",
+                          borderRadius: "4px",
+                          color: "#fff",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="CPF ou CNPJ"
+                        value={procuracaoForm.outorgante.cpf_cnpj}
+                        onChange={(e) =>
+                          setProcuracaoForm({
+                            ...procuracaoForm,
+                            outorgante: {
+                              ...procuracaoForm.outorgante,
+                              cpf_cnpj: e.target.value,
+                            },
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          background: "#222",
+                          border: "1px solid #444",
+                          borderRadius: "4px",
+                          color: "#fff",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Estado Civil"
+                        value={procuracaoForm.outorgante.estado_civil}
+                        onChange={(e) =>
+                          setProcuracaoForm({
+                            ...procuracaoForm,
+                            outorgante: {
+                              ...procuracaoForm.outorgante,
+                              estado_civil: e.target.value,
+                            },
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          background: "#222",
+                          border: "1px solid #444",
+                          borderRadius: "4px",
+                          color: "#fff",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Profissão"
+                        value={procuracaoForm.outorgante.profissao}
+                        onChange={(e) =>
+                          setProcuracaoForm({
+                            ...procuracaoForm,
+                            outorgante: {
+                              ...procuracaoForm.outorgante,
+                              profissao: e.target.value,
+                            },
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          background: "#222",
+                          border: "1px solid #444",
+                          borderRadius: "4px",
+                          color: "#fff",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Endereço Completo"
+                        value={procuracaoForm.outorgante.endereco}
+                        onChange={(e) =>
+                          setProcuracaoForm({
+                            ...procuracaoForm,
+                            outorgante: {
+                              ...procuracaoForm.outorgante,
+                              endereco: e.target.value,
+                            },
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          background: "#222",
+                          border: "1px solid #444",
+                          borderRadius: "4px",
+                          color: "#fff",
+                        }}
+                      />
                     </div>
                   </div>
                   {/* Outorgado */}
-                  <div style={{ flex: 1, background: 'rgba(255,255,255,0.01)', padding: '15px', borderRadius: '8px', border: '1px solid #333' }}>
-                    <h3 style={{ fontSize: '1rem', marginBottom: '10px', color: 'var(--color-gold)' }}>Outorgado</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <input type="text" placeholder="Nome Completo" value={procuracaoForm.outorgado.nome} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgado: {...procuracaoForm.outorgado, nome: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
-                      <input type="text" placeholder="OAB" value={procuracaoForm.outorgado.oab} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgado: {...procuracaoForm.outorgado, oab: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
-                      <input type="text" placeholder="CPF" value={procuracaoForm.outorgado.cpf} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgado: {...procuracaoForm.outorgado, cpf: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
-                      <input type="text" placeholder="Endereço Profissional" value={procuracaoForm.outorgado.endereco} onChange={(e) => setProcuracaoForm({...procuracaoForm, outorgado: {...procuracaoForm.outorgado, endereco: e.target.value}})} style={{ width: '100%', padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                  <div
+                    style={{
+                      flex: 1,
+                      background: "rgba(255,255,255,0.01)",
+                      padding: "15px",
+                      borderRadius: "8px",
+                      border: "1px solid #333",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        fontSize: "1rem",
+                        marginBottom: "10px",
+                        color: "var(--color-gold)",
+                      }}
+                    >
+                      Outorgado
+                    </h3>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px",
+                      }}
+                    >
+                      <input
+                        type="text"
+                        placeholder="Nome Completo"
+                        value={procuracaoForm.outorgado.nome}
+                        onChange={(e) =>
+                          setProcuracaoForm({
+                            ...procuracaoForm,
+                            outorgado: {
+                              ...procuracaoForm.outorgado,
+                              nome: e.target.value,
+                            },
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          background: "#222",
+                          border: "1px solid #444",
+                          borderRadius: "4px",
+                          color: "#fff",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="OAB"
+                        value={procuracaoForm.outorgado.oab}
+                        onChange={(e) =>
+                          setProcuracaoForm({
+                            ...procuracaoForm,
+                            outorgado: {
+                              ...procuracaoForm.outorgado,
+                              oab: e.target.value,
+                            },
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          background: "#222",
+                          border: "1px solid #444",
+                          borderRadius: "4px",
+                          color: "#fff",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="CPF"
+                        value={procuracaoForm.outorgado.cpf}
+                        onChange={(e) =>
+                          setProcuracaoForm({
+                            ...procuracaoForm,
+                            outorgado: {
+                              ...procuracaoForm.outorgado,
+                              cpf: e.target.value,
+                            },
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          background: "#222",
+                          border: "1px solid #444",
+                          borderRadius: "4px",
+                          color: "#fff",
+                        }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Endereço Profissional"
+                        value={procuracaoForm.outorgado.endereco}
+                        onChange={(e) =>
+                          setProcuracaoForm({
+                            ...procuracaoForm,
+                            outorgado: {
+                              ...procuracaoForm.outorgado,
+                              endereco: e.target.value,
+                            },
+                          })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "8px",
+                          background: "#222",
+                          border: "1px solid #444",
+                          borderRadius: "4px",
+                          color: "#fff",
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input type="text" placeholder="Comarca" value={procuracaoForm.comarca} onChange={(e) => setProcuracaoForm({...procuracaoForm, comarca: e.target.value})} style={{ flex: 1, padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
-                  <input type="text" placeholder="Local" value={procuracaoForm.local} onChange={(e) => setProcuracaoForm({...procuracaoForm, local: e.target.value})} style={{ flex: 1, padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
-                  <input type="date" value={procuracaoForm.data} onChange={(e) => setProcuracaoForm({...procuracaoForm, data: e.target.value})} style={{ flex: 1, padding: '8px', background: '#222', border: '1px solid #444', borderRadius: '4px', color: '#fff' }} />
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <input
+                    type="text"
+                    placeholder="Comarca"
+                    value={procuracaoForm.comarca}
+                    onChange={(e) =>
+                      setProcuracaoForm({
+                        ...procuracaoForm,
+                        comarca: e.target.value,
+                      })
+                    }
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: "#222",
+                      border: "1px solid #444",
+                      borderRadius: "4px",
+                      color: "#fff",
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Local"
+                    value={procuracaoForm.local}
+                    onChange={(e) =>
+                      setProcuracaoForm({
+                        ...procuracaoForm,
+                        local: e.target.value,
+                      })
+                    }
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: "#222",
+                      border: "1px solid #444",
+                      borderRadius: "4px",
+                      color: "#fff",
+                    }}
+                  />
+                  <input
+                    type="date"
+                    value={procuracaoForm.data}
+                    onChange={(e) =>
+                      setProcuracaoForm({
+                        ...procuracaoForm,
+                        data: e.target.value,
+                      })
+                    }
+                    style={{
+                      flex: 1,
+                      padding: "8px",
+                      background: "#222",
+                      border: "1px solid #444",
+                      borderRadius: "4px",
+                      color: "#fff",
+                    }}
+                  />
                 </div>
                 <div>
-                  <label style={{ color: '#ccc', fontSize: '0.85rem' }}>Poderes</label>
-                  <textarea value={procuracaoForm.poderes} onChange={(e) => setProcuracaoForm({...procuracaoForm, poderes: e.target.value})} placeholder="Descreva os poderes..." style={{ width: '100%', height: '80px', padding: '10px', background: '#222', border: '1px solid #333', borderRadius: '6px', color: '#fff' }} />
+                  <label style={{ color: "#ccc", fontSize: "0.85rem" }}>
+                    Poderes
+                  </label>
+                  <textarea
+                    value={procuracaoForm.poderes}
+                    onChange={(e) =>
+                      setProcuracaoForm({
+                        ...procuracaoForm,
+                        poderes: e.target.value,
+                      })
+                    }
+                    placeholder="Descreva os poderes..."
+                    style={{
+                      width: "100%",
+                      height: "80px",
+                      padding: "10px",
+                      background: "#222",
+                      border: "1px solid #333",
+                      borderRadius: "6px",
+                      color: "#fff",
+                    }}
+                  />
                 </div>
                 <button
                   disabled={isGeneratingProcuracao || !procuracaoForm.poderes}
-                  style={{ padding: '12px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', opacity: (isGeneratingProcuracao || !procuracaoForm.poderes) ? 0.7 : 1 }}
+                  style={{
+                    padding: "12px",
+                    background: "var(--color-gold)",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    opacity:
+                      isGeneratingProcuracao || !procuracaoForm.poderes
+                        ? 0.7
+                        : 1,
+                  }}
                   onClick={async () => {
                     setIsGeneratingProcuracao(true);
                     try {
@@ -11257,43 +15449,104 @@ export default function AdvogadoDashboard() {
                         facts: `Poderes: ${procuracaoForm.poderes}\n\nComarca: ${procuracaoForm.comarca}\nLocal: ${procuracaoForm.local}\nData: ${procuracaoForm.data}\n\nOutorgante: ${procuracaoForm.outorgante.nome}, CPF/CNPJ: ${procuracaoForm.outorgante.cpf_cnpj}, Estado Civil: ${procuracaoForm.outorgante.estado_civil}, Profissão: ${procuracaoForm.outorgante.profissao}, Endereço: ${procuracaoForm.outorgante.endereco}\n\nOutorgado: ${procuracaoForm.outorgado.nome}, OAB: ${procuracaoForm.outorgado.oab}, CPF: ${procuracaoForm.outorgado.cpf}, Endereço: ${procuracaoForm.outorgado.endereco}`,
                         advocateData: profileData,
                       };
-                      const res = await fetch("/api/crm/redator", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                      const res = await fetch("/api/crm/redator", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload),
+                      });
                       const data = await res.json();
                       if (data.success) {
                         setGeneratedProcuracao(data.draft);
                         toast.success("Procuração gerada!");
                         setShowProcuracaoResult(true);
-                      } else { toast.error(data.message || "Erro ao gerar"); }
-                    } catch (error) { toast.error("Erro de conexão"); } finally { setIsGeneratingProcuracao(false); }
+                      } else {
+                        toast.error(data.message || "Erro ao gerar");
+                      }
+                    } catch (error) {
+                      toast.error("Erro de conexão");
+                    } finally {
+                      setIsGeneratingProcuracao(false);
+                    }
                   }}
                 >
                   {isGeneratingProcuracao ? "Gerando..." : "Gerar Procuração"}
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <div style={{ background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '6px', maxHeight: '200px', overflowY: 'auto', whiteSpace: 'pre-wrap', textAlign: 'left', fontSize: '0.9rem' }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px",
+                }}
+              >
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    padding: "15px",
+                    borderRadius: "6px",
+                    maxHeight: "200px",
+                    overflowY: "auto",
+                    whiteSpace: "pre-wrap",
+                    textAlign: "left",
+                    fontSize: "0.9rem",
+                  }}
+                >
                   {generatedProcuracao}
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button style={{ flex: 1, padding: '10px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }} onClick={() => setShowProcuracaoResult(false)}>Voltar</button>
+                <div style={{ display: "flex", gap: "10px" }}>
                   <button
-                    style={{ flex: 1, padding: '10px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      background: "#333",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setShowProcuracaoResult(false)}
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      background: "var(--color-gold)",
+                      color: "#000",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                    }}
                     onClick={() => {
                       const doc = new jsPDF();
                       const pageWidth = doc.internal.pageSize.getWidth();
                       const pageHeight = doc.internal.pageSize.getHeight();
                       const margin = 20;
-                      const contentWidth = pageWidth - (margin * 2);
+                      const contentWidth = pageWidth - margin * 2;
                       let y = 30;
-                      doc.setFont("helvetica", "normal"); doc.setFontSize(11);
-                      const cleanProcuracao = generatedProcuracao.replace(/\*\*/g, '').replace(/\*/g, '');
-                      const splitContent = doc.splitTextToSize(cleanProcuracao, contentWidth);
+                      doc.setFont("helvetica", "normal");
+                      doc.setFontSize(11);
+                      const cleanProcuracao = generatedProcuracao
+                        .replace(/\*\*/g, "")
+                        .replace(/\*/g, "");
+                      const splitContent = doc.splitTextToSize(
+                        cleanProcuracao,
+                        contentWidth,
+                      );
                       for (let i = 0; i < splitContent.length; i++) {
-                        if (y > pageHeight - margin - 10) { doc.addPage(); y = margin; }
-                        doc.text(splitContent[i], margin, y); y += 5;
+                        if (y > pageHeight - margin - 10) {
+                          doc.addPage();
+                          y = margin;
+                        }
+                        doc.text(splitContent[i], margin, y);
+                        y += 5;
                       }
-                      doc.save(`procuracao_${procuracaoForm.outorgante.nome.replace(/\s+/g, '_')}.pdf`);
+                      doc.save(
+                        `procuracao_${procuracaoForm.outorgante.nome.replace(/\s+/g, "_")}.pdf`,
+                      );
                       setProcuracaoConfirmed(true);
                     }}
                   >
@@ -11301,34 +15554,111 @@ export default function AdvogadoDashboard() {
                   </button>
                 </div>
                 {procuracaoConfirmed && (
-                  <div style={{ marginTop: '10px', borderTop: '1px solid #333', paddingTop: '10px' }}>
-                    <h4 style={{ fontSize: '1rem', color: '#fff', marginBottom: '5px' }}>Blindar Procuração Assinada</h4>
-                    <div style={{ border: '2px dashed #444', borderRadius: '6px', padding: '15px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', cursor: 'pointer' }} onClick={() => document.getElementById('fileUploadProcuracao').click()}>
-                      <input id="fileUploadProcuracao" type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={(e) => { if (e.target.files && e.target.files[0]) setUploadedSignedProcuracao(e.target.files[0]); }} />
-                      <Upload size={20} color="var(--color-gold)" style={{ marginBottom: '5px' }} />
-                      <p style={{ color: '#fff', fontSize: '0.85rem' }}>{uploadedSignedProcuracao ? uploadedSignedProcuracao.name : "Clique para selecionar"}</p>
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      borderTop: "1px solid #333",
+                      paddingTop: "10px",
+                    }}
+                  >
+                    <h4
+                      style={{
+                        fontSize: "1rem",
+                        color: "#fff",
+                        marginBottom: "5px",
+                      }}
+                    >
+                      Blindar Procuração Assinada
+                    </h4>
+                    <div
+                      style={{
+                        border: "2px dashed #444",
+                        borderRadius: "6px",
+                        padding: "15px",
+                        textAlign: "center",
+                        background: "rgba(255,255,255,0.02)",
+                        cursor: "pointer",
+                      }}
+                      onClick={() =>
+                        document.getElementById("fileUploadProcuracao").click()
+                      }
+                    >
+                      <input
+                        id="fileUploadProcuracao"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        style={{ display: "none" }}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0])
+                            setUploadedSignedProcuracao(e.target.files[0]);
+                        }}
+                      />
+                      <Upload
+                        size={20}
+                        color="var(--color-gold)"
+                        style={{ marginBottom: "5px" }}
+                      />
+                      <p style={{ color: "#fff", fontSize: "0.85rem" }}>
+                        {uploadedSignedProcuracao
+                          ? uploadedSignedProcuracao.name
+                          : "Clique para selecionar"}
+                      </p>
                     </div>
                     {uploadedSignedProcuracao && (
                       <button
                         disabled={isShieldingProcuracao}
-                        style={{ marginTop: '10px', width: '100%', padding: '10px', background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', opacity: isShieldingProcuracao ? 0.7 : 1 }}
+                        style={{
+                          marginTop: "10px",
+                          width: "100%",
+                          padding: "10px",
+                          background:
+                            "linear-gradient(135deg, #00e676 0%, #00c853 100%)",
+                          color: "#fff",
+                          border: "none",
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                          opacity: isShieldingProcuracao ? 0.7 : 1,
+                        }}
                         onClick={async () => {
-                          const isStart = profileData?.plan_type === 'START';
+                          const isStart = profileData?.plan_type === "START";
                           const proceedWithShielding = async () => {
-                            if (isStart && (profileData?.balance || 0) < 4) { toast.error("Saldo insuficiente!"); return; }
+                            if (isStart && (profileData?.balance || 0) < 4) {
+                              toast.error("Saldo insuficiente!");
+                              return;
+                            }
                             setIsShieldingProcuracao(true);
                             try {
                               const formData = new FormData();
                               formData.append("file", uploadedSignedProcuracao);
                               formData.append("type", "procuracao");
-                              const res = await fetch("/api/crm/blindagem", { method: "POST", body: formData });
+                              const res = await fetch("/api/crm/blindagem", {
+                                method: "POST",
+                                body: formData,
+                              });
                               const data = await res.json();
                               if (data.success) {
-                                setProcuracaoCertificate({ protocol: data.data.protocol, hash: data.data.hash, date: new Date(data.data.date).toLocaleString() });
+                                setProcuracaoCertificate({
+                                  protocol: data.data.protocol,
+                                  hash: data.data.hash,
+                                  date: new Date(
+                                    data.data.date,
+                                  ).toLocaleString(),
+                                });
                                 toast.success("Blindada!");
-                                if (isStart) setProfileData(prev => ({ ...prev, balance: (prev.balance || 0) - 4 }));
-                              } else { toast.error(data.message || "Erro"); }
-                            } catch (error) { toast.error("Erro"); } finally { setIsShieldingProcuracao(false); }
+                                if (isStart)
+                                  setProfileData((prev) => ({
+                                    ...prev,
+                                    balance: (prev.balance || 0) - 4,
+                                  }));
+                              } else {
+                                toast.error(data.message || "Erro");
+                              }
+                            } catch (error) {
+                              toast.error("Erro");
+                            } finally {
+                              setIsShieldingProcuracao(false);
+                            }
                           };
 
                           if (isStart) {
@@ -11339,14 +15669,37 @@ export default function AdvogadoDashboard() {
                           }
                         }}
                       >
-                        {isShieldingProcuracao ? "Blindando..." : "Blindar Procuração"}
+                        {isShieldingProcuracao
+                          ? "Blindando..."
+                          : "Blindar Procuração"}
                       </button>
                     )}
                     {procuracaoCertificate && (
-                      <div style={{ marginTop: '10px', background: 'rgba(0, 230, 118, 0.05)', padding: '10px', borderRadius: '6px', border: '1px solid rgba(0, 230, 118, 0.2)' }}>
-                        <p style={{ color: '#fff', fontSize: '0.8rem' }}><strong>Protocolo:</strong> {procuracaoCertificate.protocol}</p>
+                      <div
+                        style={{
+                          marginTop: "10px",
+                          background: "rgba(0, 230, 118, 0.05)",
+                          padding: "10px",
+                          borderRadius: "6px",
+                          border: "1px solid rgba(0, 230, 118, 0.2)",
+                        }}
+                      >
+                        <p style={{ color: "#fff", fontSize: "0.8rem" }}>
+                          <strong>Protocolo:</strong>{" "}
+                          {procuracaoCertificate.protocol}
+                        </p>
                         <button
-                          style={{ marginTop: '10px', width: '100%', padding: '8px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                          style={{
+                            marginTop: "10px",
+                            width: "100%",
+                            padding: "8px",
+                            background: "var(--color-gold)",
+                            color: "#000",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontWeight: "bold",
+                          }}
                           onClick={() => {
                             generateCertificatePDF({
                               fileName: `Procuracao_${procuracaoForm.outorgante.nome}_${procuracaoForm.outorgado.nome}.pdf`,
@@ -11355,12 +15708,37 @@ export default function AdvogadoDashboard() {
                               date: procuracaoCertificate.date,
                               hash: procuracaoCertificate.hash,
                               ip: "::1",
-                              agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I'
+                              agent:
+                                typeof navigator !== "undefined"
+                                  ? navigator.userAgent
+                                  : "N/I",
                             });
                             setTimeout(() => {
                               setShowProcuracaoModal(false);
-                              setProcuracaoForm({ outorgante: { nome: "", cpf_cnpj: "", endereco: "", estado_civil: "", profissao: "" }, outorgado: { nome: "", oab: "", cpf: "", endereco: "" }, poderes: "Ad Judicia et Extra", comarca: "", local: "", data: new Date().toISOString().split('T')[0] });
-                              setGeneratedProcuracao(""); setShowProcuracaoResult(false); setProcuracaoConfirmed(false); setUploadedSignedProcuracao(null); setProcuracaoCertificate(null);
+                              setProcuracaoForm({
+                                outorgante: {
+                                  nome: "",
+                                  cpf_cnpj: "",
+                                  endereco: "",
+                                  estado_civil: "",
+                                  profissao: "",
+                                },
+                                outorgado: {
+                                  nome: "",
+                                  oab: "",
+                                  cpf: "",
+                                  endereco: "",
+                                },
+                                poderes: "Ad Judicia et Extra",
+                                comarca: "",
+                                local: "",
+                                data: new Date().toISOString().split("T")[0],
+                              });
+                              setGeneratedProcuracao("");
+                              setShowProcuracaoResult(false);
+                              setProcuracaoConfirmed(false);
+                              setUploadedSignedProcuracao(null);
+                              setProcuracaoCertificate(null);
                               fetchBlindados();
                             }, 1000);
                           }}
@@ -11382,71 +15760,195 @@ export default function AdvogadoDashboard() {
   const renderProvasModal = () => {
     if (!showProvasModal) return null;
     return (
-      <div className={styles.modalOverlay} onClick={() => setShowProvasModal(false)}>
-        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px", width: "90%" }}>
+      <div
+        className={styles.modalOverlay}
+        onClick={() => setShowProvasModal(false)}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: "600px", width: "90%" }}
+        >
           <div className={styles.modalHeader}>
-            <h2 className={styles.modalTitle}>🛡️ Blindagem de Provas Digitais</h2>
-            <button className={styles.modalClose} onClick={() => setShowProvasModal(false)}><X size={20} /></button>
+            <h2 className={styles.modalTitle}>
+              🛡️ Blindagem de Provas Digitais
+            </h2>
+            <button
+              className={styles.modalClose}
+              onClick={() => setShowProvasModal(false)}
+            >
+              <X size={20} />
+            </button>
           </div>
-          <div className={styles.modalBody} style={{ padding: '20px' }}>
-            <div style={{ border: '2px dashed #444', borderRadius: '6px', padding: '20px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', cursor: 'pointer' }} onClick={() => document.getElementById('fileUploadProva').click()}>
-              <input id="fileUploadProva" type="file" accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4" style={{ display: 'none' }} onChange={async (e) => {
-                if (e.target.files && e.target.files[0]) {
-                  const file = e.target.files[0];
-                  setUploadedProvaFile(file);
-                  setIsAnalyzingProva(true);
-                  try {
-                    const formData = new FormData();
-                    formData.append("file", file);
-                    const res = await fetch("/api/crm/analisador", { method: "POST", body: formData });
-                    const data = await res.json();
-                    if (data.success) {
-                      setProvaAnalysis(data.analysis);
-                      toast.success("Análise concluída!");
-                    } else { toast.error("Erro ao analisar"); }
-                  } catch (error) { toast.error("Erro de conexão"); } finally { setIsAnalyzingProva(false); }
-                }
-              }} />
-              <Upload size={32} color="var(--color-gold)" style={{ marginBottom: '10px' }} />
-              <p style={{ color: '#fff' }}>{uploadedProvaFile ? uploadedProvaFile.name : "Clique para selecionar arquivo ou imagem"}</p>
-              <p style={{ color: '#808080', fontSize: '0.8rem', marginTop: '5px' }}>Suporta PDF, Imagens, Áudio e Vídeo</p>
+          <div className={styles.modalBody} style={{ padding: "20px" }}>
+            <div
+              style={{
+                border: "2px dashed #444",
+                borderRadius: "6px",
+                padding: "20px",
+                textAlign: "center",
+                background: "rgba(255,255,255,0.02)",
+                cursor: "pointer",
+              }}
+              onClick={() => document.getElementById("fileUploadProva").click()}
+            >
+              <input
+                id="fileUploadProva"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4"
+                style={{ display: "none" }}
+                onChange={async (e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    const file = e.target.files[0];
+                    setUploadedProvaFile(file);
+                    setIsAnalyzingProva(true);
+                    try {
+                      const formData = new FormData();
+                      formData.append("file", file);
+                      const res = await fetch("/api/crm/analisador", {
+                        method: "POST",
+                        body: formData,
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        setProvaAnalysis(data.analysis);
+                        toast.success("Análise concluída!");
+                      } else {
+                        toast.error("Erro ao analisar");
+                      }
+                    } catch (error) {
+                      toast.error("Erro de conexão");
+                    } finally {
+                      setIsAnalyzingProva(false);
+                    }
+                  }
+                }}
+              />
+              <Upload
+                size={32}
+                color="var(--color-gold)"
+                style={{ marginBottom: "10px" }}
+              />
+              <p style={{ color: "#fff" }}>
+                {uploadedProvaFile
+                  ? uploadedProvaFile.name
+                  : "Clique para selecionar arquivo ou imagem"}
+              </p>
+              <p
+                style={{
+                  color: "#808080",
+                  fontSize: "0.8rem",
+                  marginTop: "5px",
+                }}
+              >
+                Suporta PDF, Imagens, Áudio e Vídeo
+              </p>
             </div>
             {isAnalyzingProva && (
-              <div style={{ marginTop: '15px', textAlign: 'center', color: '#aaa' }}>
-                <Loader2 size={20} style={{ animation: "spin 1s linear infinite", marginBottom: '5px' }} />
+              <div
+                style={{
+                  marginTop: "15px",
+                  textAlign: "center",
+                  color: "#aaa",
+                }}
+              >
+                <Loader2
+                  size={20}
+                  style={{
+                    animation: "spin 1s linear infinite",
+                    marginBottom: "5px",
+                  }}
+                />
                 <p>IA analisando o documento...</p>
               </div>
             )}
             {provaAnalysis && !isAnalyzingProva && (
-              <div style={{ marginTop: '15px', background: 'rgba(255,255,255,0.05)', padding: '15px', borderRadius: '6px' }}>
-                <h4 style={{ color: 'var(--color-gold)', marginBottom: '5px', fontSize: '0.9rem' }}>Análise da IA:</h4>
-                <p style={{ color: '#fff', fontSize: '0.85rem', lineHeight: '1.4', whiteSpace: 'pre-line' }}>
-                  {provaAnalysis.replace(/\*\*/g, '').replace(/###/g, '').replace(/#/g, '')}
+              <div
+                style={{
+                  marginTop: "15px",
+                  background: "rgba(255,255,255,0.05)",
+                  padding: "15px",
+                  borderRadius: "6px",
+                }}
+              >
+                <h4
+                  style={{
+                    color: "var(--color-gold)",
+                    marginBottom: "5px",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Análise da IA:
+                </h4>
+                <p
+                  style={{
+                    color: "#fff",
+                    fontSize: "0.85rem",
+                    lineHeight: "1.4",
+                    whiteSpace: "pre-line",
+                  }}
+                >
+                  {provaAnalysis
+                    .replace(/\*\*/g, "")
+                    .replace(/###/g, "")
+                    .replace(/#/g, "")}
                 </p>
               </div>
             )}
             {uploadedProvaFile && provaAnalysis && !isAnalyzingProva && (
               <button
                 disabled={isShieldingProva}
-                style={{ marginTop: '15px', width: '100%', padding: '12px', background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', opacity: isShieldingProva ? 0.7 : 1 }}
+                style={{
+                  marginTop: "15px",
+                  width: "100%",
+                  padding: "12px",
+                  background:
+                    "linear-gradient(135deg, #00e676 0%, #00c853 100%)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  opacity: isShieldingProva ? 0.7 : 1,
+                }}
                 onClick={async () => {
-                  const isStart = profileData?.plan_type === 'START';
+                  const isStart = profileData?.plan_type === "START";
                   const proceedWithShielding = async () => {
-                    if (isStart && (profileData?.balance || 0) < 4) { toast.error("Saldo insuficiente!"); return; }
+                    if (isStart && (profileData?.balance || 0) < 4) {
+                      toast.error("Saldo insuficiente!");
+                      return;
+                    }
                     setIsShieldingProva(true);
                     try {
                       const formData = new FormData();
                       formData.append("file", uploadedProvaFile);
                       formData.append("type", "prova");
                       formData.append("analysis", provaAnalysis);
-                      const res = await fetch("/api/crm/blindagem", { method: "POST", body: formData });
+                      const res = await fetch("/api/crm/blindagem", {
+                        method: "POST",
+                        body: formData,
+                      });
                       const data = await res.json();
                       if (data.success) {
-                        setProvaCertificate({ protocol: data.data.protocol, hash: data.data.hash, date: new Date(data.data.date).toLocaleString() });
+                        setProvaCertificate({
+                          protocol: data.data.protocol,
+                          hash: data.data.hash,
+                          date: new Date(data.data.date).toLocaleString(),
+                        });
                         toast.success("Prova Blindada!");
-                        if (isStart) setProfileData(prev => ({ ...prev, balance: (prev.balance || 0) - 4 }));
-                      } else { toast.error(data.message || "Erro"); }
-                    } catch (error) { toast.error("Erro"); } finally { setIsShieldingProva(false); }
+                        if (isStart)
+                          setProfileData((prev) => ({
+                            ...prev,
+                            balance: (prev.balance || 0) - 4,
+                          }));
+                      } else {
+                        toast.error(data.message || "Erro");
+                      }
+                    } catch (error) {
+                      toast.error("Erro");
+                    } finally {
+                      setIsShieldingProva(false);
+                    }
                   };
 
                   if (isStart) {
@@ -11461,10 +15963,30 @@ export default function AdvogadoDashboard() {
               </button>
             )}
             {provaCertificate && (
-              <div style={{ marginTop: '15px', background: 'rgba(0, 230, 118, 0.05)', padding: '15px', borderRadius: '6px', border: '1px solid rgba(0, 230, 118, 0.2)' }}>
-                <p style={{ color: '#fff', fontSize: '0.85rem' }}><strong>Protocolo:</strong> {provaCertificate.protocol}</p>
+              <div
+                style={{
+                  marginTop: "15px",
+                  background: "rgba(0, 230, 118, 0.05)",
+                  padding: "15px",
+                  borderRadius: "6px",
+                  border: "1px solid rgba(0, 230, 118, 0.2)",
+                }}
+              >
+                <p style={{ color: "#fff", fontSize: "0.85rem" }}>
+                  <strong>Protocolo:</strong> {provaCertificate.protocol}
+                </p>
                 <button
-                  style={{ marginTop: '10px', width: '100%', padding: '10px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                  style={{
+                    marginTop: "10px",
+                    width: "100%",
+                    padding: "10px",
+                    background: "var(--color-gold)",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                  }}
                   onClick={() => {
                     generateCertificatePDF({
                       fileName: uploadedProvaFile?.name,
@@ -11473,7 +15995,10 @@ export default function AdvogadoDashboard() {
                       date: provaCertificate.date,
                       hash: provaCertificate.hash,
                       ip: "::1",
-                      agent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/I'
+                      agent:
+                        typeof navigator !== "undefined"
+                          ? navigator.userAgent
+                          : "N/I",
                     });
                     setTimeout(() => {
                       setShowProvasModal(false);
@@ -11497,35 +16022,94 @@ export default function AdvogadoDashboard() {
   const renderNotificacaoModal = () => {
     if (!showNotificacaoModal) return null;
     return (
-      <div className={styles.modalOverlay} onClick={() => setShowNotificacaoModal(false)}>
-        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "600px", width: "90%" }}>
+      <div
+        className={styles.modalOverlay}
+        onClick={() => setShowNotificacaoModal(false)}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+          style={{ maxWidth: "600px", width: "90%" }}
+        >
           <div className={styles.modalHeader}>
-            <h2 className={styles.modalTitle}>📝 Nova Notificação Extrajudicial</h2>
-            <button className={styles.modalClose} onClick={() => setShowNotificacaoModal(false)}><X size={20} /></button>
+            <h2 className={styles.modalTitle}>
+              📝 Nova Notificação Extrajudicial
+            </h2>
+            <button
+              className={styles.modalClose}
+              onClick={() => setShowNotificacaoModal(false)}
+            >
+              <X size={20} />
+            </button>
           </div>
-          <div className={styles.modalBody} style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <div className={styles.modalBody} style={{ padding: "20px" }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "15px" }}
+            >
               <div>
-                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Caso / Cliente (Opcional)</label>
+                <label
+                  style={{
+                    color: "#aaa",
+                    fontSize: "0.9rem",
+                    marginBottom: "5px",
+                    display: "block",
+                  }}
+                >
+                  Caso / Cliente (Opcional)
+                </label>
                 <select
-                  style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    background: "#333",
+                    color: "#fff",
+                    border: "1px solid #444",
+                    borderRadius: "6px",
+                  }}
                   value={notificacaoForm.caso}
-                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, caso: e.target.value })}
+                  onChange={(e) =>
+                    setNotificacaoForm({
+                      ...notificacaoForm,
+                      caso: e.target.value,
+                    })
+                  }
                 >
                   <option value="">Selecione um caso ou cliente...</option>
-                  {casos && casos.filter(caso => caso.advogado_id === profileData?.id).length > 0 && (
-                    <optgroup label="Casos Contratados" style={{ background: '#222', color: '#fff' }}>
-                      {casos.filter(caso => caso.advogado_id === profileData?.id).map(caso => (
-                        <option key={caso.id} value={`caso_\${caso.id}`} style={{ background: '#333', color: '#fff' }}>
-                          {caso.titulo || `Caso #\${caso.id.substring(0,8)}`} ({caso.cliente_nome || "S/N"})
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
+                  {casos &&
+                    casos.filter((caso) => caso.advogado_id === profileData?.id)
+                      .length > 0 && (
+                      <optgroup
+                        label="Casos Contratados"
+                        style={{ background: "#222", color: "#fff" }}
+                      >
+                        {casos
+                          .filter(
+                            (caso) => caso.advogado_id === profileData?.id,
+                          )
+                          .map((caso) => (
+                            <option
+                              key={caso.id}
+                              value={`caso_\${caso.id}`}
+                              style={{ background: "#333", color: "#fff" }}
+                            >
+                              {caso.titulo ||
+                                `Caso #\${caso.id.substring(0,8)}`}{" "}
+                              ({caso.cliente_nome || "S/N"})
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
                   {crmClients && crmClients.length > 0 && (
-                    <optgroup label="Clientes do CRM" style={{ background: '#222', color: '#fff' }}>
-                      {crmClients.map(client => (
-                        <option key={client.id} value={`client_\${client.id}`} style={{ background: '#333', color: '#fff' }}>
+                    <optgroup
+                      label="Clientes do CRM"
+                      style={{ background: "#222", color: "#fff" }}
+                    >
+                      {crmClients.map((client) => (
+                        <option
+                          key={client.id}
+                          value={`client_\${client.id}`}
+                          style={{ background: "#333", color: "#fff" }}
+                        >
                           {client.name || client.nome_completo || "Sem Nome"}
                         </option>
                       ))}
@@ -11535,127 +16119,392 @@ export default function AdvogadoDashboard() {
               </div>
 
               <div>
-                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Nome do Notificado</label>
+                <label
+                  style={{
+                    color: "#aaa",
+                    fontSize: "0.9rem",
+                    marginBottom: "5px",
+                    display: "block",
+                  }}
+                >
+                  Nome do Notificado
+                </label>
                 <input
                   type="text"
                   placeholder="Nome completo do destinatário"
-                  style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    background: "#333",
+                    color: "#fff",
+                    border: "1px solid #444",
+                    borderRadius: "6px",
+                  }}
                   value={notificacaoForm.destinatario_nome}
-                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_nome: e.target.value })}
+                  onChange={(e) =>
+                    setNotificacaoForm({
+                      ...notificacaoForm,
+                      destinatario_nome: e.target.value,
+                    })
+                  }
                 />
               </div>
 
               {/* DADOS DO NOTIFICADO */}
-              <div style={{ borderTop: '1px solid #444', paddingTop: '10px', marginTop: '10px' }}>
-                <h4 style={{ color: 'var(--color-gold)', marginBottom: '10px' }}>Dados do Notificado (Destinatário)</h4>
-                
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+              <div
+                style={{
+                  borderTop: "1px solid #444",
+                  paddingTop: "10px",
+                  marginTop: "10px",
+                }}
+              >
+                <h4
+                  style={{ color: "var(--color-gold)", marginBottom: "10px" }}
+                >
+                  Dados do Notificado (Destinatário)
+                </h4>
+
+                <div
+                  style={{ display: "flex", gap: "10px", marginBottom: "10px" }}
+                >
                   <div style={{ flex: 2 }}>
-                    <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Endereço</label>
+                    <label
+                      style={{
+                        color: "#aaa",
+                        fontSize: "0.8rem",
+                        marginBottom: "3px",
+                        display: "block",
+                      }}
+                    >
+                      Endereço
+                    </label>
                     <input
                       type="text"
                       placeholder="Rua, Número, Bairro"
-                      style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        background: "#333",
+                        color: "#fff",
+                        border: "1px solid #444",
+                        borderRadius: "6px",
+                      }}
                       value={notificacaoForm.destinatario_endereco}
-                      onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_endereco: e.target.value })}
+                      onChange={(e) =>
+                        setNotificacaoForm({
+                          ...notificacaoForm,
+                          destinatario_endereco: e.target.value,
+                        })
+                      }
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>CEP</label>
+                    <label
+                      style={{
+                        color: "#aaa",
+                        fontSize: "0.8rem",
+                        marginBottom: "3px",
+                        display: "block",
+                      }}
+                    >
+                      CEP
+                    </label>
                     <input
                       type="text"
                       placeholder="00000-000"
-                      style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        background: "#333",
+                        color: "#fff",
+                        border: "1px solid #444",
+                        borderRadius: "6px",
+                      }}
                       value={notificacaoForm.destinatario_cep}
-                      onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_cep: e.target.value })}
+                      onChange={(e) =>
+                        setNotificacaoForm({
+                          ...notificacaoForm,
+                          destinatario_cep: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
-                
-                <div style={{ marginBottom: '10px' }}>
-                  <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Cidade - Estado</label>
+
+                <div style={{ marginBottom: "10px" }}>
+                  <label
+                    style={{
+                      color: "#aaa",
+                      fontSize: "0.8rem",
+                      marginBottom: "3px",
+                      display: "block",
+                    }}
+                  >
+                    Cidade - Estado
+                  </label>
                   <input
                     type="text"
                     placeholder="Ex: São Paulo - SP"
-                    style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                    style={{
+                      width: "100%",
+                      padding: "8px",
+                      background: "#333",
+                      color: "#fff",
+                      border: "1px solid #444",
+                      borderRadius: "6px",
+                    }}
                     value={notificacaoForm.destinatario_cidade_estado}
-                    onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_cidade_estado: e.target.value })}
+                    onChange={(e) =>
+                      setNotificacaoForm({
+                        ...notificacaoForm,
+                        destinatario_cidade_estado: e.target.value,
+                      })
+                    }
                   />
                 </div>
               </div>
 
               {/* DADOS DO NOTIFICANTE */}
-              <div style={{ borderTop: '1px solid #444', paddingTop: '10px', marginTop: '10px' }}>
-                <h4 style={{ color: 'var(--color-gold)', marginBottom: '10px' }}>Dados do Notificante (Remetente)</h4>
-                
-                <div style={{ marginBottom: '10px' }}>
-                  <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Nome ou Razão Social</label>
+              <div
+                style={{
+                  borderTop: "1px solid #444",
+                  paddingTop: "10px",
+                  marginTop: "10px",
+                }}
+              >
+                <h4
+                  style={{ color: "var(--color-gold)", marginBottom: "10px" }}
+                >
+                  Dados do Notificante (Remetente)
+                </h4>
+
+                <div style={{ marginBottom: "10px" }}>
+                  <label
+                    style={{
+                      color: "#aaa",
+                      fontSize: "0.8rem",
+                      marginBottom: "3px",
+                      display: "block",
+                    }}
+                  >
+                    Nome ou Razão Social
+                  </label>
                   <input
                     type="text"
                     placeholder="Seu nome ou nome do seu cliente"
-                    style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                    style={{
+                      width: "100%",
+                      padding: "8px",
+                      background: "#333",
+                      color: "#fff",
+                      border: "1px solid #444",
+                      borderRadius: "6px",
+                    }}
                     value={notificacaoForm.notificante_nome}
-                    onChange={(e) => setNotificacaoForm({ ...notificacaoForm, notificante_nome: e.target.value })}
+                    onChange={(e) =>
+                      setNotificacaoForm({
+                        ...notificacaoForm,
+                        notificante_nome: e.target.value,
+                      })
+                    }
                   />
                 </div>
 
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                <div
+                  style={{ display: "flex", gap: "10px", marginBottom: "10px" }}
+                >
                   <div style={{ flex: 2 }}>
-                    <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Endereço</label>
+                    <label
+                      style={{
+                        color: "#aaa",
+                        fontSize: "0.8rem",
+                        marginBottom: "3px",
+                        display: "block",
+                      }}
+                    >
+                      Endereço
+                    </label>
                     <input
                       type="text"
                       placeholder="Rua, Número, Bairro"
-                      style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        background: "#333",
+                        color: "#fff",
+                        border: "1px solid #444",
+                        borderRadius: "6px",
+                      }}
                       value={notificacaoForm.notificante_endereco}
-                      onChange={(e) => setNotificacaoForm({ ...notificacaoForm, notificante_endereco: e.target.value })}
+                      onChange={(e) =>
+                        setNotificacaoForm({
+                          ...notificacaoForm,
+                          notificante_endereco: e.target.value,
+                        })
+                      }
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>CEP</label>
+                    <label
+                      style={{
+                        color: "#aaa",
+                        fontSize: "0.8rem",
+                        marginBottom: "3px",
+                        display: "block",
+                      }}
+                    >
+                      CEP
+                    </label>
                     <input
                       type="text"
                       placeholder="00000-000"
-                      style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                      style={{
+                        width: "100%",
+                        padding: "8px",
+                        background: "#333",
+                        color: "#fff",
+                        border: "1px solid #444",
+                        borderRadius: "6px",
+                      }}
                       value={notificacaoForm.notificante_cep}
-                      onChange={(e) => setNotificacaoForm({ ...notificacaoForm, notificante_cep: e.target.value })}
+                      onChange={(e) =>
+                        setNotificacaoForm({
+                          ...notificacaoForm,
+                          notificante_cep: e.target.value,
+                        })
+                      }
                     />
                   </div>
                 </div>
-                
-                <div style={{ marginBottom: '10px' }}>
-                  <label style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '3px', display: 'block' }}>Cidade - Estado</label>
+
+                <div style={{ marginBottom: "10px" }}>
+                  <label
+                    style={{
+                      color: "#aaa",
+                      fontSize: "0.8rem",
+                      marginBottom: "3px",
+                      display: "block",
+                    }}
+                  >
+                    Cidade - Estado
+                  </label>
                   <input
                     type="text"
                     placeholder="Ex: São Paulo - SP"
-                    style={{ width: '100%', padding: '8px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                    style={{
+                      width: "100%",
+                      padding: "8px",
+                      background: "#333",
+                      color: "#fff",
+                      border: "1px solid #444",
+                      borderRadius: "6px",
+                    }}
                     value={notificacaoForm.notificante_cidade_estado}
-                    onChange={(e) => setNotificacaoForm({ ...notificacaoForm, notificante_cidade_estado: e.target.value })}
+                    onChange={(e) =>
+                      setNotificacaoForm({
+                        ...notificacaoForm,
+                        notificante_cidade_estado: e.target.value,
+                      })
+                    }
                   />
                 </div>
               </div>
 
-              <div style={{ borderTop: '1px solid #444', paddingTop: '10px', marginTop: '10px' }}>
-                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>O que está acontecendo? (Explique para a IA)</label>
+              <div
+                style={{
+                  borderTop: "1px solid #444",
+                  paddingTop: "10px",
+                  marginTop: "10px",
+                }}
+              >
+                <label
+                  style={{
+                    color: "#aaa",
+                    fontSize: "0.9rem",
+                    marginBottom: "5px",
+                    display: "block",
+                  }}
+                >
+                  O que está acontecendo? (Explique para a IA)
+                </label>
                 <textarea
                   placeholder="Explique os fatos para que a IA redija a notificação adequada..."
-                  style={{ width: '100%', height: '100px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px', padding: '10px' }}
+                  style={{
+                    width: "100%",
+                    height: "100px",
+                    background: "#333",
+                    color: "#fff",
+                    border: "1px solid #444",
+                    borderRadius: "6px",
+                    padding: "10px",
+                  }}
                   value={notificacaoForm.explicacao}
-                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, explicacao: e.target.value })}
+                  onChange={(e) =>
+                    setNotificacaoForm({
+                      ...notificacaoForm,
+                      explicacao: e.target.value,
+                    })
+                  }
                 />
               </div>
 
               <div>
-                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Tom da Notificação</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <label
+                  style={{
+                    color: "#aaa",
+                    fontSize: "0.9rem",
+                    marginBottom: "5px",
+                    display: "block",
+                  }}
+                >
+                  Tom da Notificação
+                </label>
+                <div style={{ display: "flex", gap: "10px" }}>
                   <button
-                    style={{ flex: 1, padding: '10px', background: notificacaoForm.tom === 'Conciliador' ? 'var(--color-gold)' : '#333', color: notificacaoForm.tom === 'Conciliador' ? '#000' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                    onClick={() => setNotificacaoForm({ ...notificacaoForm, tom: 'Conciliador' })}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      background:
+                        notificacaoForm.tom === "Conciliador"
+                          ? "var(--color-gold)"
+                          : "#333",
+                      color:
+                        notificacaoForm.tom === "Conciliador" ? "#000" : "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                    }}
+                    onClick={() =>
+                      setNotificacaoForm({
+                        ...notificacaoForm,
+                        tom: "Conciliador",
+                      })
+                    }
                   >
                     🤝 Conciliador
                   </button>
                   <button
-                    style={{ flex: 1, padding: '10px', background: notificacaoForm.tom === 'Agressivo' ? '#d32f2f' : '#333', color: notificacaoForm.tom === 'Agressivo' ? '#fff' : '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
-                    onClick={() => setNotificacaoForm({ ...notificacaoForm, tom: 'Agressivo' })}
+                    style={{
+                      flex: 1,
+                      padding: "10px",
+                      background:
+                        notificacaoForm.tom === "Agressivo"
+                          ? "#d32f2f"
+                          : "#333",
+                      color:
+                        notificacaoForm.tom === "Agressivo" ? "#fff" : "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                    }}
+                    onClick={() =>
+                      setNotificacaoForm({
+                        ...notificacaoForm,
+                        tom: "Agressivo",
+                      })
+                    }
                   >
                     🔥 Assertivo / Agressivo
                   </button>
@@ -11663,36 +16512,94 @@ export default function AdvogadoDashboard() {
               </div>
 
               <div>
-                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>E-mail do Destinatário</label>
+                <label
+                  style={{
+                    color: "#aaa",
+                    fontSize: "0.9rem",
+                    marginBottom: "5px",
+                    display: "block",
+                  }}
+                >
+                  E-mail do Destinatário
+                </label>
                 <input
                   type="email"
                   placeholder="email@destino.com"
-                  style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    background: "#333",
+                    color: "#fff",
+                    border: "1px solid #444",
+                    borderRadius: "6px",
+                  }}
                   value={notificacaoForm.destinatario_email}
-                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, destinatario_email: e.target.value })}
+                  onChange={(e) =>
+                    setNotificacaoForm({
+                      ...notificacaoForm,
+                      destinatario_email: e.target.value,
+                    })
+                  }
                 />
               </div>
 
               <div>
-                <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Logotipo (Opcional)</label>
+                <label
+                  style={{
+                    color: "#aaa",
+                    fontSize: "0.9rem",
+                    marginBottom: "5px",
+                    display: "block",
+                  }}
+                >
+                  Logotipo (Opcional)
+                </label>
                 <input
                   type="file"
                   accept="image/*"
-                  style={{ width: '100%', padding: '10px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px' }}
-                  onChange={(e) => setNotificacaoForm({ ...notificacaoForm, logo: e.target.files[0] })}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    background: "#333",
+                    color: "#fff",
+                    border: "1px solid #444",
+                    borderRadius: "6px",
+                  }}
+                  onChange={(e) =>
+                    setNotificacaoForm({
+                      ...notificacaoForm,
+                      logo: e.target.files[0],
+                    })
+                  }
                 />
               </div>
 
               {!showNotificacaoResult ? (
                 <button
-                  style={{ width: '100%', padding: '12px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    background: "var(--color-gold)",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                    marginTop: "10px",
+                  }}
                   onClick={async () => {
                     // Remoção da obrigatoriedade do caso/cliente a pedido do usuário
                     setIsGeneratingNotificacao(true);
                     try {
-                      const selectedCaso = (notificacaoForm.caso && notificacaoForm.caso.startsWith("caso_")) 
-                        ? casos.find(c => c.id === notificacaoForm.caso.replace("caso_", "")) 
-                        : null;
+                      const selectedCaso =
+                        notificacaoForm.caso &&
+                        notificacaoForm.caso.startsWith("caso_")
+                          ? casos.find(
+                              (c) =>
+                                c.id ===
+                                notificacaoForm.caso.replace("caso_", ""),
+                            )
+                          : null;
                       const payload = {
                         type: "Notificação Extrajudicial",
                         tone: notificacaoForm.tom,
@@ -11708,7 +16615,7 @@ Endereço: ${notificacaoForm.destinatario_endereco || "N/I"}
 CEP: ${notificacaoForm.destinatario_cep || "N/I"}
 Cidade/Estado: ${notificacaoForm.destinatario_cidade_estado || "N/I"}
 
-DATA DE EMISSÃO: ${new Date().toLocaleDateString('pt-BR')}
+DATA DE EMISSÃO: ${new Date().toLocaleDateString("pt-BR")}
 
 CONTEXTO E FATOS:
 ${notificacaoForm.explicacao || "N/I"}
@@ -11739,53 +16646,142 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                   }}
                   disabled={isGeneratingNotificacao}
                 >
-                  {isGeneratingNotificacao ? "Gerando..." : "Gerar Notificação com IA"}
+                  {isGeneratingNotificacao
+                    ? "Gerando..."
+                    : "Gerar Notificação com IA"}
                 </button>
               ) : (
                 <>
-                  <div style={{ marginTop: '15px', background: '#222', padding: '15px', borderRadius: '6px', border: '1px solid #444' }}>
-                    <label style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '5px', display: 'block' }}>Minuta Gerada</label>
+                  <div
+                    style={{
+                      marginTop: "15px",
+                      background: "#222",
+                      padding: "15px",
+                      borderRadius: "6px",
+                      border: "1px solid #444",
+                    }}
+                  >
+                    <label
+                      style={{
+                        color: "#aaa",
+                        fontSize: "0.9rem",
+                        marginBottom: "5px",
+                        display: "block",
+                      }}
+                    >
+                      Minuta Gerada
+                    </label>
                     <textarea
-                      style={{ width: '100%', height: '200px', background: '#333', color: '#fff', border: '1px solid #444', borderRadius: '6px', padding: '10px' }}
+                      style={{
+                        width: "100%",
+                        height: "200px",
+                        background: "#333",
+                        color: "#fff",
+                        border: "1px solid #444",
+                        borderRadius: "6px",
+                        padding: "10px",
+                      }}
                       value={draftedNotificacao}
                       onChange={(e) => setDraftedNotificacao(e.target.value)}
                     />
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                      marginTop: "10px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
                       <input
                         type="checkbox"
                         id="confirm_notificacao"
                         checked={notificacaoConfirmed}
-                        onChange={(e) => setNotificacaoConfirmed(e.target.checked)}
+                        onChange={(e) =>
+                          setNotificacaoConfirmed(e.target.checked)
+                        }
                       />
-                      <label htmlFor="confirm_notificacao" style={{ color: '#fff', fontSize: '0.9rem' }}>
-                        Confirmo que a notificação está redigida perfeitamente e autorizo o envio.
+                      <label
+                        htmlFor="confirm_notificacao"
+                        style={{ color: "#fff", fontSize: "0.9rem" }}
+                      >
+                        Confirmo que a notificação está redigida perfeitamente e
+                        autorizo o envio.
                       </label>
                     </div>
 
-                    {profileData?.plan_type === 'START' && (
+                    {profileData?.plan_type === "START" && (
                       <>
-                        <div style={{ background: 'rgba(255, 193, 7, 0.1)', border: '1px solid #ffc107', padding: '10px', borderRadius: '6px' }}>
-                          <p style={{ color: '#ffc107', fontSize: '0.9rem', margin: 0 }}>
-                            No plano <strong>START</strong>, o envio de Notificação Extrajudicial custa <strong>R$ 10,00</strong>.
+                        <div
+                          style={{
+                            background: "rgba(255, 193, 7, 0.1)",
+                            border: "1px solid #ffc107",
+                            padding: "10px",
+                            borderRadius: "6px",
+                          }}
+                        >
+                          <p
+                            style={{
+                              color: "#ffc107",
+                              fontSize: "0.9rem",
+                              margin: 0,
+                            }}
+                          >
+                            No plano <strong>START</strong>, o envio de
+                            Notificação Extrajudicial custa{" "}
+                            <strong>R$ 10,00</strong>.
                           </p>
-                          <p style={{ color: '#aaa', fontSize: '0.8rem', marginTop: '5px', marginBottom: 0 }}>
-                            Realize o pagamento via PIX na InfinitePay antes de enviar: 
-                            <a href="https://loja.infinitepay.io/carlos-henrique-1o7/uus4692-notificacao-extrajudicial" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-gold)', textDecoration: 'underline', marginLeft: '5px' }}>
+                          <p
+                            style={{
+                              color: "#aaa",
+                              fontSize: "0.8rem",
+                              marginTop: "5px",
+                              marginBottom: 0,
+                            }}
+                          >
+                            Realize o pagamento via PIX na InfinitePay antes de
+                            enviar:
+                            <a
+                              href="https://loja.infinitepay.io/carlos-henrique-1o7/uus4692-notificacao-extrajudicial"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                color: "var(--color-gold)",
+                                textDecoration: "underline",
+                                marginLeft: "5px",
+                              }}
+                            >
                               Pagar via PIX
                             </a>
                           </p>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                          }}
+                        >
                           <input
                             type="checkbox"
                             id="confirm_payment"
                             checked={paymentConfirmed}
-                            onChange={(e) => setPaymentConfirmed(e.target.checked)}
+                            onChange={(e) =>
+                              setPaymentConfirmed(e.target.checked)
+                            }
                           />
-                          <label htmlFor="confirm_payment" style={{ color: '#fff', fontSize: '0.9rem' }}>
+                          <label
+                            htmlFor="confirm_payment"
+                            style={{ color: "#fff", fontSize: "0.9rem" }}
+                          >
                             Já realizei o pagamento de R$ 10,00 via PIX.
                           </label>
                         </div>
@@ -11794,71 +16790,130 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                   </div>
 
                   <button
-                    style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #00e676 0%, #00c853 100%)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', marginTop: '10px' }}
+                    style={{
+                      width: "100%",
+                      padding: "12px",
+                      background:
+                        "linear-gradient(135deg, #00e676 0%, #00c853 100%)",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                      fontWeight: "bold",
+                      marginTop: "10px",
+                    }}
                     onClick={async () => {
-                      if (!notificacaoForm.destinatario_email) { toast.error("E-mail do destinatário é obrigatório!"); return; }
-                      if (!notificacaoConfirmed) { toast.error("Você precisa confirmar que a minuta está perfeita!"); return; }
-                      if (profileData?.plan_type === 'START' && !paymentConfirmed) { toast.error("Você precisa confirmar o pagamento!"); return; }
+                      if (!notificacaoForm.destinatario_email) {
+                        toast.error("E-mail do destinatário é obrigatório!");
+                        return;
+                      }
+                      if (!notificacaoConfirmed) {
+                        toast.error(
+                          "Você precisa confirmar que a minuta está perfeita!",
+                        );
+                        return;
+                      }
+                      if (
+                        profileData?.plan_type === "START" &&
+                        !paymentConfirmed
+                      ) {
+                        toast.error("Você precisa confirmar o pagamento!");
+                        return;
+                      }
                       setIsShieldingNotificacao(true);
                       try {
                         const docPdf = new jsPDF();
                         const pageWidth = docPdf.internal.pageSize.getWidth();
-                        
+
                         const generateAndSend = async (imgData) => {
                           docPdf.setFillColor(0, 200, 118);
-                          docPdf.rect(0, 0, pageWidth, 15, 'F');
-                          
+                          docPdf.rect(0, 0, pageWidth, 15, "F");
+
                           docPdf.setFont("helvetica", "bold");
                           docPdf.setFontSize(14);
                           docPdf.setTextColor(255, 255, 255);
                           docPdf.text("NOTIFICAÇÃO EXTRAJUDICIAL", 15, 10);
-                          
+
                           if (imgData) {
                             try {
-                              docPdf.addImage(imgData, 'JPEG', pageWidth - 55, 20, 40, 15);
+                              docPdf.addImage(
+                                imgData,
+                                "JPEG",
+                                pageWidth - 55,
+                                20,
+                                40,
+                                15,
+                              );
                             } catch (e) {
                               console.error("Erro ao adicionar imagem:", e);
                             }
                           }
-                          
+
                           docPdf.setFont("helvetica", "normal");
                           docPdf.setFontSize(10);
                           docPdf.setTextColor(50, 50, 50);
-                          
+
                           const cleanedDraft = draftedNotificacao
                             .replace(/\*\*/g, "")
                             .replace(/#/g, "")
                             .replace(/^---\s*$/gm, "")
                             .trim();
-                          
-                          const splitContent = docPdf.splitTextToSize(cleanedDraft, pageWidth - 40);
+
+                          const splitContent = docPdf.splitTextToSize(
+                            cleanedDraft,
+                            pageWidth - 40,
+                          );
                           docPdf.text(splitContent, 20, 40);
-                          
-                          const blob = docPdf.output('blob');
-                          const file = new File([blob], `Notificacao.pdf`, { type: 'application/pdf' });
-                          
+
+                          const blob = docPdf.output("blob");
+                          const file = new File([blob], `Notificacao.pdf`, {
+                            type: "application/pdf",
+                          });
+
                           const formData = new FormData();
                           formData.append("file", file);
-                          formData.append("destinatario_email", notificacaoForm.destinatario_email);
+                          formData.append(
+                            "destinatario_email",
+                            notificacaoForm.destinatario_email,
+                          );
                           formData.append("tone", notificacaoForm.tom);
-                          
+
                           const selectedValue = notificacaoForm.caso;
-                          if (selectedValue && selectedValue.startsWith("client_")) {
-                            formData.append("client_id", selectedValue.replace("client_", ""));
-                          } else if (selectedValue && selectedValue.startsWith("caso_")) {
-                            formData.append("case_id", selectedValue.replace("caso_", ""));
+                          if (
+                            selectedValue &&
+                            selectedValue.startsWith("client_")
+                          ) {
+                            formData.append(
+                              "client_id",
+                              selectedValue.replace("client_", ""),
+                            );
+                          } else if (
+                            selectedValue &&
+                            selectedValue.startsWith("caso_")
+                          ) {
+                            formData.append(
+                              "case_id",
+                              selectedValue.replace("caso_", ""),
+                            );
                           }
-                          
+
                           const res = await fetch("/api/crm/notificacoes", {
                             method: "POST",
                             body: formData,
                           });
-                          
+
                           const data = await res.json();
                           if (data.success) {
                             toast.success("Notificação enviada com sucesso!");
                             setShowNotificacaoModal(false);
-                            setNotificacaoForm({ cliente: "", caso: "", tom: "Conciliador", destinatario_email: "", conteudo: "", logo: null });
+                            setNotificacaoForm({
+                              cliente: "",
+                              caso: "",
+                              tom: "Conciliador",
+                              destinatario_email: "",
+                              conteudo: "",
+                              logo: null,
+                            });
                             setShowNotificacaoResult(false);
                             setDraftedNotificacao("");
                             fetchBlindados();
@@ -11885,7 +16940,9 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                     }}
                     disabled={isShieldingNotificacao}
                   >
-                    {isShieldingNotificacao ? "Enviando..." : "Selar e Enviar Notificação"}
+                    {isShieldingNotificacao
+                      ? "Enviando..."
+                      : "Selar e Enviar Notificação"}
                   </button>
                 </>
               )}
@@ -11899,22 +16956,65 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
   const renderJurisConfirmModal = () => {
     if (!showJurisConfirmModal) return null;
     return (
-      <div className={styles.modalOverlay} onClick={() => setShowJurisConfirmModal(false)}>
-        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "400px", width: "90%", border: '1px solid var(--color-gold)' }}>
+      <div
+        className={styles.modalOverlay}
+        onClick={() => setShowJurisConfirmModal(false)}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            maxWidth: "400px",
+            width: "90%",
+            border: "1px solid var(--color-gold)",
+          }}
+        >
           <div className={styles.modalHeader}>
-            <h2 className={styles.modalTitle} style={{ color: 'var(--color-gold)' }}>⚠️ Atenção</h2>
-            <button className={styles.modalClose} onClick={() => setShowJurisConfirmModal(false)}><X size={20} /></button>
+            <h2
+              className={styles.modalTitle}
+              style={{ color: "var(--color-gold)" }}
+            >
+              ⚠️ Atenção
+            </h2>
+            <button
+              className={styles.modalClose}
+              onClick={() => setShowJurisConfirmModal(false)}
+            >
+              <X size={20} />
+            </button>
           </div>
-          <div className={styles.modalBody} style={{ padding: '20px', textAlign: 'center' }}>
-            <p style={{ color: '#fff', fontSize: '1rem', marginBottom: '20px' }}>
-              No plano <strong>START</strong>, a blindagem de documentos custa <strong>4 Juris</strong>.
+          <div
+            className={styles.modalBody}
+            style={{ padding: "20px", textAlign: "center" }}
+          >
+            <p
+              style={{ color: "#fff", fontSize: "1rem", marginBottom: "20px" }}
+            >
+              No plano <strong>START</strong>, a blindagem de documentos custa{" "}
+              <strong>4 Juris</strong>.
             </p>
-            <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '20px' }}>
+            <p
+              style={{
+                color: "#aaa",
+                fontSize: "0.9rem",
+                marginBottom: "20px",
+              }}
+            >
               Deseja confirmar o desconto e prosseguir com a blindagem?
             </p>
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+            <div
+              style={{ display: "flex", gap: "10px", justifyContent: "center" }}
+            >
               <button
-                style={{ padding: '10px 20px', background: 'var(--color-gold)', color: '#000', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                style={{
+                  padding: "10px 20px",
+                  background: "var(--color-gold)",
+                  color: "#000",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}
                 onClick={() => {
                   setShowJurisConfirmModal(false);
                   if (jurisConfirmAction) jurisConfirmAction();
@@ -11923,7 +17023,15 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                 Confirmar
               </button>
               <button
-                style={{ padding: '10px 20px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                style={{
+                  padding: "10px 20px",
+                  background: "#333",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}
                 onClick={() => setShowJurisConfirmModal(false)}
               >
                 Cancelar
@@ -11941,47 +17049,121 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
     const currentBalance = profileData?.balance || 0;
 
     return (
-      <div className={styles.modalOverlay} onClick={() => { setShowConfirmInterestModal(false); setConfirmInterestCaseId(null); }}>
-        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "420px", width: "90%", border: isHighCompetition ? '1px solid #ef4444' : '1px solid var(--color-gold)' }}>
+      <div
+        className={styles.modalOverlay}
+        onClick={() => {
+          setShowConfirmInterestModal(false);
+          setConfirmInterestCaseId(null);
+        }}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            maxWidth: "420px",
+            width: "90%",
+            border: isHighCompetition
+              ? "1px solid #ef4444"
+              : "1px solid var(--color-gold)",
+          }}
+        >
           <div className={styles.modalHeader}>
-            <h2 className={styles.modalTitle} style={{ color: isHighCompetition ? '#ef4444' : 'var(--color-gold)' }}>
-              {isHighCompetition ? "🔥 Alta Concorrência!" : "⚖️ Confirmar Interesse"}
+            <h2
+              className={styles.modalTitle}
+              style={{
+                color: isHighCompetition ? "#ef4444" : "var(--color-gold)",
+              }}
+            >
+              {isHighCompetition
+                ? "🔥 Alta Concorrência!"
+                : "⚖️ Confirmar Interesse"}
             </h2>
-            <button className={styles.modalClose} onClick={() => { setShowConfirmInterestModal(false); setConfirmInterestCaseId(null); }}><X size={20} /></button>
+            <button
+              className={styles.modalClose}
+              onClick={() => {
+                setShowConfirmInterestModal(false);
+                setConfirmInterestCaseId(null);
+              }}
+            >
+              <X size={20} />
+            </button>
           </div>
-          <div className={styles.modalBody} style={{ padding: '20px', textAlign: 'center' }}>
+          <div
+            className={styles.modalBody}
+            style={{ padding: "20px", textAlign: "center" }}
+          >
             {isHighCompetition ? (
-              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', padding: '12px', marginBottom: '20px' }}>
-                <p style={{ color: '#ef4444', fontSize: '0.95rem', fontWeight: 600, margin: 0 }}>
-                  Atenção: Já existem {confirmInterestCount} Advogados interessados neste caso.
+              <div
+                style={{
+                  background: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  marginBottom: "20px",
+                }}
+              >
+                <p
+                  style={{
+                    color: "#ef4444",
+                    fontSize: "0.95rem",
+                    fontWeight: 600,
+                    margin: 0,
+                  }}
+                >
+                  Atenção: Já existem {confirmInterestCount} Advogados
+                  interessados neste caso.
                 </p>
               </div>
             ) : (
-              <p style={{ color: '#aaa', fontSize: '0.95rem', marginBottom: '20px' }}>
-                Ao manifestar interesse, você poderá negociar diretamente com o cliente.
+              <p
+                style={{
+                  color: "#aaa",
+                  fontSize: "0.95rem",
+                  marginBottom: "20px",
+                }}
+              >
+                Ao manifestar interesse, você poderá negociar diretamente com o
+                cliente.
               </p>
             )}
 
-            <p style={{ color: '#fff', fontSize: '1.05rem', fontWeight: 500, marginBottom: '8px' }}>
+            <p
+              style={{
+                color: "#fff",
+                fontSize: "1.05rem",
+                fontWeight: 500,
+                marginBottom: "8px",
+              }}
+            >
               Custo: <strong>1 Júri</strong>
             </p>
-            
-            <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '24px' }}>
+
+            <p
+              style={{
+                color: "#888",
+                fontSize: "0.85rem",
+                marginBottom: "24px",
+              }}
+            >
               Seu saldo atual: <strong>{currentBalance} Juris</strong>
             </p>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <div
+              style={{ display: "flex", gap: "12px", justifyContent: "center" }}
+            >
               <button
                 style={{
-                  padding: '12px 24px',
-                  background: isHighCompetition ? '#ef4444' : 'var(--color-gold)',
-                  color: isHighCompetition ? '#fff' : '#000',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
+                  padding: "12px 24px",
+                  background: isHighCompetition
+                    ? "#ef4444"
+                    : "var(--color-gold)",
+                  color: isHighCompetition ? "#fff" : "#000",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
                   flex: 1,
-                  transition: 'opacity 0.2s'
+                  transition: "opacity 0.2s",
                 }}
                 onClick={() => executeVincularCaso(confirmInterestCaseId)}
               >
@@ -11989,16 +17171,19 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
               </button>
               <button
                 style={{
-                  padding: '12px 24px',
-                  background: '#222',
-                  color: '#fff',
-                  border: '1px solid #444',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  flex: 1
+                  padding: "12px 24px",
+                  background: "#222",
+                  color: "#fff",
+                  border: "1px solid #444",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                  flex: 1,
                 }}
-                onClick={() => { setShowConfirmInterestModal(false); setConfirmInterestCaseId(null); }}
+                onClick={() => {
+                  setShowConfirmInterestModal(false);
+                  setConfirmInterestCaseId(null);
+                }}
               >
                 Cancelar
               </button>
@@ -12013,35 +17198,93 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
     if (!showCancelInterestModal) return null;
 
     return (
-      <div className={styles.modalOverlay} onClick={() => { if (!isCancelingInterest) { setShowCancelInterestModal(false); setCancelInterestCaseId(null); } }}>
-        <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "420px", width: "90%", border: '1px solid #ef4444' }}>
+      <div
+        className={styles.modalOverlay}
+        onClick={() => {
+          if (!isCancelingInterest) {
+            setShowCancelInterestModal(false);
+            setCancelInterestCaseId(null);
+          }
+        }}
+      >
+        <div
+          className={styles.modalContent}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            maxWidth: "420px",
+            width: "90%",
+            border: "1px solid #ef4444",
+          }}
+        >
           <div className={styles.modalHeader}>
-            <h2 className={styles.modalTitle} style={{ color: '#ef4444' }}>↩️ Desfazer Interesse</h2>
-            <button className={styles.modalClose} onClick={() => { if (!isCancelingInterest) { setShowCancelInterestModal(false); setCancelInterestCaseId(null); } }} disabled={isCancelingInterest}><X size={20} /></button>
+            <h2 className={styles.modalTitle} style={{ color: "#ef4444" }}>
+              ↩️ Desfazer Interesse
+            </h2>
+            <button
+              className={styles.modalClose}
+              onClick={() => {
+                if (!isCancelingInterest) {
+                  setShowCancelInterestModal(false);
+                  setCancelInterestCaseId(null);
+                }
+              }}
+              disabled={isCancelingInterest}
+            >
+              <X size={20} />
+            </button>
           </div>
-          <div className={styles.modalBody} style={{ padding: '20px', textAlign: 'center' }}>
-            <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 500, marginBottom: '16px' }}>
-              Tem certeza que deseja cancelar sua manifestação de interesse neste caso?
+          <div
+            className={styles.modalBody}
+            style={{ padding: "20px", textAlign: "center" }}
+          >
+            <p
+              style={{
+                color: "#fff",
+                fontSize: "1rem",
+                fontWeight: 500,
+                marginBottom: "16px",
+              }}
+            >
+              Tem certeza que deseja cancelar sua manifestação de interesse
+              neste caso?
             </p>
-            
-            <div style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '8px', padding: '12px', marginBottom: '24px' }}>
-              <p style={{ color: '#22c55e', fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>
-                💰 Reembolso garantido: 1 Júri será devolvido à sua carteira imediatamente.
+
+            <div
+              style={{
+                background: "rgba(34, 197, 94, 0.1)",
+                border: "1px solid rgba(34, 197, 94, 0.2)",
+                borderRadius: "8px",
+                padding: "12px",
+                marginBottom: "24px",
+              }}
+            >
+              <p
+                style={{
+                  color: "#22c55e",
+                  fontSize: "0.9rem",
+                  fontWeight: 600,
+                  margin: 0,
+                }}
+              >
+                💰 Reembolso garantido: 1 Júri será devolvido à sua carteira
+                imediatamente.
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <div
+              style={{ display: "flex", gap: "12px", justifyContent: "center" }}
+            >
               <button
                 style={{
-                  padding: '12px 24px',
-                  background: '#ef4444',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: isCancelingInterest ? 'not-allowed' : 'pointer',
-                  fontWeight: 'bold',
+                  padding: "12px 24px",
+                  background: "#ef4444",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: isCancelingInterest ? "not-allowed" : "pointer",
+                  fontWeight: "bold",
                   flex: 1,
-                  opacity: isCancelingInterest ? 0.7 : 1
+                  opacity: isCancelingInterest ? 0.7 : 1,
                 }}
                 disabled={isCancelingInterest}
                 onClick={executeDesfazerInteresse}
@@ -12050,17 +17293,20 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
               </button>
               <button
                 style={{
-                  padding: '12px 24px',
-                  background: '#222',
-                  color: '#fff',
-                  border: '1px solid #444',
-                  borderRadius: '8px',
-                  cursor: isCancelingInterest ? 'not-allowed' : 'pointer',
-                  fontWeight: 'bold',
-                  flex: 1
+                  padding: "12px 24px",
+                  background: "#222",
+                  color: "#fff",
+                  border: "1px solid #444",
+                  borderRadius: "8px",
+                  cursor: isCancelingInterest ? "not-allowed" : "pointer",
+                  fontWeight: "bold",
+                  flex: 1,
                 }}
                 disabled={isCancelingInterest}
-                onClick={() => { setShowCancelInterestModal(false); setCancelInterestCaseId(null); }}
+                onClick={() => {
+                  setShowCancelInterestModal(false);
+                  setCancelInterestCaseId(null);
+                }}
               >
                 Voltar
               </button>
@@ -12287,35 +17533,92 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
           <div className={styles.packageGrid}>
             <div
               className={styles.packageCard}
-              onClick={() => handleBuyJuris(10, appliedCoupon?.tipo_internal === 'COMPRA_JURIS' ? appliedCoupon : null)}
+              onClick={() =>
+                handleBuyJuris(
+                  10,
+                  appliedCoupon?.tipo_internal === "COMPRA_JURIS"
+                    ? appliedCoupon
+                    : null,
+                )
+              }
             >
               <span className={styles.packageAmount}>10</span>
               <span className={styles.packageUnit}>Juris</span>
               <span className={styles.packagePrice}>
-                {appliedCoupon && appliedCoupon.status === 'success' && appliedCoupon.tipo_internal === 'COMPRA_JURIS' ? (
+                {appliedCoupon &&
+                appliedCoupon.status === "success" &&
+                appliedCoupon.tipo_internal === "COMPRA_JURIS" ? (
                   <>
-                    <span style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: '0.8rem', marginRight: '5px' }}>R$ 9.90</span>
-                    R$ {(9.90 * (appliedCoupon.desconto_tipo === 'PERCENTUAL' ? (1 - appliedCoupon.valor / 100) : 1) - (appliedCoupon.desconto_tipo === 'FIXO' ? appliedCoupon.valor : 0)).toFixed(2)}
+                    <span
+                      style={{
+                        textDecoration: "line-through",
+                        opacity: 0.5,
+                        fontSize: "0.8rem",
+                        marginRight: "5px",
+                      }}
+                    >
+                      R$ 9.90
+                    </span>
+                    R${" "}
+                    {(
+                      9.9 *
+                        (appliedCoupon.desconto_tipo === "PERCENTUAL"
+                          ? 1 - appliedCoupon.valor / 100
+                          : 1) -
+                      (appliedCoupon.desconto_tipo === "FIXO"
+                        ? appliedCoupon.valor
+                        : 0)
+                    ).toFixed(2)}
                   </>
-                ) : "R$ 9.90"}
+                ) : (
+                  "R$ 9.90"
+                )}
               </span>
               <button className={styles.packageBtn}>Comprar</button>
             </div>
 
             <div
               className={`${styles.packageCard} ${styles.popularCard}`}
-              onClick={() => handleBuyJuris(20, appliedCoupon?.tipo_internal === 'COMPRA_JURIS' ? appliedCoupon : null)}
+              onClick={() =>
+                handleBuyJuris(
+                  20,
+                  appliedCoupon?.tipo_internal === "COMPRA_JURIS"
+                    ? appliedCoupon
+                    : null,
+                )
+              }
             >
               <span className={styles.popularBadge}>Mais Popular</span>
               <span className={styles.packageAmount}>20</span>
               <span className={styles.packageUnit}>Juris</span>
               <span className={styles.packagePrice}>
-                {appliedCoupon && appliedCoupon.tipo_internal === 'COMPRA_JURIS' ? (
+                {appliedCoupon &&
+                appliedCoupon.tipo_internal === "COMPRA_JURIS" ? (
                   <>
-                    <span style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: '0.8rem', marginRight: '5px' }}>R$ 16.90</span>
-                    R$ {(16.90 * (appliedCoupon.desconto_tipo === 'PERCENTUAL' ? (1 - appliedCoupon.valor / 100) : 1) - (appliedCoupon.desconto_tipo === 'FIXO' ? appliedCoupon.valor : 0)).toFixed(2)}
+                    <span
+                      style={{
+                        textDecoration: "line-through",
+                        opacity: 0.5,
+                        fontSize: "0.8rem",
+                        marginRight: "5px",
+                      }}
+                    >
+                      R$ 16.90
+                    </span>
+                    R${" "}
+                    {(
+                      16.9 *
+                        (appliedCoupon.desconto_tipo === "PERCENTUAL"
+                          ? 1 - appliedCoupon.valor / 100
+                          : 1) -
+                      (appliedCoupon.desconto_tipo === "FIXO"
+                        ? appliedCoupon.valor
+                        : 0)
+                    ).toFixed(2)}
                   </>
-                ) : "R$ 16.90"}
+                ) : (
+                  "R$ 16.90"
+                )}
               </span>
               <button
                 className={`${styles.packageBtn} ${styles.popularPkgBtn}`}
@@ -12326,44 +17629,82 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
 
             <div
               className={styles.packageCard}
-              onClick={() => handleBuyJuris(50, appliedCoupon?.tipo_internal === 'COMPRA_JURIS' ? appliedCoupon : null)}
+              onClick={() =>
+                handleBuyJuris(
+                  50,
+                  appliedCoupon?.tipo_internal === "COMPRA_JURIS"
+                    ? appliedCoupon
+                    : null,
+                )
+              }
             >
               <span className={styles.packageAmount}>50</span>
               <span className={styles.packageUnit}>Juris</span>
               <span className={styles.packagePrice}>
-                {appliedCoupon && appliedCoupon.tipo_internal === 'COMPRA_JURIS' ? (
+                {appliedCoupon &&
+                appliedCoupon.tipo_internal === "COMPRA_JURIS" ? (
                   <>
-                    <span style={{ textDecoration: 'line-through', opacity: 0.5, fontSize: '0.8rem', marginRight: '5px' }}>R$ 39.90</span>
-                    R$ {(39.90 * (appliedCoupon.desconto_tipo === 'PERCENTUAL' ? (1 - appliedCoupon.valor / 100) : 1) - (appliedCoupon.desconto_tipo === 'FIXO' ? appliedCoupon.valor : 0)).toFixed(2)}
+                    <span
+                      style={{
+                        textDecoration: "line-through",
+                        opacity: 0.5,
+                        fontSize: "0.8rem",
+                        marginRight: "5px",
+                      }}
+                    >
+                      R$ 39.90
+                    </span>
+                    R${" "}
+                    {(
+                      39.9 *
+                        (appliedCoupon.desconto_tipo === "PERCENTUAL"
+                          ? 1 - appliedCoupon.valor / 100
+                          : 1) -
+                      (appliedCoupon.desconto_tipo === "FIXO"
+                        ? appliedCoupon.valor
+                        : 0)
+                    ).toFixed(2)}
                   </>
-                ) : "R$ 39.90"}
+                ) : (
+                  "R$ 39.90"
+                )}
               </span>
               <button className={styles.packageBtn}>Comprar</button>
             </div>
           </div>
 
           <div className={styles.couponArea}>
-             <label>Possui um cupom de desconto?</label>
-             <div className={styles.couponRow}>
-                <input 
-                  type="text" 
-                  placeholder="DIGITE SEU CUPOM" 
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                  className={styles.couponInput}
-                  disabled={appliedCoupon}
-                />
-                <button 
-                  className={styles.applyCouponBtn}
-                  onClick={() => handleApplyCoupon('COMPRA_JURIS')}
-                  disabled={isValidatingCoupon || !couponCode || appliedCoupon}
-                >
-                  {isValidatingCoupon ? "..." : appliedCoupon ? "APLICADO" : "VALIDAR"}
-                </button>
-             </div>
-             {appliedCoupon && (
-               <p className={styles.couponSuccess}>Desconto de {appliedCoupon.desconto_tipo === 'PERCENTUAL' ? `${appliedCoupon.valor}%` : `R$ ${appliedCoupon.valor}`} ativado!</p>
-             )}
+            <label>Possui um cupom de desconto?</label>
+            <div className={styles.couponRow}>
+              <input
+                type="text"
+                placeholder="DIGITE SEU CUPOM"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                className={styles.couponInput}
+                disabled={appliedCoupon}
+              />
+              <button
+                className={styles.applyCouponBtn}
+                onClick={() => handleApplyCoupon("COMPRA_JURIS")}
+                disabled={isValidatingCoupon || !couponCode || appliedCoupon}
+              >
+                {isValidatingCoupon
+                  ? "..."
+                  : appliedCoupon
+                    ? "APLICADO"
+                    : "VALIDAR"}
+              </button>
+            </div>
+            {appliedCoupon && (
+              <p className={styles.couponSuccess}>
+                Desconto de{" "}
+                {appliedCoupon.desconto_tipo === "PERCENTUAL"
+                  ? `${appliedCoupon.valor}%`
+                  : `R$ ${appliedCoupon.valor}`}{" "}
+                ativado!
+              </p>
+            )}
           </div>
 
           <button
@@ -12381,34 +17722,47 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
     if (!showProModal) return null;
 
     return (
-      <div className={styles.premiumModalOverlay} onClick={() => setShowProModal(false)}>
-        <div className={styles.premiumModalContent} onClick={(e) => e.stopPropagation()}>
-          <button className={styles.closeIconBtn} onClick={() => setShowProModal(false)}>
+      <div
+        className={styles.premiumModalOverlay}
+        onClick={() => setShowProModal(false)}
+      >
+        <div
+          className={styles.premiumModalContent}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className={styles.closeIconBtn}
+            onClick={() => setShowProModal(false)}
+          >
             <X size={24} />
           </button>
 
           <div className={styles.modalLayout}>
             {/* LADO ESQUERDO: TEXTO E TOGGLE */}
             <div className={styles.modalInfoSide}>
-              <h1 className={styles.modalTitle}>Escolha o plano ideal para seu momento</h1>
-              <p className={styles.modalSubtitle}>Maximize sua produtividade com Inteligência Artificial Jurídica.</p>
-              
+              <h1 className={styles.modalTitle}>
+                Escolha o plano ideal para seu momento
+              </h1>
+              <p className={styles.modalSubtitle}>
+                Maximize sua produtividade com Inteligência Artificial Jurídica.
+              </p>
+
               <div className={styles.billingToggle}>
-                <button 
-                  className={`${styles.toggleBtn} ${billingCycle === 'AVULSO' ? styles.toggleBtnActive : ''}`}
-                  onClick={() => setBillingCycle('AVULSO')}
+                <button
+                  className={`${styles.toggleBtn} ${billingCycle === "AVULSO" ? styles.toggleBtnActive : ""}`}
+                  onClick={() => setBillingCycle("AVULSO")}
                 >
                   Avulso
                 </button>
-                <button 
-                  className={`${styles.toggleBtn} ${billingCycle === 'MONTHLY' ? styles.toggleBtnActive : ''}`}
-                  onClick={() => setBillingCycle('MONTHLY')}
+                <button
+                  className={`${styles.toggleBtn} ${billingCycle === "MONTHLY" ? styles.toggleBtnActive : ""}`}
+                  onClick={() => setBillingCycle("MONTHLY")}
                 >
                   Mensal
                 </button>
-                <button 
-                  className={`${styles.toggleBtn} ${billingCycle === 'ANNUAL' ? styles.toggleBtnActive : ''}`}
-                  onClick={() => setBillingCycle('ANNUAL')}
+                <button
+                  className={`${styles.toggleBtn} ${billingCycle === "ANNUAL" ? styles.toggleBtnActive : ""}`}
+                  onClick={() => setBillingCycle("ANNUAL")}
                 >
                   Anual <span className={styles.discountBadge}>-25%</span>
                 </button>
@@ -12418,22 +17772,23 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
               <div className={styles.couponWrapper}>
                 <div className={styles.couponLabel}>Possui um cupom?</div>
                 <div className={styles.couponInputGroup}>
-                  <input 
-                    type="text" 
-                    placeholder="CÓDIGO" 
+                  <input
+                    type="text"
+                    placeholder="CÓDIGO"
                     className={styles.couponInput}
                     id="plan_coupon_input"
                   />
-                  <button 
+                  <button
                     className={styles.couponApplyBtn}
-                    onClick={() => handleApplyCoupon('PLANO_PRO')}
+                    onClick={() => handleApplyCoupon("PLANO_PRO")}
                   >
                     Aplicar
                   </button>
                 </div>
                 {appliedCouponData && (
                   <div className={styles.couponStatus}>
-                    ✓ Cupom {appliedCouponData.id} aplicado ({appliedCouponData.percent_off}% OFF)
+                    ✓ Cupom {appliedCouponData.id} aplicado (
+                    {appliedCouponData.percent_off}% OFF)
                   </div>
                 )}
               </div>
@@ -12444,44 +17799,58 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
               <div className={styles.plansGrid}>
                 {Object.entries(PLANS_DATA).map(([key, plan]) => {
                   const rawPriceInfo = plan.prices[billingCycle];
-                  
+
                   // Lógica de Promoção R$ 10,99 no primeiro mês
-                  const currentPlan = profileData?.plan_type || 'FREE';
+                  const currentPlan = profileData?.plan_type || "FREE";
                   const isPremium = profileData?.is_premium || false;
-                  
+
                   let showPromoStart = false;
                   let showPromoPro = false;
-                  
-                  if (billingCycle === 'MONTHLY') {
-                    if (currentPlan === 'START' && isPremium) {
+
+                  if (billingCycle === "MONTHLY") {
+                    if (currentPlan === "START" && isPremium) {
                       showPromoPro = true;
-                    } else if (currentPlan === 'PRO' && isPremium) {
+                    } else if (currentPlan === "PRO" && isPremium) {
                       // Sem promo
                     } else {
                       showPromoStart = true;
                       showPromoPro = true;
                     }
                   }
-                  
-                  const isPromoApplied = (key === 'START' && showPromoStart) || (key === 'PRO' && showPromoPro);
-                  
+
+                  const isPromoApplied =
+                    (key === "START" && showPromoStart) ||
+                    (key === "PRO" && showPromoPro);
+
                   // Aplicar desconto do cupom se existir
-                  let displayValue = billingCycle === 'ANNUAL' ? rawPriceInfo.monthly : rawPriceInfo.value;
+                  let displayValue =
+                    billingCycle === "ANNUAL"
+                      ? rawPriceInfo.monthly
+                      : rawPriceInfo.value;
                   let totalValue = rawPriceInfo.value;
 
                   if (isPromoApplied) {
                     displayValue = 10.99;
                   }
 
-                  if (appliedCouponData && appliedCouponData.status === 'success') {
+                  if (
+                    appliedCouponData &&
+                    appliedCouponData.status === "success"
+                  ) {
                     if (appliedCouponData.percent_off) {
-                      displayValue = displayValue * (1 - appliedCouponData.percent_off / 100);
-                      totalValue = totalValue * (1 - appliedCouponData.percent_off / 100);
+                      displayValue =
+                        displayValue *
+                        (1 - appliedCouponData.percent_off / 100);
+                      totalValue =
+                        totalValue * (1 - appliedCouponData.percent_off / 100);
                     } else if (appliedCouponData.amount_off) {
                       const discount = appliedCouponData.amount_off / 100;
                       // No anual, o desconto geralmente é no total, então rateamos para o mensal se for anual
-                      if (billingCycle === 'ANNUAL') {
-                        displayValue = Math.max(0, displayValue - (discount / 12));
+                      if (billingCycle === "ANNUAL") {
+                        displayValue = Math.max(
+                          0,
+                          displayValue - discount / 12,
+                        );
                       } else {
                         displayValue = Math.max(0, displayValue - discount);
                       }
@@ -12489,14 +17858,22 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                     }
                   }
 
-                  const formattedPrice = displayValue.toFixed(2).replace('.', ',');
-                  const [priceInteiro, priceCentavos] = formattedPrice.split(',');
+                  const formattedPrice = displayValue
+                    .toFixed(2)
+                    .replace(".", ",");
+                  const [priceInteiro, priceCentavos] =
+                    formattedPrice.split(",");
 
                   return (
-                    <div key={key} className={`${styles.planCard} ${key === 'PRO' ? styles.planCardPro : ''}`}>
-                      {key === 'PRO' && <div className={styles.mostPopular}>RECOMENDADO</div>}
+                    <div
+                      key={key}
+                      className={`${styles.planCard} ${key === "PRO" ? styles.planCardPro : ""}`}
+                    >
+                      {key === "PRO" && (
+                        <div className={styles.mostPopular}>RECOMENDADO</div>
+                      )}
                       <div className={styles.planName}>{plan.name}</div>
-                      
+
                       <div className={styles.planPrice}>
                         <span className={styles.currency}>R$</span>
                         <span className={styles.amount}>{priceInteiro}</span>
@@ -12505,59 +17882,102 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                           <span className={styles.period}>/mês</span>
                         </div>
                       </div>
-                      
+
                       {isPromoApplied && (
-                        <div style={{ color: '#00e676', fontSize: '0.85rem', fontWeight: 'bold', marginTop: '5px', marginBottom: '10px', textAlign: 'center' }}>
+                        <div
+                          style={{
+                            color: "#00e676",
+                            fontSize: "0.85rem",
+                            fontWeight: "bold",
+                            marginTop: "5px",
+                            marginBottom: "10px",
+                            textAlign: "center",
+                          }}
+                        >
                           ★ 1º MÊS POR R$ 10,99 ★
                         </div>
                       )}
-                      
+
                       <div className={styles.jurisBonus}>
-                        <Zap size={14} /> <span>Ganhe <strong>{plan.juris} Juris</strong> imediato</span>
+                        <Zap size={14} />{" "}
+                        <span>
+                          Ganhe <strong>{plan.juris} Juris</strong> imediato
+                        </span>
                       </div>
 
-                      {billingCycle === 'ANNUAL' ? (
-                        <div className={styles.annualTotal}>Cobrado anualmente (R$ {totalValue.toFixed(2).replace('.', ',')})</div>
+                      {billingCycle === "ANNUAL" ? (
+                        <div className={styles.annualTotal}>
+                          Cobrado anualmente (R${" "}
+                          {totalValue.toFixed(2).replace(".", ",")})
+                        </div>
                       ) : (
-                        <div className={styles.planDesc}>{plan.description}</div>
+                        <div className={styles.planDesc}>
+                          {plan.description}
+                        </div>
                       )}
-                      
+
                       <div className={styles.planFeatures}>
                         {plan.features.map((feat, i) => (
-                          <div key={i} className={`${styles.featItem} ${!feat.included ? styles.featDisabled : ''}`}>
-                            {feat.included ? <Check size={16} color="#10b981" /> : <X size={16} color="#4b5563" />}
+                          <div
+                            key={i}
+                            className={`${styles.featItem} ${!feat.included ? styles.featDisabled : ""}`}
+                          >
+                            {feat.included ? (
+                              <Check size={16} color="#10b981" />
+                            ) : (
+                              <X size={16} color="#4b5563" />
+                            )}
                             {feat.text}
                           </div>
                         ))}
                       </div>
 
-                      <button 
-                        className={`${styles.selectPlanBtn} ${key === 'PRO' ? styles.selectPlanBtnPro : ''}`}
+                      <button
+                        className={`${styles.selectPlanBtn} ${key === "PRO" ? styles.selectPlanBtnPro : ""}`}
                         onClick={() => {
-                          console.log('Selecionando plano:', key, 'Preço:', rawPriceInfo);
-                          setIsProCheckout(key === 'PRO');
+                          console.log(
+                            "Selecionando plano:",
+                            key,
+                            "Preço:",
+                            rawPriceInfo,
+                          );
+                          setIsProCheckout(key === "PRO");
                           setTransparentCheckoutAmount(totalValue);
                           if (rawPriceInfo.priceId) {
-                            window.localStorage.setItem('sj_selected_price_id', rawPriceInfo.priceId);
+                            window.localStorage.setItem(
+                              "sj_selected_price_id",
+                              rawPriceInfo.priceId,
+                            );
                           } else {
-                            window.localStorage.removeItem('sj_selected_price_id');
+                            window.localStorage.removeItem(
+                              "sj_selected_price_id",
+                            );
                           }
-                          window.localStorage.setItem('sj_selected_plan_type', key);
-                          window.localStorage.setItem('sj_selected_billing', billingCycle);
-                          
+                          window.localStorage.setItem(
+                            "sj_selected_plan_type",
+                            key,
+                          );
+                          window.localStorage.setItem(
+                            "sj_selected_billing",
+                            billingCycle,
+                          );
+
                           // Auto-aplicar cupom de promoção se elegível no primeiro mês
                           if (isPromoApplied) {
-                            const promoCouponId = key === 'START' ? 'START_MES1_1099' : 'PRO_MES1_1099';
+                            const promoCouponId =
+                              key === "START"
+                                ? "START_MES1_1099"
+                                : "PRO_MES1_1099";
                             const proCoupon = {
-                              status: 'success',
+                              status: "success",
                               id: promoCouponId,
                               percent_off: 0,
-                              amount_off: key === 'START' ? 3000 : 7691, // Desconto em centavos
-                              stripe_coupon_id: promoCouponId
+                              amount_off: key === "START" ? 3000 : 7691, // Desconto em centavos
+                              stripe_coupon_id: promoCouponId,
                             };
                             setAppliedCouponData(proCoupon);
                           }
-                          
+
                           setShowProModal(false);
                           setShowTransparentCheckout(true);
                         }}
@@ -12576,7 +17996,9 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
   };
 
   return (
-    <div className={`${styles.dashboardContainer} ${isSidebarOpen ? styles.sidebarOpen : ""}`}>
+    <div
+      className={`${styles.dashboardContainer} ${isSidebarOpen ? styles.sidebarOpen : ""}`}
+    >
       {/* SIDEBAR */}
       {/* <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarActive : ""}`}>
         ... (Sidebar original comentada para paridade)
@@ -12622,79 +18044,111 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
               </button>
             </div>
           )}
-          {highlightedAds.length > 0 && activeTab === "oportunidades" && (() => {
-            const ad = highlightedAds[currentAdIndex];
-            if (!ad) return null;
-            return (
-              <div className={styles.highlightedAdContainer}>
-                {/* Seta esquerda */}
-                {highlightedAds.length > 1 && (
-                  <button
-                    className={styles.carouselArrow}
-                    style={{ left: '8px' }}
-                    onClick={() => setCurrentAdIndex((prev) => (prev - 1 + highlightedAds.length) % highlightedAds.length)}
-                    aria-label="Anúncio anterior"
-                  >
-                    ‹
-                  </button>
-                )}
-
-                <div className={styles.highlightedInfo} key={ad.id} style={{ animation: 'fadeSlide 0.5s ease' }}>
-                  <h4>
-                    <Sparkles size={14} /> ANÚNCIO EM DESTAQUE
-                    {highlightedAds.length > 1 && (
-                      <span className={styles.adCounter}>{currentAdIndex + 1}/{highlightedAds.length}</span>
-                    )}
-                  </h4>
-                  <h3>{ad.titulo}</h3>
-                  <p>{ad.descricao}</p>
-                </div>
-                <div className={styles.highlightedAction}>
-                  <button
-                    className={styles.premiumBtn}
-                    style={{ margin: 0 }}
-                    onClick={() => {
-                      const phone = ad.anunciante?.whatsapp?.replace(/\D/g, "");
-                      if (phone) {
-                        window.open(`https://wa.me/55${phone}?text=Olá, vi seu destaque no SocialJurídico e gostaria de mais informações.`, "_blank");
+          {highlightedAds.length > 0 &&
+            activeTab === "oportunidades" &&
+            (() => {
+              const ad = highlightedAds[currentAdIndex];
+              if (!ad) return null;
+              return (
+                <div className={styles.highlightedAdContainer}>
+                  {/* Seta esquerda */}
+                  {highlightedAds.length > 1 && (
+                    <button
+                      className={styles.carouselArrow}
+                      style={{ left: "8px" }}
+                      onClick={() =>
+                        setCurrentAdIndex(
+                          (prev) =>
+                            (prev - 1 + highlightedAds.length) %
+                            highlightedAds.length,
+                        )
                       }
-                    }}
+                      aria-label="Anúncio anterior"
+                    >
+                      ‹
+                    </button>
+                  )}
+
+                  <div
+                    className={styles.highlightedInfo}
+                    key={ad.id}
+                    style={{ animation: "fadeSlide 0.5s ease" }}
                   >
-                    Falar agora
-                  </button>
-                  <div className={styles.adVendor}>
-                    <span className={styles.vendorName} style={{ fontSize: '0.7rem', color: "rgba(255, 255, 255, 0.5)" }}>Por: {ad.anunciante?.nome_empresa}</span>
+                    <h4>
+                      <Sparkles size={14} /> ANÚNCIO EM DESTAQUE
+                      {highlightedAds.length > 1 && (
+                        <span className={styles.adCounter}>
+                          {currentAdIndex + 1}/{highlightedAds.length}
+                        </span>
+                      )}
+                    </h4>
+                    <h3>{ad.titulo}</h3>
+                    <p>{ad.descricao}</p>
                   </div>
+                  <div className={styles.highlightedAction}>
+                    <button
+                      className={styles.premiumBtn}
+                      style={{ margin: 0 }}
+                      onClick={() => {
+                        const phone = ad.anunciante?.whatsapp?.replace(
+                          /\D/g,
+                          "",
+                        );
+                        if (phone) {
+                          window.open(
+                            `https://wa.me/55${phone}?text=Olá, vi seu destaque no SocialJurídico e gostaria de mais informações.`,
+                            "_blank",
+                          );
+                        }
+                      }}
+                    >
+                      Falar agora
+                    </button>
+                    <div className={styles.adVendor}>
+                      <span
+                        className={styles.vendorName}
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "rgba(255, 255, 255, 0.5)",
+                        }}
+                      >
+                        Por: {ad.anunciante?.nome_empresa}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Seta direita */}
+                  {highlightedAds.length > 1 && (
+                    <button
+                      className={styles.carouselArrow}
+                      style={{ right: "8px" }}
+                      onClick={() =>
+                        setCurrentAdIndex(
+                          (prev) => (prev + 1) % highlightedAds.length,
+                        )
+                      }
+                      aria-label="Próximo anúncio"
+                    >
+                      ›
+                    </button>
+                  )}
+
+                  {/* Dots indicadores */}
+                  {highlightedAds.length > 1 && (
+                    <div className={styles.carouselDots}>
+                      {highlightedAds.map((_, idx) => (
+                        <button
+                          key={idx}
+                          className={`${styles.carouselDot} ${idx === currentAdIndex ? styles.carouselDotActive : ""}`}
+                          onClick={() => setCurrentAdIndex(idx)}
+                          aria-label={`Ir para anúncio ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                {/* Seta direita */}
-                {highlightedAds.length > 1 && (
-                  <button
-                    className={styles.carouselArrow}
-                    style={{ right: '8px' }}
-                    onClick={() => setCurrentAdIndex((prev) => (prev + 1) % highlightedAds.length)}
-                    aria-label="Próximo anúncio"
-                  >
-                    ›
-                  </button>
-                )}
-
-                {/* Dots indicadores */}
-                {highlightedAds.length > 1 && (
-                  <div className={styles.carouselDots}>
-                    {highlightedAds.map((_, idx) => (
-                      <button
-                        key={idx}
-                        className={`${styles.carouselDot} ${idx === currentAdIndex ? styles.carouselDotActive : ''}`}
-                        onClick={() => setCurrentAdIndex(idx)}
-                        aria-label={`Ir para anúncio ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+              );
+            })()}
           {renderActiveContent()}
         </section>
       </main>
@@ -12726,26 +18180,52 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
       {renderNotifDeleteConfirmModal()}
       {/* MODAL DE ANÁLISE/RESUMO DA AGENDA */}
       {showAgendaAnalysisModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowAgendaAnalysisModal(false)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: '800px' }}>
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowAgendaAnalysisModal(false)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "800px" }}
+          >
             <div className={styles.modalHeader}>
-              <h2 className={styles.modalTitle}>✨ Inteligência de Agenda IA</h2>
-              <p className={styles.modalSubtitle}>Insights estratégicos para sua gestão de prazos</p>
+              <h2 className={styles.modalTitle}>
+                ✨ Inteligência de Agenda IA
+              </h2>
+              <p className={styles.modalSubtitle}>
+                Insights estratégicos para sua gestão de prazos
+              </p>
             </div>
-            
-            <div style={{ 
-              padding: '20px', 
-              background: 'rgba(255,255,255,0.02)', 
-              borderRadius: '12px',
-              minHeight: '200px',
-              maxHeight: '60vh',
-              overflowY: 'auto',
-              lineHeight: '1.6',
-              whiteSpace: 'pre-wrap'
-            }}>
+
+            <div
+              style={{
+                padding: "20px",
+                background: "rgba(255,255,255,0.02)",
+                borderRadius: "12px",
+                minHeight: "200px",
+                maxHeight: "60vh",
+                overflowY: "auto",
+                lineHeight: "1.6",
+                whiteSpace: "pre-wrap",
+              }}
+            >
               {isAnalyzingAgenda ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', gap: '15px' }}>
-                  <Sparkles size={40} className={styles.spin} color="var(--color-gold)" />
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    height: "200px",
+                    gap: "15px",
+                  }}
+                >
+                  <Sparkles
+                    size={40}
+                    className={styles.spin}
+                    color="var(--color-gold)"
+                  />
                   <p>A IA está processando sua agenda...</p>
                 </div>
               ) : (
@@ -12755,38 +18235,47 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
               )}
             </div>
 
-            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-              <button 
+            <div style={{ marginTop: "20px", display: "flex", gap: "10px" }}>
+              <button
                 className={styles.redatorGenerateBtn}
                 style={{ flex: 1 }}
                 onClick={() => {
                   const doc = new jsPDF();
                   const pageWidth = doc.internal.pageSize.getWidth();
                   const pageHeight = doc.internal.pageSize.getHeight();
-                  
+
                   // HEADER
                   doc.setFillColor(11, 11, 14); // Cor de fundo do site (Dark)
-                  doc.rect(0, 0, pageWidth, 45, 'F');
-                  
+                  doc.rect(0, 0, pageWidth, 45, "F");
+
                   doc.setTextColor(212, 175, 55); // Cor Gold
                   doc.setFont("helvetica", "bold");
                   doc.setFontSize(24);
                   doc.text("SocialJurídico", 14, 22);
-                  
+
                   doc.setTextColor(255, 255, 255);
                   doc.setFontSize(12);
                   doc.setFont("helvetica", "normal");
-                  doc.text("Inteligência de Agenda IA - Relatório Estratégico", 14, 32);
-                  
+                  doc.text(
+                    "Inteligência de Agenda IA - Relatório Estratégico",
+                    14,
+                    32,
+                  );
+
                   doc.setFontSize(10);
-                  doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 14, 32, { align: 'right' });
+                  doc.text(
+                    `Gerado em: ${new Date().toLocaleString("pt-BR")}`,
+                    pageWidth - 14,
+                    32,
+                    { align: "right" },
+                  );
 
                   // CORPO DO RELATÓRIO
                   doc.setTextColor(40, 40, 40);
                   doc.setFontSize(14);
                   doc.setFont("helvetica", "bold");
                   doc.text("Análise e Insights da IA", 14, 60);
-                  
+
                   doc.setDrawColor(212, 175, 55);
                   doc.setLineWidth(0.5);
                   doc.line(14, 63, 60, 63);
@@ -12794,13 +18283,16 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                   doc.setFont("helvetica", "normal");
                   doc.setFontSize(11);
                   doc.setTextColor(60, 60, 60);
-                  
-                  const cleanAnalysis = agendaAnalysis.replace(/\*\*/g, ''); // Remove asteriscos
-                  const splitText = doc.splitTextToSize(cleanAnalysis, pageWidth - 28);
-                  
+
+                  const cleanAnalysis = agendaAnalysis.replace(/\*\*/g, ""); // Remove asteriscos
+                  const splitText = doc.splitTextToSize(
+                    cleanAnalysis,
+                    pageWidth - 28,
+                  );
+
                   // Verificação de quebra de página
                   let currentY = 75;
-                  splitText.forEach(line => {
+                  splitText.forEach((line) => {
                     if (currentY > pageHeight - 30) {
                       doc.addPage();
                       currentY = 20;
@@ -12823,12 +18315,17 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                     doc.setPage(i);
                     doc.setFontSize(9);
                     doc.setTextColor(150, 150, 150);
-                    doc.line(14, pageHeight - 20, pageWidth - 14, pageHeight - 20);
+                    doc.line(
+                      14,
+                      pageHeight - 20,
+                      pageWidth - 14,
+                      pageHeight - 20,
+                    );
                     doc.text(
                       `SocialJurídico PRO - Inteligência Artificial para Advogados | Página ${i} de ${pageCount}`,
                       pageWidth / 2,
                       pageHeight - 12,
-                      { align: "center" }
+                      { align: "center" },
                     );
                   }
 
@@ -12839,7 +18336,11 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
               >
                 <FileDown size={18} /> Baixar PDF
               </button>
-              <button className={styles.closeModalBtn} onClick={() => setShowAgendaAnalysisModal(false)} style={{ margin: 0 }}>
+              <button
+                className={styles.closeModalBtn}
+                onClick={() => setShowAgendaAnalysisModal(false)}
+                style={{ margin: 0 }}
+              >
                 Fechar
               </button>
             </div>
@@ -12856,78 +18357,228 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
             <AlertTriangle size={48} color="#eab308" />
             <h3>Verificação de OAB Pendente</h3>
             <p>
-              Identificamos que sua OAB ainda não foi verificada manualmente por nossa equipe jurídica.
+              Identificamos que sua OAB ainda não foi verificada manualmente por
+              nossa equipe jurídica.
             </p>
             {profileData?.oab_warning_started_at && (
-              <div style={{ backgroundColor: "rgba(234, 179, 8, 0.1)", border: "1px solid #eab308", padding: "12px", borderRadius: "8px", margin: "15px 0", textAlign: "center" }}>
-                <p style={{ margin: 0, fontWeight: "bold", color: "#854d0e", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <div
+                style={{
+                  backgroundColor: "rgba(234, 179, 8, 0.1)",
+                  border: "1px solid #eab308",
+                  padding: "12px",
+                  borderRadius: "8px",
+                  margin: "15px 0",
+                  textAlign: "center",
+                }}
+              >
+                <p
+                  style={{
+                    margin: 0,
+                    fontWeight: "bold",
+                    color: "#854d0e",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px",
+                  }}
+                >
                   <Clock size={16} /> Atenção: Prazo de Verificação
                 </p>
-                <p style={{ margin: "8px 0 0 0", color: "#854d0e", fontSize: "1.1rem" }}>
-                  Tempo restante: <strong>{Math.max(0, 7 - Math.floor((new Date() - new Date(profileData.oab_warning_started_at)) / (1000 * 60 * 60 * 24)))} dias</strong>
+                <p
+                  style={{
+                    margin: "8px 0 0 0",
+                    color: "#854d0e",
+                    fontSize: "1.1rem",
+                  }}
+                >
+                  Tempo restante:{" "}
+                  <strong>
+                    {Math.max(
+                      0,
+                      7 -
+                        Math.floor(
+                          (new Date() -
+                            new Date(profileData.oab_warning_started_at)) /
+                            (1000 * 60 * 60 * 24),
+                        ),
+                    )}{" "}
+                    dias
+                  </strong>
                 </p>
-                <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#a16207" }}>
+                <p
+                  style={{
+                    margin: "5px 0 0 0",
+                    fontSize: "0.85rem",
+                    color: "#a16207",
+                  }}
+                >
                   Sua conta será suspensa automaticamente após este período.
                 </p>
               </div>
             )}
             <p className={styles.oabModalSub}>
-              Para garantir a segurança de todos os usuários e a sua visibilidade plena na plataforma, entre em contato conosco para validar seus dados.
+              Para garantir a segurança de todos os usuários e a sua
+              visibilidade plena na plataforma, entre em contato conosco para
+              validar seus dados.
             </p>
-            
-            <a 
-              href="https://wa.me/5515981657317?text=Olá, gostaria de solicitar a verificação manual da minha OAB no SocialJurídico. Meu nome é " 
-              target="_blank" 
+
+            <a
+              href="https://wa.me/5515981657317?text=Olá, gostaria de solicitar a verificação manual da minha OAB no SocialJurídico. Meu nome é "
+              target="_blank"
               rel="noopener noreferrer"
               className={styles.supportBtn}
             >
               Verificar agora pelo WhatsApp
             </a>
-            
-            <button onClick={() => setShowPendingOABModal(false)} className={styles.closeBtn}>
+
+            <button
+              onClick={() => setShowPendingOABModal(false)}
+              className={styles.closeBtn}
+            >
               Vou fazer isso mais tarde
             </button>
           </div>
         </div>
       )}
-      
+
       {/* MODAL PREMIUM: OAB EM DESENVOLVIMENTO */}
       {showOabModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowOabModal(false)}>
-          <div className={styles.modalContent} onClick={e => e.stopPropagation()} style={{ maxWidth: "550px", border: "1px solid rgba(212, 175, 55, 0.3)", background: "rgba(15, 17, 23, 0.95)", backdropFilter: "blur(20px)" }}>
-            <div className={styles.modalHeader} style={{ textAlign: "center", borderBottom: "1px solid rgba(212, 175, 55, 0.15)", paddingBottom: "15px" }}>
-              <div style={{ display: "inline-flex", padding: "12px", borderRadius: "50%", background: "rgba(212, 175, 55, 0.1)", marginBottom: "12px", border: "1px solid rgba(212, 175, 55, 0.3)" }}>
+        <div
+          className={styles.modalOverlay}
+          onClick={() => setShowOabModal(false)}
+        >
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "550px",
+              border: "1px solid rgba(212, 175, 55, 0.3)",
+              background: "rgba(15, 17, 23, 0.95)",
+              backdropFilter: "blur(20px)",
+            }}
+          >
+            <div
+              className={styles.modalHeader}
+              style={{
+                textAlign: "center",
+                borderBottom: "1px solid rgba(212, 175, 55, 0.15)",
+                paddingBottom: "15px",
+              }}
+            >
+              <div
+                style={{
+                  display: "inline-flex",
+                  padding: "12px",
+                  borderRadius: "50%",
+                  background: "rgba(212, 175, 55, 0.1)",
+                  marginBottom: "12px",
+                  border: "1px solid rgba(212, 175, 55, 0.3)",
+                }}
+              >
                 <Sparkles size={28} color="var(--brand-gold)" />
               </div>
-              <h2 className={styles.modalTitle} style={{ color: "var(--brand-gold)" }}>💡 Importação de Processos por OAB</h2>
-              <p className={styles.modalSubtitle}>Automação Inteligente e Conexão Direta ao CRM</p>
+              <h2
+                className={styles.modalTitle}
+                style={{ color: "var(--brand-gold)" }}
+              >
+                💡 Importação de Processos por OAB
+              </h2>
+              <p className={styles.modalSubtitle}>
+                Automação Inteligente e Conexão Direta ao CRM
+              </p>
             </div>
 
-            <div style={{ padding: "20px 0", color: "#e2e8f0", fontSize: "0.9rem", lineHeight: "1.6", display: "flex", flexDirection: "column", gap: "15px" }}>
+            <div
+              style={{
+                padding: "20px 0",
+                color: "#e2e8f0",
+                fontSize: "0.9rem",
+                lineHeight: "1.6",
+                display: "flex",
+                flexDirection: "column",
+                gap: "15px",
+              }}
+            >
               <p style={{ margin: 0, color: "#cbd5e1" }}>
-                Esta funcionalidade está sendo preparada para o seu escritório! Em breve, com apenas um clique, o <strong>SocialJuridico</strong> fará a varredura completa de todos os processos ativos vinculados à sua OAB nos diários oficiais e tribunais do país.
+                Esta funcionalidade está sendo preparada para o seu escritório!
+                Em breve, com apenas um clique, o{" "}
+                <strong>SocialJuridico</strong> fará a varredura completa de
+                todos os processos ativos vinculados à sua OAB nos diários
+                oficiais e tribunais do país.
               </p>
-              
-              <div style={{ background: "rgba(255, 255, 255, 0.03)", borderRadius: "8px", padding: "15px", border: "1px solid rgba(255, 255, 255, 0.05)" }}>
-                <h4 style={{ color: "var(--brand-gold)", margin: "0 0 10px 0", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "1px" }}>O que a nossa IA fará por você:</h4>
-                <ul style={{ margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "8px" }}>
-                  <li>🔍 <strong>Varredura Automatizada:</strong> Busca em tempo real em Tribunais Estaduais, Federais e Diários Oficiais.</li>
-                  <li>🤖 <strong>Sincronização com o CRM:</strong> Cadastro automático de clientes no CRM com preenchimento completo de dados.</li>
-                  <li>📈 <strong>Insights KYC Avançados:</strong> Geração instantânea de análises de risco e viabilidade processual com inteligência artificial.</li>
+
+              <div
+                style={{
+                  background: "rgba(255, 255, 255, 0.03)",
+                  borderRadius: "8px",
+                  padding: "15px",
+                  border: "1px solid rgba(255, 255, 255, 0.05)",
+                }}
+              >
+                <h4
+                  style={{
+                    color: "var(--brand-gold)",
+                    margin: "0 0 10px 0",
+                    fontSize: "0.85rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  O que a nossa IA fará por você:
+                </h4>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: "18px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                  }}
+                >
+                  <li>
+                    🔍 <strong>Varredura Automatizada:</strong> Busca em tempo
+                    real em Tribunais Estaduais, Federais e Diários Oficiais.
+                  </li>
+                  <li>
+                    🤖 <strong>Sincronização com o CRM:</strong> Cadastro
+                    automático de clientes no CRM com preenchimento completo de
+                    dados.
+                  </li>
+                  <li>
+                    📈 <strong>Insights KYC Avançados:</strong> Geração
+                    instantânea de análises de risco e viabilidade processual
+                    com inteligência artificial.
+                  </li>
                 </ul>
               </div>
-              
-              <p style={{ margin: 0, fontSize: "0.8rem", color: "#9ca3af", fontStyle: "italic", textAlign: "center" }}>
-                Nossa equipe de engenharia está finalizando as integrações com os tribunais para garantir o máximo de estabilidade.
+
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "0.8rem",
+                  color: "#9ca3af",
+                  fontStyle: "italic",
+                  textAlign: "center",
+                }}
+              >
+                Nossa equipe de engenharia está finalizando as integrações com
+                os tribunais para garantir o máximo de estabilidade.
               </p>
             </div>
 
             <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-              <button 
-                type="button" 
-                className={styles.submitBtn} 
+              <button
+                type="button"
+                className={styles.submitBtn}
                 onClick={() => setShowOabModal(false)}
-                style={{ flex: 1, background: "linear-gradient(135deg, var(--brand-gold) 0%, #b8860b 100%)", color: "#000", fontWeight: "600", border: "none" }}
+                style={{
+                  flex: 1,
+                  background:
+                    "linear-gradient(135deg, var(--brand-gold) 0%, #b8860b 100%)",
+                  color: "#000",
+                  fontWeight: "600",
+                  border: "none",
+                }}
               >
                 Entendido, mal posso esperar!
               </button>
@@ -12935,7 +18586,7 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
           </div>
         </div>
       )}
-      
+
       {/* CHECKOUT TRANSPARENTE */}
       <TransparentCheckoutModal
         isOpen={showTransparentCheckout}

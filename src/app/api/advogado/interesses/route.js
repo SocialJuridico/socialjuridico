@@ -38,7 +38,40 @@ export async function GET(request) {
 
     if (iError) throw iError;
 
-    return NextResponse.json({ success: true, data: interests || [] });
+    const caseIds = [
+      ...new Set(
+        (interests || []).map((interest) => interest.case_id).filter(Boolean),
+      ),
+    ];
+    let casosById = {};
+
+    if (caseIds.length > 0) {
+      const { data: casos, error: cError } = await db
+        .from("casos")
+        .select("id, titulo, area_atuacao, cidade, estado, status, created_at")
+        .in("id", caseIds);
+
+      if (cError) throw cError;
+
+      casosById = Object.fromEntries(
+        (casos || []).map((caso) => [caso.id, caso]),
+      );
+    }
+
+    const enrichedInterests = (interests || []).map((interest) => {
+      const caso = casosById[interest.case_id];
+      return {
+        ...interest,
+        caso_titulo: caso?.titulo || "Caso desconhecido",
+        caso_area: caso?.area_atuacao || "",
+        caso_cidade: caso?.cidade || "",
+        caso_estado: caso?.estado || "",
+        caso_status: caso?.status || null,
+        caso_created_at: caso?.created_at || interest.created_at,
+      };
+    });
+
+    return NextResponse.json({ success: true, data: enrichedInterests });
   } catch (error) {
     console.error("Erro na API GET /api/advogado/interesses:", error);
     return NextResponse.json(

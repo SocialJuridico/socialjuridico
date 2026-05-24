@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { resend } from "@/lib/resend";
 import { interesseCasoTemplate } from "@/lib/emailTemplates";
 import { createClient } from "@/lib/supabaseServer";
+import { sendPushNotification } from "@/lib/pushNotifications";
 
 async function ensureAdmin(db, userId) {
   const { data: admin, error } = await db
@@ -130,6 +131,22 @@ export async function POST(request) {
           : "⚖️ Advogado interessado no seu caso!",
       html,
     });
+    // Tentar enviar push notification também (não falhar o endpoint se der erro no push)
+    try {
+      if (cliente?.id) {
+        await sendPushNotification({
+          userIds: [cliente.id],
+          title:
+            lawyerNamesArr.length > 1
+              ? "⚖️ Advogados interessados no seu caso!"
+              : "⚖️ Novo interesse no seu caso",
+          message: `Há interesse no caso "${caso.titulo || 'Caso'}".`,
+          url: "/dashboard/cliente",
+        });
+      }
+    } catch (pushErr) {
+      console.error("Erro enviando push notification:", pushErr);
+    }
 
     return NextResponse.json({
       success: true,
@@ -142,13 +159,4 @@ export async function POST(request) {
       { status: 500 },
     );
   }
-}
-
-if (cliente?.id) {
-  await sendPushNotification({
-    userIds: [cliente.id],
-    title: "Novo interesse no seu caso",
-    message: `Um advogado demonstrou interesse no caso "${caso.titulo}".`,
-    url: "/dashboard/cliente",
-  });
 }

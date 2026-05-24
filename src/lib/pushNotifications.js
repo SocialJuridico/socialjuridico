@@ -1,12 +1,29 @@
 import { supabaseAdmin } from "./supabase";
 
-export async function sendPushNotification({ 
-  userIds = [], 
-  roles = [], 
-  title, 
-  message, 
-  url = "https://socialjuridico.com.br/dashboard" 
-}) {
+export async function sendPushNotification(options, ...args) {
+  let userIds = [];
+  let roles = [];
+  let title = "";
+  let message = "";
+  let url = "https://socialjuridico.com.br/dashboard";
+
+  // Suporte a chamada com objeto de opções ou parâmetros posicionais legados
+  if (options && typeof options === "object" && !Array.isArray(options) && (options.userIds || options.roles || options.title || options.message)) {
+    userIds = options.userIds || [];
+    roles = options.roles || [];
+    title = options.title;
+    message = options.message;
+    url = options.url || url;
+  } else {
+    if (Array.isArray(options)) {
+      userIds = options;
+    } else if (typeof options === "string" && options.length > 0) {
+      userIds = [options];
+    }
+    title = args[0] || "";
+    message = args[1] || "";
+    url = args[2] || url;
+  }
   const appId = process.env.NEXT_PUBLIC_ONESIGNAL_APP_ID;
   const apiKey = process.env.ONESIGNAL_REST_API_KEY;
 

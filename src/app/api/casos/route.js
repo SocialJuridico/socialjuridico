@@ -444,6 +444,14 @@ export async function DELETE(request) {
         },
       ]);
 
+      // 📣 ENVIAR PUSH NOTIFICATION PARA O ADVOGADO CONTRATADO
+      await sendPushNotification({
+        userIds: [caso.advogado_id],
+        title: "Caso cancelado 🚫",
+        message: `O cliente decidiu encerrar o caso "${caso.titulo}" que você estava atendendo.`,
+        url: "/dashboard/advogado"
+      });
+
       // 📧 ENVIAR EMAIL DE CANCELAMENTO PARA O ADVOGADO
       try {
         const { data: advCancel } = await supabaseAdmin.from("advogados").select("name, email").eq("id", caso.advogado_id).single();
@@ -474,10 +482,34 @@ export async function DELETE(request) {
       .eq("case_id", casoId)
       .in("status", ["PENDING", "NEGOTIATING"]);
 
-    // 📧 ENVIAR EMAIL PARA ADVOGADOS COM INTERESSE
+    // Notificar e enviar email para advogados com interesse
     if (interessados && interessados.length > 0) {
       try {
         const lawyerIds = [...new Set(interessados.map(i => i.lawyer_id))];
+
+        // 1. Inserir notificações de banco para todos os advogados interessados
+        const now = new Date().toISOString();
+        const dbNotifs = lawyerIds.map(lawyerId => ({
+          id: crypto.randomUUID(),
+          user_id: lawyerId,
+          titulo: "Caso removido",
+          mensagem: `O cliente removeu o caso "${caso.titulo}" no qual você tinha interesse.`,
+          tipo: "CASO_CANCELADO",
+          meta: JSON.stringify({ case_id: casoId }),
+          lida: false,
+          created_at: now
+        }));
+        await supabaseAdmin.from("notificacoes").insert(dbNotifs);
+
+        // 2. Enviar push notification para todos os interessados
+        await sendPushNotification({
+          userIds: lawyerIds,
+          title: "Caso removido 🚫",
+          message: `O cliente removeu o caso "${caso.titulo}" no qual você tinha interesse.`,
+          url: "/dashboard/advogado"
+        });
+
+        // 3. Enviar email de cancelamento aos interessados
         const { data: advs } = await supabaseAdmin.from("advogados").select("name, email").in("id", lawyerIds);
         if (advs?.length > 0) {
           const emailPayloads = advs.filter(a => a.email).map(a => ({
@@ -491,8 +523,8 @@ export async function DELETE(request) {
             console.log(`📧 Email de cancelamento enviado para ${emailPayloads.length} advogado(s) interessado(s)`);
           }
         }
-      } catch (emailErr) {
-        console.error("⚠️ Erro ao enviar email de cancelamento aos interessados (não-fatal):", emailErr.message);
+      } catch (err) {
+        console.error("⚠️ Erro ao notificar interessados sobre cancelamento do caso:", err.message);
       }
     }
 

@@ -3,8 +3,8 @@ import { resend } from "@/lib/resend";
 import { sendPushNotification } from "@/lib/pushNotifications";
 
 export async function checkAndNotifyLowBalance(lawyerId, oldBalance, newBalance) {
-  // Dispara apenas se o saldo passou do limite de segurança (acima de 3 para <= 3)
-  if (newBalance <= 3 && oldBalance > 3) {
+  // Dispara apenas se o saldo passou do limite de segurança (acima de 3 para estritamente abaixo de 3)
+  if (newBalance < 3 && oldBalance >= 3) {
     try {
       // 1. Obter dados do advogado
       const { data: lawyer } = await supabaseAdmin

@@ -9,13 +9,39 @@ import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    let user = null;
 
-    if (authError || !user) {
+    // 1. Tentar Bearer Token (para mobile)
+    const authHeader = request.headers.get("Authorization");
+    console.log("[vincular] Authorization header:", authHeader ? `${authHeader.slice(0, 15)}...${authHeader.slice(-10)}` : "missing");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user: tokenUser }, error } = await supabaseAdmin.auth.getUser(token);
+      if (error) {
+        console.error("[vincular] error getting user from token:", error.message, error.status);
+      } else {
+        console.log("[vincular] token user found:", tokenUser?.id);
+      }
+      if (tokenUser && !error) {
+        user = tokenUser;
+      }
+    }
+
+    // 2. Fallback para cookies (web)
+    if (!user) {
+      console.log("[vincular] Falling back to cookie authentication...");
+      const supabase = createClient();
+      const { data: { user: cookieUser }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.warn("[vincular] cookie auth error:", authError.message);
+      }
+      if (!authError && cookieUser) {
+        user = cookieUser;
+      }
+    }
+
+    if (!user) {
+      console.error("[vincular] Authentication failed: User not found in either token or cookies");
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
@@ -32,7 +58,7 @@ export async function POST(request) {
     }
 
     // 1. Verificar se o usuário é um advogado
-    const db = supabaseAdmin || supabase;
+    const db = supabaseAdmin;
     if (!(await isLawyer(db, user.id))) {
       return NextResponse.json(
         {

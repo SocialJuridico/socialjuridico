@@ -8,13 +8,28 @@ import { novaMensagemTemplate, novaMensagemClienteTemplate } from "@/lib/emailTe
 // GET /api/mensagens?caso_id=xxx&interest_id=yyy
 export async function GET(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    let user = null;
 
-    if (authError || !user) {
+    // 1. Tentar Bearer Token (para mobile)
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user: tokenUser }, error } = await supabaseAdmin.auth.getUser(token);
+      if (tokenUser && !error) {
+        user = tokenUser;
+      }
+    }
+
+    // 2. Fallback para cookies (web)
+    if (!user) {
+      const supabase = createClient();
+      const { data: { user: cookieUser }, error: authError } = await supabase.auth.getUser();
+      if (!authError && cookieUser) {
+        user = cookieUser;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
@@ -64,13 +79,28 @@ export async function GET(request) {
 // POST /api/mensagens
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    let user = null;
 
-    if (authError || !user) {
+    // 1. Tentar Bearer Token (para mobile)
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: { user: tokenUser }, error } = await supabaseAdmin.auth.getUser(token);
+      if (tokenUser && !error) {
+        user = tokenUser;
+      }
+    }
+
+    // 2. Fallback para cookies (web)
+    if (!user) {
+      const supabase = createClient();
+      const { data: { user: cookieUser }, error: authError } = await supabase.auth.getUser();
+      if (!authError && cookieUser) {
+        user = cookieUser;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },

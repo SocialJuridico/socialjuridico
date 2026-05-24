@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import { sendPushNotification } from "@/lib/oneSignal";
+import { sendPushNotification } from "@/lib/pushNotifications";
 
 async function ensureAdmin(db, userId) {
   const { data: admin, error } = await db

@@ -3,20 +3,45 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
-import { interesseRecusadoTemplate, interesseAceitoTemplate, advogadoContratadoTemplate, casoEncerradoTemplate, clienteCadastradoCrmTemplate } from "@/lib/emailTemplates";
+import {
+  interesseRecusadoTemplate,
+  interesseAceitoTemplate,
+  advogadoContratadoTemplate,
+  casoEncerradoTemplate,
+  clienteCadastradoCrmTemplate,
+} from "@/lib/emailTemplates";
 import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 
 // POST /api/casos/interesse
 // Body: { interestId, action: 'ACCEPT' | 'DECLINE' | 'HIRE' }
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    let user = null;
 
-    if (authError || !user) {
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const {
+        data: { user: tokenUser },
+        error,
+      } = await supabaseAdmin.auth.getUser(token);
+      if (tokenUser && !error) {
+        user = tokenUser;
+      }
+    }
+
+    if (!user) {
+      const supabase = createClient();
+      const {
+        data: { user: cookieUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (!authError && cookieUser) {
+        user = cookieUser;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
@@ -80,38 +105,50 @@ export async function POST(request) {
         .eq("id", interestId);
 
       // Notificar advogado
-      await db.from("notificacoes").insert([{
-        user_id: interest.lawyer_id,
-        titulo: "Proposta não aceita",
-        mensagem: `O cliente decidiu não prosseguir com a negociação no caso "${caso.titulo}".`,
-        lida: false,
-        created_at: new Date().toISOString(),
-        tipo: "RECUSA",
-        meta: JSON.stringify({ case_id: interest.case_id }),
-      }]);
+      await db.from("notificacoes").insert([
+        {
+          user_id: interest.lawyer_id,
+          titulo: "Proposta não aceita",
+          mensagem: `O cliente decidiu não prosseguir com a negociação no caso "${caso.titulo}".`,
+          lida: false,
+          created_at: new Date().toISOString(),
+          tipo: "RECUSA",
+          meta: JSON.stringify({ case_id: interest.case_id }),
+        },
+      ]);
 
       // 📣 ENVIAR PUSH NOTIFICATION (RECUSA)
       await sendPushNotification({
         userIds: [interest.lawyer_id],
         title: "Proposta não aceita ❌",
         message: `O cliente decidiu não prosseguir com a negociação no caso "${caso.titulo}".`,
-        url: "/dashboard/advogado"
+        url: "/dashboard/advogado",
       });
 
       // 📧 ENVIAR EMAIL DE RECUSA PARA O ADVOGADO
       try {
-        const { data: advRecusa } = await db.from("advogados").select("name, email").eq("id", interest.lawyer_id).single();
+        const { data: advRecusa } = await db
+          .from("advogados")
+          .select("name, email")
+          .eq("id", interest.lawyer_id)
+          .single();
         if (advRecusa?.email) {
           await resend.emails.send({
-            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            from: "Social Jurídico <contato@socialjuridico.com.br>",
             to: advRecusa.email,
             subject: `📋 Atualização sobre o caso "${caso.titulo}"`,
-            html: interesseRecusadoTemplate({ lawyerName: advRecusa.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+            html: interesseRecusadoTemplate({
+              lawyerName: advRecusa.name || "Advogado(a)",
+              casoTitulo: caso.titulo,
+            }),
           });
           console.log(`📧 Email de recusa enviado para ${advRecusa.email}`);
         }
       } catch (emailErr) {
-        console.error("⚠️ Erro ao enviar email de recusa (não-fatal):", emailErr.message);
+        console.error(
+          "⚠️ Erro ao enviar email de recusa (não-fatal):",
+          emailErr.message,
+        );
       }
 
       // Atualizar cache de negotiating_lawyers no caso
@@ -146,38 +183,50 @@ export async function POST(request) {
       await updateNegotiatingLawyers(db, interest.case_id);
 
       // Notificar advogado que entrou em negociação
-      await db.from("notificacoes").insert([{
-        user_id: interest.lawyer_id,
-        titulo: "Você entrou em negociação!",
-        mensagem: `O cliente aceitou sua proposta no caso "${caso.titulo}". Vocês estão agora em fase de negociação.`,
-        lida: false,
-        created_at: new Date().toISOString(),
-        tipo: "NEGOCIACAO",
-        meta: JSON.stringify({ case_id: interest.case_id }),
-      }]);
+      await db.from("notificacoes").insert([
+        {
+          user_id: interest.lawyer_id,
+          titulo: "Você entrou em negociação!",
+          mensagem: `O cliente aceitou sua proposta no caso "${caso.titulo}". Vocês estão agora em fase de negociação.`,
+          lida: false,
+          created_at: new Date().toISOString(),
+          tipo: "NEGOCIACAO",
+          meta: JSON.stringify({ case_id: interest.case_id }),
+        },
+      ]);
 
       // 📣 ENVIAR PUSH NOTIFICATION (ACEITE/NEGOCIAÇÃO)
       await sendPushNotification({
         userIds: [interest.lawyer_id],
         title: "Você entrou em negociação! 🤝",
         message: `O cliente aceitou sua proposta no caso "${caso.titulo}".`,
-        url: `/dashboard/advogado`
+        url: `/dashboard/advogado`,
       });
 
       // 📧 ENVIAR EMAIL DE ACEITE PARA O ADVOGADO
       try {
-        const { data: advAceito } = await db.from("advogados").select("name, email").eq("id", interest.lawyer_id).single();
+        const { data: advAceito } = await db
+          .from("advogados")
+          .select("name, email")
+          .eq("id", interest.lawyer_id)
+          .single();
         if (advAceito?.email) {
           await resend.emails.send({
-            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            from: "Social Jurídico <contato@socialjuridico.com.br>",
             to: advAceito.email,
             subject: `🤝 Proposta aceita no caso "${caso.titulo}"`,
-            html: interesseAceitoTemplate({ lawyerName: advAceito.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+            html: interesseAceitoTemplate({
+              lawyerName: advAceito.name || "Advogado(a)",
+              casoTitulo: caso.titulo,
+            }),
           });
           console.log(`📧 Email de aceite enviado para ${advAceito.email}`);
         }
       } catch (emailErr) {
-        console.error("⚠️ Erro ao enviar email de aceite (não-fatal):", emailErr.message);
+        console.error(
+          "⚠️ Erro ao enviar email de aceite (não-fatal):",
+          emailErr.message,
+        );
       }
 
       return NextResponse.json({
@@ -191,7 +240,10 @@ export async function POST(request) {
       // Verificar se já não tem advogado contratado
       if (caso.advogado_id) {
         return NextResponse.json(
-          { success: false, message: "Já existe um advogado contratado para este caso." },
+          {
+            success: false,
+            message: "Já existe um advogado contratado para este caso.",
+          },
           { status: 400 },
         );
       }
@@ -202,11 +254,11 @@ export async function POST(request) {
         .select("balance")
         .eq("id", interest.lawyer_id)
         .single();
-      
+
       if (advError || !advogado) {
         return NextResponse.json(
           { success: false, message: "Perfil de advogado não encontrado" },
-          { status: 404 }
+          { status: 404 },
         );
       }
 
@@ -214,19 +266,26 @@ export async function POST(request) {
         return NextResponse.json(
           {
             success: false,
-            message: "O advogado selecionado não possui saldo de Juri suficiente (3 Juris) para fechar o contrato.",
+            message:
+              "O advogado selecionado não possui saldo de Juri suficiente (3 Juris) para fechar o contrato.",
           },
-          { status: 402 }
+          { status: 402 },
         );
       }
 
       // Debitar 3 Juris do advogado
       const newBalance = advogado.balance - 3;
-      await db.from("advogados").update({ balance: newBalance }).eq("id", interest.lawyer_id);
+      await db
+        .from("advogados")
+        .update({ balance: newBalance })
+        .eq("id", interest.lawyer_id);
 
       // Verificar e notificar estoque baixo de Juris
-      await checkAndNotifyLowBalance(interest.lawyer_id, advogado.balance, newBalance);
-
+      await checkAndNotifyLowBalance(
+        interest.lawyer_id,
+        advogado.balance,
+        newBalance,
+      );
 
       // Mudar interest status para HIRED
       await db
@@ -283,14 +342,13 @@ export async function POST(request) {
             await db
               .from("crm_clients")
               .update({
-                notes: `Cliente recontratou para um novo caso.\nCaso: ${caso.titulo}\nStatus: Ativo`
+                notes: `Cliente recontratou para um novo caso.\nCaso: ${caso.titulo}\nStatus: Ativo`,
               })
               .eq("id", crmClientId);
           } else {
             crmClientId = crypto.randomUUID();
-            await db
-              .from("crm_clients")
-              .insert([{
+            await db.from("crm_clients").insert([
+              {
                 id: crmClientId,
                 lawyer_id: interest.lawyer_id,
                 name: cliente.name || "Cliente sem Nome",
@@ -300,31 +358,34 @@ export async function POST(request) {
                 type: "Pessoa Física",
                 notes: `Adicionado automaticamente via contratação do caso "${caso.titulo}".\nDescrição do Caso: ${caso.descricao || "Sem descrição"}`,
                 risk_score: Math.floor(Math.random() * 100),
-                created_at: new Date().toISOString()
-              }]);
+                created_at: new Date().toISOString(),
+              },
+            ]);
           }
 
           // Registrar interação no CRM
-          await db
-            .from("crm_interactions")
-            .insert([{
+          await db.from("crm_interactions").insert([
+            {
               id: crypto.randomUUID(),
               client_id: crmClientId,
               lawyer_id: interest.lawyer_id,
               type: "CONTRATO",
               content: `Cliente contratou o advogado para o caso "${caso.titulo}".`,
-              created_at: new Date().toISOString()
-            }]);
+              created_at: new Date().toISOString(),
+            },
+          ]);
 
           // Sincronizar anexos (documentos) para crm_documents se houver
           if (caso.anexos && Array.isArray(caso.anexos)) {
-            const docsToInsert = caso.anexos.map(anexo => ({
-              id: crypto.randomUUID(),
-              client_id: crmClientId,
-              file_name: anexo.name || anexo.fileName || "Documento sem nome",
-              file_url: anexo.url || anexo.fileUrl || "",
-              created_at: new Date().toISOString()
-            })).filter(doc => doc.file_url);
+            const docsToInsert = caso.anexos
+              .map((anexo) => ({
+                id: crypto.randomUUID(),
+                client_id: crmClientId,
+                file_name: anexo.name || anexo.fileName || "Documento sem nome",
+                file_url: anexo.url || anexo.fileUrl || "",
+                created_at: new Date().toISOString(),
+              }))
+              .filter((doc) => doc.file_url);
 
             if (docsToInsert.length > 0) {
               await db.from("crm_documents").insert(docsToInsert);
@@ -335,23 +396,31 @@ export async function POST(request) {
           if (advogado?.email) {
             try {
               await resend.emails.send({
-                from: 'Social Jurídico <contato@socialjuridico.com.br>',
+                from: "Social Jurídico <contato@socialjuridico.com.br>",
                 to: advogado.email,
                 subject: `👤 Cliente "${cliente.name || "Cliente"}" cadastrado no seu CRM`,
                 html: clienteCadastradoCrmTemplate({
-                  lawyerName: advogado.name || 'Advogado(a)',
-                  clientName: cliente.name || 'Cliente',
-                  casoTitulo: caso.titulo
+                  lawyerName: advogado.name || "Advogado(a)",
+                  clientName: cliente.name || "Cliente",
+                  casoTitulo: caso.titulo,
                 }),
               });
-              console.log(`📧 E-mail de cadastro de CRM enviado para ${advogado.email}`);
+              console.log(
+                `📧 E-mail de cadastro de CRM enviado para ${advogado.email}`,
+              );
             } catch (emailErr) {
-              console.error("⚠️ Erro ao enviar e-mail de CRM (não-fatal):", emailErr.message);
+              console.error(
+                "⚠️ Erro ao enviar e-mail de CRM (não-fatal):",
+                emailErr.message,
+              );
             }
           }
         }
       } catch (crmErr) {
-        console.error("⚠️ Erro ao sincronizar dados no CRM (não-fatal):", crmErr.message);
+        console.error(
+          "⚠️ Erro ao sincronizar dados no CRM (não-fatal):",
+          crmErr.message,
+        );
       }
 
       // Migrar as mensagens do chat de negociação para o chat principal (interest_id = null)
@@ -368,38 +437,52 @@ export async function POST(request) {
         .not("interest_id", "is", null);
 
       // Notificar o advogado contratado
-      await db.from("notificacoes").insert([{
-        user_id: interest.lawyer_id,
-        titulo: "Você foi contratado! 🎉",
-        mensagem: `Parabéns! O cliente contratou seus serviços no caso "${caso.titulo}". Você já pode iniciar o atendimento via chat.`,
-        lida: false,
-        created_at: new Date().toISOString(),
-        tipo: "CONTRATACAO",
-        meta: JSON.stringify({ case_id: interest.case_id }),
-      }]);
+      await db.from("notificacoes").insert([
+        {
+          user_id: interest.lawyer_id,
+          titulo: "Você foi contratado! 🎉",
+          mensagem: `Parabéns! O cliente contratou seus serviços no caso "${caso.titulo}". Você já pode iniciar o atendimento via chat.`,
+          lida: false,
+          created_at: new Date().toISOString(),
+          tipo: "CONTRATACAO",
+          meta: JSON.stringify({ case_id: interest.case_id }),
+        },
+      ]);
 
       // 📣 ENVIAR PUSH NOTIFICATION (CONTRATAÇÃO)
       await sendPushNotification({
         userIds: [interest.lawyer_id],
         title: "Você foi contratado! 🎉",
         message: `Parabéns! O cliente escolheu você para o caso "${caso.titulo}".`,
-        url: "/dashboard/advogado"
+        url: "/dashboard/advogado",
       });
 
       // 📧 ENVIAR EMAIL DE CONTRATAÇÃO PARA O ADVOGADO
       try {
-        const { data: advContratado } = await db.from("advogados").select("name, email").eq("id", interest.lawyer_id).single();
+        const { data: advContratado } = await db
+          .from("advogados")
+          .select("name, email")
+          .eq("id", interest.lawyer_id)
+          .single();
         if (advContratado?.email) {
           await resend.emails.send({
-            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            from: "Social Jurídico <contato@socialjuridico.com.br>",
             to: advContratado.email,
             subject: `🎉 Parabéns! Você foi contratado no caso "${caso.titulo}"`,
-            html: advogadoContratadoTemplate({ lawyerName: advContratado.name || 'Advogado(a)', casoTitulo: caso.titulo }),
+            html: advogadoContratadoTemplate({
+              lawyerName: advContratado.name || "Advogado(a)",
+              casoTitulo: caso.titulo,
+            }),
           });
-          console.log(`📧 Email de contratação enviado para ${advContratado.email}`);
+          console.log(
+            `📧 Email de contratação enviado para ${advContratado.email}`,
+          );
         }
       } catch (emailErr) {
-        console.error("⚠️ Erro ao enviar email de contratação (não-fatal):", emailErr.message);
+        console.error(
+          "⚠️ Erro ao enviar email de contratação (não-fatal):",
+          emailErr.message,
+        );
       }
 
       // Notificar advogados que perderam
@@ -424,22 +507,35 @@ export async function POST(request) {
 
         // 📧 ENVIAR EMAIL PARA ADVOGADOS QUE PERDERAM A VAGA
         try {
-          const loserIds = declinedInterests.map(di => di.lawyer_id);
-          const { data: losers } = await db.from("advogados").select("name, email").in("id", loserIds);
+          const loserIds = declinedInterests.map((di) => di.lawyer_id);
+          const { data: losers } = await db
+            .from("advogados")
+            .select("name, email")
+            .in("id", loserIds);
           if (losers?.length > 0) {
-            const emailPayloads = losers.filter(l => l.email).map(l => ({
-              from: 'Social Jurídico <contato@socialjuridico.com.br>',
-              to: [l.email],
-              subject: `📌 Atualização: caso "${caso.titulo}" encerrado`,
-              html: casoEncerradoTemplate({ lawyerName: l.name || 'Advogado(a)', casoTitulo: caso.titulo }),
-            }));
+            const emailPayloads = losers
+              .filter((l) => l.email)
+              .map((l) => ({
+                from: "Social Jurídico <contato@socialjuridico.com.br>",
+                to: [l.email],
+                subject: `📌 Atualização: caso "${caso.titulo}" encerrado`,
+                html: casoEncerradoTemplate({
+                  lawyerName: l.name || "Advogado(a)",
+                  casoTitulo: caso.titulo,
+                }),
+              }));
             if (emailPayloads.length > 0) {
               await resend.batch.send(emailPayloads);
-              console.log(`📧 Email de caso encerrado enviado para ${emailPayloads.length} advogado(s)`);
+              console.log(
+                `📧 Email de caso encerrado enviado para ${emailPayloads.length} advogado(s)`,
+              );
             }
           }
         } catch (emailErr) {
-          console.error("⚠️ Erro ao enviar email de caso encerrado (não-fatal):", emailErr.message);
+          console.error(
+            "⚠️ Erro ao enviar email de caso encerrado (não-fatal):",
+            emailErr.message,
+          );
         }
       }
 
@@ -449,7 +545,6 @@ export async function POST(request) {
         casoId: interest.case_id,
       });
     }
-
   } catch (error) {
     console.error("Erro ao processar interesse:", error);
     return NextResponse.json(
@@ -470,7 +565,10 @@ async function updateNegotiatingLawyers(db, caseId) {
       .eq("status", "NEGOTIATING");
 
     if (!negotiatingInterests || negotiatingInterests.length === 0) {
-      await db.from("casos").update({ negotiating_lawyers: [] }).eq("id", caseId);
+      await db
+        .from("casos")
+        .update({ negotiating_lawyers: [] })
+        .eq("id", caseId);
       return;
     }
 
@@ -489,7 +587,10 @@ async function updateNegotiatingLawyers(db, caseId) {
       initials: (l.name || "AD").substring(0, 2).toUpperCase(),
     }));
 
-    await db.from("casos").update({ negotiating_lawyers: lawyerData }).eq("id", caseId);
+    await db
+      .from("casos")
+      .update({ negotiating_lawyers: lawyerData })
+      .eq("id", caseId);
   } catch (err) {
     console.error("Erro ao atualizar negotiating_lawyers:", err);
   }
@@ -499,13 +600,34 @@ async function updateNegotiatingLawyers(db, caseId) {
 // Retorna interesses PENDING e NEGOTIATING dos casos do cliente logado
 export async function GET(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    let user = null;
 
-    if (authError || !user) {
+    // Tentar autenticação via Bearer token (mobile)
+    const authHeader = request.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const {
+        data: { user: tokenUser },
+        error,
+      } = await supabaseAdmin.auth.getUser(token);
+      if (tokenUser && !error) {
+        user = tokenUser;
+      }
+    }
+
+    // Fallback para sessão web (cookies)
+    if (!user) {
+      const supabase = createClient();
+      const {
+        data: { user: cookieUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+      if (!authError && cookieUser) {
+        user = cookieUser;
+      }
+    }
+
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },

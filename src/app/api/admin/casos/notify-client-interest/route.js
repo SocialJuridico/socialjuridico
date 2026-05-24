@@ -140,7 +140,7 @@ export async function POST(request) {
             lawyerNamesArr.length > 1
               ? "⚖️ Advogados interessados no seu caso!"
               : "⚖️ Novo interesse no seu caso",
-          message: `Há interesse no caso "${caso.titulo || 'Caso'}".`,
+          message: `Há interesse no caso "${caso.titulo || "Caso"}".`,
           url: "/dashboard/cliente",
         });
       }

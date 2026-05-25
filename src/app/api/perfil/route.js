@@ -2,6 +2,61 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
+function decodeJwtPayload(token) {
+  try {
+    const payloadPart = token.split(".")[1];
+    if (!payloadPart) return null;
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "=",
+    );
+    return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function getAuthenticatedUser(request) {
+  const authHeader = request?.headers?.get("Authorization");
+  const headerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  if (headerToken) {
+    const {
+      data: { user },
+      error,
+    } = await supabaseAdmin.auth.getUser(headerToken);
+    if (user && !error) return user;
+
+    const payload = decodeJwtPayload(headerToken);
+    if (payload?.sub) {
+      const {
+        data: { user: adminUser },
+        error: adminError,
+      } = await supabaseAdmin.auth.admin.getUserById(payload.sub);
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      if (
+        adminUser &&
+        !adminError &&
+        (!payload.exp || payload.exp > nowInSeconds)
+      ) {
+        return adminUser;
+      }
+    }
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (!authError && user) return user;
+
+  return null;
+}
+
 const PROFILE_SELECT_FIELDS = {
   clientes: "id, name, email, role, phone, avatar, bio, created_at",
   advogados:
@@ -43,31 +98,7 @@ function buildUpdateData(body, allowedFields) {
 
 export async function GET(request) {
   try {
-    let finalUser = null;
-
-    // 1. Tentar Bearer Token (para mobile)
-    if (request) {
-      const authHeader = request.headers.get("Authorization");
-      if (authHeader?.startsWith("Bearer ")) {
-        const token = authHeader.slice(7);
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-        if (user && !error) {
-          finalUser = user;
-        }
-      }
-    }
-
-    // 2. Fallback para cookies (web)
-    if (!finalUser) {
-      const supabase = createClient();
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-      if (!authError && user) {
-        finalUser = user;
-      }
-    }
+    const finalUser = await getAuthenticatedUser(request);
 
     if (!finalUser) {
       return NextResponse.json(
@@ -116,7 +147,8 @@ export async function GET(request) {
       const newProfile = {
         id: finalUser.id,
         email: finalUser.email,
-        name: finalUser.user_metadata?.full_name || finalUser.email.split("@")[0],
+        name:
+          finalUser.user_metadata?.full_name || finalUser.email.split("@")[0],
         role: "CLIENT",
         created_at: new Date().toISOString(),
       };
@@ -152,7 +184,10 @@ export async function GET(request) {
     }
 
     // -- Lógica de Contagem de Verificação da OAB --
-    if (profile.role === "LAWYER" && profile.oab_verification_status === "PENDING") {
+    if (
+      profile.role === "LAWYER" &&
+      profile.oab_verification_status === "PENDING"
+    ) {
       const now = new Date();
       if (!profile.oab_warning_started_at) {
         // Inicia o contador no primeiro login com status PENDING
@@ -161,7 +196,7 @@ export async function GET(request) {
           .from("advogados")
           .update({ oab_warning_started_at: startedAt })
           .eq("id", profile.id);
-        
+
         if (!updateError) {
           profile.oab_warning_started_at = startedAt;
         }
@@ -170,14 +205,14 @@ export async function GET(request) {
         const startedDate = new Date(profile.oab_warning_started_at);
         const diffMs = now.getTime() - startedDate.getTime();
         const daysPassed = diffMs / (1000 * 60 * 60 * 24);
-        
+
         if (daysPassed >= 7) {
           // Prazo estourou, suspende a conta
           await db
             .from("advogados")
             .update({ oab_verification_status: "ERROR" })
             .eq("id", profile.id);
-          
+
           profile.oab_verification_status = "ERROR";
         }
       }
@@ -207,31 +242,7 @@ export async function GET(request) {
 
 export async function PUT(request) {
   try {
-    let finalUser = null;
-
-    // 1. Tentar Bearer Token (para mobile)
-    if (request) {
-      const authHeader = request.headers.get("Authorization");
-      if (authHeader?.startsWith("Bearer ")) {
-        const token = authHeader.slice(7);
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-        if (user && !error) {
-          finalUser = user;
-        }
-      }
-    }
-
-    // 2. Fallback para cookies (web)
-    if (!finalUser) {
-      const supabase = createClient();
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-      if (!authError && user) {
-        finalUser = user;
-      }
-    }
+    const finalUser = await getAuthenticatedUser(request);
 
     if (!finalUser) {
       return NextResponse.json(

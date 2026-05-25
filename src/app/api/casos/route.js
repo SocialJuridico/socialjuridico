@@ -10,6 +10,70 @@ import {
   oportunidadeLocalTemplate,
 } from "@/lib/emailTemplates";
 
+function decodeJwtPayload(token) {
+  try {
+    const payloadPart = token.split(".")[1];
+    if (!payloadPart) return null;
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "=",
+    );
+    return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function getAuthenticatedUser(request) {
+  const authHeader = request?.headers?.get("Authorization");
+  const headerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+  const fallbackToken =
+    request?.headers?.get("x-access-token") ||
+    new URL(request.url).searchParams.get("token");
+  const token = headerToken || fallbackToken;
+
+  if (token) {
+    const {
+      data: { user },
+      error,
+    } = await supabaseAdmin.auth.getUser(token);
+    if (user && !error) {
+      return user;
+    }
+
+    const payload = decodeJwtPayload(token);
+    if (payload?.sub) {
+      const {
+        data: { user: adminUser },
+        error: adminError,
+      } = await supabaseAdmin.auth.admin.getUserById(payload.sub);
+
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      if (
+        adminUser &&
+        !adminError &&
+        (!payload.exp || payload.exp > nowInSeconds)
+      ) {
+        return adminUser;
+      }
+    }
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (!authError && user) {
+    return user;
+  }
+
+  return null;
+}
+
 export async function POST(request) {
   try {
     let user = null;
@@ -234,19 +298,17 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser(request);
 
-    if (authError || !user) {
+    if (!user) {
       // ⚠️ SEGURANÇA: Não logar detalhes de autenticação
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
       );
     }
+
+    const supabase = createClient();
 
     const db = supabaseAdmin || supabase;
     const role = (await getRoleFromDatabase(db, user.id)) || "CLIENT";
@@ -310,18 +372,16 @@ export async function GET(request) {
 
 export async function PUT(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser(request);
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
       );
     }
+
+    const supabase = createClient();
 
     const body = await request.json();
     const { id, titulo, descricao, area_atuacao, cidade, estado } = body;
@@ -374,18 +434,16 @@ export async function PUT(request) {
 
 export async function PATCH(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser(request);
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
       );
     }
+
+    const supabase = createClient();
 
     const body = await request.json();
     const { id, status } = body || {};
@@ -430,18 +488,16 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const user = await getAuthenticatedUser(request);
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 },
       );
     }
+
+    const supabase = createClient();
 
     const { searchParams } = new URL(request.url);
     const casoId = searchParams.get("id");

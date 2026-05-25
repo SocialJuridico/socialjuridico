@@ -2,34 +2,65 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
+function decodeJwtPayload(token) {
+  try {
+    const payloadPart = token.split(".")[1];
+    if (!payloadPart) return null;
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "=",
+    );
+    return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function getAuthenticatedUser(req) {
+  const authHeader = req?.headers?.get("Authorization");
+  const headerToken = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : null;
+
+  if (headerToken) {
+    const {
+      data: { user },
+      error,
+    } = await supabaseAdmin.auth.getUser(headerToken);
+    if (user && !error) return user;
+
+    const payload = decodeJwtPayload(headerToken);
+    if (payload?.sub) {
+      const {
+        data: { user: adminUser },
+        error: adminError,
+      } = await supabaseAdmin.auth.admin.getUserById(payload.sub);
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      if (
+        adminUser &&
+        !adminError &&
+        (!payload.exp || payload.exp > nowInSeconds)
+      ) {
+        return adminUser;
+      }
+    }
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (!authError && user) return user;
+
+  return null;
+}
+
 // GET /api/notificacoes -> lista notificacoes do usuario autenticado
 export async function GET(req) {
   try {
-    let finalUser = null;
-
-    // 1. Tentar Bearer Token (para mobile)
-    if (req) {
-      const authHeader = req.headers.get("Authorization");
-      if (authHeader?.startsWith("Bearer ")) {
-        const token = authHeader.slice(7);
-        const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-        if (user && !error) {
-          finalUser = user;
-        }
-      }
-    }
-
-    // 2. Fallback para Cookies (web)
-    if (!finalUser) {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      finalUser = user;
-
-      if (!finalUser) {
-        const { data: { session } } = await supabase.auth.getSession();
-        finalUser = session?.user;
-      }
-    }
+    const finalUser = await getAuthenticatedUser(req);
 
     if (!finalUser) {
       console.error("[notificacoes] Auth error: No user or session found");
@@ -38,7 +69,7 @@ export async function GET(req) {
         { status: 401 },
       );
     }
-    
+
     const supabase = createClient();
     const db = supabaseAdmin || supabase;
 
@@ -50,9 +81,10 @@ export async function GET(req) {
 
     if (error) throw error;
 
-    const filtered = (data || []).filter(n => {
-       const meta = typeof n.meta === 'string' ? JSON.parse(n.meta || '{}') : (n.meta || {});
-       return !meta.deleted_by_user;
+    const filtered = (data || []).filter((n) => {
+      const meta =
+        typeof n.meta === "string" ? JSON.parse(n.meta || "{}") : n.meta || {};
+      return !meta.deleted_by_user;
     });
 
     return NextResponse.json({ success: true, data: filtered });
@@ -72,24 +104,7 @@ export async function DELETE(req) {
     const { searchParams } = new URL(req.url);
     const notificationId = searchParams.get("id");
 
-    let user = null;
-
-    // 1. Tentar Bearer Token (para mobile)
-    const authHeader = req.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user: u }, error } = await supabaseAdmin.auth.getUser(token);
-      if (u && !error) {
-        user = u;
-      }
-    }
-
-    // 2. Fallback para Cookies (web)
-    if (!user) {
-      const supabase = createClient();
-      const { data: { user: u } } = await supabase.auth.getUser();
-      user = u;
-    }
+    const user = await getAuthenticatedUser(req);
 
     if (!user) {
       console.error("[DELETE Notif] No user session");
@@ -103,7 +118,9 @@ export async function DELETE(req) {
 
     // Caso seja solicitado limpar todas as notificações (limpar tudo)
     if (notificationId === "all" || !notificationId) {
-      console.log(`[DELETE Notif] Clearing all notifications for user: ${user.email}`);
+      console.log(
+        `[DELETE Notif] Clearing all notifications for user: ${user.email}`,
+      );
       const { error } = await db
         .from("notificacoes")
         .delete()
@@ -111,21 +128,23 @@ export async function DELETE(req) {
 
       if (error) throw error;
 
-      return NextResponse.json({ 
-        success: true, 
-        message: "Todas as notificações foram excluídas com sucesso" 
+      return NextResponse.json({
+        success: true,
+        message: "Todas as notificações foram excluídas com sucesso",
       });
     }
 
     // 2. Verifica se o usuário é ADMIN (Checa perfil e tb tabela admins)
     const [profileRes, adminRes] = await Promise.all([
       db.from("perfil").select("role").eq("id", user.id).maybeSingle(),
-      db.from("admins").select("id").eq("id", user.id).maybeSingle()
+      db.from("admins").select("id").eq("id", user.id).maybeSingle(),
     ]);
 
     const isAdmin = profileRes.data?.role === "ADMIN" || !!adminRes.data;
-    
-    console.log(`[DELETE Notif] User: ${user.email}, isAdmin: ${isAdmin}, ID: ${notificationId}`);
+
+    console.log(
+      `[DELETE Notif] User: ${user.email}, isAdmin: ${isAdmin}, ID: ${notificationId}`,
+    );
 
     // 3. Executa o soft-delete ou delete definitivo
     const { data: targetNotif, error: fetchError } = await db
@@ -135,43 +154,57 @@ export async function DELETE(req) {
       .maybeSingle();
 
     if (fetchError) throw fetchError;
-    if (!targetNotif) return NextResponse.json({ success: true, message: "Já removida" });
+    if (!targetNotif)
+      return NextResponse.json({ success: true, message: "Já removida" });
 
     // Permissão: se não for admin, só pode mexer se for dono
     if (!isAdmin && targetNotif.user_id !== user.id) {
-       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 403 });
+      return NextResponse.json(
+        { success: false, message: "Não autorizado" },
+        { status: 403 },
+      );
     }
 
-    const currentMeta = typeof targetNotif.meta === 'string' ? JSON.parse(targetNotif.meta || '{}') : (targetNotif.meta || {});
+    const currentMeta =
+      typeof targetNotif.meta === "string"
+        ? JSON.parse(targetNotif.meta || "{}")
+        : targetNotif.meta || {};
     const isLawyerAction = targetNotif.user_id === user.id;
-    
+
     // Se for o advogado apagando a dele
     if (isLawyerAction) {
-       currentMeta.deleted_by_user = true;
-       // Se o admin já tinha "apagado" (pelo lado dele no papo), ou se não é uma msg de papo, apaga de vez
-       const isShared = targetNotif.tipo === 'ADMIN_CHAT' || targetNotif.tipo === 'ADMIN_BROADCAST';
-       if (!isShared || currentMeta.deleted_by_admin) {
-          await db.from("notificacoes").delete().eq("id", notificationId);
-       } else {
-          await db.from("notificacoes").update({ meta: JSON.stringify(currentMeta) }).eq("id", notificationId);
-       }
+      currentMeta.deleted_by_user = true;
+      // Se o admin já tinha "apagado" (pelo lado dele no papo), ou se não é uma msg de papo, apaga de vez
+      const isShared =
+        targetNotif.tipo === "ADMIN_CHAT" ||
+        targetNotif.tipo === "ADMIN_BROADCAST";
+      if (!isShared || currentMeta.deleted_by_admin) {
+        await db.from("notificacoes").delete().eq("id", notificationId);
+      } else {
+        await db
+          .from("notificacoes")
+          .update({ meta: JSON.stringify(currentMeta) })
+          .eq("id", notificationId);
+      }
     } else if (isAdmin) {
-       // Se for o admin apagando uma do advogado (comunicado enviado por exemplo)
-       currentMeta.deleted_by_admin = true;
-       if (currentMeta.deleted_by_user) {
-          await db.from("notificacoes").delete().eq("id", notificationId);
-       } else {
-          await db.from("notificacoes").update({ meta: JSON.stringify(currentMeta) }).eq("id", notificationId);
-       }
+      // Se for o admin apagando uma do advogado (comunicado enviado por exemplo)
+      currentMeta.deleted_by_admin = true;
+      if (currentMeta.deleted_by_user) {
+        await db.from("notificacoes").delete().eq("id", notificationId);
+      } else {
+        await db
+          .from("notificacoes")
+          .update({ meta: JSON.stringify(currentMeta) })
+          .eq("id", notificationId);
+      }
     }
 
     console.log(`[DELETE Notif] Success. ID: ${notificationId}`);
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Mensagem excluída com sucesso"
+    return NextResponse.json({
+      success: true,
+      message: "Mensagem excluída com sucesso",
     });
-
   } catch (error) {
     console.error("Erro na API DELETE /api/notificacoes:", error);
     return NextResponse.json(
@@ -185,25 +218,8 @@ export async function DELETE(req) {
 export async function PATCH(req) {
   try {
     const supabase = createClient();
-    
-    let user = null;
 
-    // 1. Tentar Bearer Token (para mobile)
-    const authHeader = req.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user: u }, error } = await supabaseAdmin.auth.getUser(token);
-      if (u && !error) {
-        user = u;
-      }
-    }
-
-    // 2. Fallback para Cookies (web)
-    if (!user) {
-      const supabase = createClient();
-      const { data: { user: u } } = await supabase.auth.getUser();
-      user = u;
-    }
+    const user = await getAuthenticatedUser(req);
 
     if (!user) {
       return NextResponse.json(
@@ -216,8 +232,11 @@ export async function PATCH(req) {
     const db = supabaseAdmin || supabase;
 
     // 2. Executa o update
-    let query = db.from("notificacoes").update({ lida: true }).eq("user_id", user.id);
-    
+    let query = db
+      .from("notificacoes")
+      .update({ lida: true })
+      .eq("user_id", user.id);
+
     // Se passou um ID específico, marca só ela
     if (id) {
       query = query.eq("id", id);
@@ -230,8 +249,10 @@ export async function PATCH(req) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, message: "Notificações marcadas como lidas" });
-
+    return NextResponse.json({
+      success: true,
+      message: "Notificações marcadas como lidas",
+    });
   } catch (error) {
     console.error("Erro na API PATCH /api/notificacoes:", error);
     return NextResponse.json(
@@ -250,7 +271,10 @@ export async function POST(req) {
     const authHeader = req.headers.get("Authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
-      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      const {
+        data: { user },
+        error,
+      } = await supabaseAdmin.auth.getUser(token);
       if (user && !error) {
         finalUser = user;
       }
@@ -259,7 +283,9 @@ export async function POST(req) {
     // 2. Fallback para Cookies (web)
     if (!finalUser) {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       finalUser = user;
     }
 
@@ -285,17 +311,17 @@ export async function POST(req) {
     // Upsert token in user_push_tokens table
     const { error } = await db
       .from("user_push_tokens")
-      .upsert(
-        { user_id: finalUser.id, token: token },
-        { onConflict: "token" }
-      );
+      .upsert({ user_id: finalUser.id, token: token }, { onConflict: "token" });
 
     if (error) {
       console.error("[notificacoes] Error registering push token:", error);
       throw error;
     }
 
-    return NextResponse.json({ success: true, message: "Token registrado com sucesso" });
+    return NextResponse.json({
+      success: true,
+      message: "Token registrado com sucesso",
+    });
   } catch (error) {
     console.error("Erro na API POST /api/notificacoes:", error);
     return NextResponse.json(
@@ -304,4 +330,3 @@ export async function POST(req) {
     );
   }
 }
-

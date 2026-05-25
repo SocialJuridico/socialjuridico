@@ -74,6 +74,7 @@ import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
+import OnboardingModal from "@/components/Onboarding/OnboardingModal";
 import PesquisaSatisfacaoPopup from "@/components/PesquisaSatisfacaoPopup/PesquisaSatisfacaoPopup";
 import {
   PlusCircle,
@@ -344,6 +345,33 @@ export default function AdvogadoDashboard() {
   });
   const [showOabModal, setShowOabModal] = useState(false);
   const [calendarMemberFilter, setCalendarMemberFilter] = useState("TODOS");
+
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+
+  useEffect(() => {
+    if (!profileData || !profileData.role) return;
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const { data: { user } = {} } = await supabase.auth.getUser();
+        const metaOnboard = user?.user_metadata?.onboarding_complete === true;
+        const profileOnboard = profileData?.onboarding_complete === true;
+        const normalizedRole = String(profileData.role || "").toUpperCase();
+        const isLawyerRole =
+          normalizedRole === "LAWYER" || normalizedRole === "ADVOGADO";
+
+        const needsOnboarding = isLawyerRole && !metaOnboard && !profileOnboard;
+
+        if (mounted) setShowOnboardingModal(!!needsOnboarding);
+      } catch (err) {
+        console.error("Erro checando onboarding (advogado):", err);
+      }
+    })();
+
+    return () => (mounted = false);
+  }, [profileData]);
 
   const [generatedContract, setGeneratedContract] = useState("");
   const [isGeneratingContract, setIsGeneratingContract] = useState(false);
@@ -17999,6 +18027,15 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
     <div
       className={`${styles.dashboardContainer} ${isSidebarOpen ? styles.sidebarOpen : ""}`}
     >
+      {showOnboardingModal && (
+        <OnboardingModal
+          role="LAWYER"
+          initialCompleted={false}
+          redirectHref={null}
+          onComplete={() => setShowOnboardingModal(false)}
+        />
+      )}
+
       {/* SIDEBAR */}
       {/* <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarActive : ""}`}>
         ... (Sidebar original comentada para paridade)

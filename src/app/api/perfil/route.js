@@ -183,6 +183,9 @@ export async function GET(request) {
       );
     }
 
+    profile.onboarding_complete =
+      finalUser.user_metadata?.onboarding_complete === true;
+
     // -- Lógica de Contagem de Verificação da OAB --
     if (
       profile.role === "LAWYER" &&

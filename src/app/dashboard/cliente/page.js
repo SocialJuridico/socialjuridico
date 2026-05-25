@@ -42,6 +42,7 @@ import { supabase } from "@/lib/supabase";
 import { formatPhone } from "@/lib/securityUtils";
 import toast from "react-hot-toast";
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
+import OnboardingModal from "@/components/Onboarding/OnboardingModal";
 import PesquisaSatisfacaoClientePopup from "@/components/PesquisaSatisfacaoClientePopup/PesquisaSatisfacaoClientePopup";
 
 const FACEBOOK_GROUP_URL = "https://www.facebook.com/groups/1667675480204134";
@@ -162,6 +163,31 @@ export default function ClienteDashboard() {
   const [selectedOffice, setSelectedOffice] = useState(null);
   const [isOfficeModalOpen, setIsOfficeModalOpen] = useState(false);
 
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+
+  useEffect(() => {
+    if (!profileData || !profileData.role) return;
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const { data: { user } = {} } = await supabase.auth.getUser();
+        const metaOnboard = user?.user_metadata?.onboarding_complete === true;
+        const profileOnboard = profileData?.onboarding_complete === true;
+
+        const needsOnboarding =
+          profileData.role === "CLIENT" && !metaOnboard && !profileOnboard;
+
+        if (mounted) setShowOnboardingModal(!!needsOnboarding);
+      } catch (err) {
+        console.error("Erro checando onboarding (cliente):", err);
+      }
+    })();
+
+    return () => (mounted = false);
+  }, [profileData]);
+
   // Filtra advogados com especialidade preenchida
   const advogadosComEspecialidade = useMemo(() => {
     return advogados.filter((adv) => {
@@ -169,7 +195,8 @@ export default function ClienteDashboard() {
       if (adv.oab_verification_status === "ERROR") return false;
 
       // Ocultar secretárias e estagiários do painel do cliente
-      if (adv.cargo === "secretaria" || adv.cargo === "estagiario") return false;
+      if (adv.cargo === "secretaria" || adv.cargo === "estagiario")
+        return false;
 
       const specs = String(adv.specialties || "").trim();
       return specs && specs !== "Clínico Geral" && specs.length > 0;
@@ -215,7 +242,11 @@ export default function ClienteDashboard() {
   const uniqueOffices = useMemo(() => {
     const offices = {};
     advogados.forEach((adv) => {
-      if (adv.oab_verification_status === "ERROR" || !adv.escritorio_id || !adv.nome_escritorio) {
+      if (
+        adv.oab_verification_status === "ERROR" ||
+        !adv.escritorio_id ||
+        !adv.nome_escritorio
+      ) {
         return;
       }
       // Ocultar secretárias e estagiários
@@ -232,7 +263,7 @@ export default function ClienteDashboard() {
       }
       offices[adv.escritorio_id].advogados.push(adv);
     });
-    return Object.values(offices).filter(o => o.advogados.length > 0);
+    return Object.values(offices).filter((o) => o.advogados.length > 0);
   }, [advogados]);
 
   const showNotificationToast = useCallback(
@@ -334,7 +365,6 @@ export default function ClienteDashboard() {
       toast.error("Erro na conexão.");
     }
   };
-
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true);
@@ -817,7 +847,9 @@ export default function ClienteDashboard() {
       ].includes(file.type);
 
       if (!isAllowed) {
-        toast.error(`Arquivo "${file.name}" não aceito. Apenas PDF, JPG, PNG e WEBP são suportados.`);
+        toast.error(
+          `Arquivo "${file.name}" não aceito. Apenas PDF, JPG, PNG e WEBP são suportados.`,
+        );
         continue;
       }
 
@@ -921,7 +953,13 @@ export default function ClienteDashboard() {
         }
 
         setFormSuccess(true);
-        setFormData({ titulo: "", area: "", descricao: "", cidade: "", estado: "" });
+        setFormData({
+          titulo: "",
+          area: "",
+          descricao: "",
+          cidade: "",
+          estado: "",
+        });
         setSelectedFiles([]);
         setShareCaseOnFacebook(false);
         setTimeout(() => {
@@ -1004,7 +1042,9 @@ export default function ClienteDashboard() {
       style={{ cursor: "pointer", position: "relative" }}
     >
       {adv.oab_verification_status === "VERIFIED" && (
-        <div style={{ position: "absolute", top: "8px", left: "8px", zIndex: 10 }}>
+        <div
+          style={{ position: "absolute", top: "8px", left: "8px", zIndex: 10 }}
+        >
           <VerifiedBadge size={68} />
         </div>
       )}
@@ -1042,11 +1082,24 @@ export default function ClienteDashboard() {
       )}
 
       <div className={styles.lawyerInfo}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', justifyContent: 'center' }}>
-          <h3 className={styles.lawyerName} style={{ margin: 0 }}>{adv.name}</h3>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "6px",
+            justifyContent: "center",
+          }}
+        >
+          <h3 className={styles.lawyerName} style={{ margin: 0 }}>
+            {adv.name}
+          </h3>
         </div>
         {adv.nome_escritorio && (
-          <div className={styles.officeTag} title={`Membro de ${adv.nome_escritorio}`}>
+          <div
+            className={styles.officeTag}
+            title={`Membro de ${adv.nome_escritorio}`}
+          >
             <Briefcase size={12} /> {adv.nome_escritorio}
           </div>
         )}
@@ -1135,6 +1188,14 @@ export default function ClienteDashboard() {
     <div
       className={`${styles.dashboardContainer} ${isSidebarCollapsed ? styles.sidebarCollapsed : ""}`}
     >
+      {showOnboardingModal && (
+        <OnboardingModal
+          role="CLIENT"
+          initialCompleted={false}
+          redirectHref={null}
+        />
+      )}
+
       {/* SIDEBAR */}
       <aside className={styles.sidebar}>
         <div className={styles.sidebarHeader}>
@@ -1412,95 +1473,163 @@ export default function ClienteDashboard() {
                     {interesses.map((interesse) => {
                       const isNegotiating = interesse.status === "NEGOTIATING";
                       return (
-                      <div key={interesse.id} className={styles.interesseCard} style={isNegotiating ? { borderLeft: '3px solid #f59e0b' } : {}}>
-                        <div className={styles.interesseInfo}>
-                          <div className={styles.interesseAvatar} style={isNegotiating ? { background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000' } : {}}>
-                            {(interesse.lawyer_name || "A")
-                              .substring(0, 2)
-                              .toUpperCase()}
+                        <div
+                          key={interesse.id}
+                          className={styles.interesseCard}
+                          style={
+                            isNegotiating
+                              ? { borderLeft: "3px solid #f59e0b" }
+                              : {}
+                          }
+                        >
+                          <div className={styles.interesseInfo}>
+                            <div
+                              className={styles.interesseAvatar}
+                              style={
+                                isNegotiating
+                                  ? {
+                                      background:
+                                        "linear-gradient(135deg, #f59e0b, #d97706)",
+                                      color: "#000",
+                                    }
+                                  : {}
+                              }
+                            >
+                              {(interesse.lawyer_name || "A")
+                                .substring(0, 2)
+                                .toUpperCase()}
+                            </div>
+                            <div>
+                              <p className={styles.interesseAdvName}>
+                                <Sparkles
+                                  size={12}
+                                  className={styles.proIconSmall}
+                                />
+                                {interesse.lawyer_name || "Advogado"}
+                                {isNegotiating && (
+                                  <span
+                                    style={{
+                                      marginLeft: "8px",
+                                      background:
+                                        "linear-gradient(135deg, #f59e0b, #d97706)",
+                                      color: "#000",
+                                      padding: "2px 8px",
+                                      borderRadius: "10px",
+                                      fontSize: "0.65rem",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    EM NEGOCIAÇÃO
+                                  </span>
+                                )}
+                              </p>
+                              <p className={styles.interesseCasoName}>
+                                Caso: {interesse.caso_titulo}
+                              </p>
+                              <p className={styles.interesseCasoArea}>
+                                {interesse.caso_area}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className={styles.interesseAdvName}>
-                              <Sparkles
-                                size={12}
-                                className={styles.proIconSmall}
-                              />
-                              {interesse.lawyer_name || "Advogado"}
-                              {isNegotiating && (
-                                <span style={{ marginLeft: '8px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: '#000', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 700 }}>
-                                  EM NEGOCIAÇÃO
-                                </span>
-                              )}
-                            </p>
-                            <p className={styles.interesseCasoName}>
-                              Caso: {interesse.caso_titulo}
-                            </p>
-                            <p className={styles.interesseCasoArea}>
-                              {interesse.caso_area}
-                            </p>
+                          <div className={styles.interesseActions}>
+                            {isNegotiating ? (
+                              <>
+                                <button
+                                  style={{
+                                    background: "rgba(99,102,241,0.9)",
+                                    color: "#fff",
+                                    border: "none",
+                                    borderRadius: "10px",
+                                    padding: "8px 14px",
+                                    cursor: "pointer",
+                                    fontWeight: 600,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    fontSize: "0.8rem",
+                                  }}
+                                  onClick={() => {
+                                    window.location.href = `/chat/${interesse.case_id}?interest=${interesse.id}`;
+                                  }}
+                                >
+                                  <MessageSquare size={14} /> Conversar
+                                </button>
+                                <button
+                                  className={styles.acceptBtn}
+                                  style={{
+                                    background:
+                                      "linear-gradient(135deg, #d4af37, #b8860b)",
+                                    color: "#000",
+                                    fontWeight: 700,
+                                    border: "none",
+                                  }}
+                                  onClick={() =>
+                                    handleResponderInteresse(
+                                      interesse.id,
+                                      "HIRE",
+                                    )
+                                  }
+                                  disabled={
+                                    processandoInteresse === interesse.id
+                                  }
+                                >
+                                  <Check size={14} />
+                                  {processandoInteresse === interesse.id
+                                    ? "Processando..."
+                                    : "✨ Contratar"}
+                                </button>
+                                <button
+                                  className={styles.declineBtn}
+                                  onClick={() =>
+                                    handleResponderInteresse(
+                                      interesse.id,
+                                      "DECLINE",
+                                    )
+                                  }
+                                  disabled={
+                                    processandoInteresse === interesse.id
+                                  }
+                                >
+                                  <UserX size={14} /> Recusar
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  className={styles.acceptBtn}
+                                  onClick={() =>
+                                    handleResponderInteresse(
+                                      interesse.id,
+                                      "ACCEPT",
+                                    )
+                                  }
+                                  disabled={
+                                    processandoInteresse === interesse.id
+                                  }
+                                >
+                                  <Check size={14} />
+                                  {processandoInteresse === interesse.id
+                                    ? "Processando..."
+                                    : "Negociar"}
+                                </button>
+                                <button
+                                  className={styles.declineBtn}
+                                  onClick={() =>
+                                    handleResponderInteresse(
+                                      interesse.id,
+                                      "DECLINE",
+                                    )
+                                  }
+                                  disabled={
+                                    processandoInteresse === interesse.id
+                                  }
+                                >
+                                  <UserX size={14} /> Recusar
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
-                        <div className={styles.interesseActions}>
-                          {isNegotiating ? (
-                            <>
-                              <button
-                                style={{ background: 'rgba(99,102,241,0.9)', color: '#fff', border: 'none', borderRadius: '10px', padding: '8px 14px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.8rem' }}
-                                onClick={() => {
-                                  window.location.href = `/chat/${interesse.case_id}?interest=${interesse.id}`;
-                                }}
-                              >
-                                <MessageSquare size={14} /> Conversar
-                              </button>
-                              <button
-                                className={styles.acceptBtn}
-                                style={{ background: 'linear-gradient(135deg, #d4af37, #b8860b)', color: '#000', fontWeight: 700, border: 'none' }}
-                                onClick={() =>
-                                  handleResponderInteresse(interesse.id, "HIRE")
-                                }
-                                disabled={processandoInteresse === interesse.id}
-                              >
-                                <Check size={14} />
-                                {processandoInteresse === interesse.id
-                                  ? "Processando..."
-                                  : "✨ Contratar"}
-                              </button>
-                              <button
-                                className={styles.declineBtn}
-                                onClick={() =>
-                                  handleResponderInteresse(interesse.id, "DECLINE")
-                                }
-                                disabled={processandoInteresse === interesse.id}
-                              >
-                                <UserX size={14} /> Recusar
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                className={styles.acceptBtn}
-                                onClick={() =>
-                                  handleResponderInteresse(interesse.id, "ACCEPT")
-                                }
-                                disabled={processandoInteresse === interesse.id}
-                              >
-                                <Check size={14} />
-                                {processandoInteresse === interesse.id
-                                  ? "Processando..."
-                                  : "Negociar"}
-                              </button>
-                              <button
-                                className={styles.declineBtn}
-                                onClick={() =>
-                                  handleResponderInteresse(interesse.id, "DECLINE")
-                                }
-                                disabled={processandoInteresse === interesse.id}
-                              >
-                                <UserX size={14} /> Recusar
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
                       );
                     })}
                   </div>
@@ -1595,7 +1724,14 @@ export default function ClienteDashboard() {
                     />
                   </div>
 
-                  <div className={styles.formRow} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div
+                    className={styles.formRow}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: "20px",
+                    }}
+                  >
                     <div className={styles.formGroup}>
                       <label>Cidade</label>
                       <input
@@ -1764,7 +1900,13 @@ export default function ClienteDashboard() {
                         <span className={styles.notifTitle}>
                           {notif.titulo}
                         </span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "12px",
+                          }}
+                        >
                           <span className={styles.notifDate}>
                             {new Date(notif.created_at).toLocaleDateString()}
                           </span>
@@ -1786,8 +1928,13 @@ export default function ClienteDashboard() {
                               justifyContent: "center",
                               transition: "all 0.2s",
                             }}
-                            onMouseOver={(e) => (e.currentTarget.style.color = "#ef4444")}
-                            onMouseOut={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.2)")}
+                            onMouseOver={(e) =>
+                              (e.currentTarget.style.color = "#ef4444")
+                            }
+                            onMouseOut={(e) =>
+                              (e.currentTarget.style.color =
+                                "rgba(255,255,255,0.2)")
+                            }
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1818,7 +1965,9 @@ export default function ClienteDashboard() {
                 <>
                   <div className={styles.profileHeader}>
                     <div className={styles.profileAvatarLarge}>
-                      {(profileData.name || "Cliente").substring(0, 2).toUpperCase()}
+                      {(profileData.name || "Cliente")
+                        .substring(0, 2)
+                        .toUpperCase()}
                     </div>
                     <div className={styles.profileHeaderText}>
                       <h2>{profileData.name}</h2>
@@ -2187,7 +2336,14 @@ export default function ClienteDashboard() {
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "15px",
+                  marginBottom: "15px",
+                }}
+              >
                 <div className={styles.formGroup}>
                   <label>Cidade</label>
                   <input
@@ -2195,7 +2351,10 @@ export default function ClienteDashboard() {
                     className={styles.modalInput}
                     value={editFormData.cidade}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, cidade: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        cidade: e.target.value,
+                      })
                     }
                     required
                   />
@@ -2207,7 +2366,10 @@ export default function ClienteDashboard() {
                     className={styles.modalInput}
                     value={editFormData.estado}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, estado: e.target.value })
+                      setEditFormData({
+                        ...editFormData,
+                        estado: e.target.value,
+                      })
                     }
                     required
                   />
@@ -2338,7 +2500,11 @@ export default function ClienteDashboard() {
                   <img
                     src={selectedOffice.logo_url}
                     alt={selectedOffice.nome}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
                   />
                 ) : (
                   <div className={styles.officeModalLogoFallback}>
@@ -2349,13 +2515,23 @@ export default function ClienteDashboard() {
               <div className={styles.officeModalTitleArea}>
                 <h2>{selectedOffice.nome}</h2>
                 <p>
-                  Conheça os advogados e especialistas que fazem parte de nossa equipe
+                  Conheça os advogados e especialistas que fazem parte de nossa
+                  equipe
                 </p>
               </div>
             </div>
-            
-            <div className={styles.lpModalBody} style={{ maxHeight: "55vh", overflowY: "auto", padding: "10px" }}>
-              <div className={styles.lawyersGrid} style={{ gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "20px" }}>
+
+            <div
+              className={styles.lpModalBody}
+              style={{ maxHeight: "55vh", overflowY: "auto", padding: "10px" }}
+            >
+              <div
+                className={styles.lawyersGrid}
+                style={{
+                  gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+                  gap: "20px",
+                }}
+              >
                 {selectedOffice.advogados.map((adv) => renderLawyerCard(adv))}
               </div>
             </div>
@@ -2397,13 +2573,26 @@ export default function ClienteDashboard() {
                 </div>
               )}
               <div className={styles.lpModalMainInfo}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "4px",
+                  }}
+                >
                   <h2 style={{ margin: 0 }}>{selectedLawyer.name}</h2>
-                  {selectedLawyer.oab_verification_status === "VERIFIED" && <VerifiedBadge size={50} />}
+                  {selectedLawyer.oab_verification_status === "VERIFIED" && (
+                    <VerifiedBadge size={50} />
+                  )}
                 </div>
                 {selectedLawyer.nome_escritorio && (
-                  <div className={styles.officeTagModal} title={`Membro de ${selectedLawyer.nome_escritorio}`}>
-                    <Briefcase size={12} style={{ marginRight: "4px" }} /> {selectedLawyer.nome_escritorio}
+                  <div
+                    className={styles.officeTagModal}
+                    title={`Membro de ${selectedLawyer.nome_escritorio}`}
+                  >
+                    <Briefcase size={12} style={{ marginRight: "4px" }} />{" "}
+                    {selectedLawyer.nome_escritorio}
                   </div>
                 )}
                 <p className={styles.lpModalOab}>
@@ -2536,11 +2725,15 @@ export default function ClienteDashboard() {
       {showAvaliacaoModal && avaliacaoPendente && (
         <div
           style={{
-            position: "fixed", inset: 0,
+            position: "fixed",
+            inset: 0,
             background: "rgba(0,0,0,0.85)",
             backdropFilter: "blur(12px)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            zIndex: 99999, padding: "20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            padding: "20px",
           }}
         >
           <div
@@ -2551,35 +2744,75 @@ export default function ClienteDashboard() {
               padding: "40px",
               maxWidth: "480px",
               width: "100%",
-              boxShadow: "0 0 60px rgba(212,175,55,0.15), 0 25px 50px rgba(0,0,0,0.5)",
+              boxShadow:
+                "0 0 60px rgba(212,175,55,0.15), 0 25px 50px rgba(0,0,0,0.5)",
               animation: "fadeIn 0.3s ease",
             }}
           >
             {/* Header */}
             <div style={{ textAlign: "center", marginBottom: "28px" }}>
-              <div style={{
-                width: "56px", height: "56px",
-                background: "rgba(212,175,55,0.15)",
-                borderRadius: "50%",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                margin: "0 auto 16px",
-                border: "1px solid rgba(212,175,55,0.3)",
-              }}>
-                <Star size={28} fill="var(--color-gold)" color="var(--color-gold)" />
+              <div
+                style={{
+                  width: "56px",
+                  height: "56px",
+                  background: "rgba(212,175,55,0.15)",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 16px",
+                  border: "1px solid rgba(212,175,55,0.3)",
+                }}
+              >
+                <Star
+                  size={28}
+                  fill="var(--color-gold)"
+                  color="var(--color-gold)"
+                />
               </div>
-              <h2 style={{ color: "#fff", fontSize: "1.4rem", fontWeight: 800, margin: "0 0 8px" }}>
+              <h2
+                style={{
+                  color: "#fff",
+                  fontSize: "1.4rem",
+                  fontWeight: 800,
+                  margin: "0 0 8px",
+                }}
+              >
                 Avalie o Atendimento
               </h2>
-              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.9rem", margin: 0 }}>
-                Como foi sua experiência com <strong style={{ color: "var(--color-gold)" }}>{avaliacaoPendente.advogado_nome}</strong>?
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.6)",
+                  fontSize: "0.9rem",
+                  margin: 0,
+                }}
+              >
+                Como foi sua experiência com{" "}
+                <strong style={{ color: "var(--color-gold)" }}>
+                  {avaliacaoPendente.advogado_nome}
+                </strong>
+                ?
               </p>
-              <p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.78rem", marginTop: "4px" }}>
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.4)",
+                  fontSize: "0.78rem",
+                  marginTop: "4px",
+                }}
+              >
                 Caso: {avaliacaoPendente.caso_titulo}
               </p>
             </div>
 
             {/* Estrelas */}
-            <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "28px" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: "10px",
+                marginBottom: "28px",
+              }}
+            >
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
@@ -2588,15 +2821,29 @@ export default function ClienteDashboard() {
                   onMouseEnter={() => setAvaliacaoHover(star)}
                   onMouseLeave={() => setAvaliacaoHover(0)}
                   style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    padding: "4px", transition: "transform 0.15s",
-                    transform: (avaliacaoHover || avaliacaoNota) >= star ? "scale(1.2)" : "scale(1)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "4px",
+                    transition: "transform 0.15s",
+                    transform:
+                      (avaliacaoHover || avaliacaoNota) >= star
+                        ? "scale(1.2)"
+                        : "scale(1)",
                   }}
                 >
                   <Star
                     size={40}
-                    fill={(avaliacaoHover || avaliacaoNota) >= star ? "#d4af37" : "transparent"}
-                    color={(avaliacaoHover || avaliacaoNota) >= star ? "#d4af37" : "rgba(255,255,255,0.25)"}
+                    fill={
+                      (avaliacaoHover || avaliacaoNota) >= star
+                        ? "#d4af37"
+                        : "transparent"
+                    }
+                    color={
+                      (avaliacaoHover || avaliacaoNota) >= star
+                        ? "#d4af37"
+                        : "rgba(255,255,255,0.25)"
+                    }
                   />
                 </button>
               ))}
@@ -2604,19 +2851,44 @@ export default function ClienteDashboard() {
 
             {/* Label da nota */}
             {avaliacaoNota > 0 && (
-              <p style={{ textAlign: "center", color: "var(--color-gold)", fontWeight: 700, marginBottom: "20px", fontSize: "0.9rem" }}>
-                {avaliacaoNota === 1 ? "😞 Muito ruim" :
-                 avaliacaoNota === 2 ? "😐 Ruim" :
-                 avaliacaoNota === 3 ? "😊 Regular" :
-                 avaliacaoNota === 4 ? "😃 Bom" :
-                 "🌟 Excelente!"}
+              <p
+                style={{
+                  textAlign: "center",
+                  color: "var(--color-gold)",
+                  fontWeight: 700,
+                  marginBottom: "20px",
+                  fontSize: "0.9rem",
+                }}
+              >
+                {avaliacaoNota === 1
+                  ? "😞 Muito ruim"
+                  : avaliacaoNota === 2
+                    ? "😐 Ruim"
+                    : avaliacaoNota === 3
+                      ? "😊 Regular"
+                      : avaliacaoNota === 4
+                        ? "😃 Bom"
+                        : "🌟 Excelente!"}
               </p>
             )}
 
             {/* Justificativa (opcional) */}
             <div style={{ marginBottom: "24px" }}>
-              <label style={{ display: "block", color: "rgba(255,255,255,0.7)", fontSize: "0.85rem", fontWeight: 600, marginBottom: "8px" }}>
-                Justificativa <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400 }}>(opcional)</span>
+              <label
+                style={{
+                  display: "block",
+                  color: "rgba(255,255,255,0.7)",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  marginBottom: "8px",
+                }}
+              >
+                Justificativa{" "}
+                <span
+                  style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400 }}
+                >
+                  (opcional)
+                </span>
               </label>
               <textarea
                 value={avaliacaoJustificativa}
@@ -2624,7 +2896,8 @@ export default function ClienteDashboard() {
                 placeholder="Conte um pouco sobre sua experiência..."
                 rows={3}
                 style={{
-                  width: "100%", boxSizing: "border-box",
+                  width: "100%",
+                  boxSizing: "border-box",
                   background: "rgba(255,255,255,0.05)",
                   border: "1px solid rgba(212,175,55,0.2)",
                   borderRadius: "12px",
@@ -2645,7 +2918,10 @@ export default function ClienteDashboard() {
                 disabled={avaliacaoLoading || avaliacaoNota === 0}
                 style={{
                   flex: 1,
-                  background: avaliacaoNota === 0 ? "rgba(212,175,55,0.3)" : "var(--color-gold)",
+                  background:
+                    avaliacaoNota === 0
+                      ? "rgba(212,175,55,0.3)"
+                      : "var(--color-gold)",
                   color: "#000",
                   border: "none",
                   borderRadius: "12px",
@@ -2659,7 +2935,10 @@ export default function ClienteDashboard() {
                 {avaliacaoLoading ? "Enviando..." : "Enviar Avaliação"}
               </button>
               <button
-                onClick={() => { setShowAvaliacaoModal(false); setAvaliacaoPendente(null); }}
+                onClick={() => {
+                  setShowAvaliacaoModal(false);
+                  setAvaliacaoPendente(null);
+                }}
                 style={{
                   flex: 0.4,
                   background: "rgba(255,255,255,0.05)",
@@ -2681,34 +2960,86 @@ export default function ClienteDashboard() {
       {/* MODAL CONFIRMAÇÃO EXCLUSÃO NOTIFICAÇÃO */}
       {showNotifDeleteConfirm && (
         <div className={styles.modalOverlay} style={{ zIndex: 100000 }}>
-          <div className={`${styles.editModal} ${styles.confirmSpecial}`} style={{ maxWidth: '400px', textAlign: 'center' }}>
-             <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                <Trash2 size={32} />
-             </div>
-             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>Excluir Notificação?</h3>
-             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', marginBottom: '30px', lineHeight: '1.5' }}>
-                Esta mensagem será removida permanentemente da sua área de notificações.
-             </p>
-             <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  onClick={() => { setShowNotifDeleteConfirm(false); setNotifToDelete(null); }}
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={executeDeleteNotification}
-                  style={{ flex: 1, padding: '12px', borderRadius: '10px', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800 }}
-                >
-                  Excluir
-                </button>
-             </div>
+          <div
+            className={`${styles.editModal} ${styles.confirmSpecial}`}
+            style={{ maxWidth: "400px", textAlign: "center" }}
+          >
+            <div
+              style={{
+                background: "rgba(239, 68, 68, 0.1)",
+                color: "#ef4444",
+                width: "64px",
+                height: "64px",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 20px",
+              }}
+            >
+              <Trash2 size={32} />
+            </div>
+            <h3
+              style={{
+                fontSize: "1.2rem",
+                fontWeight: 800,
+                color: "#fff",
+                marginBottom: "12px",
+              }}
+            >
+              Excluir Notificação?
+            </h3>
+            <p
+              style={{
+                color: "rgba(255,255,255,0.6)",
+                fontSize: "0.9rem",
+                marginBottom: "30px",
+                lineHeight: "1.5",
+              }}
+            >
+              Esta mensagem será removida permanentemente da sua área de
+              notificações.
+            </p>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <button
+                onClick={() => {
+                  setShowNotifDeleteConfirm(false);
+                  setNotifToDelete(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: "10px",
+                  background: "rgba(255,255,255,0.05)",
+                  color: "#fff",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={executeDeleteNotification}
+                style={{
+                  flex: 1,
+                  padding: "12px",
+                  borderRadius: "10px",
+                  background: "#ef4444",
+                  color: "#fff",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 800,
+                }}
+              >
+                Excluir
+              </button>
+            </div>
           </div>
         </div>
       )}
       <AdvogadoMesPopup />
       <PesquisaSatisfacaoClientePopup />
     </div>
-
   );
 }

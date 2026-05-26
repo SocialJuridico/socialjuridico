@@ -76,6 +76,7 @@ import autoTable from "jspdf-autotable";
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
 import LawyerTutorial from "@/components/Onboarding/LawyerTutorial";
 import PesquisaSatisfacaoPopup from "@/components/PesquisaSatisfacaoPopup/PesquisaSatisfacaoPopup";
+import { HelpCircle } from "lucide-react";
 import {
   PlusCircle,
   Bell,
@@ -18089,6 +18090,50 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
     <div
       className={`${styles.dashboardContainer} ${isSidebarOpen ? styles.sidebarOpen : ""}`}
     >
+      {/* Botão Flutuante de Ajuda / Tour Didático */}
+      <button
+        type="button"
+        title="Ajuda & Tour Didático"
+        onClick={() => {
+          localStorage.removeItem("sj_lawyer_tutorial_completed");
+          setShowOnboardingModal(true);
+          setActiveTab("oportunidades");
+          toast.success("Guia didático reiniciado! Começando pelas Oportunidades.");
+        }}
+        style={{
+          position: "fixed",
+          top: "50%",
+          right: "24px",
+          transform: "translateY(-50%)",
+          zIndex: 9999,
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+          border: "1px solid rgba(245, 200, 83, 0.4)",
+          borderRadius: "50px",
+          padding: "12px 20px",
+          color: "#f5c853",
+          fontWeight: "600",
+          fontSize: "0.85rem",
+          cursor: "pointer",
+          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)",
+          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          backdropFilter: "blur(8px)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-50%) scale(1.05)";
+          e.currentTarget.style.boxShadow = "0 15px 30px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 200, 83, 0.3)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateY(-50%)";
+          e.currentTarget.style.boxShadow = "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)";
+        }}
+      >
+        <HelpCircle size={18} />
+        <span>Tour Didático</span>
+      </button>
+
       {/* SIDEBAR */}
       {/* <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarActive : ""}`}>
         ... (Sidebar original comentada para paridade)

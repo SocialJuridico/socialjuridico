@@ -17948,14 +17948,30 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                       )}
                       <div className={styles.planName}>{plan.name}</div>
 
-                      <div className={styles.planPrice}>
-                        <span className={styles.currency}>R$</span>
-                        <span className={styles.amount}>{priceInteiro}</span>
-                        <div className={styles.priceSub}>
-                          <span className={styles.cents}>,{priceCentavos}</span>
-                          <span className={styles.period}>/mês</span>
+                      {isPromoApplied ? (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", margin: "10px 0" }}>
+                          <span style={{ textDecoration: "line-through", color: "#94a3b8", fontSize: "0.95rem", fontWeight: "500", opacity: 0.75 }}>
+                            De: R$ {rawPriceInfo.value.toFixed(2).replace(".", ",")}
+                          </span>
+                          <div style={{ display: "flex", alignItems: "baseline", color: "#10b981" }}>
+                            <span style={{ fontSize: "0.9rem", fontWeight: "bold", marginRight: "2px", color: "#10b981" }}>Por: R$</span>
+                            <span style={{ fontSize: "2.8rem", fontWeight: "800", lineHeight: 1, color: "#10b981", letterSpacing: "-1px" }}>10</span>
+                            <div style={{ display: "flex", flexDirection: "column", marginLeft: "1px" }}>
+                              <span style={{ fontSize: "1.05rem", fontWeight: "bold", color: "#10b981" }}>,99</span>
+                              <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>/mês</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className={styles.planPrice}>
+                          <span className={styles.currency}>R$</span>
+                          <span className={styles.amount}>{priceInteiro}</span>
+                          <div className={styles.priceSub}>
+                            <span className={styles.cents}>,{priceCentavos}</span>
+                            <span className={styles.period}>/mês</span>
+                          </div>
+                        </div>
+                      )}
 
                       {isPromoApplied && (
                         <div

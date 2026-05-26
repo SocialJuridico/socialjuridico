@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { ensureDb } from '@/lib/dbSignatureHelper';
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 const generateVerificationCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Evita O/0, I/1 para evitar ambiguidade na leitura visual
@@ -17,37 +18,43 @@ const generateVerificationCode = () => {
 };
 
 async function getSessionUser(req) {
-  const supabase = createClient();
-  const db = supabaseAdmin || supabase;
-  
-  // 1. Tentar Bearer Token (para mobile)
   if (req) {
     const authHeader = req.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-      if (user && !error) {
-        const { data: adv, error: advError } = await db
-          .from("advogados")
-          .select("id, name, cargo, escritorio_id")
-          .eq("id", user.id)
-          .single();
-        
-        if (adv && !advError) {
-          return {
-            id: adv.id,
-            name: adv.name,
-            cargo: adv.cargo || "advogado",
-            escritorio_id: adv.escritorio_id || null,
-            isOfficeAdmin: false
-          };
-        }
+    const fallbackToken =
+      req.headers.get("x-access-token") ||
+      (req.url ? new URL(req.url).searchParams.get("token") : null);
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : fallbackToken;
+
+    // Se houver indício de token, valida estritamente por token
+    if (token && token !== "null" && token !== "undefined") {
+      const authUser = await getAuthenticatedUser(req);
+      if (!authUser) {
+        console.error("[getSessionUser] Bearer token validation failed, blocking request");
+        return null;
       }
+      const { data: adv, error: advError } = await supabaseAdmin
+        .from("advogados")
+        .select("id, name, cargo, escritorio_id")
+        .eq("id", authUser.id)
+        .single();
+      
+      if (adv && !advError) {
+        return {
+          id: adv.id,
+          name: adv.name,
+          cargo: adv.cargo || "advogado",
+          escritorio_id: adv.escritorio_id || null,
+          isOfficeAdmin: false
+        };
+      }
+      return null;
     }
   }
 
-  // 2. Verificação via Cookie do Escritório (Administrador / Gestor)
+  // Fallback apenas para cookies (sem token)
   const cookieStore = await cookies();
+  
+  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
   const sessionCookie = cookieStore.get("sj_escritorio_session");
   if (sessionCookie?.value) {
     try {
@@ -64,28 +71,24 @@ async function getSessionUser(req) {
     }
   }
 
-  // 3. Verificação via Supabase Auth (Advogado / Membro Normal)
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (user && !error) {
-      const { data: adv, error: advError } = await db
-        .from("advogados")
-        .select("id, name, cargo, escritorio_id")
-        .eq("id", user.id)
-        .single();
-      
-      if (adv && !advError) {
-        return {
-          id: adv.id,
-          name: adv.name,
-          cargo: adv.cargo || "advogado",
-          escritorio_id: adv.escritorio_id || null,
-          isOfficeAdmin: false
-        };
-      }
+  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
+  const authUser = await getAuthenticatedUser(req);
+  if (authUser) {
+    const { data: adv, error: advError } = await supabaseAdmin
+      .from("advogados")
+      .select("id, name, cargo, escritorio_id")
+      .eq("id", authUser.id)
+      .single();
+    
+    if (adv && !advError) {
+      return {
+        id: adv.id,
+        name: adv.name,
+        cargo: adv.cargo || "advogado",
+        escritorio_id: adv.escritorio_id || null,
+        isOfficeAdmin: false
+      };
     }
-  } catch (e) {
-    console.error("Erro ao obter usuario autenticado:", e);
   }
 
   return null;

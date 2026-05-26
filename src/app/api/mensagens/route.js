@@ -4,30 +4,12 @@ import { NextResponse } from "next/server";
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
 import { novaMensagemTemplate, novaMensagemClienteTemplate } from "@/lib/emailTemplates";
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 // GET /api/mensagens?caso_id=xxx&interest_id=yyy
 export async function GET(request) {
   try {
-    let user = null;
-
-    // 1. Tentar Bearer Token (para mobile)
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user: tokenUser }, error } = await supabaseAdmin.auth.getUser(token);
-      if (tokenUser && !error) {
-        user = tokenUser;
-      }
-    }
-
-    // 2. Fallback para cookies (web)
-    if (!user) {
-      const supabase = createClient();
-      const { data: { user: cookieUser }, error: authError } = await supabase.auth.getUser();
-      if (!authError && cookieUser) {
-        user = cookieUser;
-      }
-    }
+    const user = await getAuthenticatedUser(request);
 
     if (!user) {
       return NextResponse.json(
@@ -79,26 +61,7 @@ export async function GET(request) {
 // POST /api/mensagens
 export async function POST(request) {
   try {
-    let user = null;
-
-    // 1. Tentar Bearer Token (para mobile)
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user: tokenUser }, error } = await supabaseAdmin.auth.getUser(token);
-      if (tokenUser && !error) {
-        user = tokenUser;
-      }
-    }
-
-    // 2. Fallback para cookies (web)
-    if (!user) {
-      const supabase = createClient();
-      const { data: { user: cookieUser }, error: authError } = await supabase.auth.getUser();
-      if (!authError && cookieUser) {
-        user = cookieUser;
-      }
-    }
+    const user = await getAuthenticatedUser(request);
 
     if (!user) {
       return NextResponse.json(

@@ -9,70 +9,7 @@ import {
   casoCanceladoTemplate,
   oportunidadeLocalTemplate,
 } from "@/lib/emailTemplates";
-
-function decodeJwtPayload(token) {
-  try {
-    const payloadPart = token.split(".")[1];
-    if (!payloadPart) return null;
-    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-    const base64 = normalized.padEnd(
-      normalized.length + ((4 - (normalized.length % 4)) % 4),
-      "=",
-    );
-    return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
-
-async function getAuthenticatedUser(request) {
-  const authHeader = request?.headers?.get("Authorization");
-  const headerToken = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
-  const fallbackToken =
-    request?.headers?.get("x-access-token") ||
-    new URL(request.url).searchParams.get("token");
-  const token = headerToken || fallbackToken;
-
-  if (token) {
-    const {
-      data: { user },
-      error,
-    } = await supabaseAdmin.auth.getUser(token);
-    if (user && !error) {
-      return user;
-    }
-
-    const payload = decodeJwtPayload(token);
-    if (payload?.sub) {
-      const {
-        data: { user: adminUser },
-        error: adminError,
-      } = await supabaseAdmin.auth.admin.getUserById(payload.sub);
-
-      const nowInSeconds = Math.floor(Date.now() / 1000);
-      if (
-        adminUser &&
-        !adminError &&
-        (!payload.exp || payload.exp > nowInSeconds)
-      ) {
-        return adminUser;
-      }
-    }
-  }
-
-  const supabase = createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (!authError && user) {
-    return user;
-  }
-
-  return null;
-}
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 export async function POST(request) {
   try {

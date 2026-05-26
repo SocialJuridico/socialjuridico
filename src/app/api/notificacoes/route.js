@@ -1,61 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-
-function decodeJwtPayload(token) {
-  try {
-    const payloadPart = token.split(".")[1];
-    if (!payloadPart) return null;
-    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-    const base64 = normalized.padEnd(
-      normalized.length + ((4 - (normalized.length % 4)) % 4),
-      "=",
-    );
-    return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
-  } catch {
-    return null;
-  }
-}
-
-async function getAuthenticatedUser(req) {
-  const authHeader = req?.headers?.get("Authorization");
-  const headerToken = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7)
-    : null;
-
-  if (headerToken) {
-    const {
-      data: { user },
-      error,
-    } = await supabaseAdmin.auth.getUser(headerToken);
-    if (user && !error) return user;
-
-    const payload = decodeJwtPayload(headerToken);
-    if (payload?.sub) {
-      const {
-        data: { user: adminUser },
-        error: adminError,
-      } = await supabaseAdmin.auth.admin.getUserById(payload.sub);
-      const nowInSeconds = Math.floor(Date.now() / 1000);
-      if (
-        adminUser &&
-        !adminError &&
-        (!payload.exp || payload.exp > nowInSeconds)
-      ) {
-        return adminUser;
-      }
-    }
-  }
-
-  const supabase = createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (!authError && user) return user;
-
-  return null;
-}
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 // GET /api/notificacoes -> lista notificacoes do usuario autenticado
 export async function GET(req) {
@@ -265,29 +211,7 @@ export async function PATCH(req) {
 // POST /api/notificacoes -> registra token de push notification do usuário autenticado
 export async function POST(req) {
   try {
-    let finalUser = null;
-
-    // 1. Tentar Bearer Token (para mobile)
-    const authHeader = req.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const {
-        data: { user },
-        error,
-      } = await supabaseAdmin.auth.getUser(token);
-      if (user && !error) {
-        finalUser = user;
-      }
-    }
-
-    // 2. Fallback para Cookies (web)
-    if (!finalUser) {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      finalUser = user;
-    }
+    const finalUser = await getAuthenticatedUser(req);
 
     if (!finalUser) {
       return NextResponse.json(

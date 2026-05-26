@@ -2,29 +2,11 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import crypto from "crypto";
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 export async function POST(request) {
   try {
-    let user = null;
-
-    // 1. Tentar Bearer Token (para mobile)
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user: u }, error } = await supabaseAdmin.auth.getUser(token);
-      if (u && !error) {
-        user = u;
-      }
-    }
-
-    // 2. Fallback para Cookie (web)
-    if (!user) {
-      const supabase = createClient();
-      const { data: { user: u }, error: authError } = await supabase.auth.getUser();
-      if (u && !authError) {
-        user = u;
-      }
-    }
+    const user = await getAuthenticatedUser(request);
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });

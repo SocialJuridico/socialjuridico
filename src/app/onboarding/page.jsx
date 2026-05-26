@@ -1,5 +1,6 @@
 import OnboardingModal from "@/components/Onboarding/OnboardingModal";
 import { createClient } from "@/lib/supabaseServer";
+import { redirect } from "next/navigation";
 
 export default async function OnboardingPage() {
   const supabase = createClient();
@@ -18,17 +19,19 @@ export default async function OnboardingPage() {
     );
   }
 
-  // Ler role do user_metadata — ajustável para chamar getRoleFromDatabase se necessário
+  // Ler role do user_metadata
   const role = user.user_metadata?.role || "CLIENT";
+
+  if (role === "CLIENT") {
+    redirect("/dashboard/cliente");
+  }
 
   return (
     <>
       <OnboardingModal
-        role={role === "LAWYER" ? "LAWYER" : "CLIENT"}
+        role="LAWYER"
         initialCompleted={false}
-        redirectHref={
-          role === "LAWYER" ? "/dashboard/advogado" : "/dashboard/cliente"
-        }
+        redirectHref="/dashboard/advogado"
       />
       <div style={{ padding: 24 }}>
         <h1>Onboarding</h1>

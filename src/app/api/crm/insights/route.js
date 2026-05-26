@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -9,20 +10,7 @@ const openai = new OpenAI({
 
 export async function GET(request) {
   try {
-    let user = null;
-
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user: u }, error } = await supabaseAdmin.auth.getUser(token);
-      if (!error && u) user = u;
-    }
-
-    if (!user) {
-      const supabase = createClient();
-      const { data: { user: u }, error: authError } = await supabase.auth.getUser();
-      if (!authError && u) user = u;
-    }
+    const user = await getAuthenticatedUser(request);
 
     if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });

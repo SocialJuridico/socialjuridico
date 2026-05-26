@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -12,32 +13,39 @@ const openai = new OpenAI({
 async function getSessionUser(request) {
   if (request) {
     const authHeader = request.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-      if (user && !error) {
-        const { data: adv, error: advError } = await supabaseAdmin
-          .from("advogados")
-          .select("id, name, cargo, escritorio_id")
-          .eq("id", user.id)
-          .single();
-        
-        if (adv && !advError) {
-          return {
-            id: adv.id,
-            name: adv.name,
-            cargo: adv.cargo || "advogado",
-            escritorio_id: adv.escritorio_id || null,
-            isOfficeAdmin: false
-          };
-        }
+    const fallbackToken =
+      request.headers.get("x-access-token") ||
+      (request.url ? new URL(request.url).searchParams.get("token") : null);
+    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : fallbackToken;
+
+    // Se houver indício de token, valida estritamente por token
+    if (token && token !== "null" && token !== "undefined") {
+      const authUser = await getAuthenticatedUser(request);
+      if (!authUser) {
+        console.error("[getSessionUser] Bearer token validation failed, blocking request");
+        return null;
       }
+      const { data: adv, error: advError } = await supabaseAdmin
+        .from("advogados")
+        .select("id, name, cargo, escritorio_id")
+        .eq("id", authUser.id)
+        .single();
+      
+      if (adv && !advError) {
+        return {
+          id: adv.id,
+          name: adv.name,
+          cargo: adv.cargo || "advogado",
+          escritorio_id: adv.escritorio_id || null,
+          isOfficeAdmin: false
+        };
+      }
+      return null;
     }
   }
 
+  // Fallback apenas para cookies (sem token)
   const cookieStore = await cookies();
-  const supabase = createClient();
-  const db = supabaseAdmin || supabase;
   
   // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
   const sessionCookie = cookieStore.get("sj_escritorio_session");
@@ -57,27 +65,23 @@ async function getSessionUser(request) {
   }
 
   // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
-  try {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (user && !error) {
-      const { data: adv, error: advError } = await db
-        .from("advogados")
-        .select("id, name, cargo, escritorio_id")
-        .eq("id", user.id)
-        .single();
-      
-      if (adv && !advError) {
-        return {
-          id: adv.id,
-          name: adv.name,
-          cargo: adv.cargo || "advogado",
-          escritorio_id: adv.escritorio_id || null,
-          isOfficeAdmin: false
-        };
-      }
+  const authUser = await getAuthenticatedUser(request);
+  if (authUser) {
+    const { data: adv, error: advError } = await supabaseAdmin
+      .from("advogados")
+      .select("id, name, cargo, escritorio_id")
+      .eq("id", authUser.id)
+      .single();
+    
+    if (adv && !advError) {
+      return {
+        id: adv.id,
+        name: adv.name,
+        cargo: adv.cargo || "advogado",
+        escritorio_id: adv.escritorio_id || null,
+        isOfficeAdmin: false
+      };
     }
-  } catch (e) {
-    console.error("Erro ao obter usuario autenticado:", e);
   }
 
   return null;

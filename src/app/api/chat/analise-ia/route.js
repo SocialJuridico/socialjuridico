@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -9,25 +10,9 @@ const openai = new OpenAI({
 
 export async function POST(request) {
   try {
-    let user = null;
-    let authError = null;
+    const user = await getAuthenticatedUser(request);
 
-    // Verificar se há token de autenticação via header (Mobile App)
-    const authHeader = request.headers.get('authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data, error } = await supabaseAdmin.auth.getUser(token);
-      user = data?.user;
-      authError = error;
-    } else {
-      // Fallback para os cookies do Next.js (Web App)
-      const supabase = createClient();
-      const result = await supabase.auth.getUser();
-      user = result.data?.user;
-      authError = result.error;
-    }
-
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 

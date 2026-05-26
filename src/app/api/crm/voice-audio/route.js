@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -15,21 +16,15 @@ const openai = new OpenAI({
 export async function POST(request) {
   try {
     // ── Auth: Aceita tanto cookies (web) quanto Bearer token (mobile) ──
-    let userId = null;
+    const user = await getAuthenticatedUser(request);
 
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-      if (!error && user) userId = user.id;
-    }
-
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
         { status: 401 }
       );
     }
+    const userId = user.id;
 
     // ── Parse FormData ──
     const formData = await request.formData();

@@ -31,6 +31,7 @@ import {
   Search,
   Globe,
   Briefcase,
+  RotateCcw,
 } from "lucide-react";
 import styles from "./Dashboard.module.css";
 import {
@@ -42,7 +43,7 @@ import { supabase } from "@/lib/supabase";
 import { formatPhone } from "@/lib/securityUtils";
 import toast from "react-hot-toast";
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
-import OnboardingModal from "@/components/Onboarding/OnboardingModal";
+import ClientTutorial from "@/components/Onboarding/ClientTutorial";
 import PesquisaSatisfacaoClientePopup from "@/components/PesquisaSatisfacaoClientePopup/PesquisaSatisfacaoClientePopup";
 
 const FACEBOOK_GROUP_URL = "https://www.facebook.com/groups/1667675480204134";
@@ -1188,13 +1189,6 @@ export default function ClienteDashboard() {
     <div
       className={`${styles.dashboardContainer} ${isSidebarCollapsed ? styles.sidebarCollapsed : ""}`}
     >
-      {showOnboardingModal && (
-        <OnboardingModal
-          role="CLIENT"
-          initialCompleted={false}
-          redirectHref={null}
-        />
-      )}
 
       {/* SIDEBAR */}
       <aside className={styles.sidebar}>
@@ -1332,6 +1326,13 @@ export default function ClienteDashboard() {
         </header>
 
         <section className={styles.pageBody}>
+          {showOnboardingModal && (
+            <ClientTutorial
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              onComplete={() => setShowOnboardingModal(false)}
+            />
+          )}
           {activeTab === "painel" && (
             <div className={styles.contentGrid}>
               <div className={styles.listSection}>
@@ -2085,6 +2086,27 @@ export default function ClienteDashboard() {
                         disabled={formLoading}
                       >
                         {formLoading ? "Salvando..." : "Salvar Alterações"}
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.saveProfileBtn}
+                        style={{
+                          background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                          color: "#ffffff",
+                          border: "none",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px"
+                        }}
+                        onClick={() => {
+                          localStorage.removeItem("sj_client_tutorial_completed");
+                          setShowOnboardingModal(true);
+                          setActiveTab("painel");
+                          toast.success("Guia didático reiniciado! Volte ao Painel para começar.");
+                        }}
+                      >
+                        <RotateCcw size={16} /> Reiniciar Tour
                       </button>
                       <button
                         type="button"

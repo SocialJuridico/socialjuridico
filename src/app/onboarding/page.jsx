@@ -21,22 +21,11 @@ export default async function OnboardingPage() {
 
   // Ler role do user_metadata
   const role = user.user_metadata?.role || "CLIENT";
+  const normalizedRole = String(role).toUpperCase();
 
-  if (role === "CLIENT") {
+  if (normalizedRole === "LAWYER" || normalizedRole === "ADVOGADO") {
+    redirect("/dashboard/advogado");
+  } else {
     redirect("/dashboard/cliente");
   }
-
-  return (
-    <>
-      <OnboardingModal
-        role="LAWYER"
-        initialCompleted={false}
-        redirectHref="/dashboard/advogado"
-      />
-      <div style={{ padding: 24 }}>
-        <h1>Onboarding</h1>
-        <p>Se o modal não abriu, certifique-se de estar autenticado.</p>
-      </div>
-    </>
-  );
 }

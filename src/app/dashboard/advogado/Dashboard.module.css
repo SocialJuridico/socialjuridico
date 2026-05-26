@@ -6513,3 +6513,102 @@
   height: 100%;
 }
 
+/* Premium Shield Overlay for Free Plan users */
+.premiumShieldParent {
+  position: relative;
+  min-height: 400px;
+  width: 100%;
+}
+
+.premiumOverlayShield {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  background-color: rgba(9, 11, 16, 0.45);
+  backdrop-filter: blur(5px);
+  z-index: 99;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  animation: fadeInShield 0.3s ease-out;
+}
+
+.premiumOverlayCard {
+  background: rgba(17, 22, 34, 0.95);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  border-radius: 16px;
+  width: 95%;
+  max-width: 480px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 25px rgba(99, 102, 241, 0.2);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.premiumOverlayIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+}
+
+.premiumOverlayCard h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 12px 0;
+  background: linear-gradient(to right, #ffffff, #c7d2fe);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.premiumOverlayCard p {
+  font-size: 0.92rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 24px 0;
+}
+
+.premiumOverlayUpgradeBtn {
+  background: linear-gradient(to right, #4f46e5, #7c3aed);
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.premiumOverlayUpgradeBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+  background: linear-gradient(to right, #4338ca, #6d28d9);
+}
+
+@keyframes fadeInShield {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+

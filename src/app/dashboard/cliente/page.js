@@ -176,9 +176,10 @@ export default function ClienteDashboard() {
         const { data: { user } = {} } = await supabase.auth.getUser();
         const metaOnboard = user?.user_metadata?.onboarding_complete === true;
         const profileOnboard = profileData?.onboarding_complete === true;
+        const localCompleted = typeof window !== "undefined" && window.localStorage.getItem("sj_client_tutorial_completed") === "true";
 
         const needsOnboarding =
-          profileData.role === "CLIENT" && !metaOnboard && !profileOnboard;
+          profileData.role === "CLIENT" && (!metaOnboard && !profileOnboard || !localCompleted);
 
         if (mounted) setShowOnboardingModal(!!needsOnboarding);
       } catch (err) {

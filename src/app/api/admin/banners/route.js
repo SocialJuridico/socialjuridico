@@ -59,7 +59,7 @@ export async function GET() {
     const { data, error } = await runOnBannerTable((table) =>
       db
         .from(table)
-        .select("id, name, image_url, link_url, created_at, updated_at")
+        .select("id, name, image_url, link_url, created_at, updated_at, position, slot_index")
         .order("created_at", { ascending: false }),
     );
 
@@ -100,7 +100,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { name, image_url, link_url } = body;
+    const { name, image_url, link_url, position, slot_index } = body;
 
     if (!name || !image_url) {
       return NextResponse.json(
@@ -114,6 +114,8 @@ export async function POST(request) {
       name: String(name).trim(),
       image_url: String(image_url).trim(),
       link_url: link_url ? String(link_url).trim() : null,
+      position: position ? String(position).trim() : "left",
+      slot_index: slot_index !== undefined ? Number(slot_index) : 0,
       updated_at: new Date().toISOString(),
     };
 
@@ -121,7 +123,7 @@ export async function POST(request) {
       db
         .from(table)
         .insert([payload])
-        .select("id, name, image_url, link_url, created_at, updated_at")
+        .select("id, name, image_url, link_url, created_at, updated_at, position, slot_index")
         .single(),
     );
 
@@ -180,13 +182,17 @@ export async function PUT(request) {
       updates.image_url = String(body.image_url).trim();
     if (body.link_url !== undefined)
       updates.link_url = body.link_url ? String(body.link_url).trim() : null;
+    if (body.position !== undefined)
+      updates.position = String(body.position).trim();
+    if (body.slot_index !== undefined)
+      updates.slot_index = Number(body.slot_index);
 
     const { data, error } = await runOnBannerTable((table) =>
       db
         .from(table)
         .update(updates)
         .eq("id", id)
-        .select("id, name, image_url, link_url, created_at, updated_at")
+        .select("id, name, image_url, link_url, created_at, updated_at, position, slot_index")
         .single(),
     );
 

@@ -594,6 +594,33 @@ export default function AdvogadoDashboard() {
   });
   const [avisos, setAvisos] = useState([]);
   const [loadingAvisos, setLoadingAvisos] = useState(false);
+  const [sidebarBanners, setSidebarBanners] = useState([]);
+  const [bannerTicker, setBannerTicker] = useState(0);
+  const [zoomBanner, setZoomBanner] = useState(null);
+
+  const leftBannersBySlot = useMemo(() => {
+    const grouped = {};
+    sidebarBanners
+      .filter((b) => b.position === "left")
+      .forEach((b) => {
+        const slot = b.slot_index || 0;
+        if (!grouped[slot]) grouped[slot] = [];
+        grouped[slot].push(b);
+      });
+    return Object.values(grouped);
+  }, [sidebarBanners]);
+
+  const rightBannersBySlot = useMemo(() => {
+    const grouped = {};
+    sidebarBanners
+      .filter((b) => b.position === "right")
+      .forEach((b) => {
+        const slot = b.slot_index || 0;
+        if (!grouped[slot]) grouped[slot] = [];
+        grouped[slot].push(b);
+      });
+    return Object.values(grouped);
+  }, [sidebarBanners]);
 
   const fileInputRef = useRef(null);
   const smartFileInputRef = useRef(null);
@@ -662,6 +689,18 @@ export default function AdvogadoDashboard() {
       console.error("Erro ao carregar avisos:", err);
     } finally {
       setLoadingAvisos(false);
+    }
+  }, []);
+
+  const fetchSidebarBanners = useCallback(async () => {
+    try {
+      const res = await fetch("/api/banners");
+      const data = await res.json();
+      if (data.success) {
+        setSidebarBanners(data.banners || []);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar banners da sidebar:", err);
     }
   }, []);
 
@@ -1685,8 +1724,15 @@ export default function AdvogadoDashboard() {
   useEffect(() => {
     loadDataFull();
     fetchAvisos();
-    // fetchHighlightedAd(); // Agora no Context
-  }, [loadDataFull, fetchAvisos]);
+    fetchSidebarBanners();
+  }, [loadDataFull, fetchAvisos, fetchSidebarBanners]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setBannerTicker((prev) => prev + 1);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (activeTab === "notificacoes") {
@@ -4630,16 +4676,38 @@ export default function AdvogadoDashboard() {
       )}
 
       <div className={styles.contentRow}>
-        <aside className={styles.bannerLeft}>
-          <div className={styles.bannerCard}>
-            <Image
-              src="/img/banner_sidebar.png"
-              alt="Anuncie"
-              width={240}
-              height={360}
-              className={styles.bannerImg}
-            />
-          </div>
+        <aside className={styles.bannerLeft} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {leftBannersBySlot.length === 0 ? (
+            <div className={styles.bannerCard}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/img/banner_sidebar.png"
+                alt="Anuncie"
+                className={styles.bannerImg}
+                style={{ width: "100%", height: "auto" }}
+              />
+            </div>
+          ) : (
+            leftBannersBySlot.map((slot, idx) => {
+              const activeBanner = slot[bannerTicker % slot.length];
+              return (
+                <div
+                  key={idx}
+                  className={styles.bannerCard}
+                  onClick={() => setZoomBanner(activeBanner)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={activeBanner.image_url}
+                    alt={activeBanner.name || "Banner"}
+                    className={styles.bannerImg}
+                    style={{ width: "100%", height: "auto", display: "block" }}
+                  />
+                </div>
+              );
+            })
+          )}
         </aside>
 
         <section className={styles.opportunityGrid}>
@@ -4808,16 +4876,38 @@ export default function AdvogadoDashboard() {
           )}
         </section>
 
-        <aside className={styles.bannerRight}>
-          <div className={styles.bannerCard}>
-            <Image
-              src="/img/banner_whatsapp.png"
-              alt="Suporte"
-              width={240}
-              height={360}
-              className={styles.bannerImg}
-            />
-          </div>
+        <aside className={styles.bannerRight} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {rightBannersBySlot.length === 0 ? (
+            <div className={styles.bannerCard}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/img/banner_whatsapp.png"
+                alt="Suporte"
+                className={styles.bannerImg}
+                style={{ width: "100%", height: "auto" }}
+              />
+            </div>
+          ) : (
+            rightBannersBySlot.map((slot, idx) => {
+              const activeBanner = slot[bannerTicker % slot.length];
+              return (
+                <div
+                  key={idx}
+                  className={styles.bannerCard}
+                  onClick={() => setZoomBanner(activeBanner)}
+                  style={{ cursor: "pointer" }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={activeBanner.image_url}
+                    alt={activeBanner.name || "Banner"}
+                    className={styles.bannerImg}
+                    style={{ width: "100%", height: "auto", display: "block" }}
+                  />
+                </div>
+              );
+            })
+          )}
         </aside>
       </div>
 
@@ -13795,6 +13885,135 @@ export default function AdvogadoDashboard() {
     );
   };
 
+  const renderZoomBannerModal = () => {
+    if (!zoomBanner) return null;
+    return (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0, 0, 0, 0.85)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 99999,
+          backdropFilter: "blur(8px)",
+          padding: "20px",
+        }}
+        onClick={() => setZoomBanner(null)}
+      >
+        <div
+          style={{
+            position: "relative",
+            background: "#0f172a",
+            border: "1px solid rgba(212, 175, 55, 0.2)",
+            borderRadius: "16px",
+            padding: "24px",
+            maxWidth: "600px",
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setZoomBanner(null)}
+            style={{
+              position: "absolute",
+              top: "16px",
+              right: "16px",
+              background: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              borderRadius: "50%",
+              width: "36px",
+              height: "36px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            <X size={18} />
+          </button>
+
+          {/* Banner Title */}
+          <h3
+            style={{
+              color: "#d4af37",
+              fontSize: "1.25rem",
+              fontWeight: "600",
+              marginBottom: "20px",
+              textAlign: "center",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {zoomBanner.name || "Banner"}
+          </h3>
+
+          {/* Large Image */}
+          <div
+            style={{
+              width: "100%",
+              maxHeight: "70vh",
+              borderRadius: "12px",
+              overflow: "hidden",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+              background: "rgba(0, 0, 0, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: zoomBanner.link_url ? "24px" : "0px",
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={zoomBanner.image_url}
+              alt={zoomBanner.name || "Banner"}
+              style={{
+                width: "100%",
+                height: "auto",
+                maxHeight: "65vh",
+                objectFit: "contain",
+              }}
+            />
+          </div>
+
+          {/* Actions */}
+          {zoomBanner.link_url && (
+            <a
+              href={zoomBanner.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                textDecoration: "none",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "12px 32px",
+                background: "linear-gradient(135deg, #d4af37 0%, #aa841d 100%)",
+                color: "#000",
+                fontSize: "0.95rem",
+                fontWeight: "700",
+                borderRadius: "30px",
+                boxShadow: "0 10px 15px -3px rgba(212, 175, 55, 0.3)",
+                transition: "all 0.2s",
+                cursor: "pointer",
+              }}
+            >
+              Saber Mais
+              <ExternalLink size={16} />
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   const renderChatModal = () => {
     if (!showChatModal || !selectedClient) return null;
 
@@ -18188,111 +18407,7 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
               </button>
             </div>
           )}
-          {highlightedAds.length > 0 &&
-            activeTab === "oportunidades" &&
-            (() => {
-              const ad = highlightedAds[currentAdIndex];
-              if (!ad) return null;
-              return (
-                <div className={styles.highlightedAdContainer}>
-                  {/* Seta esquerda */}
-                  {highlightedAds.length > 1 && (
-                    <button
-                      className={styles.carouselArrow}
-                      style={{ left: "8px" }}
-                      onClick={() =>
-                        setCurrentAdIndex(
-                          (prev) =>
-                            (prev - 1 + highlightedAds.length) %
-                            highlightedAds.length,
-                        )
-                      }
-                      aria-label="Anúncio anterior"
-                    >
-                      ‹
-                    </button>
-                  )}
 
-                  <div
-                    className={styles.highlightedInfo}
-                    key={ad.id}
-                    style={{ animation: "fadeSlide 0.5s ease" }}
-                  >
-                    <h4>
-                      <Sparkles size={14} /> ANÚNCIO EM DESTAQUE
-                      {highlightedAds.length > 1 && (
-                        <span className={styles.adCounter}>
-                          {currentAdIndex + 1}/{highlightedAds.length}
-                        </span>
-                      )}
-                    </h4>
-                    <h3>{ad.titulo}</h3>
-                    <p>{ad.descricao}</p>
-                  </div>
-                  <div className={styles.highlightedAction}>
-                    <button
-                      className={styles.premiumBtn}
-                      style={{ margin: 0 }}
-                      onClick={() => {
-                        const phone = ad.anunciante?.whatsapp?.replace(
-                          /\D/g,
-                          "",
-                        );
-                        if (phone) {
-                          window.open(
-                            `https://wa.me/55${phone}?text=Olá, vi seu destaque no SocialJurídico e gostaria de mais informações.`,
-                            "_blank",
-                          );
-                        }
-                      }}
-                    >
-                      Falar agora
-                    </button>
-                    <div className={styles.adVendor}>
-                      <span
-                        className={styles.vendorName}
-                        style={{
-                          fontSize: "0.7rem",
-                          color: "rgba(255, 255, 255, 0.5)",
-                        }}
-                      >
-                        Por: {ad.anunciante?.nome_empresa}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Seta direita */}
-                  {highlightedAds.length > 1 && (
-                    <button
-                      className={styles.carouselArrow}
-                      style={{ right: "8px" }}
-                      onClick={() =>
-                        setCurrentAdIndex(
-                          (prev) => (prev + 1) % highlightedAds.length,
-                        )
-                      }
-                      aria-label="Próximo anúncio"
-                    >
-                      ›
-                    </button>
-                  )}
-
-                  {/* Dots indicadores */}
-                  {highlightedAds.length > 1 && (
-                    <div className={styles.carouselDots}>
-                      {highlightedAds.map((_, idx) => (
-                        <button
-                          key={idx}
-                          className={`${styles.carouselDot} ${idx === currentAdIndex ? styles.carouselDotActive : ""}`}
-                          onClick={() => setCurrentAdIndex(idx)}
-                          aria-label={`Ir para anúncio ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
           {renderActiveContent()}
         </section>
       </main>
@@ -18322,6 +18437,7 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
       {renderMessageContentModal()}
       {renderAgendaModal()}
       {renderNotifDeleteConfirmModal()}
+      {renderZoomBannerModal()}
       {/* MODAL DE ANÁLISE/RESUMO DA AGENDA */}
       {showAgendaAnalysisModal && (
         <div

@@ -163,6 +163,52 @@ import {
   createProSubscription,
 } from "@/services/stripeCheckoutService";
 
+const PLAN_MODAL_PARAM_VALUES = new Set([
+  "plans",
+  "planos",
+  "plano",
+  "pro",
+  "upgrade",
+  "true",
+  "1",
+]);
+
+const PLAN_MODAL_SHORTCUT_VALUES = new Set([
+  "open_plans_modal",
+  "open-plan-modal",
+  "modal:planos",
+  "modal:plano",
+  "#planos",
+  "#plano",
+  "sj://planos",
+]);
+
+function shouldOpenPlansFromQuery(urlParams) {
+  const rawValue =
+    urlParams.get("open") ||
+    urlParams.get("modal") ||
+    urlParams.get("planModal");
+
+  if (!rawValue) return false;
+  return PLAN_MODAL_PARAM_VALUES.has(rawValue.trim().toLowerCase());
+}
+
+function isPlansModalLink(rawLink) {
+  if (!rawLink) return false;
+
+  const normalized = String(rawLink).trim().toLowerCase();
+  if (PLAN_MODAL_SHORTCUT_VALUES.has(normalized)) return true;
+
+  try {
+    const parsed = new URL(rawLink, "https://socialjuridico.com.br");
+    if (!parsed.pathname.includes("/dashboard/advogado")) return false;
+
+    return shouldOpenPlansFromQuery(parsed.searchParams);
+  } catch {
+    return false;
+  }
+}
+
 export default function AdvogadoDashboard() {
   const {
     userName,
@@ -628,6 +674,20 @@ export default function AdvogadoDashboard() {
   const chatEndRef = useRef(null);
   const [showMsgModal, setShowMsgModal] = useState(false);
   const [selectedMsg, setSelectedMsg] = useState(null);
+
+  const handleSidebarBannerClick = useCallback(
+    (banner) => {
+      if (!banner) return;
+
+      if (isPlansModalLink(banner.link_url)) {
+        setShowProModal(true);
+        return;
+      }
+
+      setZoomBanner(banner);
+    },
+    [setShowProModal],
+  );
 
   const handleApplyCoupon = async (tipo) => {
     let code = "";
@@ -1664,6 +1724,22 @@ export default function AdvogadoDashboard() {
       const urlParams = new URLSearchParams(window.location.search);
       const paymentStatus = urlParams.get("payment_status");
       const googleSync = urlParams.get("google_sync");
+
+      if (shouldOpenPlansFromQuery(urlParams)) {
+        setShowProModal(true);
+
+        const cleanParams = new URLSearchParams(window.location.search);
+        cleanParams.delete("open");
+        cleanParams.delete("modal");
+        cleanParams.delete("planModal");
+
+        const cleanQuery = cleanParams.toString();
+        const cleanUrl = cleanQuery
+          ? `${window.location.pathname}?${cleanQuery}`
+          : window.location.pathname;
+
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
 
       if (googleSync === "success") {
         toast.success("✅ Google Calendar sincronizado com sucesso!", {
@@ -4694,7 +4770,7 @@ export default function AdvogadoDashboard() {
                 <div
                   key={idx}
                   className={styles.bannerCard}
-                  onClick={() => setZoomBanner(activeBanner)}
+                  onClick={() => handleSidebarBannerClick(activeBanner)}
                   style={{ cursor: "pointer" }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -4894,7 +4970,7 @@ export default function AdvogadoDashboard() {
                 <div
                   key={idx}
                   className={styles.bannerCard}
-                  onClick={() => setZoomBanner(activeBanner)}
+                  onClick={() => handleSidebarBannerClick(activeBanner)}
                   style={{ cursor: "pointer" }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -13984,31 +14060,58 @@ export default function AdvogadoDashboard() {
           </div>
 
           {/* Actions */}
-          {zoomBanner.link_url && (
-            <a
-              href={zoomBanner.link_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "12px 32px",
-                background: "linear-gradient(135deg, #d4af37 0%, #aa841d 100%)",
-                color: "#000",
-                fontSize: "0.95rem",
-                fontWeight: "700",
-                borderRadius: "30px",
-                boxShadow: "0 10px 15px -3px rgba(212, 175, 55, 0.3)",
-                transition: "all 0.2s",
-                cursor: "pointer",
-              }}
-            >
-              Saber Mais
-              <ExternalLink size={16} />
-            </a>
-          )}
+          {zoomBanner.link_url &&
+            (isPlansModalLink(zoomBanner.link_url) ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setZoomBanner(null);
+                  setShowProModal(true);
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "12px 32px",
+                  background: "linear-gradient(135deg, #d4af37 0%, #aa841d 100%)",
+                  color: "#000",
+                  fontSize: "0.95rem",
+                  fontWeight: "700",
+                  borderRadius: "30px",
+                  border: "none",
+                  boxShadow: "0 10px 15px -3px rgba(212, 175, 55, 0.3)",
+                  transition: "all 0.2s",
+                  cursor: "pointer",
+                }}
+              >
+                Ver Planos
+                <ArrowRight size={16} />
+              </button>
+            ) : (
+              <a
+                href={zoomBanner.link_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "12px 32px",
+                  background: "linear-gradient(135deg, #d4af37 0%, #aa841d 100%)",
+                  color: "#000",
+                  fontSize: "0.95rem",
+                  fontWeight: "700",
+                  borderRadius: "30px",
+                  boxShadow: "0 10px 15px -3px rgba(212, 175, 55, 0.3)",
+                  transition: "all 0.2s",
+                  cursor: "pointer",
+                }}
+              >
+                Saber Mais
+                <ExternalLink size={16} />
+              </a>
+            ))}
         </div>
       </div>
     );

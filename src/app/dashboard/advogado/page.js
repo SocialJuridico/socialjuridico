@@ -409,8 +409,13 @@ export default function AdvogadoDashboard() {
         const isLawyerRole =
           normalizedRole === "LAWYER" || normalizedRole === "ADVOGADO";
 
-        const localCompleted = typeof window !== "undefined" && window.localStorage.getItem("sj_lawyer_tutorial_completed") === "true";
-        const needsOnboarding = isLawyerRole && (!metaOnboard && !profileOnboard || !localCompleted);
+        const localCompleted =
+          typeof window !== "undefined" &&
+          window.localStorage.getItem("sj_lawyer_tutorial_completed") ===
+            "true";
+        const needsOnboarding =
+          isLawyerRole &&
+          ((!metaOnboard && !profileOnboard) || !localCompleted);
 
         if (mounted) setShowOnboardingModal(!!needsOnboarding);
       } catch (err) {
@@ -4073,7 +4078,10 @@ export default function AdvogadoDashboard() {
   };
 
   const renderActiveContent = () => {
-    const isFreeUser = !profileData?.is_premium && profileData?.plan_type !== "START" && profileData?.plan_type !== "PRO";
+    const isFreeUser =
+      !profileData?.is_premium &&
+      profileData?.plan_type !== "START" &&
+      profileData?.plan_type !== "PRO";
 
     const wrapPremium = (content, title, desc) => {
       if (!isFreeUser) return content;
@@ -4085,8 +4093,16 @@ export default function AdvogadoDashboard() {
                 <Lock size={28} />
               </div>
               <h3>{title || "Ferramenta Premium"}</h3>
-              <p style={{ margin: "0 0 24px 0", color: "#94a3b8", fontSize: "0.92rem", lineHeight: "1.5" }}>
-                {desc || "Esta ferramenta está disponível exclusivamente nos planos START e PRO."}
+              <p
+                style={{
+                  margin: "0 0 24px 0",
+                  color: "#94a3b8",
+                  fontSize: "0.92rem",
+                  lineHeight: "1.5",
+                }}
+              >
+                {desc ||
+                  "Esta ferramenta está disponível exclusivamente nos planos START e PRO."}
               </p>
               <button
                 type="button"
@@ -4097,7 +4113,13 @@ export default function AdvogadoDashboard() {
               </button>
             </div>
           </div>
-          <div style={{ filter: "blur(3px)", pointerEvents: "none", userSelect: "none" }}>
+          <div
+            style={{
+              filter: "blur(3px)",
+              pointerEvents: "none",
+              userSelect: "none",
+            }}
+          >
             {content}
           </div>
         </div>
@@ -4106,9 +4128,17 @@ export default function AdvogadoDashboard() {
 
     switch (activeTab) {
       case "assinatura":
-        return wrapPremium(renderAssinatura(), "Assinatura Digital 🖊️", "Assine petições, procurações e contratos de honorários com assinatura digital criptografada e validade jurídica nacional.");
+        return wrapPremium(
+          renderAssinatura(),
+          "Assinatura Digital 🖊️",
+          "Assine petições, procurações e contratos de honorários com assinatura digital criptografada e validade jurídica nacional.",
+        );
       case "blindagem":
-        return wrapPremium(renderBlindagem(), "Blindagem de Documentos 🛡️", "Registre hashes de documentos e provas na blockchain para garantir integridade temporal, autoria e blindagem jurídica inabalável.");
+        return wrapPremium(
+          renderBlindagem(),
+          "Blindagem de Documentos 🛡️",
+          "Registre hashes de documentos e provas na blockchain para garantir integridade temporal, autoria e blindagem jurídica inabalável.",
+        );
       case "oportunidades":
         return renderOportunidades();
       case "meus-casos":
@@ -4118,19 +4148,43 @@ export default function AdvogadoDashboard() {
       case "minhas-mensagens":
         return renderMinhasMensagens();
       case "crm":
-        return wrapPremium(renderCRM(), "CRM de Clientes Profissional 📊", "Gerencie a esteira de atendimento (Intake, Contrato, Atendimento, Execução), compromissos financeiros e controle de dossiê de cada cliente.");
+        return wrapPremium(
+          renderCRM(),
+          "CRM de Clientes Profissional 📊",
+          "Gerencie a esteira de atendimento (Intake, Contrato, Atendimento, Execução), compromissos financeiros e controle de dossiê de cada cliente.",
+        );
       case "docs":
-        return wrapPremium(renderDocs(), "IA Smart Docs 📂", "Armazene documentos de processos na nuvem com análise inteligente da IA e extração automática de dados de petições.");
+        return wrapPremium(
+          renderDocs(),
+          "IA Smart Docs 📂",
+          "Armazene documentos de processos na nuvem com análise inteligente da IA e extração automática de dados de petições.",
+        );
       case "redator":
-        return wrapPremium(renderRedator(), "Redator IA Jurídico ✍️", "Gere petições iniciais completas, contestações, recursos, minutas de contratos e notificações em segundos com Inteligência Artificial especializada.");
+        return wrapPremium(
+          renderRedator(),
+          "Redator IA Jurídico ✍️",
+          "Gere petições iniciais completas, contestações, recursos, minutas de contratos e notificações em segundos com Inteligência Artificial especializada.",
+        );
       case "calculadora":
         return renderCalculadora();
       case "juris":
-        return wrapPremium(renderJuris(), "Pesquisa de Jurisprudência 🔍", "Realize buscas rápidas e inteligentes em súmulas e julgados de tribunais estaduais e superiores com resumos explicativos feitos por IA.");
+        return wrapPremium(
+          renderJuris(),
+          "Pesquisa de Jurisprudência 🔍",
+          "Realize buscas rápidas e inteligentes em súmulas e julgados de tribunais estaduais e superiores com resumos explicativos feitos por IA.",
+        );
       case "agenda":
-        return wrapPremium(renderAgenda(), "Agenda & Prazos Inteligentes 📅", "Controle compromissos, audiências e prazos processuais com alertas inteligentes integrados para toda a sua equipe.");
+        return wrapPremium(
+          renderAgenda(),
+          "Agenda & Prazos Inteligentes 📅",
+          "Controle compromissos, audiências e prazos processuais com alertas inteligentes integrados para toda a sua equipe.",
+        );
       case "triagem":
-        return wrapPremium(renderTriagem(), "Triagem IA & Diagnóstico 📋", "Realize o intake automático de clientes. Cole relatos brutos para obter a viabilidade jurídica, enquadramento de área, estimativa de valor da causa e checklist de documentos.");
+        return wrapPremium(
+          renderTriagem(),
+          "Triagem IA & Diagnóstico 📋",
+          "Realize o intake automático de clientes. Cole relatos brutos para obter a viabilidade jurídica, enquadramento de área, estimativa de valor da causa e checklist de documentos.",
+        );
       case "cartao-visitas":
         return renderCartaoVisitas();
       case "perfil":
@@ -4752,7 +4806,10 @@ export default function AdvogadoDashboard() {
       )}
 
       <div className={styles.contentRow}>
-        <aside className={styles.bannerLeft} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <aside
+          className={styles.bannerLeft}
+          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+        >
           {leftBannersBySlot.length === 0 ? (
             <div className={styles.bannerCard}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -4952,7 +5009,10 @@ export default function AdvogadoDashboard() {
           )}
         </section>
 
-        <aside className={styles.bannerRight} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <aside
+          className={styles.bannerRight}
+          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+        >
           {rightBannersBySlot.length === 0 ? (
             <div className={styles.bannerCard}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -10230,12 +10290,28 @@ export default function AdvogadoDashboard() {
               <button
                 type="button"
                 className={styles.secondaryBtn}
-                style={{ width: "100%", padding: "18px", marginTop: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "rgba(255, 255, 255, 0.05)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "8px", color: "#94a3b8", fontWeight: "600", cursor: "pointer" }}
+                style={{
+                  width: "100%",
+                  padding: "18px",
+                  marginTop: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "8px",
+                  color: "#94a3b8",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
                 onClick={() => {
                   localStorage.removeItem("sj_lawyer_tutorial_completed");
                   setShowOnboardingModal(true);
                   setActiveTab("oportunidades");
-                  toast.success("Guia didático reiniciado! Começando pelas Oportunidades.");
+                  toast.success(
+                    "Guia didático reiniciado! Começando pelas Oportunidades.",
+                  );
                 }}
               >
                 <RotateCcw size={20} /> Reiniciar Tour Didático
@@ -13990,7 +14066,8 @@ export default function AdvogadoDashboard() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5)",
+            boxShadow:
+              "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5)",
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -14073,7 +14150,8 @@ export default function AdvogadoDashboard() {
                   alignItems: "center",
                   gap: "8px",
                   padding: "12px 32px",
-                  background: "linear-gradient(135deg, #d4af37 0%, #aa841d 100%)",
+                  background:
+                    "linear-gradient(135deg, #d4af37 0%, #aa841d 100%)",
                   color: "#000",
                   fontSize: "0.95rem",
                   fontWeight: "700",
@@ -14098,7 +14176,8 @@ export default function AdvogadoDashboard() {
                   alignItems: "center",
                   gap: "8px",
                   padding: "12px 32px",
-                  background: "linear-gradient(135deg, #d4af37 0%, #aa841d 100%)",
+                  background:
+                    "linear-gradient(135deg, #d4af37 0%, #aa841d 100%)",
                   color: "#000",
                   fontSize: "0.95rem",
                   fontWeight: "700",
@@ -18272,16 +18351,79 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                       <div className={styles.planName}>{plan.name}</div>
 
                       {isPromoApplied ? (
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px", margin: "10px 0" }}>
-                          <span style={{ textDecoration: "line-through", color: "#94a3b8", fontSize: "0.95rem", fontWeight: "500", opacity: 0.75 }}>
-                            De: R$ {rawPriceInfo.value.toFixed(2).replace(".", ",")}
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: "2px",
+                            margin: "10px 0",
+                          }}
+                        >
+                          <span
+                            style={{
+                              textDecoration: "line-through",
+                              color: "#94a3b8",
+                              fontSize: "0.95rem",
+                              fontWeight: "500",
+                              opacity: 0.75,
+                            }}
+                          >
+                            De: R${" "}
+                            {rawPriceInfo.value.toFixed(2).replace(".", ",")}
                           </span>
-                          <div style={{ display: "flex", alignItems: "baseline", color: "#10b981" }}>
-                            <span style={{ fontSize: "0.9rem", fontWeight: "bold", marginRight: "2px", color: "#10b981" }}>Por: R$</span>
-                            <span style={{ fontSize: "2.8rem", fontWeight: "800", lineHeight: 1, color: "#10b981", letterSpacing: "-1px" }}>10</span>
-                            <div style={{ display: "flex", flexDirection: "column", marginLeft: "1px" }}>
-                              <span style={{ fontSize: "1.05rem", fontWeight: "bold", color: "#10b981" }}>,99</span>
-                              <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>/mês</span>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "baseline",
+                              color: "#10b981",
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: "0.9rem",
+                                fontWeight: "bold",
+                                marginRight: "2px",
+                                color: "#10b981",
+                              }}
+                            >
+                              Por: R$
+                            </span>
+                            <span
+                              style={{
+                                fontSize: "2.8rem",
+                                fontWeight: "800",
+                                lineHeight: 1,
+                                color: "#10b981",
+                                letterSpacing: "-1px",
+                              }}
+                            >
+                              10
+                            </span>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexDirection: "column",
+                                marginLeft: "1px",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: "1.05rem",
+                                  fontWeight: "bold",
+                                  color: "#10b981",
+                                }}
+                              >
+                                ,99
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.75rem",
+                                  color: "#94a3b8",
+                                }}
+                              >
+                                /mês
+                              </span>
                             </div>
                           </div>
                         </div>
@@ -18290,7 +18432,9 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
                           <span className={styles.currency}>R$</span>
                           <span className={styles.amount}>{priceInteiro}</span>
                           <div className={styles.priceSub}>
-                            <span className={styles.cents}>,{priceCentavos}</span>
+                            <span className={styles.cents}>
+                              ,{priceCentavos}
+                            </span>
                             <span className={styles.period}>/mês</span>
                           </div>
                         </div>
@@ -18420,7 +18564,9 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
           localStorage.removeItem("sj_lawyer_tutorial_completed");
           setShowOnboardingModal(true);
           setActiveTab("oportunidades");
-          toast.success("Guia didático reiniciado! Começando pelas Oportunidades.");
+          toast.success(
+            "Guia didático reiniciado! Começando pelas Oportunidades.",
+          );
         }}
         style={{
           position: "fixed",
@@ -18439,17 +18585,20 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
           fontWeight: "600",
           fontSize: "0.85rem",
           cursor: "pointer",
-          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)",
+          boxShadow:
+            "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)",
           transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           backdropFilter: "blur(8px)",
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = "translateY(-50%) scale(1.05)";
-          e.currentTarget.style.boxShadow = "0 15px 30px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 200, 83, 0.3)";
+          e.currentTarget.style.boxShadow =
+            "0 15px 30px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 200, 83, 0.3)";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = "translateY(-50%)";
-          e.currentTarget.style.boxShadow = "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)";
+          e.currentTarget.style.boxShadow =
+            "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)";
         }}
       >
         <HelpCircle size={18} />

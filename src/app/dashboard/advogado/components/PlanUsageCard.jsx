@@ -15,7 +15,9 @@ export default function PlanUsageCard() {
       key: "redator",
       label: "Redator IA",
       usage: profileData?.uso_redator_ia || 0,
-      limit: (planType === "PRO" ? 200 : planType === "START" ? 20 : 0) + (profileData?.extra_redator_ia || 0),
+      limit:
+        (planType === "PRO" ? 200 : planType === "START" ? 20 : 0) +
+        (profileData?.extra_redator_ia || 0),
     },
     {
       key: "crm",
@@ -27,7 +29,9 @@ export default function PlanUsageCard() {
       key: "triagem",
       label: "Triagem IA",
       usage: profileData?.uso_triagem || 0,
-      limit: (planType === "PRO" ? 200 : planType === "START" ? 10 : 0) + (profileData?.extra_triagem || 0),
+      limit:
+        (planType === "PRO" ? 200 : planType === "START" ? 10 : 0) +
+        (profileData?.extra_triagem || 0),
     },
     {
       key: "agenda",
@@ -39,12 +43,16 @@ export default function PlanUsageCard() {
       key: "storage",
       label: "Armazenamento",
       usage: profileData?.uso_storage_mb || 0,
-      limit: (planType === "PRO" ? 10240 : planType === "START" ? 500 : 0) + (profileData?.extra_storage_mb || 0),
+      limit:
+        (planType === "PRO" ? 10240 : planType === "START" ? 500 : 0) +
+        (profileData?.extra_storage_mb || 0),
     },
   ];
 
   const now = new Date();
-  const periodLabel = now.toLocaleString("pt-BR", { month: "long", year: "numeric" }).toUpperCase();
+  const periodLabel = now
+    .toLocaleString("pt-BR", { month: "long", year: "numeric" })
+    .toUpperCase();
 
   const formatStorage = (mb) => {
     if (mb === undefined || mb === null) return "0MB";
@@ -70,13 +78,26 @@ export default function PlanUsageCard() {
         <div className={styles.planUsageCenter}>
           <div className={styles.metricsRow}>
             {metrics.map((m, idx) => {
-              const limitLabel = m.key === "storage" ? formatStorage(m.limit || 0) : (m.limit === Infinity ? "0" : m.limit || 0);
-              const usageLabel = m.key === "storage" ? formatStorage(m.usage || 0) : `${m.usage || 0}`;
-              const pct = m.limit && m.limit !== Infinity ? Math.min(100, (m.usage / (m.limit || 1)) * 100) : 0;
+              const limitLabel =
+                m.key === "storage"
+                  ? formatStorage(m.limit || 0)
+                  : m.limit === Infinity
+                    ? "0"
+                    : m.limit || 0;
+              const usageLabel =
+                m.key === "storage"
+                  ? formatStorage(m.usage || 0)
+                  : `${m.usage || 0}`;
+              const pct =
+                m.limit && m.limit !== Infinity
+                  ? Math.min(100, (m.usage / (m.limit || 1)) * 100)
+                  : 0;
 
               return (
                 <div key={m.key} className={styles.metricColumn}>
-                  <div className={styles.metricLabel}>{`${idx + 1}. ${m.label}`}</div>
+                  <div
+                    className={styles.metricLabel}
+                  >{`${idx + 1}. ${m.label}`}</div>
                   <div className={styles.metricNumberRow}>
                     <div className={styles.metricValue}>{usageLabel}</div>
                     <div className={styles.metricSmall}>/ {limitLabel}</div>
@@ -90,7 +111,12 @@ export default function PlanUsageCard() {
 
         <div className={styles.planUsageRight}>
           <div className={styles.periodLabel}>PERÍODO: {periodLabel}</div>
-          <button className={styles.verPlanBtn} onClick={() => setShowProModal(true)}>Ver Planos</button>
+          <button
+            className={styles.verPlanBtn}
+            onClick={() => setShowProModal(true)}
+          >
+            Ver Planos
+          </button>
         </div>
       </div>
     </div>

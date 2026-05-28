@@ -152,6 +152,7 @@ import styles from "./Dashboard.module.css";
 import { supabase } from "@/lib/supabase";
 import { maskCPFCNPJ, formatPhone, maskPhone } from "@/lib/securityUtils";
 import PWAInlineBanner from "@/components/PWA/PWAInlineBanner";
+import PlanUsageCard from "./components/PlanUsageCard";
 import TransparentCheckoutModal from "@/components/TransparentCheckout/TransparentCheckoutModal";
 
 import { useDashboard } from "./DashboardContext";
@@ -4782,6 +4783,8 @@ export default function AdvogadoDashboard() {
   const renderOportunidades = () => (
     <div className={styles.toolContainer}>
       <PWAInlineBanner />
+      <PlanUsageCard />
+
       <div className={styles.searchWrapper}>
         <input
           type="text"

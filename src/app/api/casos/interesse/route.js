@@ -75,6 +75,17 @@ export async function POST(request) {
       );
     }
 
+    // Registrar resposta no funil de reengajamento
+    try {
+      await db
+        .from("case_email_funnel")
+        .update({ responded_at: new Date().toISOString() })
+        .eq("case_id", interest.case_id)
+        .is("responded_at", null);
+    } catch (trackErr) {
+      console.error("Erro ao registrar resposta no funil (não-fatal):", trackErr);
+    }
+
     // ========== DECLINE ==========
     if (action === "DECLINE") {
       await db
@@ -625,6 +636,18 @@ export async function GET(request) {
 
     if (!casos || casos.length === 0) {
       return NextResponse.json({ success: true, data: [] });
+    }
+
+    // Registrar visualização no funil de reengajamento
+    try {
+      const caseIdsForTracking = casos.map((c) => c.id);
+      await db
+        .from("case_email_funnel")
+        .update({ viewed_interests_at: new Date().toISOString() })
+        .in("case_id", caseIdsForTracking)
+        .is("viewed_interests_at", null);
+    } catch (trackErr) {
+      console.error("Erro ao registrar visualização no funil (não-fatal):", trackErr);
     }
 
     const caseIds = casos.map((c) => c.id);

@@ -256,6 +256,26 @@ export default function ClienteDashboard() {
 
   const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
+  // Rastreamento do Funil de Reengajamento: registra login realizado
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const trackId = params.get("trackId");
+      if (trackId) {
+        // Disparar atualização de login
+        fetch("/api/track/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trackId }),
+        }).catch((err) => console.error("Erro ao registrar login no funil:", err));
+
+        // Limpar trackId da URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!profileData || !profileData.role) return;
 

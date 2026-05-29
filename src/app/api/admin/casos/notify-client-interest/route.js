@@ -116,19 +116,42 @@ export async function POST(request) {
         lawyerNamesArr[lawyerNamesArr.length - 1];
     }
 
+    // Obter quantidade total de interessados para exibição e rastreamento dinâmico
+    const { count: interestedCount } = await supabaseAdmin
+      .from("case_interests")
+      .select("*", { count: "exact", head: true })
+      .eq("case_id", casoId)
+      .in("status", ["PENDING", "NEGOTIATING"]);
+
+    const trackId = crypto.randomUUID();
+
+    // Registrar no funil de reengajamento
+    await supabaseAdmin.from("case_email_funnel").insert([
+      {
+        id: trackId,
+        case_id: casoId,
+        client_id: caso.cliente_id,
+        interested_count: interestedCount || 1,
+        sent_at: new Date().toISOString(),
+      }
+    ]);
+
+    const emailSubject = (interestedCount || 1) > 1
+      ? `⚖️ ${(interestedCount || 1)} advogados querem analisar seu caso "${caso.titulo || "Caso"}"`
+      : `⚖️ Um advogado quer analisar seu caso "${caso.titulo || "Caso"}"`;
+
     const html = interesseCasoTemplate({
       clientName: cliente.name || "Cliente",
       titulo: caso.titulo || "Caso sem título",
+      interestedCount: interestedCount || 1,
       lawyerName: namesStr,
+      trackId: trackId,
     });
 
     await resend.emails.send({
       from: "Social Jurídico <contato@socialjuridico.com.br>",
       to: cliente.email,
-      subject:
-        lawyerNamesArr.length > 1
-          ? "⚖️ Advogados interessados no seu caso!"
-          : "⚖️ Advogado interessado no seu caso!",
+      subject: emailSubject,
       html,
     });
     // Tentar enviar push notification também (não falhar o endpoint se der erro no push)

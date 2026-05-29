@@ -19,6 +19,7 @@ import {
   DollarSign,
   Megaphone,
   Building,
+  Mail,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./AdminDashboard.module.css";
@@ -646,6 +647,15 @@ export default function AdminDashboardPage() {
                   <strong>Gerar PDF</strong>
                 )}
               </div>
+
+              <Link href="/dashboard/admin/casos?tab=FUNNEL" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid var(--color-gold)", background: "rgba(212, 175, 55, 0.03)" }}>
+                  <div className={styles.cardTop}>
+                    <Mail size={16} color="var(--color-gold)" /> Funil de Reengajamento (E-mails)
+                  </div>
+                  <strong>Ver Métricas e Conversões</strong>
+                </article>
+              </Link>
             </div>
           </section>
 

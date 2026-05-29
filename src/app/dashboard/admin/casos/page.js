@@ -15,6 +15,7 @@ const TABS = [
   { id: "NEGOCIANDO", label: "Em Negociação" },
   { id: "CANCELADO", label: "Cancelados" },
   { id: "CONTRATADO", label: "Advogado Contratado" },
+  { id: "FUNNEL", label: "Funil de E-mails" },
 ];
 
 function getCaseTab(c) {
@@ -36,7 +37,20 @@ export default function AdminCasosPage() {
   const [isNotifying, setIsNotifying] = useState({});
   const [casoToDelete, setCasoToDelete] = useState(null);
 
+  // States para o Funil de Conversão
+  const [funnelData, setFunnelData] = useState([]);
+  const [loadingFunnel, setLoadingFunnel] = useState(false);
+
   useEffect(() => {
+    // Definir tab inicial se fornecida via URL query param (?tab=FUNNEL)
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab");
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+    }
+
     const load = async () => {
       try {
         const res = await fetch("/api/admin/casos", { cache: "no-store" });
@@ -59,7 +73,23 @@ export default function AdminCasosPage() {
       }
     };
 
+    const loadFunnel = async () => {
+      setLoadingFunnel(true);
+      try {
+        const res = await fetch("/api/admin/funnel", { cache: "no-store" });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setFunnelData(data.data || []);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar funil:", err);
+      } finally {
+        setLoadingFunnel(false);
+      }
+    };
+
     load();
+    loadFunnel();
   }, [router]);
 
   const filteredCasos = useMemo(() => {
@@ -137,6 +167,31 @@ export default function AdminCasosPage() {
     }
   };
 
+  const formatFunnelStep = (label, timestamp) => {
+    const isCompleted = !!timestamp;
+    return (
+      <div key={label} style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        opacity: isCompleted ? 1 : 0.45,
+        minWidth: '72px',
+        padding: '6px 4px',
+        borderRadius: '8px',
+        backgroundColor: isCompleted ? 'rgba(16, 185, 129, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+        border: `1px solid ${isCompleted ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.05)'}`,
+      }}>
+        <span style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: isCompleted ? '#10b981' : '#a1a1aa', fontWeight: 'bold' }}>{label}</span>
+        <span style={{ fontSize: '1rem', marginTop: '4px' }}>{isCompleted ? '✓' : '—'}</span>
+        {timestamp && (
+          <small style={{ fontSize: '0.55rem', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px', whiteSpace: 'nowrap' }}>
+            {new Date(timestamp).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+          </small>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return <div className={styles.loading}>Carregando casos...</div>;
   }
@@ -167,6 +222,7 @@ export default function AdminCasosPage() {
         {TABS.map((tab) => {
           let count = 0;
           if (tab.id === "TUDO") count = casos.length;
+          else if (tab.id === "FUNNEL") count = funnelData.length;
           else count = casos.filter((c) => getCaseTab(c) === tab.id).length;
 
           return (
@@ -182,7 +238,71 @@ export default function AdminCasosPage() {
       </div>
 
       <div className={styles.tableWrap}>
-        {filteredCasos.length === 0 ? (
+        {activeTab === "FUNNEL" ? (
+          loadingFunnel ? (
+            <p className={styles.empty}>Carregando dados do funil...</p>
+          ) : funnelData.length === 0 ? (
+            <p className={styles.empty}>Nenhum registro de e-mail enviado no funil.</p>
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Caso</th>
+                  <th>Cliente</th>
+                  <th>Marcos (Interessados)</th>
+                  <th>Data de Envio</th>
+                  <th>Funil de Conversão (Status)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {funnelData.map((item) => (
+                  <tr key={item.id}>
+                    <td style={{ fontWeight: '600' }}>{item.caso_titulo}</td>
+                    <td>
+                      <div className={styles.clientCell}>
+                        <span>{item.cliente_name}</span>
+                        <small>{item.cliente_email}</small>
+                      </div>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '12px',
+                        fontSize: '0.78rem',
+                        fontWeight: '700',
+                        backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                        color: 'var(--color-gold)',
+                        border: '1px solid rgba(212, 175, 55, 0.25)'
+                      }}>
+                        ⚖️ {item.interested_count} {item.interested_count === 1 ? 'interessado' : 'interessados'}
+                      </span>
+                    </td>
+                    <td>
+                      {item.sent_at
+                        ? new Date(item.sent_at).toLocaleString("pt-BR", { dateStyle: 'short', timeStyle: 'short' })
+                        : "-"}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', padding: '6px 0' }}>
+                        {formatFunnelStep("Disparado", item.sent_at)}
+                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                        {formatFunnelStep("Aberto", item.opened_at)}
+                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                        {formatFunnelStep("Clicado", item.clicked_at)}
+                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                        {formatFunnelStep("Logou", item.logged_in_at)}
+                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                        {formatFunnelStep("Visualizou", item.viewed_interests_at)}
+                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                        {formatFunnelStep("Respondeu", item.responded_at)}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )
+        ) : filteredCasos.length === 0 ? (
           <p className={styles.empty}>Nenhum caso encontrado.</p>
         ) : (
           <table className={styles.table}>

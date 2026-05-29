@@ -13,6 +13,7 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "true";
+  const trackId = searchParams.get("trackId");
   const [oabError, setOabError] = useState(false);
   const [activeTab, setActiveTab] = useState("individual"); // "individual" ou "escritorios"
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
@@ -71,7 +72,10 @@ function LoginContent() {
               if (role === "ADMIN") router.push("/dashboard/admin");
               else if (cargo === "secretaria") router.push("/dashboard/escritorio");
               else if (role === "LAWYER") router.push("/dashboard/advogado");
-              else router.push("/dashboard/cliente");
+              else {
+                const redirectTarget = trackId ? `/dashboard/cliente?trackId=${trackId}` : "/dashboard/cliente";
+                router.push(redirectTarget);
+              }
             }
           }
         }, 1500);

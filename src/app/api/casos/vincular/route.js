@@ -165,26 +165,58 @@ export async function POST(request) {
       url: "/dashboard/cliente"
     });
 
-    // 📧 ENVIAR EMAIL PARA O CLIENTE VIA RESEND
+    // 📧 ENVIAR EMAIL PARA O CLIENTE VIA RESEND COM BASE EM EVOLUÇÃO (MARCOS) E RASTREAMENTO
     try {
-      const { data: cliente } = await db
-        .from("clientes")
-        .select("name, email")
-        .eq("id", caso.cliente_id)
-        .single();
+      const { count: interestedCount } = await db
+        .from("case_interests")
+        .select("*", { count: "exact", head: true })
+        .eq("case_id", casoId)
+        .in("status", ["PENDING", "NEGOTIATING"]);
 
-      if (cliente?.email) {
-        await resend.emails.send({
-          from: 'Social Jurídico <contato@socialjuridico.com.br>',
-          to: cliente.email,
-          subject: `⚖️ Advogado interessado no seu caso "${caso.titulo}"`,
-          html: interesseCasoTemplate({
-            titulo: caso.titulo,
-            lawyerName: advogado.name || 'Um advogado',
-            clientName: cliente.name || 'Cliente',
-          }),
-        });
-        console.log(`📧 Email de interesse enviado para ${cliente.email}`);
+      const milestones = [1, 3, 5, 7, 10, 15, 20, 25, 30];
+      const isMilestone = milestones.includes(interestedCount);
+
+      if (isMilestone) {
+        const { data: cliente } = await db
+          .from("clientes")
+          .select("name, email")
+          .eq("id", caso.cliente_id)
+          .single();
+
+        if (cliente?.email) {
+          const trackId = crypto.randomUUID();
+
+          // Registrar no funil de reengajamento
+          await db.from("case_email_funnel").insert([
+            {
+              id: trackId,
+              case_id: casoId,
+              client_id: caso.cliente_id,
+              interested_count: interestedCount,
+              sent_at: new Date().toISOString(),
+            }
+          ]);
+
+          const emailSubject = interestedCount > 1
+            ? `⚖️ ${interestedCount} advogados querem analisar seu caso "${caso.titulo}"`
+            : `⚖️ Um advogado quer analisar seu caso "${caso.titulo}"`;
+
+          await resend.emails.send({
+            from: 'Social Jurídico <contato@socialjuridico.com.br>',
+            to: cliente.email,
+            subject: emailSubject,
+            html: interesseCasoTemplate({
+              titulo: caso.titulo,
+              clientName: cliente.name || 'Cliente',
+              interestedCount: interestedCount,
+              lawyerName: advogado.name || 'Um advogado',
+              trackId: trackId,
+            }),
+          });
+          console.log(`📧 Email de interesse (marcos/reengajamento) enviado para ${cliente.email} com trackId ${trackId} e count ${interestedCount}`);
+        }
+      } else {
+        console.log(`ℹ️ Notificação por e-mail pulada para o caso ${casoId} pois o total de interessados (${interestedCount}) não é um marco.`);
       }
     } catch (emailErr) {
       console.error("⚠️ Erro ao enviar email de interesse (não-fatal):", emailErr.message);

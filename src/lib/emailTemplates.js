@@ -126,8 +126,86 @@ export function novoCasoTemplate({ titulo, area_atuacao, cidade, estado, lawyerN
 /**
  * Template de notificação de interesse de advogado para o cliente
  */
-export function interesseCasoTemplate({ titulo, lawyerName, clientName }) {
-  const dashboardUrl = 'https://socialjuridico.com.br/dashboard/cliente';
+export function interesseCasoTemplate({ titulo, clientName, interestedCount = 1, lawyerName = '', trackId = '' }) {
+  const dashboardUrl = trackId 
+    ? `https://socialjuridico.com.br/api/track/click?trackId=${trackId}`
+    : 'https://socialjuridico.com.br/dashboard/cliente';
+
+  const titleText = interestedCount > 1 
+    ? '⚖️ Seu caso chamou atenção'
+    : '⚖️ Seu caso recebeu interesse';
+
+  const subtitleText = interestedCount > 1 
+    ? `${interestedCount} ADVOGADOS INTERESSADOS`
+    : 'ADVOGADO INTERESSADO NO SEU CASO';
+
+  const bodyText = interestedCount > 1
+    ? `<strong style="color: #d4af37;">${interestedCount} advogados</strong> demonstraram interesse em analisar sua situação.`
+    : `Um advogado qualificado demonstrou interesse em analisar sua situação.`;
+
+  // Render lawyer detail card or a generic summary
+  let detailsHtml = '';
+  if (interestedCount === 1 && lawyerName) {
+    detailsHtml = `
+      <!-- CARD DE INTERESSE (Único Advogado) -->
+      <tr>
+        <td style="padding: 8px 40px 24px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.03) 100%); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 12px; overflow: hidden;">
+            <tr>
+              <td style="padding: 20px 24px 12px;">
+                <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">📋 Seu Caso</p>
+                <p style="margin: 0; color: #ffffff; font-size: 16px; font-weight: 700; line-height: 1.4;">${titulo}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0 24px;">
+                <div style="border-top: 1px solid rgba(212, 175, 55, 0.15);"></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 24px 20px;">
+                <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">👤 Advogado Interessado</p>
+                <p style="margin: 0; color: #d4af37; font-size: 16px; font-weight: 600;">${lawyerName}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    `;
+  } else {
+    detailsHtml = `
+      <!-- CARD DE INTERESSE (Múltiplos Advogados) -->
+      <tr>
+        <td style="padding: 8px 40px 24px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.03) 100%); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 12px; overflow: hidden;">
+            <tr>
+              <td style="padding: 20px 24px 20px;">
+                <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">📋 Seu Caso</p>
+                <p style="margin: 0; color: #ffffff; font-size: 16px; font-weight: 700; line-height: 1.4;">${titulo}</p>
+              </td>
+            </tr>
+            ${lawyerName ? `
+            <tr>
+              <td style="padding: 0 24px;">
+                <div style="border-top: 1px solid rgba(212, 175, 55, 0.15);"></div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 24px 20px;">
+                <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">👤 Advogados Interessados</p>
+                <p style="margin: 0; color: #d4af37; font-size: 14px; font-weight: 600; line-height: 1.4;">${lawyerName}</p>
+              </td>
+            </tr>
+            ` : ''}
+          </table>
+        </td>
+      </tr>
+    `;
+  }
+
+  const trackingPixelHtml = trackId
+    ? `<img src="https://socialjuridico.com.br/api/track/open?trackId=${trackId}" width="1" height="1" alt="" style="display:none;" />`
+    : '';
 
   return `
 <!DOCTYPE html>
@@ -146,7 +224,7 @@ export function interesseCasoTemplate({ titulo, lawyerName, clientName }) {
           <tr>
             <td style="background: linear-gradient(135deg, #d4af37 0%, #b8962e 50%, #a07928 100%); padding: 32px 40px; text-align: center;">
               <h1 style="margin: 0; color: #0d0f12; font-size: 22px; font-weight: 800; letter-spacing: 1px;">⚖️ SOCIAL JURÍDICO</h1>
-              <p style="margin: 6px 0 0; color: rgba(13, 15, 18, 0.7); font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">ADVOGADO INTERESSADO NO SEU CASO</p>
+              <p style="margin: 6px 0 0; color: rgba(13, 15, 18, 0.7); font-size: 13px; font-weight: 500; letter-spacing: 0.5px;">${subtitleText}</p>
             </td>
           </tr>
 
@@ -156,68 +234,66 @@ export function interesseCasoTemplate({ titulo, lawyerName, clientName }) {
               <p style="margin: 0; color: #ffffff; font-size: 17px; line-height: 1.6;">
                 Olá, <strong style="color: #d4af37;">${clientName}</strong>!
               </p>
+              <p style="margin: 12px 0 0; color: rgba(255, 255, 255, 0.85); font-size: 16px; line-height: 1.7; font-weight: 600;">
+                ${titleText}.
+              </p>
+              <p style="margin: 6px 0 0; color: rgba(255, 255, 255, 0.75); font-size: 15px; line-height: 1.7;">
+                ${bodyText}
+              </p>
               <p style="margin: 12px 0 0; color: rgba(255, 255, 255, 0.75); font-size: 15px; line-height: 1.7;">
-                Ótima notícia! Um advogado demonstrou interesse em atender o seu caso na plataforma Social Jurídico.
+                Agora você pode comparar perfis e escolher quem melhor atende você. Não deixe sua solicitação parada.
               </p>
             </td>
           </tr>
 
           <!-- CARD DE INTERESSE -->
+          ${detailsHtml}
+
+          <!-- PROVA SOCIAL -->
           <tr>
-            <td style="padding: 8px 40px 24px;">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.03) 100%); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 12px; overflow: hidden;">
-                
-                <!-- Título do caso -->
+            <td style="padding: 0 40px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: rgba(212, 175, 55, 0.04); border: 1px dashed rgba(212, 175, 55, 0.25); border-radius: 12px; padding: 20px;">
                 <tr>
-                  <td style="padding: 24px 24px 16px;">
-                    <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">📋 Seu Caso</p>
-                    <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; line-height: 1.4;">${titulo}</p>
-                  </td>
-                </tr>
-
-                <!-- Divider -->
-                <tr>
-                  <td style="padding: 0 24px;">
-                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.15);"></div>
-                  </td>
-                </tr>
-
-                <!-- Advogado interessado -->
-                <tr>
-                  <td style="padding: 16px 24px 20px;">
-                    <p style="margin: 0 0 4px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">👤 Advogado Interessado</p>
-                    <p style="margin: 0; color: #d4af37; font-size: 16px; font-weight: 600;">${lawyerName}</p>
+                  <td>
+                    <p style="margin: 0 0 12px; color: #ffffff; font-size: 14px; font-weight: 700; letter-spacing: 0.5px;">VANTAGENS DO ATENDIMENTO:</p>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td width="24" valign="top" style="color: #d4af37; font-size: 16px; line-height: 20px; font-weight: bold;">✔</td>
+                        <td style="color: rgba(255, 255, 255, 0.85); font-size: 14px; line-height: 20px; padding-bottom: 8px;"><strong>Especialistas na área:</strong> Advogados com experiência no tipo do seu caso.</td>
+                      </tr>
+                      <tr>
+                        <td width="24" valign="top" style="color: #d4af37; font-size: 16px; line-height: 20px; font-weight: bold;">✔</td>
+                        <td style="color: rgba(255, 255, 255, 0.85); font-size: 14px; line-height: 20px; padding-bottom: 8px;"><strong>Atendimento online:</strong> Esclareça dúvidas e envie documentos sem sair de casa.</td>
+                      </tr>
+                      <tr>
+                        <td width="24" valign="top" style="color: #d4af37; font-size: 16px; line-height: 20px; font-weight: bold;">✔</td>
+                        <td style="color: rgba(255, 255, 255, 0.85); font-size: 14px; line-height: 20px;"><strong>Profissionais verificados:</strong> Todos possuem cadastro ativo e regular na OAB.</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
-          <!-- MENSAGEM -->
+          <!-- ESCASSEZ / TEXTO INFORMATIVO -->
           <tr>
-            <td style="padding: 0 40px 24px;">
-              <p style="margin: 0; color: rgba(255, 255, 255, 0.7); font-size: 15px; line-height: 1.7; text-align: center;">
-                Acesse seu painel para <strong style="color: #ffffff;">aceitar</strong> ou <strong style="color: #ffffff;">recusar</strong> esta manifestação de interesse e dar andamento ao seu caso.
+            <td style="padding: 0 40px 16px; text-align: center;">
+              <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: 600; line-height: 1.6;">
+                ⏳ Seu caso já recebeu interesse.
+              </p>
+              <p style="margin: 4px 0 0; color: rgba(255, 255, 255, 0.65); font-size: 13.5px; line-height: 1.6;">
+                Quanto antes você responder, mais rápido poderá iniciar seu atendimento jurídico.
               </p>
             </td>
           </tr>
 
           <!-- BOTÃO CTA -->
           <tr>
-            <td style="padding: 8px 40px 16px; text-align: center;">
+            <td style="padding: 8px 40px 24px; text-align: center;">
               <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #0d0f12; padding: 16px 40px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
-                Acessar Meu Painel
+                Ver Advogados Interessados
               </a>
-            </td>
-          </tr>
-
-          <!-- TEXTO INFORMATIVO -->
-          <tr>
-            <td style="padding: 8px 40px 32px; text-align: center;">
-              <p style="margin: 0; color: rgba(255, 255, 255, 0.5); font-size: 13px; line-height: 1.6;">
-                Você pode conversar com o advogado antes de tomar sua decisão.<br>
-                Não perca tempo — advogados qualificados podem atender outros casos!
-              </p>
             </td>
           </tr>
 
@@ -238,6 +314,7 @@ export function interesseCasoTemplate({ titulo, lawyerName, clientName }) {
       </td>
     </tr>
   </table>
+  ${trackingPixelHtml}
 </body>
 </html>`;
 }

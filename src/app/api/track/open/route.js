@@ -10,7 +10,7 @@ export async function GET(request) {
       const db = supabaseAdmin;
       // Fetch current track
       const { data: track } = await db
-        .from("case_email_funnel")
+        .from("email_tracking_logs")
         .select("opened_at")
         .eq("id", trackId)
         .single();
@@ -18,7 +18,7 @@ export async function GET(request) {
       // Only update if not already opened to preserve the first open timestamp
       if (track && !track.opened_at) {
         await db
-          .from("case_email_funnel")
+          .from("email_tracking_logs")
           .update({ opened_at: new Date().toISOString() })
           .eq("id", trackId);
       }

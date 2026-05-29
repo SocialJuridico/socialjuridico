@@ -40,6 +40,7 @@ export default function AdminCasosPage() {
   // States para o Funil de Conversão
   const [funnelData, setFunnelData] = useState([]);
   const [loadingFunnel, setLoadingFunnel] = useState(false);
+  const [funnelFilterType, setFunnelFilterType] = useState("TODOS");
 
   useEffect(() => {
     // Definir tab inicial se fornecida via URL query param (?tab=FUNNEL)
@@ -91,6 +92,57 @@ export default function AdminCasosPage() {
     load();
     loadFunnel();
   }, [router]);
+
+  const getEmailTypeDetails = (type) => {
+    switch (type) {
+      case "INTERESSE":
+        return { label: "Interesse", color: "var(--color-gold)", bg: "rgba(212, 175, 55, 0.08)", border: "rgba(212, 175, 55, 0.2)" };
+      case "CADASTRO":
+        return { label: "Cadastro", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.08)", border: "rgba(56, 189, 248, 0.2)" };
+      case "SENHA":
+        return { label: "Senha", color: "#f43f5e", bg: "rgba(244, 63, 94, 0.08)", border: "rgba(244, 63, 94, 0.2)" };
+      case "FINANCEIRO":
+        return { label: "Financeiro", color: "#10b981", bg: "rgba(16, 185, 129, 0.08)", border: "rgba(16, 185, 129, 0.2)" };
+      case "CHAT":
+        return { label: "Chat", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.08)", border: "rgba(139, 92, 246, 0.2)" };
+      case "CRM":
+        return { label: "CRM", color: "#ec4899", bg: "rgba(236, 72, 153, 0.08)", border: "rgba(236, 72, 153, 0.2)" };
+      case "JURIS":
+        return { label: "Juris", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.08)", border: "rgba(245, 158, 11, 0.2)" };
+      case "ADMIN":
+        return { label: "Admin", color: "#a855f7", bg: "rgba(168, 85, 247, 0.08)", border: "rgba(168, 85, 247, 0.2)" };
+      case "AVISO":
+        return { label: "Aviso", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.08)", border: "rgba(59, 130, 246, 0.2)" };
+      default:
+        return { label: "Sistema", color: "#94a3b8", bg: "rgba(148, 163, 184, 0.08)", border: "rgba(148, 163, 184, 0.2)" };
+    }
+  };
+
+  const filteredFunnelData = useMemo(() => {
+    let list = funnelData;
+
+    // Filter by type
+    if (funnelFilterType !== "TODOS") {
+      list = list.filter((item) => item.email_type === funnelFilterType);
+    }
+
+    // Filter by search term
+    const term = search.trim().toLowerCase();
+    if (!term) return list;
+
+    return list.filter((item) => {
+      const caso = String(item.caso_titulo || "").toLowerCase();
+      const email = String(item.cliente_email || "").toLowerCase();
+      const name = String(item.cliente_name || "").toLowerCase();
+      const type = String(item.email_type || "").toLowerCase();
+      return (
+        caso.includes(term) ||
+        email.includes(term) ||
+        name.includes(term) ||
+        type.includes(term)
+      );
+    });
+  }, [funnelData, search, funnelFilterType]);
 
   const filteredCasos = useMemo(() => {
     let list = casos;
@@ -212,7 +264,7 @@ export default function AdminCasosPage() {
         <input
           className={styles.searchInput}
           type="text"
-          placeholder="Buscar por título, área, nome ou email do cliente..."
+          placeholder={activeTab === "FUNNEL" ? "Buscar por assunto, nome do destinatário ou e-mail..." : "Buscar por título, área, nome ou email do cliente..."}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -237,68 +289,132 @@ export default function AdminCasosPage() {
         })}
       </div>
 
+      {activeTab === "FUNNEL" && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          marginBottom: "16px",
+          padding: "12px",
+          background: "#12151b",
+          border: "1px solid rgba(212, 175, 55, 0.16)",
+          borderRadius: "10px"
+        }}>
+          <span style={{ fontSize: "0.85rem", color: "#94a3b8", fontWeight: "600" }}>Filtrar por Tipo:</span>
+          <select
+            value={funnelFilterType}
+            onChange={(e) => setFunnelFilterType(e.target.value)}
+            style={{
+              background: "#0d0f12",
+              border: "1px solid rgba(212, 175, 55, 0.2)",
+              color: "#e5e7eb",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              fontSize: "0.85rem",
+              outline: "none",
+              cursor: "pointer"
+            }}
+          >
+            <option value="TODOS">Todos os E-mails</option>
+            <option value="INTERESSE">⚖️ Interesse de Advogado</option>
+            <option value="CADASTRO">👤 Boas-Vindas / Cadastro</option>
+            <option value="SENHA">🔑 Recuperação de Senha</option>
+            <option value="FINANCEIRO">💰 Financeiro / Vendas</option>
+            <option value="CHAT">💬 Submissões e Chat</option>
+            <option value="CRM">📋 Notificações CRM</option>
+            <option value="JURIS">🪙 Alertas de Juris</option>
+            <option value="ADMIN">📢 Comunicados do Admin</option>
+            <option value="AVISO">🔔 Avisos Gerais</option>
+            <option value="SISTEMA">⚙️ Outros / Sistema</option>
+          </select>
+        </div>
+      )}
+
       <div className={styles.tableWrap}>
         {activeTab === "FUNNEL" ? (
           loadingFunnel ? (
             <p className={styles.empty}>Carregando dados do funil...</p>
-          ) : funnelData.length === 0 ? (
-            <p className={styles.empty}>Nenhum registro de e-mail enviado no funil.</p>
+          ) : filteredFunnelData.length === 0 ? (
+            <p className={styles.empty}>Nenhum registro de e-mail encontrado para o filtro selecionado.</p>
           ) : (
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Caso</th>
-                  <th>Cliente</th>
-                  <th>Marcos (Interessados)</th>
-                  <th>Data de Envio</th>
-                  <th>Funil de Conversão (Status)</th>
+                  <th>Tipo</th>
+                  <th>Assunto / Caso</th>
+                  <th>Destinatário</th>
+                  <th>Envio</th>
+                  <th>Progresso do Funil</th>
                 </tr>
               </thead>
               <tbody>
-                {funnelData.map((item) => (
-                  <tr key={item.id}>
-                    <td style={{ fontWeight: '600' }}>{item.caso_titulo}</td>
-                    <td>
-                      <div className={styles.clientCell}>
-                        <span>{item.cliente_name}</span>
-                        <small>{item.cliente_email}</small>
-                      </div>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span style={{
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '0.78rem',
-                        fontWeight: '700',
-                        backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                        color: 'var(--color-gold)',
-                        border: '1px solid rgba(212, 175, 55, 0.25)'
-                      }}>
-                        ⚖️ {item.interested_count} {item.interested_count === 1 ? 'interessado' : 'interessados'}
-                      </span>
-                    </td>
-                    <td>
-                      {item.sent_at
-                        ? new Date(item.sent_at).toLocaleString("pt-BR", { dateStyle: 'short', timeStyle: 'short' })
-                        : "-"}
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', padding: '6px 0' }}>
-                        {formatFunnelStep("Disparado", item.sent_at)}
-                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
-                        {formatFunnelStep("Aberto", item.opened_at)}
-                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
-                        {formatFunnelStep("Clicado", item.clicked_at)}
-                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
-                        {formatFunnelStep("Logou", item.logged_in_at)}
-                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
-                        {formatFunnelStep("Visualizou", item.viewed_interests_at)}
-                        <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
-                        {formatFunnelStep("Respondeu", item.responded_at)}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredFunnelData.map((item) => {
+                  const typeDetails = getEmailTypeDetails(item.email_type);
+                  const isInterest = item.email_type === "INTERESSE";
+                  return (
+                    <tr key={item.id}>
+                      <td>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '4px 8px',
+                          borderRadius: '6px',
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          backgroundColor: typeDetails.bg,
+                          color: typeDetails.color,
+                          border: `1px solid ${typeDetails.border}`
+                        }}>
+                          {typeDetails.label}
+                        </span>
+                      </td>
+                      <td style={{ fontWeight: '600' }}>
+                        {isInterest && item.interested_count ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <span>{item.caso_titulo}</span>
+                            <small style={{ color: 'var(--color-gold)', fontSize: '0.72rem', fontWeight: '500' }}>
+                              ⚖️ {item.interested_count} {item.interested_count === 1 ? 'interessado' : 'interessados'}
+                            </small>
+                          </div>
+                        ) : (
+                          <span>{item.caso_titulo}</span>
+                        )}
+                      </td>
+                      <td>
+                        <div className={styles.clientCell}>
+                          <span>{item.cliente_name}</span>
+                          <small>{item.cliente_email}</small>
+                        </div>
+                      </td>
+                      <td>
+                        {item.sent_at
+                          ? new Date(item.sent_at).toLocaleString("pt-BR", { dateStyle: 'short', timeStyle: 'short' })
+                          : "-"}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', padding: '6px 0' }}>
+                          {formatFunnelStep("Disparado", item.sent_at)}
+                          <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                          {formatFunnelStep("Aberto", item.opened_at)}
+                          <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                          {formatFunnelStep("Clicado", item.clicked_at)}
+                          
+                          {isInterest && (
+                            <>
+                              <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                              {formatFunnelStep("Logou", item.logged_in_at)}
+                              <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                              {formatFunnelStep("Visualizou", item.viewed_interests_at)}
+                              <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 'bold' }}>→</span>
+                              {formatFunnelStep("Respondeu", item.responded_at)}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )

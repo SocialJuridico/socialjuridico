@@ -78,7 +78,7 @@ export async function POST(request) {
     // Registrar resposta no funil de reengajamento
     try {
       await db
-        .from("case_email_funnel")
+        .from("email_tracking_logs")
         .update({ responded_at: new Date().toISOString() })
         .eq("case_id", interest.case_id)
         .is("responded_at", null);
@@ -642,7 +642,7 @@ export async function GET(request) {
     try {
       const caseIdsForTracking = casos.map((c) => c.id);
       await db
-        .from("case_email_funnel")
+        .from("email_tracking_logs")
         .update({ viewed_interests_at: new Date().toISOString() })
         .in("case_id", caseIdsForTracking)
         .is("viewed_interests_at", null);

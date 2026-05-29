@@ -39,9 +39,13 @@ export async function GET() {
     }
 
     const { data: funnelData, error: funnelError } = await db
-      .from("case_email_funnel")
+      .from("email_tracking_logs")
       .select(`
         id,
+        recipient_email,
+        email_type,
+        user_id,
+        client_id,
         interested_count,
         sent_at,
         opened_at,
@@ -52,29 +56,56 @@ export async function GET() {
         casos (
           titulo
         ),
-        clientes (
+        clientes:client_id (
           name,
           email
         )
       `)
-      .order("sent_at", { ascending: false });
+      .order("sent_at", { ascending: false })
+      .limit(500);
 
     if (funnelError) throw funnelError;
 
+    // Buscar nomes dos advogados de forma otimizada/batched em lote
+    const userIds = Array.from(
+      new Set((funnelData || []).map((item) => item.user_id).filter(Boolean))
+    );
+    
+    const lawyerMap = new Map();
+    if (userIds.length > 0) {
+      const { data: lawyers } = await db
+        .from("advogados")
+        .select("id, name, email")
+        .in("id", userIds);
+      
+      (lawyers || []).forEach((l) => {
+        lawyerMap.set(l.id, l);
+      });
+    }
+
     // Normalizar a estrutura de retorno para facilitar a renderização no front
-    const normalizedData = (funnelData || []).map((item) => ({
-      id: item.id,
-      interested_count: item.interested_count,
-      sent_at: item.sent_at,
-      opened_at: item.opened_at,
-      clicked_at: item.clicked_at,
-      logged_in_at: item.logged_in_at,
-      viewed_interests_at: item.viewed_interests_at,
-      responded_at: item.responded_at,
-      caso_titulo: item.casos?.titulo || "Caso desconhecido",
-      cliente_name: item.clientes?.name || "Cliente desconhecido",
-      cliente_email: item.clientes?.email || "",
-    }));
+    const normalizedData = (funnelData || []).map((item) => {
+      const isInterest = item.email_type === "INTERESSE";
+      const lawyer = lawyerMap.get(item.user_id);
+      const resolvedName = item.clientes?.name || lawyer?.name || "Geral / Desconhecido";
+      const resolvedEmail = item.clientes?.email || lawyer?.email || item.recipient_email || "";
+
+      return {
+        id: item.id,
+        email_type: item.email_type || "SISTEMA",
+        recipient_email: item.recipient_email || "",
+        interested_count: item.interested_count,
+        sent_at: item.sent_at,
+        opened_at: item.opened_at,
+        clicked_at: item.clicked_at,
+        logged_in_at: item.logged_in_at,
+        viewed_interests_at: item.viewed_interests_at,
+        responded_at: item.responded_at,
+        caso_titulo: item.casos?.titulo || (isInterest ? "Caso desconhecido" : "—"),
+        cliente_name: resolvedName,
+        cliente_email: resolvedEmail,
+      };
+    });
 
     return NextResponse.json({ success: true, data: normalizedData });
   } catch (error) {

@@ -126,9 +126,13 @@ export async function POST(request) {
     const trackId = crypto.randomUUID();
 
     // Registrar no funil de reengajamento
-    await supabaseAdmin.from("case_email_funnel").insert([
+    await supabaseAdmin.from("email_tracking_logs").insert([
       {
         id: trackId,
+        recipient_email: cliente.email,
+        user_id: caso.cliente_id,
+        email_type: 'INTERESSE',
+        destination_url: 'https://socialjuridico.com.br/dashboard/cliente',
         case_id: casoId,
         client_id: caso.cliente_id,
         interested_count: interestedCount || 1,

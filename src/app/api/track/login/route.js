@@ -14,14 +14,14 @@ export async function POST(request) {
 
     const db = supabaseAdmin;
     const { data: track } = await db
-      .from("case_email_funnel")
+      .from("email_tracking_logs")
       .select("logged_in_at")
       .eq("id", trackId)
       .single();
 
     if (track && !track.logged_in_at) {
       await db
-        .from("case_email_funnel")
+        .from("email_tracking_logs")
         .update({ logged_in_at: new Date().toISOString() })
         .eq("id", trackId);
     }

@@ -14,6 +14,7 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const sessionExpired = searchParams.get("expired") === "true";
   const trackId = searchParams.get("trackId");
+  const redirectTo = searchParams.get("redirectTo");
   const [oabError, setOabError] = useState(false);
   const [activeTab, setActiveTab] = useState("individual"); // "individual" ou "escritorios"
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
@@ -73,7 +74,10 @@ function LoginContent() {
               else if (cargo === "secretaria") router.push("/dashboard/escritorio");
               else if (role === "LAWYER") router.push("/dashboard/advogado");
               else {
-                const redirectTarget = trackId ? `/dashboard/cliente?trackId=${trackId}` : "/dashboard/cliente";
+                let redirectTarget = redirectTo || "/dashboard/cliente";
+                if (trackId) {
+                  redirectTarget += (redirectTarget.includes("?") ? "&" : "?") + `trackId=${trackId}`;
+                }
                 router.push(redirectTarget);
               }
             }

@@ -144,6 +144,95 @@ export default function ClienteDashboard() {
     estado: "",
   });
 
+  // States para Mídias Inclusivas (Áudio e Vídeo)
+  const [videoLink, setVideoLink] = useState("");
+  const [videoFile, setVideoFile] = useState(null);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioURL, setAudioURL] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const audioIntervalRef = useRef(null);
+  const videoInputRef = useRef(null);
+
+  // Funções de Gravação de Áudio
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        setAudioBlob(blob);
+        setAudioURL(URL.createObjectURL(blob));
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      audioIntervalRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Erro ao acessar microfone:", err);
+      toast.error("Não foi possível acessar o microfone. Verifique suas permissões.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+      setIsRecording(false);
+      if (audioIntervalRef.current) {
+        clearInterval(audioIntervalRef.current);
+      }
+    }
+  };
+
+  const clearAudio = () => {
+    setAudioBlob(null);
+    setAudioURL(null);
+    setRecordingTime(0);
+  };
+
+  const handleVideoChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Limite de 180MB
+    const isLt180MB = file.size / 1024 / 1024 < 180;
+    if (!isLt180MB) {
+      toast.error("O vídeo excede o limite permitido de 180MB.");
+      return;
+    }
+
+    if (!file.type.startsWith("video/")) {
+      toast.error("Por favor, selecione um arquivo de vídeo válido.");
+      return;
+    }
+
+    setVideoFile(file);
+  };
+
+  const removeVideoFile = () => {
+    setVideoFile(null);
+    if (videoInputRef.current) {
+      videoInputRef.current.value = "";
+    }
+  };
+
   // States para Perfil
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -495,6 +584,7 @@ export default function ClienteDashboard() {
       window.removeEventListener("resize", handleResize);
       if (retryTimer) clearTimeout(retryTimer);
       if (channel) supabase.removeChannel(channel);
+      if (audioIntervalRef.current) clearInterval(audioIntervalRef.current);
     };
   }, [loadCasos, loadInteresses, loadProfile, showNotificationToast]);
 
@@ -928,6 +1018,38 @@ export default function ClienteDashboard() {
         uploadedUrls.push(publicUrl);
       }
 
+      let uploadedVideoUrl = null;
+      if (videoFile) {
+        const fileExt = videoFile.name.split(".").pop();
+        const filePath = `${userId}/video-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from("cases-media")
+          .upload(filePath, videoFile);
+
+        if (uploadError) throw uploadError;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("cases-media").getPublicUrl(filePath);
+        uploadedVideoUrl = publicUrl;
+      }
+
+      let uploadedAudioUrl = null;
+      if (audioBlob) {
+        const filePath = `${userId}/audio-${Date.now()}-${Math.random().toString(36).substring(7)}.webm`;
+        const audioFile = new File([audioBlob], `audio-${Date.now()}.webm`, { type: "audio/webm" });
+        const { error: uploadError } = await supabase.storage
+          .from("cases-media")
+          .upload(filePath, audioFile);
+
+        if (uploadError) throw uploadError;
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("cases-media").getPublicUrl(filePath);
+        uploadedAudioUrl = publicUrl;
+      }
+
       const createRes = await fetch("/api/casos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -938,6 +1060,9 @@ export default function ClienteDashboard() {
           cidade: formData.cidade,
           estado: formData.estado,
           anexos: uploadedUrls,
+          video_link: videoLink || null,
+          video_url: uploadedVideoUrl || null,
+          audio_url: uploadedAudioUrl || null,
         }),
       });
 
@@ -964,6 +1089,10 @@ export default function ClienteDashboard() {
           estado: "",
         });
         setSelectedFiles([]);
+        setVideoLink("");
+        setVideoFile(null);
+        setAudioBlob(null);
+        setAudioURL(null);
         setShareCaseOnFacebook(false);
         setTimeout(() => {
           setFormSuccess(false);
@@ -1908,6 +2037,193 @@ export default function ClienteDashboard() {
                         ))}
                       </div>
                     )}
+                  </div>
+
+                  {/* Seção de Mídia e Acessibilidade (Áudio/Vídeo) */}
+                  <div className={styles.accessibilitySection} style={{
+                    marginTop: '24px',
+                    padding: '20px',
+                    borderRadius: '16px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    marginBottom: '24px'
+                  }}>
+                    <h4 style={{
+                      color: 'var(--color-gold)',
+                      fontSize: '0.95rem',
+                      fontWeight: '700',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <Sparkles size={16} /> Acessibilidade & Relato em Áudio/Vídeo
+                    </h4>
+                    <p style={{
+                      color: 'rgba(255, 255, 255, 0.6)',
+                      fontSize: '0.85rem',
+                      marginBottom: '16px',
+                      lineHeight: '1.4'
+                    }}>
+                      Caso tenha dificuldade para escrever ou queira detalhar melhor, você pode gravar um áudio ou anexar um vídeo ao seu caso.
+                    </p>
+
+                    {/* 1. Gravar Áudio */}
+                    <div className={styles.mediaRow} style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: '#fff' }}>
+                        Gravador de Relato por Voz
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                        {!audioURL && !isRecording && (
+                          <button
+                            type="button"
+                            onClick={startRecording}
+                            className={styles.mediaButton}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              background: 'rgba(212, 175, 55, 0.1)',
+                              border: '1px solid var(--color-gold)',
+                              color: 'var(--color-gold)',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            🎤 Gravar Áudio
+                          </button>
+                        )}
+
+                        {isRecording && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <button
+                              type="button"
+                              onClick={stopRecording}
+                              className={styles.mediaButton}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                background: '#ef4444',
+                                border: 'none',
+                                color: '#fff',
+                                padding: '8px 16px',
+                                borderRadius: '8px',
+                                fontSize: '0.85rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                animation: 'pulse 1.5s infinite'
+                              }}
+                            >
+                              🛑 Parar Gravação ({recordingTime}s)
+                            </button>
+                          </div>
+                        )}
+
+                        {audioURL && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', flexWrap: 'wrap' }}>
+                            <audio src={audioURL} controls style={{ height: '36px' }} />
+                            <button
+                              type="button"
+                              onClick={clearAudio}
+                              className={styles.removeMediaBtn}
+                              style={{
+                                background: 'rgba(239, 68, 68, 0.1)',
+                                border: '1px solid #ef4444',
+                                color: '#ef4444',
+                                padding: '6px 12px',
+                                borderRadius: '8px',
+                                fontSize: '0.8rem',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Remover Áudio
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* 2. Upload de Vídeo */}
+                    <div className={styles.mediaRow} style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: '#fff' }}>
+                        Anexar Vídeo do Celular (Máx: 180MB)
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {!videoFile ? (
+                          <button
+                            type="button"
+                            onClick={() => videoInputRef.current.click()}
+                            className={styles.mediaButton}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              color: '#fff',
+                              padding: '8px 16px',
+                              borderRadius: '8px',
+                              fontSize: '0.85rem',
+                              fontWeight: '600',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Upload size={16} /> Selecionar Vídeo
+                          </button>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255, 255, 255, 0.03)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#fff' }}>🎬 {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+                            <button
+                              type="button"
+                              onClick={removeVideoFile}
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#ef4444',
+                                cursor: 'pointer',
+                                padding: '2px'
+                              }}
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          hidden
+                          ref={videoInputRef}
+                          onChange={handleVideoChange}
+                          accept="video/*"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 3. Link de Vídeo */}
+                    <div className={styles.mediaRow}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: '#fff' }}>
+                        Link de Vídeo Externo (Facebook, YouTube, Drive)
+                      </label>
+                      <input
+                        type="url"
+                        className={styles.formInput}
+                        placeholder="Cole aqui o link do seu vídeo..."
+                        value={videoLink}
+                        onChange={(e) => setVideoLink(e.target.value)}
+                        style={{
+                          width: '100%',
+                          background: 'rgba(0, 0, 0, 0.2)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: '#fff',
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          fontSize: '0.85rem'
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <button

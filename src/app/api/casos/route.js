@@ -11,6 +11,8 @@ import {
 } from "@/lib/emailTemplates";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request) {
   try {
     let user = null;
@@ -55,7 +57,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { titulo, descricao, area_atuacao, anexos, cidade, estado } =
+    const { titulo, descricao, area_atuacao, anexos, cidade, estado, video_link, video_url, audio_url } =
       body || {};
 
     if (
@@ -86,6 +88,9 @@ export async function POST(request) {
           estado: estado.trim(),
           cliente_id: user.id,
           anexos: Array.isArray(anexos) ? anexos : [],
+          video_link: video_link ? video_link.trim() : null,
+          video_url: video_url || null,
+          audio_url: audio_url || null,
           status: "ABERTO",
           created_at: new Date().toISOString(),
         },

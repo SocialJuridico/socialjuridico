@@ -1585,7 +1585,7 @@ export default function AdvogadoDashboard() {
     if (!explicitId && !profileData?.id) return;
     setLoadingCasos(true);
     try {
-      const res = await fetch("/api/casos");
+      const res = await fetch("/api/casos", { cache: "no-store" });
       const data = await res.json();
       if (data.success) setCasos(data.data);
     } catch (err) {
@@ -5249,6 +5249,98 @@ export default function AdvogadoDashboard() {
                   </div>
                 </div>
               )}
+
+            {/* Áudio do Cliente */}
+            {selectedCasoModal.audio_url && (
+              <div style={{ marginBottom: "24px" }}>
+                <h3
+                  style={{
+                    color: "#d4af37",
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                    marginBottom: "10px",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  🎤 Áudio Relato do Cliente
+                </h3>
+                <div style={{ background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <audio src={selectedCasoModal.audio_url} controls style={{ width: "100%", height: "40px" }} />
+                </div>
+              </div>
+            )}
+
+            {/* Vídeo Anexado (Arquivo) */}
+            {selectedCasoModal.video_url && (
+              <div style={{ marginBottom: "24px" }}>
+                <h3
+                  style={{
+                    color: "#d4af37",
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                    marginBottom: "10px",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  🎬 Vídeo Relato do Cliente
+                </h3>
+                <div style={{ background: "rgba(255,255,255,0.03)", padding: "12px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <video src={selectedCasoModal.video_url} controls style={{ width: "100%", maxHeight: "360px", borderRadius: "8px", display: "block" }} />
+                </div>
+              </div>
+            )}
+
+            {/* Vídeo Externo (Link) */}
+            {selectedCasoModal.video_link && (
+              <div style={{ marginBottom: "24px" }}>
+                <h3
+                  style={{
+                    color: "#d4af37",
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                    marginBottom: "10px",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}
+                >
+                  🔗 Link do Vídeo (Externo)
+                </h3>
+                <a
+                  href={selectedCasoModal.video_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    color: "#fff",
+                    background: "rgba(212, 175, 55, 0.15)",
+                    border: "1px solid var(--color-gold)",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    fontSize: "0.85rem",
+                    fontWeight: "600",
+                    textDecoration: "none",
+                    transition: "background 0.2s"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "rgba(212, 175, 55, 0.25)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "rgba(212, 175, 55, 0.15)"}
+                >
+                  <ExternalLink size={14} /> Abrir Vídeo no Facebook/YouTube
+                </a>
+              </div>
+            )}
 
             {/* Advogados em negociação */}
             {selectedCasoModal.status === "NEGOCIANDO" &&

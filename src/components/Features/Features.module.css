@@ -83,3 +83,38 @@
   text-transform: uppercase;
   letter-spacing: 1px;
 }
+
+@media (max-width: 768px) {
+  .container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0 16px;
+  }
+  .featureItem {
+    flex-direction: row;
+    align-items: center;
+    text-align: left;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 16px 20px;
+    gap: 16px;
+  }
+  .featureItem:first-of-type {
+    border-left: 3px solid var(--color-gold);
+  }
+  .iconWrapper {
+    margin-bottom: 0;
+    padding: 12px;
+    border-radius: 12px;
+    background-color: rgba(212, 175, 55, 0.08);
+  }
+  .title {
+    font-size: 1.05rem;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 0.65rem;
+    letter-spacing: 0.5px;
+  }
+}

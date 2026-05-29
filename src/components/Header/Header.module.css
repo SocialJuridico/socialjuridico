@@ -18,10 +18,16 @@
   justify-content: space-between;
 }
 
-.logo {
+.logoDesktop {
   display: flex;
   align-items: center;
   gap: 12px;
+  text-decoration: none;
+}
+
+.logoMobile {
+  display: none;
+  align-items: center;
   text-decoration: none;
 }
 
@@ -41,6 +47,13 @@
   font-weight: 800;
   color: var(--color-white); /* Branco do texto */
   letter-spacing: -0.5px;
+}
+
+.logoImg {
+  height: 68px;
+  width: auto;
+  object-fit: contain;
+  display: block;
 }
 
 /* Oculta navegação no mobile e exibe apenas a partir de tablet */
@@ -77,4 +90,13 @@
 .loginButton {
   border-radius: 9999px !important; 
   padding: 10px 28px !important;
+}
+
+@media (max-width: 767px) {
+  .logoDesktop {
+    display: none !important;
+  }
+  .logoMobile {
+    display: flex !important;
+  }
 }

@@ -5,22 +5,22 @@ const featuresData = [
   {
     icon: Sparkles,
     title: 'Redator IA Avançado',
-    subtitle: 'GERAÇÃO DE PETIÇÕES EM SEGUNDOS',
+    subtitle: 'GERAÇÃO EM SEGUNDOS',
   },
   {
     icon: FileText,
     title: 'Notificação Extrajudicial',
-    subtitle: 'DESTRAVE ACORDOS SEM PROCESSO',
+    subtitle: 'GERADO RÁPIDO',
   },
   {
     icon: Users,
     title: 'CRM Inteligente',
-    subtitle: 'ORGANIZE LEADS E CLIENTES',
+    subtitle: 'GESTÃO DE LEADS',
   },
   {
     icon: Filter,
     title: 'Triagem de Casos',
-    subtitle: 'FILTROS AVANÇADOS DE OPORTUNIDADES',
+    subtitle: 'FILTROS AVANÇADOS',
   },
 ];
 

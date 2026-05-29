@@ -176,3 +176,34 @@
   font-weight: 700;
   color: var(--color-white);
 }
+
+@media (max-width: 768px) {
+  .section {
+    padding: 60px 16px;
+  }
+  .header {
+    margin-bottom: 32px;
+  }
+  .title {
+    font-size: 1.8rem;
+  }
+  .cardsContainer {
+    gap: 20px;
+  }
+  .cardTraditional,
+  .cardPremium {
+    padding: 24px 20px;
+  }
+  .cardTraditionalHeader,
+  .cardPremiumHeader {
+    margin-bottom: 20px;
+  }
+  .listTraditional,
+  .listPremium {
+    gap: 16px;
+  }
+  .listItemTraditional,
+  .listItemPremium {
+    font-size: 0.85rem;
+  }
+}

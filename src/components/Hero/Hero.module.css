@@ -61,11 +61,10 @@
 .title {
   font-size: 4rem;
   font-weight: 800;
-  line-height: 1.9;
+  line-height: 1.25;
   color: var(--color-white);
   margin-bottom: 24px;
   letter-spacing: -1.5px;
-  
 }
 
 .highlight {
@@ -91,13 +90,18 @@
   gap: 24px;
 }
 
+.ctaLink {
+  text-decoration: none;
+}
+
 .ctaButton {
   border-radius: 9999px !important;
   padding: 16px 36px !important;
   font-size: 1.1rem !important;
   display: flex !important;
   align-items: center !important;
-  gap: 12px;
+  justify-content: center !important;
+  gap: 8px;
 }
 
 .freeLabel {
@@ -109,20 +113,7 @@
   color: #10B981; /* Green color to emphasize free aspect */
 }
 
-@media (max-width: 768px) {
-  .title {
-    font-size: 2.5rem;
-  }
-  .ctaWrapper {
-    flex-direction: column;
-    gap: 20px;
-  }
-  .subtitle {
-    font-size: 1.05rem;
-  }
-}
-
-/* ─── CONTADOR DE USUÁRIOS ─────────────────────────────────── */
+/* ─── CONTADOR DE USUÁRIOS (DESKTOP) ─────────────────────────── */
 .statsBar {
   display: flex;
   align-items: center;
@@ -190,17 +181,152 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 480px) {
+/* Rótulos responsivos de estatísticas */
+.desktopLabel {
+  display: inline;
+}
+
+.mobileLabel {
+  display: none;
+}
+
+/* Quebras de linha responsivas */
+.mobileBr {
+  display: none;
+}
+
+/* ─── RESPONSIVIDADE (MOBILE / TABLET) ───────────────────────── */
+@media (max-width: 768px) {
+  .heroSection {
+    padding: 170px 16px 60px 16px;
+  }
+
+  .title {
+    font-size: 1.8rem;
+    line-height: 1.25;
+    margin-bottom: 20px;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 32px;
+    color: #e0e0e0;
+  }
+
   .statsBar {
-    flex-direction: column;
-    gap: 16px;
-    padding: 18px 24px;
-  }
-  .statItem {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 8px;
+    background: transparent;
+    border: none;
     padding: 0;
+    width: 100%;
+    max-width: 480px;
+    margin-bottom: 32px;
+    backdrop-filter: none;
+    animation: none;
   }
+
   .statDivider {
-    width: 60px;
-    height: 1px;
+    display: none;
+  }
+
+  .statItem {
+    flex: 1;
+    background: #151515; /* Card escuro conforme imagem */
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px 8px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+    gap: 4px;
+  }
+
+  .statIcon {
+    display: none;
+  }
+
+  .statTexts {
+    align-items: center;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .statNumber {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--color-gold);
+    letter-spacing: -0.5px;
+  }
+
+  .statLabel {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #888888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .ctaWrapper {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .ctaLink {
+    width: 100%;
+  }
+
+  .ctaButton {
+    width: 100% !important;
+    justify-content: center;
+    padding: 14px 28px !important;
+    font-size: 1rem !important;
+    border-radius: 15px !important;
+  }
+
+  /* Estilo específico para o botão secundário Sou Advogado no Mobile */
+  .ctaLink:nth-of-type(2) button {
+    background-color: #121212 !important;
+    border: 1px solid var(--color-gold) !important;
+    color: var(--color-gold) !important;
+  }
+
+  .freeLabel {
+    color: var(--color-gold) !important;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 12px;
+    text-transform: uppercase;
+  }
+
+  .freeIcon {
+    color: var(--color-gold) !important;
+  }
+
+  .desktopLabel {
+    display: none;
+  }
+
+  .mobileLabel {
+    display: inline;
+  }
+
+  .mobileBr {
+    display: block;
   }
 }

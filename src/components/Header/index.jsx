@@ -8,16 +8,25 @@ export default function Header() {
     <header className={styles.headerWrapper}>
       <div className={styles.headerContainer}>
         
-        {/* Logo */}
-        <Link prefetch={false} href="/" className={styles.logo}>
+        {/* Logo Desktop */}
+        <Link prefetch={false} href="/" className={styles.logoDesktop}>
           <div className={styles.logoIconBox}>
             <Scale size={24} strokeWidth={2.5} />
           </div>
           <span className={styles.logoText}>SocialJurídico</span>
         </Link>
 
+        {/* Logo Mobile */}
+        <Link prefetch={false} href="/" className={styles.logoMobile}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/Logo.png" alt="SocialJurídico Logo" className={styles.logoImg} />
+        </Link>
+
         {/* Navigation Links */}
         <nav className={styles.nav}>
+          <Link prefetch={false} href="#" className={styles.navLink}>
+            Home
+          </Link>
           <Link prefetch={false} href="#como-funciona" className={styles.navLink}>
             Como Funciona
           </Link>
@@ -35,8 +44,8 @@ export default function Header() {
         {/* Action Button */}
         <div className={styles.loginAction}>
           <Link prefetch={false} href="/login" style={{ textDecoration: 'none' }}>
-            <Button variant="secondary" className={styles.loginButton}>
-              Entrar Agora
+            <Button variant="primary" className={styles.loginButton}>
+              Entrar agora
             </Button>
           </Link>
         </div>

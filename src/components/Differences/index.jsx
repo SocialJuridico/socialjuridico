@@ -24,19 +24,15 @@ export default function Differences() {
           <ul className={styles.listTraditional}>
             <li className={styles.listItemTraditional}>
               <X className={styles.iconX} size={18} />
-              Custos iniciais altos e imprevisíveis.
+              Custas iniciais altas e imprevisíveis.
             </li>
             <li className={styles.listItemTraditional}>
               <X className={styles.iconX} size={18} />
-              Atendimento lento e presencial obrigatório.
+              Atendimento lento e presencial.
             </li>
             <li className={styles.listItemTraditional}>
               <X className={styles.iconX} size={18} />
-              Linguagem difícil e falta de transparência.
-            </li>
-            <li className={styles.listItemTraditional}>
-              <X className={styles.iconX} size={18} />
-              Dificuldade para encontrar especialistas adequados para o seu caso.
+              Linguagem difícil e complexa.
             </li>
           </ul>
         </div>
@@ -48,7 +44,7 @@ export default function Differences() {
               <Zap size={24} fill="currentColor" />
               <span>SocialJurídico</span>
             </div>
-            <span className={styles.tagFuturo}>O FUTURO</span>
+            <span className={styles.tagFuturo}>GRÁTIS</span>
           </div>
 
           <ul className={styles.listPremium}>
@@ -56,31 +52,23 @@ export default function Differences() {
               <CheckCircle2 className={styles.iconCheck} size={20} />
               <div>
                 <span className={styles.itemHeading}>Publicação Grátis: </span>
-                Publique seu caso sem custos. A seriedade é garantida pela verificação de advogados qualificados.
+                sem custos ou taxas.
               </div>
             </li>
             
             <li className={styles.listItemPremium}>
               <CheckCircle2 className={styles.iconCheck} size={20} />
               <div>
-                <span className={styles.itemHeading}>Comunicação Integrada: </span>
-                Chat em tempo real, videoconferência, compartilhamento de documentos e assinatura digital segura.
+                <span className={styles.itemHeading}>Resolução Digital: </span>
+                Tudo via chat e vídeo.
               </div>
             </li>
 
             <li className={styles.listItemPremium}>
               <CheckCircle2 className={styles.iconCheck} size={20} />
               <div>
-                <span className={styles.itemHeading}>Avaliações Verificadas: </span>
-                Sistema de estrelas baseado em experiências reais entre clientes e advogados, com transparência total.
-              </div>
-            </li>
-
-            <li className={styles.listItemPremium}>
-              <CheckCircle2 className={styles.iconCheck} size={20} />
-              <div>
-                <span className={styles.itemHeading}>IA Inteligente: </span>
-                Ferramentas jurídicas assistidas por IA: calculadoras, análise de jurisprudência, redação de peças e gestão inteligente.
+                <span className={styles.itemHeading}>IA Integrada: </span>
+                Peças processuais em segundos.
               </div>
             </li>
           </ul>

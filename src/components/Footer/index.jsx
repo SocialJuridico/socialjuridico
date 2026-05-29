@@ -18,8 +18,8 @@ export default function Footer() {
         {/* Coluna 1: Logo e Descrição */}
         <div className={styles.brandColumn}>
           <Link prefetch={false} href="/" className={styles.logoWrapper}>
-            <Scale size={28} strokeWidth={2.5} />
-            SocialJurídico
+            <Scale size={28} strokeWidth={2.5} className={styles.logoIcon} />
+            <span>Social<span className={styles.goldText}>Jurídico</span></span>
           </Link>
           <p className={styles.brandDesc}>
             A plataforma líder em conectar clientes a oportunidades jurídicas. Tecnologia a serviço da Justiça.
@@ -62,8 +62,15 @@ export default function Footer() {
           <h4 className={styles.columnTitle}>Legal</h4>
           <ul className={styles.linkList}>
             <li><Link prefetch={false} href="/termos" className={styles.navLink}>Termos de Uso</Link></li>
-            <li><Link prefetch={false} href="/privacidade" className={styles.navLink}>Política de Privacidade</Link></li>
-            <li><Link prefetch={false} href="/exclusao-de-dados" className={styles.navLink}>Exclusão de Dados</Link></li>
+            <li>
+              <Link prefetch={false} href="/privacidade" className={styles.navLink}>
+                <span className={styles.desktopOnly}>Política de Privacidade</span>
+                <span className={styles.mobileOnly}>Privacidade</span>
+              </Link>
+            </li>
+            <li className={styles.desktopOnly}>
+              <Link prefetch={false} href="/exclusao-de-dados" className={styles.navLink}>Exclusão de Dados</Link>
+            </li>
           </ul>
 
           <Link prefetch={false} href="/admin" className={styles.adminBtn}>

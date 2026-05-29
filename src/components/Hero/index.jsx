@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, Users, Scale, Briefcase } from 'lucide-react';
+import { ArrowRight, Users, Scale, Briefcase, BadgeCheck } from 'lucide-react';
 import { supabase, supabaseAdmin } from '@/lib/supabase';
 import Button from '../Button';
 import styles from './Hero.module.css';
@@ -42,9 +42,10 @@ export default async function Hero() {
 
         {/* Subtítulo */}
         <p className={styles.subtitle}>
-          Conectamos problemas reais a soluções jurídicas. Publique seu{' '}
-          <br className="hidden md:block" />
-          caso <span className={styles.subtitleStrong}>100% GRÁTIS</span> e encontre advogados qualificados.
+          Conectamos problemas reais a soluções <br className={styles.mobileBr} />
+          jurídicas. Publique seu caso 100% <br className={styles.mobileBr} />
+          <span className={styles.subtitleStrong}>GRÁTIS</span> e encontre advogados <br className={styles.mobileBr} />
+          qualificados.
         </p>
 
         {/* CONTADOR DE USUÁRIOS */}
@@ -53,7 +54,10 @@ export default async function Hero() {
             <Users size={18} className={styles.statIcon} />
             <div className={styles.statTexts}>
               <span className={styles.statNumber}>{fmt(stats.totalClientes)}+</span>
-              <span className={styles.statLabel}>Clientes cadastrados</span>
+              <span className={styles.statLabel}>
+                <span className={styles.desktopLabel}>Clientes cadastrados</span>
+                <span className={styles.mobileLabel}>Clientes</span>
+              </span>
             </div>
           </div>
           <div className={styles.statDivider} aria-hidden="true" />
@@ -61,7 +65,10 @@ export default async function Hero() {
             <Scale size={18} className={styles.statIcon} />
             <div className={styles.statTexts}>
               <span className={styles.statNumber}>{fmt(stats.totalAdvogados)}+</span>
-              <span className={styles.statLabel}>Advogados na plataforma</span>
+              <span className={styles.statLabel}>
+                <span className={styles.desktopLabel}>Advogados na plataforma</span>
+                <span className={styles.mobileLabel}>Advogados</span>
+              </span>
             </div>
           </div>
           <div className={styles.statDivider} aria-hidden="true" />
@@ -69,30 +76,33 @@ export default async function Hero() {
             <Briefcase size={18} className={styles.statIcon} />
             <div className={styles.statTexts}>
               <span className={styles.statNumber}>{fmt(stats.totalCasos)}+</span>
-              <span className={styles.statLabel}>Casos abertos agora</span>
+              <span className={styles.statLabel}>
+                <span className={styles.desktopLabel}>Casos abertos agora</span>
+                <span className={styles.mobileLabel}>Casos</span>
+              </span>
             </div>
           </div>
         </div>
 
         {/* Action Area */}
         <div className={styles.ctaWrapper}>
-          <Link prefetch={false} href="/cadastro" style={{ textDecoration: 'none' }}>
+          <Link prefetch={false} href="/cadastro" className={styles.ctaLink}>
             <Button variant="primary" className={styles.ctaButton}>
               Quero Publicar Caso
               <ArrowRight size={20} />
             </Button>
           </Link>
 
-          <Link prefetch={false} href="/sou-advogado" style={{ textDecoration: 'none' }}>
+          <Link prefetch={false} href="/sou-advogado" className={styles.ctaLink}>
             <Button variant="secondary" className={styles.ctaButton}>
+              <Briefcase size={20} />
               Sou Advogado
-              <Briefcase size={20} style={{ marginLeft: '8px' }} />
             </Button>
           </Link>
 
           <div className={styles.freeLabel}>
-            <CheckCircle2 size={18} strokeWidth={2.5} />
-            100% GRÁTIS
+            <BadgeCheck size={16} className={styles.freeIcon} />
+            100% GRÁTIS PARA CLIENTES
           </div>
         </div>
 
@@ -100,4 +110,3 @@ export default async function Hero() {
     </section>
   );
 }
-

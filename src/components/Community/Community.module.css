@@ -281,21 +281,67 @@
   display: block;
 }
 
-/* Override the global button for this specific location to make it blend well with the white card */
-.fbButton {
-  width: 100% !important;
-  border-radius: 0 !important;
-  padding: 20px 0 !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  font-size: 1.1rem !important;
-  font-weight: 700 !important;
-  background-color: var(--color-black) !important;
-  color: var(--color-white) !important;
-  border: none !important;
+.ctaWrapper {
+  margin-top: 32px;
+  display: flex;
+  justify-content: flex-start;
 }
 
-.fbButton:hover {
-  background-color: var(--color-black-light) !important;
+.joinLink {
+  text-decoration: none;
+  display: inline-block;
+}
+
+.joinBtn {
+  border-radius: 9999px !important;
+  padding: 14px 36px !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+@media (max-width: 768px) {
+  .section {
+    padding: 60px 16px;
+  }
+  .container {
+    gap: 40px;
+  }
+  .title {
+    font-size: 1.8rem;
+    line-height: 1.2;
+    text-align: left;
+  }
+  .subtitle {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 24px;
+    text-align: left;
+  }
+  .benefitItem {
+    padding: 16px;
+    gap: 16px;
+  }
+  .benefitTitle {
+    font-size: 1rem;
+  }
+  .benefitDesc {
+    font-size: 0.8rem;
+  }
+  .ctaWrapper {
+    margin-top: 24px;
+    justify-content: center;
+  }
+  .joinLink {
+    width: 100%;
+    max-width: 320px;
+  }
+  .joinBtn {
+    width: 100% !important;
+  }
+  .reviewsCard {
+    max-width: 100%;
+  }
 }

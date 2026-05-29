@@ -14,58 +14,6 @@
   margin-bottom: 64px;
 }
 
-@media (max-width: 768px) {
-  .footer {
-    padding: 40px 16px 24px 86px;
-    text-align: center;
-  }
-
-  .container {
-    grid-template-columns: 1fr;
-    gap: 32px;
-    justify-items: center;
-    margin-bottom: 40px;
-  }
-
-  .brandColumn {
-    align-items: center;
-    max-width: 100%;
-  }
-
-  .logoWrapper {
-    font-size: 1.25rem;
-    justify-content: center;
-  }
-
-  .brandDesc {
-    max-width: 100%;
-    font-size: 0.85rem;
-  }
-
-  .socials {
-    justify-content: center;
-    gap: 12px;
-  }
-
-  .columnTitle {
-    margin-bottom: 12px;
-    font-size: 1rem;
-  }
-
-  .linkList {
-    align-items: center;
-    gap: 12px;
-  }
-
-  .navLink {
-    font-size: 0.85rem;
-  }
-
-  .adminBtn {
-    margin: 24px auto 0;
-  }
-}
-
 @media (min-width: 769px) {
   .container {
     grid-template-columns: repeat(2, 1fr);
@@ -92,8 +40,16 @@
   gap: 8px;
   font-size: 1.5rem;
   font-weight: 800;
-  color: var(--color-gold);
+  color: var(--color-white);
   text-decoration: none;
+}
+
+.logoIcon {
+  color: var(--color-gold);
+}
+
+.goldText {
+  color: var(--color-gold);
 }
 
 .brandDesc {
@@ -137,7 +93,7 @@
 .columnTitle {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--color-white);
+  color: var(--color-gold);
   margin-bottom: 24px;
 }
 
@@ -192,4 +148,78 @@
   font-size: 0.8rem;
   color: #666666; /* Texto bem apagado pro copyright */
   text-align: center;
+}
+
+.mobileOnly {
+  display: none;
+}
+
+/* ─── RESPONSIVIDADE (MOBILE / TABLET) ───────────────────────── */
+@media (max-width: 768px) {
+  .footer {
+    padding: 40px 24px 100px 24px !important;
+    text-align: left !important;
+  }
+
+  .container {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 24px !important;
+    margin-bottom: 40px !important;
+  }
+
+  .container > div:nth-child(3) {
+    display: none !important;
+  }
+
+  .brandColumn {
+    grid-column: span 2 !important;
+    align-items: flex-start !important;
+    max-width: 100% !important;
+  }
+
+  .logoWrapper {
+    font-size: 1.25rem !important;
+    justify-content: flex-start !important;
+  }
+
+  .brandDesc {
+    max-width: 100% !important;
+    font-size: 0.85rem !important;
+    text-align: left !important;
+  }
+
+  .socials {
+    display: none !important;
+  }
+
+  .columnTitle {
+    margin-bottom: 12px !important;
+    font-size: 1rem !important;
+  }
+
+  .linkList {
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .navLink {
+    font-size: 0.85rem !important;
+  }
+
+  .adminBtn {
+    display: none !important;
+  }
+
+  .desktopOnly {
+    display: none !important;
+  }
+
+  .mobileOnly {
+    display: inline !important;
+  }
+
+  .bottomRow {
+    text-align: center !important;
+    justify-content: center !important;
+  }
 }

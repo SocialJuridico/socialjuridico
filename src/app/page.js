@@ -9,6 +9,7 @@ import Community from "@/components/Community";
 import Testimonials from "@/components/Testimonials";
 import FAQ from "@/components/FAQ";
 import CTA from "@/components/CTA";
+import MobileNav from "@/components/MobileNav";
 
 export default function Home() {
   return (
@@ -22,6 +23,7 @@ export default function Home() {
       <Testimonials />
       <FAQ />
       <CTA />
+      <MobileNav />
     </>
   );
 }

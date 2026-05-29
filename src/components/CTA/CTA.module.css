@@ -54,17 +54,8 @@
   gap: 24px;
 }
 
-@media (max-width: 600px) {
-  .title {
-    font-size: 2.2rem;
-  }
-  .buttonsWrapper {
-    flex-direction: column;
-    width: 100%;
-    gap: 16px;
-  }
-  .buttonsWrapper > button {
-    width: 100%;
-    justify-content: center;
+@media (max-width: 768px) {
+  .section {
+    display: none !important;
   }
 }

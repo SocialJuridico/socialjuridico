@@ -40,6 +40,7 @@ import {
   FileWarning,
   FileUp,
   ArrowLeft,
+  Plus,
 } from "lucide-react";
 import styles from "./Dashboard.module.css";
 import {
@@ -521,6 +522,38 @@ export default function ClienteDashboard() {
       toast.error("Erro ao limpar notificações.");
     } finally {
       setLoadingNotificacoes(false);
+    }
+  };
+
+  const handleNotificationClick = async (notif) => {
+    setNotificacoes((prev) =>
+      prev.map((n) => (n.id === notif.id ? { ...n, lida: true } : n))
+    );
+
+    if (!notif.lida) {
+      try {
+        await fetch("/api/notificacoes", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: notif.id }),
+        });
+      } catch (err) {
+        console.error("Erro ao marcar notificação como lida:", err);
+      }
+    }
+
+    const meta = typeof notif.meta === "string" ? JSON.parse(notif.meta || "{}") : notif.meta || {};
+    const caseId = meta.caseId || meta.caso_id || meta.case_id;
+    if (caseId) {
+      toast.success("Redirecionando para o caso...");
+      window.location.href = `/chat/${caseId}`;
+      return;
+    }
+
+    if (notif.tipo === "CHAT" || notif.tipo === "MENSAGEM") {
+      toast.success("Abrindo mensagens...");
+      setActiveTab("conversas");
+      return;
     }
   };
 
@@ -1798,10 +1831,10 @@ export default function ClienteDashboard() {
                   }}
                 >
                   <div className={styles.mobileMicIconCircle} style={{ background: "var(--color-gold)", boxShadow: "0 0 15px rgba(212, 175, 55, 0.4)" }}>
-                    <Mic size={24} color="#000" />
+                    <Plus size={24} color="#000" />
                   </div>
                   <h3 style={{ color: "var(--color-gold)", margin: "12px 0 6px 0", fontSize: "1.15rem", fontWeight: "800" }}>Iniciar Novo Caso</h3>
-                  <p style={{ color: "var(--color-silver)", margin: 0, fontSize: "0.82rem", fontWeight: "500" }}>Toque para relatar seu problema por voz (IA)</p>
+                  <p style={{ color: "var(--color-silver)", margin: 0, fontSize: "0.82rem", fontWeight: "500" }}>Toque para relatar seu problema</p>
                 </div>
 
                 {/* 3. Status do Caso Ativo Card */}
@@ -2874,7 +2907,12 @@ export default function ClienteDashboard() {
                 <>
                   <div className={isMobile ? styles.mobileNotifList : ""}>
                     {notificacoes.map((notif) => (
-                      <div key={notif.id} className={`${styles.notificationItem} ${isMobile ? styles.notificationItemMobile : ""}`}>
+                      <div
+                        key={notif.id}
+                        className={`${styles.notificationItem} ${isMobile ? styles.notificationItemMobile : ""}`}
+                        onClick={() => handleNotificationClick(notif)}
+                        style={{ cursor: "pointer" }}
+                      >
                         <div className={styles.notificationIcon}>
                           {getNotificationIcon(notif.titulo, notif.mensagem)}
                         </div>

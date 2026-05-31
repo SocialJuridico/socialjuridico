@@ -216,19 +216,189 @@ export default function AdminAdvogadosPage() {
     }
   };
 
+  const handleGeneratePDF = async () => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+
+      const doc = new jsPDF();
+
+      // Page Title & Header Bar
+      doc.setFillColor(13, 15, 18); // #0d0f12
+      doc.rect(0, 0, 210, 35, "F");
+
+      // Gold line
+      doc.setFillColor(212, 175, 55); // #d4af37
+      doc.rect(0, 35, 210, 1.5, "F");
+
+      // Title text
+      doc.setTextColor(212, 175, 55);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text("SOCIAL JURÍDICO", 15, 18);
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text("RELATÓRIO DE AUDITORIA - STATUS OAB", 15, 25);
+
+      // Date in top right
+      const nowStr = new Date().toLocaleString("pt-BR");
+      doc.setTextColor(156, 163, 175);
+      doc.setFontSize(9);
+      doc.text(`Gerado em: ${nowStr}`, 145, 25);
+
+      // --- KPI CARDS ---
+      const total = advogados.length;
+      const verified = advogados.filter(a => a.oab_verification_status === "VERIFIED").length;
+      const pending = advogados.filter(a => a.oab_verification_status === "PENDING" || !a.oab_verification_status).length;
+      const error = advogados.filter(a => a.oab_verification_status === "ERROR").length;
+
+      // Draw 4 cards
+      // Card width: 43, gap: 5, startX: 15
+      const cardW = 43;
+      const cardH = 22;
+      const cardY = 48;
+      const cardGap = 5;
+
+      const drawCard = (x, title, count, colorRGB) => {
+        // Border
+        doc.setDrawColor(229, 231, 235);
+        doc.setFillColor(249, 250, 251);
+        doc.roundedRect(x, cardY, cardW, cardH, 2, 2, "FD");
+
+        // Title
+        doc.setTextColor(100, 116, 139);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7.5);
+        doc.text(title.toUpperCase(), x + 4, cardY + 7);
+
+        // Count
+        doc.setTextColor(colorRGB[0], colorRGB[1], colorRGB[2]);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.text(String(count), x + 4, cardY + 16);
+      };
+
+      drawCard(15, "Total Cadastrados", total, [13, 15, 18]);
+      drawCard(15 + cardW + cardGap, "OAB Verificadas", verified, [16, 185, 129]);
+      drawCard(15 + (cardW + cardGap) * 2, "OAB Pendentes", pending, [245, 158, 11]);
+      drawCard(15 + (cardW + cardGap) * 3, "Erros de Validação", error, [239, 68, 68]);
+
+      // --- TABLE OF ADVOGADOS ---
+      doc.setTextColor(13, 15, 18);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("LISTAGEM DETALHADA DE ADVOGADOS", 15, 82);
+
+      const tableData = advogados.map(a => [
+        a.name || "-",
+        a.email || "-",
+        a.phone || "-",
+        a.oab ? `${a.oab}/${a.estado || ""}` : "-",
+        a.oab_verification_status === "VERIFIED" ? "Verificado" :
+        a.oab_verification_status === "ERROR" ? "Erro" : "Pendente",
+        a.created_at ? new Date(a.created_at).toLocaleDateString("pt-BR") : "-"
+      ]);
+
+      autoTable(doc, {
+        startY: 87,
+        head: [["Nome", "E-mail", "Telefone", "OAB/UF", "Status OAB", "Cadastro"]],
+        body: tableData,
+        theme: "striped",
+        headStyles: {
+          fillColor: [13, 15, 18],
+          textColor: [212, 175, 55],
+          fontStyle: "bold",
+          fontSize: 8.5
+        },
+        bodyStyles: {
+          fontSize: 8
+        },
+        columnStyles: {
+          4: { fontStyle: "bold" } // Status column bold
+        },
+        didParseCell: function(data) {
+          // Highlight status column
+          if (data.column.index === 4 && data.cell.section === 'body') {
+            const status = data.cell.raw;
+            if (status === "Verificado") {
+              data.cell.styles.textColor = [16, 185, 129]; // Green
+            } else if (status === "Erro") {
+              data.cell.styles.textColor = [239, 68, 68]; // Red
+            } else {
+              data.cell.styles.textColor = [217, 119, 6]; // Orange/Amber
+            }
+          }
+        }
+      });
+
+      // Footer
+      const totalPages = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(156, 163, 175);
+        // line divider for footer
+        doc.setFillColor(229, 231, 235);
+        doc.rect(15, 282, 180, 0.2, "F");
+        
+        doc.text("Social Jurídico - Conectando o direito ao futuro.", 15, 288);
+        doc.text(`Página ${i} de ${totalPages}`, 175, 288);
+      }
+
+      doc.save("Relatorio_Status_OAB_Advogados.pdf");
+      toast.success("Relatório gerado com sucesso!");
+    } catch (err) {
+      console.error("Erro ao gerar relatório:", err);
+      toast.error("Ocorreu um erro ao carregar ou gerar o PDF.");
+    }
+  };
+
   if (loading) {
     return <div className={styles.loading}>Carregando advogados...</div>;
   }
 
   return (
     <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/dashboard/admin" className={styles.backLink}>
-          <ArrowLeft size={16} /> Voltar ao painel admin
-        </Link>
-        <h1>
-          <Scale size={18} /> Advogados cadastrados
-        </h1>
+      <header className={styles.header} style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+        <div>
+          <Link href="/dashboard/admin" className={styles.backLink}>
+            <ArrowLeft size={16} /> Voltar ao painel admin
+          </Link>
+          <h1 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '6px 0 0 0' }}>
+            <Scale size={18} /> Advogados cadastrados
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={handleGeneratePDF}
+          style={{
+            background: "linear-gradient(135deg, #d4af37 0%, #b8962e 100%)",
+            color: "#0d0f12",
+            border: "none",
+            borderRadius: "8px",
+            padding: "10px 18px",
+            fontWeight: "700",
+            fontSize: "0.88rem",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            boxShadow: "0 4px 12px rgba(212, 175, 55, 0.2)",
+            transition: "transform 0.2s, box-shadow 0.2s"
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.boxShadow = "0 6px 16px rgba(212, 175, 55, 0.3)";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = "none";
+            e.currentTarget.style.boxShadow = "0 4px 12px rgba(212, 175, 55, 0.2)";
+          }}
+        >
+          📄 Gerar Relatório PDF
+        </button>
       </header>
 
       <div className={styles.searchWrap} style={{ display: 'flex', gap: '10px' }}>

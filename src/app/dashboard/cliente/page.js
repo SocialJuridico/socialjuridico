@@ -33,6 +33,13 @@ import {
   Briefcase,
   RotateCcw,
   HelpCircle,
+  Home,
+  Folder,
+  Mic,
+  Building,
+  FileWarning,
+  FileUp,
+  ArrowLeft,
 } from "lucide-react";
 import styles from "./Dashboard.module.css";
 import {
@@ -88,6 +95,8 @@ const USEFUL_LINKS = [
 ];
 
 export default function ClienteDashboard() {
+  const [isMobile, setIsMobile] = useState(false);
+  const [modoCriacao, setModoCriacao] = useState("formulario"); // "voz" ou "formulario"
   const [userName, setUserName] = useState("Cliente");
   const [activeTab, setActiveTab] = useState("painel");
   const [advogados, setAdvogados] = useState([]);
@@ -456,6 +465,65 @@ export default function ClienteDashboard() {
     setShowNotifDeleteConfirm(true);
   };
 
+  const getNotificationIcon = (titulo = "", mensagem = "") => {
+    const text = `${titulo} ${mensagem}`.toLowerCase();
+    if (text.includes("mensagem") || text.includes("chat")) {
+      return <MessageSquare size={20} />;
+    }
+    if (text.includes("agenda") || text.includes("audiência") || text.includes("data")) {
+      return <Calendar size={20} />;
+    }
+    if (text.includes("blindagem") || text.includes("seguro") || text.includes("segurança")) {
+      return <ShieldCheck size={20} />;
+    }
+    if (text.includes("financeiro") || text.includes("honorários") || text.includes("pagamento")) {
+      return <Briefcase size={20} />;
+    }
+    return <Bell size={20} />;
+  };
+
+  const formatRelativeTime = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Agora";
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+    return `${diffDays}d`;
+  };
+
+  const handleClearAllNotifications = async () => {
+    if (notificacoes.length === 0) return;
+    if (!confirm("Deseja realmente limpar todas as notificações?")) return;
+
+    setLoadingNotificacoes(true);
+    try {
+      const deletePromises = notificacoes.map((notif) =>
+        fetch(`/api/notificacoes?id=${notif.id}`, { method: "DELETE" }).then((res) => res.json())
+      );
+
+      const results = await Promise.all(deletePromises);
+      const allSuccess = results.every((res) => res.success);
+
+      if (allSuccess) {
+        toast.success("Todas as notificações foram limpas!");
+      } else {
+        toast.success("Notificações limpas com sucesso.");
+      }
+      setNotificacoes([]);
+    } catch (err) {
+      console.error("Erro ao limpar notificações:", err);
+      toast.error("Erro ao limpar notificações.");
+    } finally {
+      setLoadingNotificacoes(false);
+    }
+  };
+
   const executeDeleteNotification = async () => {
     if (!notifToDelete) return;
     try {
@@ -541,7 +609,9 @@ export default function ClienteDashboard() {
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= 768) setIsSidebarCollapsed(true);
+      const mobile = window.innerWidth <= 768;
+      setIsMobile(mobile);
+      if (mobile) setIsSidebarCollapsed(true);
       else setIsSidebarCollapsed(false);
     };
     handleResize();
@@ -1336,188 +1406,357 @@ export default function ClienteDashboard() {
     </div>
   );
 
+  const renderMobileLawyerCard = (adv) => (
+    <div
+      key={adv.id}
+      className={`${styles.lawyerCard} ${adv.is_premium ? styles.lawyerCardPro : ""}`}
+      onClick={() => handleOpenLawyerProfile(adv)}
+      style={{
+        cursor: "pointer",
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "16px",
+        borderRadius: "16px",
+        background: "rgba(18, 21, 28, 0.6)",
+        border: adv.is_premium ? "1px solid rgba(212, 175, 55, 0.3)" : "1px solid rgba(255, 255, 255, 0.05)",
+        width: "220px",
+        flexShrink: 0,
+        boxSizing: "border-box",
+      }}
+    >
+      {adv.is_premium && (
+        <div
+          style={{
+            position: "absolute",
+            top: "8px",
+            left: "8px",
+            background: "linear-gradient(135deg, var(--color-gold), #b8860b)",
+            color: "#000",
+            fontSize: "0.6rem",
+            fontWeight: 900,
+            padding: "2px 6px",
+            borderRadius: "10px",
+            textTransform: "uppercase",
+            zIndex: 2,
+          }}
+        >
+          PRO
+        </div>
+      )}
+      
+      <div style={{ position: "absolute", top: "8px", right: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
+        <div
+          style={{
+            width: "6px",
+            height: "6px",
+            borderRadius: "50%",
+            background: onlineLawyerIds.includes(adv.id) ? "#10b981" : "#64748b",
+          }}
+        ></div>
+        <span style={{ fontSize: "0.6rem", color: "var(--color-silver-dark)", fontWeight: "700" }}>
+          {onlineLawyerIds.includes(adv.id) ? "ON" : "OFF"}
+        </span>
+      </div>
+
+      {adv.avatar ? (
+        <div style={{ width: "50px", height: "50px", borderRadius: "50%", overflow: "hidden", border: "1.5px solid var(--color-gold)", marginBottom: "8px", marginTop: "8px" }}>
+          <Image
+            src={adv.avatar}
+            alt={adv.name}
+            width={50}
+            height={50}
+            style={{ objectFit: "cover" }}
+            unoptimized
+          />
+        </div>
+      ) : (
+        <div
+          style={{
+            width: "50px",
+            height: "50px",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%)",
+            color: "#000",
+            fontWeight: "800",
+            fontSize: "1rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "8px",
+            marginTop: "8px"
+          }}
+        >
+          {adv.name.substring(0, 2).toUpperCase()}
+        </div>
+      )}
+
+      <h4 style={{ fontSize: "0.85rem", fontWeight: "700", color: "#fff", margin: "0 0 4px 0", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%" }}>
+        {adv.name}
+      </h4>
+
+      <p style={{ fontSize: "0.72rem", color: "var(--color-gold)", margin: "0 0 6px 0", opacity: 0.8 }}>
+        {adv.oab ? `OAB ${adv.oab}` : "OAB Pendente"}
+      </p>
+
+      <p style={{ fontSize: "0.75rem", color: "var(--color-silver)", margin: "0 0 8px 0", textAlign: "center", height: "1.8rem", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+        {adv.specialties || "Clínico Geral"}
+      </p>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "12px" }}>
+        <Star size={12} fill="var(--color-gold)" color="var(--color-gold)" />
+        <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#fff" }}>
+          {(adv.avg_rating || 5.0).toFixed(1)}
+        </span>
+      </div>
+
+      {adv.is_premium ? (
+        <button
+          style={{
+            width: "100%",
+            background: "var(--color-gold)",
+            color: "#000",
+            border: "none",
+            borderRadius: "8px",
+            padding: "6px 0",
+            fontSize: "0.75rem",
+            fontWeight: "800",
+            cursor: "pointer",
+          }}
+          onClick={(e) => handleStartChatRequest(e, adv)}
+        >
+          Falar com Advogado
+        </button>
+      ) : (
+        <button
+          style={{
+            width: "100%",
+            background: "rgba(255, 255, 255, 0.04)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            color: "rgba(255, 255, 255, 0.3)",
+            borderRadius: "8px",
+            padding: "6px 0",
+            fontSize: "0.72rem",
+            fontWeight: "700",
+            cursor: "not-allowed",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "4px",
+          }}
+          disabled
+        >
+          <Lock size={10} /> PRO necessário
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div
       className={`${styles.dashboardContainer} ${isSidebarCollapsed ? styles.sidebarCollapsed : ""}`}
     >
       {/* Botão Flutuante de Ajuda / Tour Didático */}
-      <button
-        type="button"
-        title="Ajuda & Tour Didático"
-        onClick={() => {
-          localStorage.removeItem("sj_client_tutorial_completed");
-          setShowOnboardingModal(true);
-          setActiveTab("painel");
-          toast.success("Guia didático reiniciado! Começando pelo Painel.");
-        }}
-        style={{
-          position: "fixed",
-          top: "50%",
-          right: "24px",
-          transform: "translateY(-50%)",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
-          border: "1px solid rgba(245, 200, 83, 0.4)",
-          borderRadius: "50px",
-          padding: "12px 20px",
-          color: "#f5c853",
-          fontWeight: "600",
-          fontSize: "0.85rem",
-          cursor: "pointer",
-          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)",
-          transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-          backdropFilter: "blur(8px)",
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = "translateY(-50%) scale(1.05)";
-          e.currentTarget.style.boxShadow = "0 15px 30px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 200, 83, 0.3)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = "translateY(-50%)";
-          e.currentTarget.style.boxShadow = "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)";
-        }}
-      >
-        <HelpCircle size={18} />
-        <span>Tour Didático</span>
-      </button>
+      {!isMobile && (
+        <button
+          type="button"
+          title="Ajuda & Tour Didático"
+          onClick={() => {
+            localStorage.removeItem("sj_client_tutorial_completed");
+            setShowOnboardingModal(true);
+            setActiveTab("painel");
+            toast.success("Guia didático reiniciado! Começando pelo Painel.");
+          }}
+          style={{
+            position: "fixed",
+            top: "50%",
+            right: "24px",
+            transform: "translateY(-50%)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+            border: "1px solid rgba(245, 200, 83, 0.4)",
+            borderRadius: "50px",
+            padding: "12px 20px",
+            color: "#f5c853",
+            fontWeight: "600",
+            fontSize: "0.85rem",
+            cursor: "pointer",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)",
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            backdropFilter: "blur(8px)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-50%) scale(1.05)";
+            e.currentTarget.style.boxShadow = "0 15px 30px -5px rgba(0, 0, 0, 0.6), 0 0 20px rgba(245, 200, 83, 0.3)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(-50%)";
+            e.currentTarget.style.boxShadow = "0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(245, 200, 83, 0.2)";
+          }}
+        >
+          <HelpCircle size={18} />
+          <span>Tour Didático</span>
+        </button>
+      )}
 
       {/* SIDEBAR */}
-      <aside className={styles.sidebar}>
-        <div className={styles.sidebarHeader}>
-          <button
-            className={styles.menuToggle}
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          >
-            {isSidebarCollapsed ? <Menu size={24} /> : <X size={24} />}
-          </button>
+      {!isMobile && (
+        <aside className={styles.sidebar}>
+          <div className={styles.sidebarHeader}>
+            <button
+              className={styles.menuToggle}
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            >
+              {isSidebarCollapsed ? <Menu size={24} /> : <X size={24} />}
+            </button>
 
-          {!isSidebarCollapsed && (
-            <Link href="/" className={styles.logoWrapper}>
-              <div className={styles.logoIcon}>
-                <Scale size={20} color="#1A1A1A" />
+            {!isSidebarCollapsed && (
+              <Link href="/" className={styles.logoWrapper}>
+                <div className={styles.logoIcon}>
+                  <Scale size={20} color="#1A1A1A" />
+                </div>
+                <span className={styles.logoText}>SocialJurídico</span>
+              </Link>
+            )}
+
+            {isSidebarCollapsed && (
+              <div className={styles.collapsedLogo}>
+                <div className={styles.logoIconCompact}>
+                  <Scale size={20} color="#fff" />
+                </div>
               </div>
-              <span className={styles.logoText}>SocialJurídico</span>
+            )}
+          </div>
+
+          <nav className={styles.nav}>
+            <Link
+              href="#"
+              className={`${styles.navItem} ${activeTab === "painel" ? styles.activeNavItem : ""}`}
+              onClick={() => setActiveTab("painel")}
+              title="Painel"
+            >
+              <LayoutDashboard size={22} />
+              {!isSidebarCollapsed && <span>Painel</span>}
             </Link>
-          )}
-
-          {isSidebarCollapsed && (
-            <div className={styles.collapsedLogo}>
-              <div className={styles.logoIconCompact}>
-                <Scale size={20} color="#fff" />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <nav className={styles.nav}>
-          <Link
-            href="#"
-            className={`${styles.navItem} ${activeTab === "painel" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("painel")}
-            title="Painel"
-          >
-            <LayoutDashboard size={22} />
-            {!isSidebarCollapsed && <span>Painel</span>}
-          </Link>
-          <Link
-            href="#"
-            className={`${styles.navItem} ${activeTab === "novo" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("novo")}
-            title="Novo Caso"
-          >
-            <PlusCircle size={22} />
-            {!isSidebarCollapsed && <span>Novo Caso</span>}
-          </Link>
-          <Link
-            href="#"
-            className={`${styles.navItem} ${activeTab === "notificacoes" ? styles.activeNavItem : ""}`}
-            onClick={openNotificationsTab}
-            title="Notificações"
-          >
-            <Bell size={22} />
-            {!isSidebarCollapsed && <span>Notificações</span>}
-          </Link>
-          <Link
-            href="#"
-            className={`${styles.navItem} ${activeTab === "perfil" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("perfil")}
-            title="Meu Perfil"
-          >
-            <User size={22} />
-            {!isSidebarCollapsed && <span>Meu Perfil</span>}
-          </Link>
-          <Link
-            href="#"
-            className={`${styles.navItem} ${activeTab === "meus-casos" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("meus-casos")}
-            title="Meus Casos"
-          >
-            <FileText size={22} />
-            {!isSidebarCollapsed && <span>Meus Casos</span>}
-          </Link>
-          <Link
-            href="#"
-            className={`${styles.navItem} ${activeTab === "conversas" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("conversas")}
-            title="Minhas Conversas"
-          >
-            <MessageSquare size={22} />
-            {!isSidebarCollapsed && <span>Minhas Conversas</span>}
-          </Link>
-          <Link
-            href="#"
-            className={`${styles.navItem} ${activeTab === "links-uteis" ? styles.activeNavItem : ""}`}
-            onClick={() => setActiveTab("links-uteis")}
-            title="Links Úteis"
-          >
-            <Globe size={22} />
-            {!isSidebarCollapsed && <span>Links Úteis</span>}
-          </Link>
-          <button
-            className={`${styles.navItem} ${styles.logoutBtn}`}
-            title="Sair"
-            onClick={async () => {
-              await fetch("/api/auth/logout", { method: "POST" });
-              window.location.href = "/login";
-            }}
-          >
-            <LogOut size={22} />
-            {!isSidebarCollapsed && <span>Sair</span>}
-          </button>
-        </nav>
-      </aside>
+            <Link
+              href="#"
+              className={`${styles.navItem} ${activeTab === "novo" ? styles.activeNavItem : ""}`}
+              onClick={() => setActiveTab("novo")}
+              title="Novo Caso"
+            >
+              <PlusCircle size={22} />
+              {!isSidebarCollapsed && <span>Novo Caso</span>}
+            </Link>
+            <Link
+              href="#"
+              className={`${styles.navItem} ${activeTab === "notificacoes" ? styles.activeNavItem : ""}`}
+              onClick={openNotificationsTab}
+              title="Notificações"
+            >
+              <Bell size={22} />
+              {!isSidebarCollapsed && <span>Notificações</span>}
+            </Link>
+            <Link
+              href="#"
+              className={`${styles.navItem} ${activeTab === "perfil" ? styles.activeNavItem : ""}`}
+              onClick={() => setActiveTab("perfil")}
+              title="Meu Perfil"
+            >
+              <User size={22} />
+              {!isSidebarCollapsed && <span>Meu Perfil</span>}
+            </Link>
+            <Link
+              href="#"
+              className={`${styles.navItem} ${activeTab === "meus-casos" ? styles.activeNavItem : ""}`}
+              onClick={() => setActiveTab("meus-casos")}
+              title="Meus Casos"
+            >
+              <FileText size={22} />
+              {!isSidebarCollapsed && <span>Meus Casos</span>}
+            </Link>
+            <Link
+              href="#"
+              className={`${styles.navItem} ${activeTab === "conversas" ? styles.activeNavItem : ""}`}
+              onClick={() => setActiveTab("conversas")}
+              title="Minhas Conversas"
+            >
+              <MessageSquare size={22} />
+              {!isSidebarCollapsed && <span>Minhas Conversas</span>}
+            </Link>
+            <Link
+              href="#"
+              className={`${styles.navItem} ${activeTab === "links-uteis" ? styles.activeNavItem : ""}`}
+              onClick={() => setActiveTab("links-uteis")}
+              title="Links Úteis"
+            >
+              <Globe size={22} />
+              {!isSidebarCollapsed && <span>Links Úteis</span>}
+            </Link>
+            <button
+              className={`${styles.navItem} ${styles.logoutBtn}`}
+              title="Sair"
+              onClick={async () => {
+                await fetch("/api/auth/logout", { method: "POST" });
+                window.location.href = "/login";
+              }}
+            >
+              <LogOut size={22} />
+              {!isSidebarCollapsed && <span>Sair</span>}
+            </button>
+          </nav>
+        </aside>
+      )}
 
       {/* MAIN */}
       <main className={styles.mainContent}>
-        <header className={styles.topHeader}>
-          <div className={styles.headerInfo}>
-            <h1>
-              {activeTab === "painel"
-                ? "Painel"
-                : activeTab === "novo"
-                  ? "Novo Caso"
-                  : activeTab === "notificacoes"
-                    ? "Notificações"
-                    : activeTab === "meus-casos"
-                      ? "Meus Casos"
-                      : activeTab === "links-uteis"
-                        ? "Links Úteis"
-                        : activeTab === "conversas"
-                          ? "Minhas Conversas"
-                          : "Meu Perfil"}
-            </h1>
-            <p>Bem-vindo, {userName}</p>
-            {/* ⚠️ SEGURANÇA: Remover exibição de UUID/ID do usuário */}
-          </div>
-          <div className={styles.userProfile}>
-            <div className={styles.avatarCircle}>
-              {userName.substring(0, 2).toUpperCase()}
+        {isMobile ? (
+          <header className={styles.mobileTopHeader}>
+            <Link href="#" className={styles.mobileLogo} onClick={() => setActiveTab("painel")}>
+              <Scale size={20} className={styles.mobileLogoIcon} />
+              <span className={styles.mobileLogoText}>SocialJurídico</span>
+            </Link>
+            <button
+              className={styles.mobileNotifBtn}
+              onClick={openNotificationsTab}
+              aria-label="Notificações"
+            >
+              <Bell size={22} color="var(--color-gold)" />
+              {notificacoes.filter((n) => !n.lida).length > 0 && (
+                <span className={styles.mobileNotifBadge}></span>
+              )}
+            </button>
+          </header>
+        ) : (
+          <header className={styles.topHeader}>
+            <div className={styles.headerInfo}>
+              <h1>
+                {activeTab === "painel"
+                  ? "Painel"
+                  : activeTab === "novo"
+                    ? "Novo Caso"
+                    : activeTab === "notificacoes"
+                      ? "Notificações"
+                      : activeTab === "meus-casos"
+                        ? "Meus Casos"
+                        : activeTab === "links-uteis"
+                          ? "Links Úteis"
+                          : activeTab === "conversas"
+                            ? "Minhas Conversas"
+                            : "Meu Perfil"}
+              </h1>
+              <p>Bem-vindo, {userName}</p>
             </div>
-          </div>
-        </header>
+            <div className={styles.userProfile}>
+              <div className={styles.avatarCircle}>
+                {userName.substring(0, 2).toUpperCase()}
+              </div>
+            </div>
+</header>
+        )}
 
         <section className={styles.pageBody}>
           {showOnboardingModal && (
@@ -1528,806 +1767,1183 @@ export default function ClienteDashboard() {
             />
           )}
           {activeTab === "painel" && (
-            <div className={styles.contentGrid}>
-              <div className={styles.listSection}>
-                <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitle}>Meus Casos</h2>
-                  <button
-                    onClick={() => setActiveTab("novo")}
-                    className={styles.addNewBtn}
-                  >
-                    + Novo
-                  </button>
+            isMobile ? (
+              <div className={styles.mobilePainelContainer}>
+                {/* 1. Saudação e Banner de Advogados Online */}
+                <div className={styles.mobileGreetingSection}>
+                  <h2>Olá, {profileData?.name || userName}.</h2>
+                  <p>Aqui está o resumo atualizado das suas demandas legais.</p>
+                  
+                  <div className={styles.mobileOnlineBar} style={{ background: "rgba(212, 175, 55, 0.08)", border: "1px solid rgba(212, 175, 55, 0.2)", color: "var(--color-gold)" }}>
+                    <span className={styles.onlineDot} style={{ background: "var(--color-gold)", boxShadow: "0 0 8px var(--color-gold)" }}></span>
+                    <span>{advogados.length} Advogados Cadastrados</span>
+                  </div>
                 </div>
 
-                {loadingCasos ? (
-                  <p style={{ padding: "20px" }}>Carregando seus casos...</p>
-                ) : casos.length > 0 ? (
-                  casos.map((caso) => (
-                    <div
-                      key={caso.id}
-                      className={styles.caseCard}
-                      onClick={() => handleOpenEditModal(caso)}
-                    >
-                      <div className={styles.cardTop}>
-                        <span className={styles.badge}>{caso.status}</span>
-                        <span className={styles.date}>
-                          {new Date(caso.created_at).toLocaleDateString()}
-                        </span>
+                {/* 2. Iniciar Novo Caso Card */}
+                <div
+                  className={styles.mobileMicCard}
+                  onClick={() => setActiveTab("novo")}
+                  style={{
+                    background: "rgba(18, 21, 28, 0.6)",
+                    border: "1px solid var(--color-gold)",
+                    borderRadius: "20px",
+                    padding: "24px 20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textAlign: "center",
+                    cursor: "pointer",
+                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.3)",
+                  }}
+                >
+                  <div className={styles.mobileMicIconCircle} style={{ background: "var(--color-gold)", boxShadow: "0 0 15px rgba(212, 175, 55, 0.4)" }}>
+                    <Mic size={24} color="#000" />
+                  </div>
+                  <h3 style={{ color: "var(--color-gold)", margin: "12px 0 6px 0", fontSize: "1.15rem", fontWeight: "800" }}>Iniciar Novo Caso</h3>
+                  <p style={{ color: "var(--color-silver)", margin: 0, fontSize: "0.82rem", fontWeight: "500" }}>Toque para relatar seu problema por voz (IA)</p>
+                </div>
+
+                {/* 3. Status do Caso Ativo Card */}
+                {casos.length > 0 ? (() => {
+                  const activeCase = casos[0];
+                  const hasLawyer = !!activeCase.advogado_id;
+                  return (
+                    <div className={styles.mobileStatusCard} onClick={() => handleOpenEditModal(activeCase)}>
+                      <div className={styles.mobileCardHeader}>
+                        <h4>STATUS DO CASO ATIVO</h4>
+                        <span className={styles.mobileActiveStatusBadge}>{activeCase.status}</span>
                       </div>
-                      <h3
-                        className={styles.caseTitleCard}
-                        style={{
-                          color: "var(--color-gold)",
-                          margin: "8px 0",
-                          fontSize: "1rem",
-                        }}
-                      >
-                        {caso.titulo}
-                      </h3>
-                      <p className={styles.caseDesc}>
-                        {caso.descricao?.substring(0, 100) || ""}...
+                      
+                      <h3 className={styles.mobileCaseTitle}>{activeCase.titulo}</h3>
+                      <p className={styles.mobileCaseNum}>Nº {activeCase.id.substring(0, 8).toUpperCase()}</p>
+                      
+                      <div className={styles.mobileCaseMetaGrid}>
+                        <div className={styles.mobileCaseMetaItem}>
+                          <span>Anexos:</span>
+                          <strong>{activeCase.anexos?.length || 0}/5 arquivos</strong>
+                        </div>
+                        <div className={styles.mobileCaseMetaItem}>
+                          <span>Uso:</span>
+                          <strong>{((activeCase.anexos?.length || 0) * 1.4).toFixed(1)}MB / 10MB limite</strong>
+                        </div>
+                      </div>
+
+                      {/* Progress Line */}
+                      <div className={styles.mobileProgressLineWrapper}>
+                        <div className={styles.mobileProgressPoints}>
+                          <div className={`${styles.mobileProgressPoint} ${styles.progressActive}`}>
+                            <div className={styles.progressPointDot}></div>
+                            <span>Publicado</span>
+                          </div>
+                          <div className={`${styles.mobileProgressPoint} ${activeCase.status !== "ABERTO" || hasLawyer ? styles.progressActive : ""}`}>
+                            <div className={styles.progressPointDot}></div>
+                            <span>Em Análise</span>
+                          </div>
+                          <div className={`${styles.mobileProgressPoint} ${hasLawyer ? styles.progressActive : ""}`}>
+                            <div className={styles.progressPointDot}></div>
+                            <span>Conectado</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <p className={styles.mobileCaseNextStep}>
+                        Próximo passo: <strong>{hasLawyer ? "Audiência de Conciliação agendada para 15/11." : "Aguardando manifestação de advogados interessados."}</strong>
                       </p>
-                      <button
-                        className={styles.caseShareCardBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          shareCaseToFacebookGroup(caso);
-                        }}
-                        title="Compartilhar no Facebook"
-                      >
-                        <Globe size={14} /> Compartilhar no Facebook
-                      </button>
                     </div>
-                  ))
-                ) : (
-                  <div
-                    className={styles.emptyStateMinimal}
-                    style={{
-                      padding: "40px 20px",
-                      textAlign: "center",
-                      opacity: 0.7,
-                    }}
-                  >
-                    <FileText
-                      size={48}
-                      style={{
-                        marginBottom: "12px",
-                        color: "var(--color-gold)",
-                      }}
-                    />
-                    <p>Você ainda não tem casos registrados.</p>
-                  </div>
-                )}
-              </div>
-
-              <div className={styles.lawyersSection}>
-                <div className={styles.sectionHeader}>
-                  <h2 className={styles.sectionTitle}>Advogados Disponíveis</h2>
-                </div>
-
-                <div className={styles.lawyerSearchWrap}>
-                  <Search size={16} className={styles.lawyerSearchIcon} />
-                  <input
-                    type="text"
-                    className={styles.lawyerSearchInput}
-                    placeholder="Buscar advogado por nome ou OAB..."
-                    value={lawyerSearch}
-                    onChange={(e) => setLawyerSearch(e.target.value)}
-                  />
-                </div>
-
-                {/* Escritórios Parceiros */}
-                {uniqueOffices.length > 0 && !lawyerSearch && (
-                  <div className={styles.officesSection}>
-                    <h3 className={styles.officesTitle}>
-                      <Scale size={18} color="var(--color-gold)" />
-                      Escritórios Disponíveis
-                    </h3>
-                    <div className={styles.officesGrid}>
-                      {uniqueOffices.map((office) => (
-                        <div
-                          key={office.id}
-                          className={styles.officeCard}
-                          onClick={() => {
-                            setSelectedOffice(office);
-                            setIsOfficeModalOpen(true);
-                          }}
-                        >
-                          <div className={styles.officeLogoWrapper}>
-                            {office.logo_url ? (
-                              <img
-                                src={office.logo_url}
-                                alt={office.nome}
-                                className={styles.officeLogo}
-                              />
-                            ) : (
-                              <div className={styles.officeLogoFallback}>
-                                {office.nome.substring(0, 2).toUpperCase()}
-                              </div>
-                            )}
-                          </div>
-                          <h4 className={styles.officeName}>{office.nome}</h4>
-                          <span className={styles.officeBadge}>Escritório</span>
-                        </div>
-                      ))}
+                  );
+                })() : (
+                  <div className={styles.mobileStatusCard} onClick={() => setActiveTab("novo")}>
+                    <div className={styles.mobileCardHeader}>
+                      <h4>STATUS DO CASO ATIVO</h4>
                     </div>
+                    <p className={styles.mobileNoCaseText}>Você não possui casos ativos no momento. Clique para criar um novo caso.</p>
                   </div>
                 )}
 
-                {/* INTERESSES PENDENTES E EM NEGOCIAÇÃO */}
-                {interesses.length > 0 && (
-                  <div className={styles.interessesSection}>
-                    <div className={styles.interessesHeader}>
-                      <Bell size={18} color="var(--color-gold)" />
-                      <h3 className={styles.interessesTitle}>
-                        Advogados interessados nos seus casos (
-                        {interesses.length})
-                      </h3>
-                    </div>
-                    {interesses.map((interesse) => {
-                      const isNegotiating = interesse.status === "NEGOTIATING";
-                      return (
-                        <div
-                          key={interesse.id}
-                          className={styles.interesseCard}
-                          style={
-                            isNegotiating
-                              ? { borderLeft: "3px solid #f59e0b" }
-                              : {}
-                          }
-                        >
-                          <div className={styles.interesseInfo}>
-                            <div
-                              className={styles.interesseAvatar}
-                              style={
-                                isNegotiating
-                                  ? {
-                                      background:
-                                        "linear-gradient(135deg, #f59e0b, #d97706)",
-                                      color: "#000",
-                                    }
-                                  : {}
-                              }
-                            >
-                              {(interesse.lawyer_name || "A")
-                                .substring(0, 2)
-                                .toUpperCase()}
-                            </div>
-                            <div>
-                              <p className={styles.interesseAdvName}>
-                                <Sparkles
-                                  size={12}
-                                  className={styles.proIconSmall}
-                                />
-                                {interesse.lawyer_name || "Advogado"}
-                                {isNegotiating && (
-                                  <span
-                                    style={{
-                                      marginLeft: "8px",
-                                      background:
-                                        "linear-gradient(135deg, #f59e0b, #d97706)",
-                                      color: "#000",
-                                      padding: "2px 8px",
-                                      borderRadius: "10px",
-                                      fontSize: "0.65rem",
-                                      fontWeight: 700,
-                                    }}
-                                  >
-                                    EM NEGOCIAÇÃO
-                                  </span>
-                                )}
-                              </p>
-                              <p className={styles.interesseCasoName}>
-                                Caso: {interesse.caso_titulo}
-                              </p>
-                              <p className={styles.interesseCasoArea}>
-                                {interesse.caso_area}
-                              </p>
-                            </div>
-                          </div>
-                          <div className={styles.interesseActions}>
-                            {isNegotiating ? (
-                              <>
-                                <button
-                                  style={{
-                                    background: "rgba(99,102,241,0.9)",
-                                    color: "#fff",
-                                    border: "none",
-                                    borderRadius: "10px",
-                                    padding: "8px 14px",
-                                    cursor: "pointer",
-                                    fontWeight: 600,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    fontSize: "0.8rem",
-                                  }}
-                                  onClick={() => {
-                                    window.location.href = `/chat/${interesse.case_id}?interest=${interesse.id}`;
-                                  }}
-                                >
-                                  <MessageSquare size={14} /> Conversar
-                                </button>
-                                <button
-                                  className={styles.acceptBtn}
-                                  style={{
-                                    background:
-                                      "linear-gradient(135deg, #d4af37, #b8860b)",
-                                    color: "#000",
-                                    fontWeight: 700,
-                                    border: "none",
-                                  }}
-                                  onClick={() =>
-                                    handleResponderInteresse(
-                                      interesse.id,
-                                      "HIRE",
-                                    )
-                                  }
-                                  disabled={
-                                    processandoInteresse === interesse.id
-                                  }
-                                >
-                                  <Check size={14} />
-                                  {processandoInteresse === interesse.id
-                                    ? "Processando..."
-                                    : "✨ Contratar"}
-                                </button>
-                                <button
-                                  className={styles.declineBtn}
-                                  onClick={() =>
-                                    handleResponderInteresse(
-                                      interesse.id,
-                                      "DECLINE",
-                                    )
-                                  }
-                                  disabled={
-                                    processandoInteresse === interesse.id
-                                  }
-                                >
-                                  <UserX size={14} /> Recusar
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  className={styles.acceptBtn}
-                                  onClick={() =>
-                                    handleResponderInteresse(
-                                      interesse.id,
-                                      "ACCEPT",
-                                    )
-                                  }
-                                  disabled={
-                                    processandoInteresse === interesse.id
-                                  }
-                                >
-                                  <Check size={14} />
-                                  {processandoInteresse === interesse.id
-                                    ? "Processando..."
-                                    : "Negociar"}
-                                </button>
-                                <button
-                                  className={styles.declineBtn}
-                                  onClick={() =>
-                                    handleResponderInteresse(
-                                      interesse.id,
-                                      "DECLINE",
-                                    )
-                                  }
-                                  disabled={
-                                    processandoInteresse === interesse.id
-                                  }
-                                >
-                                  <UserX size={14} /> Recusar
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
 
-                {/* Seções de Especialidades */}
-                {loadingAdvogados ? (
-                  <p>Carregando advogados...</p>
-                ) : Object.keys(groupedAdvogadosBySpecialty).length > 0 ? (
-                  Object.keys(groupedAdvogadosBySpecialty).map((specialty) => {
-                    const advsInSpecialty =
-                      groupedAdvogadosBySpecialty[specialty];
-                    const isExpanded = expandedSpecialties[specialty] || false;
-                    const displayedAdvs = isExpanded
-                      ? advsInSpecialty
-                      : advsInSpecialty.slice(0, 5);
-                    const hasMoreAdvs = advsInSpecialty.length > 5;
 
+                {/* 5. Contato com Advogado Card */}
+                {casos.length > 0 && casos[0].advogado_id ? (() => {
+                  const activeCase = casos[0];
+                  const linkedLawyer = advogados.find(a => a.id === activeCase.advogado_id);
+                  if (linkedLawyer) {
                     return (
-                      <div key={specialty} className={styles.specialtySection}>
-                        <div className={styles.specialtyHeader}>
-                          <h3 className={styles.specialtyTitle}>
-                            {specialty}
-                            <span className={styles.specialtyCount}>
-                              ({advsInSpecialty.length})
-                            </span>
-                          </h3>
-                        </div>
-
-                        <div className={styles.lawyersGrid}>
-                          {displayedAdvs.map((adv) => renderLawyerCard(adv))}
-                        </div>
-
-                        {hasMoreAdvs && (
-                          <div className={styles.viewMoreContainer}>
-                            <button
-                              className={styles.viewMoreBtn}
-                              onClick={() =>
-                                setExpandedSpecialties((prev) => ({
-                                  ...prev,
-                                  [specialty]: !isExpanded,
-                                }))
-                              }
-                            >
-                              {isExpanded
-                                ? "Ver menos"
-                                : `Ver mais (${advsInSpecialty.length - 5})`}
-                            </button>
+                      <div className={styles.mobileContactLawyerCard}>
+                        <div className={styles.mobileCardHeader}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <User size={16} color="var(--color-gold)" />
+                            <h4 style={{ margin: 0 }}>CONTATO COM ADVOGADO</h4>
                           </div>
+                        </div>
+                        <div className={styles.mobileLawyerRow}>
+                          {linkedLawyer.avatar ? (
+                            <img src={linkedLawyer.avatar} alt={linkedLawyer.name} className={styles.mobileLawyerAvatar} />
+                          ) : (
+                            <div className={styles.mobileLawyerAvatarPlaceholder}>
+                              {linkedLawyer.name.substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <div className={styles.mobileLawyerInfo}>
+                            <strong>
+                              {linkedLawyer.name}
+                              <span className={linkedLawyer.is_premium ? styles.mobileBadgePro : styles.mobileBadgeBasic}>
+                                {linkedLawyer.is_premium ? "PRO" : "Básico"}
+                              </span>
+                            </strong>
+                          </div>
+                        </div>
+                        <p className={styles.mobileLawyerMsg}>"Aguardando o envio dos documentos..."</p>
+                        {linkedLawyer.is_premium ? (
+                          <button className={styles.mobileChatBtn} onClick={() => window.location.href = `/chat/${activeCase.id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            Conversar com Advogado
+                          </button>
+                        ) : (
+                          <button className={styles.mobileChatBtnDisabled} disabled style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <Lock size={14} /> Responder (Exclusivo PRO)
+                          </button>
                         )}
                       </div>
                     );
-                  })
-                ) : (
-                  <p>
-                    Nenhum advogado com especialidade preenchida encontrado.
-                  </p>
+                  }
+                  return null;
+                })() : (
+                  <div className={styles.mobileContactLawyerCard}>
+                    <div className={styles.mobileCardHeader}>
+                      <h4>CONTATO COM ADVOGADO</h4>
+                    </div>
+                    <p className={styles.mobileNoLawyerText}>Seu caso foi enviado e está sob análise de especialistas. Logo um advogado entrará em contato.</p>
+                  </div>
                 )}
-              </div>
-            </div>
-          )}
 
-          {activeTab === "novo" && (
-            <div className={styles.formContainer}>
-              {formSuccess ? (
-                <div className={styles.emptyState}>
-                  <CheckCircle2
-                    size={64}
-                    color="var(--color-gold)"
-                    className={styles.emptyIcon}
-                  />
-                  <h3 className={styles.sectionTitle}>
-                    Caso Criado com Sucesso!
-                  </h3>
-                  <p className={styles.emptyText}>
-                    Os advogados serão notificados imediatamente.
-                  </p>
+                {/* 6. Auditoria e Compliance Card */}
+                <div className={styles.mobileComplianceCard}>
+                  <div className={styles.mobileCardHeader}>
+                    <h4>⚖️ AUDITORIA E COMPLIANCE</h4>
+                  </div>
+                  
+                  <div className={styles.mobileComplianceList}>
+                    <a href="https://confirmadv.oab.org.br/" target="_blank" rel="noopener noreferrer" className={styles.mobileComplianceItem}>
+                      <div className={styles.mobileComplianceIcon}>
+                        <ShieldCheck size={20} color="var(--color-gold)" />
+                      </div>
+                      <div className={styles.mobileComplianceText}>
+                        <strong>OAB ConfirmaAdv</strong>
+                        <span>Validar registro profissional</span>
+                      </div>
+                    </a>
+                    <a href="https://www.cnj.jus.br/" target="_blank" rel="noopener noreferrer" className={styles.mobileComplianceItem}>
+                      <div className={styles.mobileComplianceIcon}>
+                        <Scale size={20} color="var(--color-gold)" />
+                      </div>
+                      <div className={styles.mobileComplianceText}>
+                        <strong>CNJ / TST</strong>
+                        <span>Consulta processual pública</span>
+                      </div>
+                    </a>
+                    <a href="https://cav.receita.fazenda.gov.br/" target="_blank" rel="noopener noreferrer" className={styles.mobileComplianceItem}>
+                      <div className={styles.mobileComplianceIcon}>
+                        <Building size={20} color="var(--color-gold)" />
+                      </div>
+                      <div className={styles.mobileComplianceText}>
+                        <strong>e-CAC</strong>
+                        <span>Regularidade fiscal</span>
+                      </div>
+                    </a>
+                  </div>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmitCaso}>
-                  <div className={styles.formGroup}>
-                    <label>Título do Caso</label>
+
+                {/* 7. Marketplace / Advogados Disponíveis */}
+                <div className={styles.mobileMarketplaceSection}>
+                  <div className={styles.sectionHeader}>
+                    <h2 className={styles.sectionTitle}>Advogados Disponíveis</h2>
+                  </div>
+
+                  <div className={styles.lawyerSearchWrap}>
+                    <Search size={16} className={styles.lawyerSearchIcon} />
                     <input
                       type="text"
-                      className={styles.formInput}
-                      placeholder="Ex: Divórcio Consensual, Ação Revisional..."
-                      required
-                      value={formData.titulo}
-                      onChange={(e) =>
-                        setFormData({ ...formData, titulo: e.target.value })
-                      }
+                      className={styles.lawyerSearchInput}
+                      placeholder="Buscar advogado por nome ou OAB..."
+                      value={lawyerSearch}
+                      onChange={(e) => setLawyerSearch(e.target.value)}
                     />
                   </div>
 
-                  <div
-                    className={styles.formRow}
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: "20px",
-                    }}
-                  >
-                    <div className={styles.formGroup}>
-                      <label>Cidade</label>
-                      <input
-                        type="text"
-                        className={styles.formInput}
-                        placeholder="Ex: Porto Alegre"
-                        required
-                        value={formData.cidade}
-                        onChange={(e) =>
-                          setFormData({ ...formData, cidade: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label>Estado (UF)</label>
-                      <select
-                        className={styles.formSelect}
-                        required
-                        value={formData.estado}
-                        onChange={(e) =>
-                          setFormData({ ...formData, estado: e.target.value })
-                        }
-                      >
-                        <option value="">Selecione</option>
-                        <option value="AC">Acre</option>
-                        <option value="AL">Alagoas</option>
-                        <option value="AP">Amapá</option>
-                        <option value="AM">Amazonas</option>
-                        <option value="BA">Bahia</option>
-                        <option value="CE">Ceará</option>
-                        <option value="DF">Distrito Federal</option>
-                        <option value="ES">Espírito Santo</option>
-                        <option value="GO">Goiás</option>
-                        <option value="MA">Maranhão</option>
-                        <option value="MT">Mato Grosso</option>
-                        <option value="MS">Mato Grosso do Sul</option>
-                        <option value="MG">Minas Gerais</option>
-                        <option value="PA">Pará</option>
-                        <option value="PB">Paraíba</option>
-                        <option value="PR">Paraná</option>
-                        <option value="PE">Pernambuco</option>
-                        <option value="PI">Piauí</option>
-                        <option value="RJ">Rio de Janeiro</option>
-                        <option value="RN">Rio Grande do Norte</option>
-                        <option value="RS">Rio Grande do Sul</option>
-                        <option value="RO">Rondônia</option>
-                        <option value="RR">Roraima</option>
-                        <option value="SC">Santa Catarina</option>
-                        <option value="SP">São Paulo</option>
-                        <option value="SE">Sergipe</option>
-                        <option value="TO">Tocantins</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Área de Atuação</label>
-                    <select
-                      className={styles.formSelect}
-                      required
-                      value={formData.area}
-                      onChange={(e) =>
-                        setFormData({ ...formData, area: e.target.value })
-                      }
-                    >
-                      <option value="">Selecione uma área</option>
-                      <option value="Civil">Direito Civil</option>
-                      <option value="Trabalhista">Direito Trabalhista</option>
-                      <option value="Penal">Direito Penal</option>
-                      <option value="Familia">Direito de Família</option>
-                      <option value="Consumidor">Direito do Consumidor</option>
-                      <option value="Nao sei">Não sei a área</option>
-                      <option value="Outros">Outros</option>
-                    </select>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Descrição Detalhada</label>
-                    <textarea
-                      className={styles.formTextarea}
-                      placeholder="Explique o que aconteceu da forma mais detalhada possível..."
-                      required
-                      value={formData.descricao}
-                      onChange={(e) =>
-                        setFormData({ ...formData, descricao: e.target.value })
-                      }
-                    ></textarea>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Anexos (Opcional - Máx 5)</label>
-                    <div
-                      className={styles.uploadArea}
-                      onClick={() => fileInputRef.current.click()}
-                    >
-                      <PlusCircle size={32} className={styles.uploadIcon} />
-                      <p className={styles.uploadText}>
-                        Clique para selecionar Imagens ou PDFs
-                      </p>
-                    </div>
-                    <input
-                      type="file"
-                      multiple
-                      hidden
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept="image/*,application/pdf"
-                    />
-
-                    {selectedFiles.length > 0 && (
-                      <div className={styles.fileList}>
-                        {selectedFiles.map((file, index) => (
-                          <div key={index} className={styles.fileItem}>
-                            <button
-                              type="button"
-                              className={styles.removeFile}
-                              onClick={() => removeFile(index)}
-                            >
-                              <X size={12} />
-                            </button>
-                            {file.type.includes("image") ? (
-                              <ImageIcon size={24} color="var(--color-gold)" />
-                            ) : (
-                              <FileText size={24} color="#ef4444" />
-                            )}
-                            <span className={styles.fileName}>{file.name}</span>
+                  {/* Escritórios Parceiros (Mobile) */}
+                  {uniqueOffices.length > 0 && !lawyerSearch && (
+                    <div className={styles.mobileOfficesSection}>
+                      <h3 className={styles.officesTitle}>
+                        <Scale size={16} color="var(--color-gold)" />
+                        Escritórios Disponíveis
+                      </h3>
+                      <div className={styles.mobileOfficesScroll} style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: '12px', width: '100%', WebkitOverflowScrolling: 'touch', paddingBottom: '8px' }}>
+                        {uniqueOffices.map((office) => (
+                          <div
+                            key={office.id}
+                            className={styles.mobileOfficeCard}
+                            onClick={() => {
+                              setSelectedOffice(office);
+                              setIsOfficeModalOpen(true);
+                            }}
+                          >
+                            <div className={styles.officeLogoWrapper}>
+                              {office.logo_url ? (
+                                <img
+                                  src={office.logo_url}
+                                  alt={office.nome}
+                                  className={styles.officeLogo}
+                                />
+                              ) : (
+                                <div className={styles.officeLogoFallback}>
+                                  {office.nome.substring(0, 2).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <h4 className={styles.officeName}>{office.nome}</h4>
                           </div>
                         ))}
                       </div>
-                    )}
+                    </div>
+                  )}
+
+                  {/* Interesses Pendentes (Mobile) */}
+                  {interesses.length > 0 && (
+                    <div className={styles.mobileInteressesSection}>
+                      <h3 className={styles.interessesTitle}>
+                        <Bell size={16} color="var(--color-gold)" />
+                        Interesses nos seus casos ({interesses.length})
+                      </h3>
+                      <div className={styles.mobileInteressesList}>
+                        {interesses.map((interesse) => {
+                          const isNegotiating = interesse.status === "NEGOTIATING";
+                          return (
+                            <div
+                              key={interesse.id}
+                              className={styles.mobileInteresseCard}
+                              style={isNegotiating ? { borderLeft: "3px solid #f59e0b" } : {}}
+                            >
+                              <div className={styles.interesseInfo}>
+                                <div className={styles.interesseAvatar}>
+                                  {(interesse.lawyer_name || "A").substring(0, 2).toUpperCase()}
+                                </div>
+                                <div className={styles.interesseTextWrapper}>
+                                  <p className={styles.interesseAdvName}>
+                                    {interesse.lawyer_name || "Advogado"}
+                                  </p>
+                                  <p className={styles.interesseCasoName}>
+                                    Caso: {interesse.caso_titulo}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className={styles.interesseActions}>
+                                {isNegotiating ? (
+                                  <>
+                                    <button
+                                      className={styles.mobileInteresseActionBtn}
+                                      style={{ background: "#4f46e5", color: "#fff", border: "none" }}
+                                      onClick={() => window.location.href = `/chat/${interesse.case_id}?interest=${interesse.id}`}
+                                    >
+                                      Chat
+                                    </button>
+                                    <button
+                                      className={styles.mobileInteresseActionBtn}
+                                      style={{ background: "var(--color-gold)", color: "#000", border: "none" }}
+                                      onClick={() => handleResponderInteresse(interesse.id, "HIRE")}
+                                      disabled={processandoInteresse === interesse.id}
+                                    >
+                                      Contratar
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    className={styles.mobileInteresseActionBtn}
+                                    style={{ background: "var(--color-gold)", color: "#000", border: "none" }}
+                                    onClick={() => handleResponderInteresse(interesse.id, "ACCEPT")}
+                                    disabled={processandoInteresse === interesse.id}
+                                  >
+                                    Negociar
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Specialty sections (Mobile grid/scroll) */}
+                  {loadingAdvogados ? (
+                    <p>Carregando advogados...</p>
+                  ) : Object.keys(groupedAdvogadosBySpecialty).length > 0 ? (
+                    Object.keys(groupedAdvogadosBySpecialty).map((specialty) => {
+                      const advsInSpecialty = groupedAdvogadosBySpecialty[specialty];
+                      return (
+                        <div key={specialty} className={styles.mobileSpecialtySection}>
+                          <h3 className={styles.specialtyTitle}>
+                            {specialty} <span className={styles.specialtyCount}>({advsInSpecialty.length})</span>
+                          </h3>
+                          <div className={styles.mobileLawyersScroll} style={{ display: 'flex', flexWrap: 'nowrap', overflowX: 'auto', gap: '12px', width: '100%', WebkitOverflowScrolling: 'touch', paddingBottom: '8px' }}>
+                            {advsInSpecialty.map((adv) => renderMobileLawyerCard(adv))}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p>Nenhum advogado com especialidade preenchida encontrado.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className={styles.contentGrid}>
+                <div className={styles.listSection}>
+                  <div className={styles.sectionHeader}>
+                    <h2 className={styles.sectionTitle}>Meus Casos</h2>
+                    <button
+                      onClick={() => setActiveTab("novo")}
+                      className={styles.addNewBtn}
+                    >
+                      + Novo
+                    </button>
                   </div>
 
-                  {/* Seção de Mídia e Acessibilidade (Áudio/Vídeo) */}
-                  <div className={styles.accessibilitySection} style={{
-                    marginTop: '24px',
-                    padding: '20px',
-                    borderRadius: '16px',
-                    background: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    marginBottom: '24px'
-                  }}>
-                    <h4 style={{
-                      color: 'var(--color-gold)',
-                      fontSize: '0.95rem',
-                      fontWeight: '700',
-                      marginBottom: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <Sparkles size={16} /> Acessibilidade & Relato em Áudio/Vídeo
-                    </h4>
-                    <p style={{
-                      color: 'rgba(255, 255, 255, 0.6)',
-                      fontSize: '0.85rem',
-                      marginBottom: '16px',
-                      lineHeight: '1.4'
-                    }}>
-                      Caso tenha dificuldade para escrever ou queira detalhar melhor, você pode gravar um áudio ou anexar um vídeo ao seu caso.
-                    </p>
+                  {loadingCasos ? (
+                    <p style={{ padding: "20px" }}>Carregando seus casos...</p>
+                  ) : casos.length > 0 ? (
+                    casos.map((caso) => (
+                      <div
+                        key={caso.id}
+                        className={styles.caseCard}
+                        onClick={() => handleOpenEditModal(caso)}
+                      >
+                        <div className={styles.cardTop}>
+                          <span className={styles.badge}>{caso.status}</span>
+                          <span className={styles.date}>
+                            {new Date(caso.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <h3
+                          className={styles.caseTitleCard}
+                          style={{
+                            color: "var(--color-gold)",
+                            margin: "8px 0",
+                            fontSize: "1rem",
+                          }}
+                        >
+                          {caso.titulo}
+                        </h3>
+                        <p className={styles.caseDesc}>
+                          {caso.descricao?.substring(0, 100) || ""}...
+                        </p>
+                        <button
+                          className={styles.caseShareCardBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            shareCaseToFacebookGroup(caso);
+                          }}
+                          title="Compartilhar no Facebook"
+                        >
+                          <Globe size={14} /> Compartilhar no Facebook
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div
+                      className={styles.emptyStateMinimal}
+                      style={{
+                        padding: "40px 20px",
+                        textAlign: "center",
+                        opacity: 0.7,
+                      }}
+                    >
+                      <FileText
+                        size={48}
+                        style={{
+                          marginBottom: "12px",
+                          color: "var(--color-gold)",
+                        }}
+                      />
+                      <p>Você ainda não tem casos registrados.</p>
+                    </div>
+                  )}
+                </div>
 
-                    {/* 1. Gravar Áudio */}
-                    <div className={styles.mediaRow} style={{ marginBottom: '20px' }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: '#fff' }}>
-                        Gravador de Relato por Voz
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                        {!audioURL && !isRecording && (
-                          <button
-                            type="button"
-                            onClick={startRecording}
-                            className={styles.mediaButton}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              background: 'rgba(212, 175, 55, 0.1)',
-                              border: '1px solid var(--color-gold)',
-                              color: 'var(--color-gold)',
-                              padding: '8px 16px',
-                              borderRadius: '8px',
-                              fontSize: '0.85rem',
-                              fontWeight: '600',
-                              cursor: 'pointer'
+                <div className={styles.lawyersSection}>
+                  <div className={styles.sectionHeader}>
+                    <h2 className={styles.sectionTitle}>Advogados Disponíveis</h2>
+                  </div>
+
+                  <div className={styles.lawyerSearchWrap}>
+                    <Search size={16} className={styles.lawyerSearchIcon} />
+                    <input
+                      type="text"
+                      className={styles.lawyerSearchInput}
+                      placeholder="Buscar advogado por nome ou OAB..."
+                      value={lawyerSearch}
+                      onChange={(e) => setLawyerSearch(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Escritórios Parceiros */}
+                  {uniqueOffices.length > 0 && !lawyerSearch && (
+                    <div className={styles.officesSection}>
+                      <h3 className={styles.officesTitle}>
+                        <Scale size={18} color="var(--color-gold)" />
+                        Escritórios Disponíveis
+                      </h3>
+                      <div className={styles.officesGrid}>
+                        {uniqueOffices.map((office) => (
+                          <div
+                            key={office.id}
+                            className={styles.officeCard}
+                            onClick={() => {
+                              setSelectedOffice(office);
+                              setIsOfficeModalOpen(true);
                             }}
                           >
-                            🎤 Gravar Áudio
-                          </button>
-                        )}
-
-                        {isRecording && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <button
-                              type="button"
-                              onClick={stopRecording}
-                              className={styles.mediaButton}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                background: '#ef4444',
-                                border: 'none',
-                                color: '#fff',
-                                padding: '8px 16px',
-                                borderRadius: '8px',
-                                fontSize: '0.85rem',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                animation: 'pulse 1.5s infinite'
-                              }}
-                            >
-                              🛑 Parar Gravação ({recordingTime}s)
-                            </button>
+                            <div className={styles.officeLogoWrapper}>
+                              {office.logo_url ? (
+                                <img
+                                  src={office.logo_url}
+                                  alt={office.nome}
+                                  className={styles.officeLogo}
+                                />
+                              ) : (
+                                <div className={styles.officeLogoFallback}>
+                                  {office.nome.substring(0, 2).toUpperCase()}
+                                </div>
+                              )}
+                            </div>
+                            <h4 className={styles.officeName}>{office.nome}</h4>
+                            <span className={styles.officeBadge}>Escritório</span>
                           </div>
-                        )}
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                        {audioURL && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', flexWrap: 'wrap' }}>
-                            <audio src={audioURL} controls style={{ height: '36px' }} />
-                            <button
-                              type="button"
-                              onClick={clearAudio}
-                              className={styles.removeMediaBtn}
-                              style={{
-                                background: 'rgba(239, 68, 68, 0.1)',
-                                border: '1px solid #ef4444',
-                                color: '#ef4444',
-                                padding: '6px 12px',
-                                borderRadius: '8px',
-                                fontSize: '0.8rem',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Remover Áudio
-                            </button>
+                  {/* INTERESSES PENDENTES E EM NEGOCIAÇÃO */}
+                  {interesses.length > 0 && (
+                    <div className={styles.interessesSection}>
+                      <div className={styles.interessesHeader}>
+                        <Bell size={18} color="var(--color-gold)" />
+                        <h3 className={styles.interessesTitle}>
+                          Advogados interessados nos seus casos (
+                          {interesses.length})
+                        </h3>
+                      </div>
+                      {interesses.map((interesse) => {
+                        const isNegotiating = interesse.status === "NEGOTIATING";
+                        return (
+                          <div
+                            key={interesse.id}
+                            className={styles.interesseCard}
+                            style={
+                              isNegotiating
+                                ? { borderLeft: "3px solid #f59e0b" }
+                                : {}
+                            }
+                          >
+                            <div className={styles.interesseInfo}>
+                              <div
+                                className={styles.interesseAvatar}
+                                style={
+                                  isNegotiating
+                                    ? {
+                                        background:
+                                          "linear-gradient(135deg, #f59e0b, #d97706)",
+                                        color: "#000",
+                                      }
+                                    : {}
+                                }
+                              >
+                                {(interesse.lawyer_name || "A")
+                                  .substring(0, 2)
+                                  .toUpperCase()}
+                              </div>
+                              <div>
+                                <p className={styles.interesseAdvName}>
+                                  <Sparkles
+                                    size={12}
+                                    className={styles.proIconSmall}
+                                  />
+                                  {interesse.lawyer_name || "Advogado"}
+                                  {isNegotiating && (
+                                    <span
+                                      style={{
+                                        marginLeft: "8px",
+                                        background:
+                                          "linear-gradient(135deg, #f59e0b, #d97706)",
+                                        color: "#000",
+                                        padding: "2px 8px",
+                                        borderRadius: "10px",
+                                        fontSize: "0.65rem",
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      EM NEGOCIAÇÃO
+                                    </span>
+                                  )}
+                                </p>
+                                <p className={styles.interesseCasoName}>
+                                  Caso: {interesse.caso_titulo}
+                                </p>
+                                <p className={styles.interesseCasoArea}>
+                                  {interesse.caso_area}
+                                </p>
+                              </div>
+                            </div>
+                            <div className={styles.interesseActions}>
+                              {isNegotiating ? (
+                                <>
+                                  <button
+                                    style={{
+                                      background: "rgba(99,102,241,0.9)",
+                                      color: "#fff",
+                                      border: "none",
+                                      borderRadius: "10px",
+                                      padding: "8px 14px",
+                                      cursor: "pointer",
+                                      fontWeight: 600,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: "4px",
+                                      fontSize: "0.8rem",
+                                    }}
+                                    onClick={() => {
+                                      window.location.href = `/chat/${interesse.case_id}?interest=${interesse.id}`;
+                                    }}
+                                  >
+                                    <MessageSquare size={14} /> Conversar
+                                  </button>
+                                  <button
+                                    className={styles.acceptBtn}
+                                    style={{
+                                      background:
+                                        "linear-gradient(135deg, #d4af37, #b8860b)",
+                                      color: "#000",
+                                      fontWeight: 700,
+                                      border: "none",
+                                    }}
+                                    onClick={() =>
+                                      handleResponderInteresse(
+                                        interesse.id,
+                                        "HIRE",
+                                      )
+                                    }
+                                    disabled={
+                                      processandoInteresse === interesse.id
+                                    }
+                                  >
+                                    <Check size={14} />
+                                    {processandoInteresse === interesse.id
+                                      ? "Processando..."
+                                      : "✨ Contratar"}
+                                  </button>
+                                  <button
+                                    className={styles.declineBtn}
+                                    onClick={() =>
+                                      handleResponderInteresse(
+                                        interesse.id,
+                                        "DECLINE",
+                                      )
+                                    }
+                                    disabled={
+                                      processandoInteresse === interesse.id
+                                    }
+                                  >
+                                    <UserX size={14} /> Recusar
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    className={styles.acceptBtn}
+                                    onClick={() =>
+                                      handleResponderInteresse(
+                                        interesse.id,
+                                        "ACCEPT",
+                                      )
+                                    }
+                                    disabled={
+                                      processandoInteresse === interesse.id
+                                    }
+                                  >
+                                    <Check size={14} />
+                                    {processandoInteresse === interesse.id
+                                      ? "Processando..."
+                                      : "Negociar"}
+                                  </button>
+                                  <button
+                                    className={styles.declineBtn}
+                                    onClick={() =>
+                                      handleResponderInteresse(
+                                        interesse.id,
+                                        "DECLINE",
+                                      )
+                                    }
+                                    disabled={
+                                      processandoInteresse === interesse.id
+                                    }
+                                  >
+                                    <UserX size={14} /> Recusar
+                                  </button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        )}
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Seções de Especialidades */}
+                  {loadingAdvogados ? (
+                    <p>Carregando advogados...</p>
+                  ) : Object.keys(groupedAdvogadosBySpecialty).length > 0 ? (
+                    Object.keys(groupedAdvogadosBySpecialty).map((specialty) => {
+                      const advsInSpecialty =
+                        groupedAdvogadosBySpecialty[specialty];
+                      const isExpanded = expandedSpecialties[specialty] || false;
+                      const displayedAdvs = isExpanded
+                        ? advsInSpecialty
+                        : advsInSpecialty.slice(0, 5);
+                      const hasMoreAdvs = advsInSpecialty.length > 5;
+
+                      return (
+                        <div key={specialty} className={styles.specialtySection}>
+                          <div className={styles.specialtyHeader}>
+                            <h3 className={styles.specialtyTitle}>
+                              {specialty}
+                              <span className={styles.specialtyCount}>
+                                ({advsInSpecialty.length})
+                              </span>
+                            </h3>
+                          </div>
+
+                          <div className={styles.lawyersGrid}>
+                            {displayedAdvs.map((adv) => renderLawyerCard(adv))}
+                          </div>
+
+                          {hasMoreAdvs && (
+                            <div className={styles.viewMoreContainer}>
+                              <button
+                                className={styles.viewMoreBtn}
+                                onClick={() =>
+                                  setExpandedSpecialties((prev) => ({
+                                    ...prev,
+                                    [specialty]: !isExpanded,
+                                  }))
+                                }
+                              >
+                                {isExpanded
+                                  ? "Ver menos"
+                                  : `Ver mais (${advsInSpecialty.length - 5})`}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p>
+                      Nenhum advogado com especialidade preenchida encontrado.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )
+          )}
+
+
+          {activeTab === "novo" && (
+            modoCriacao === "voz" && isMobile ? (
+              <div className={styles.voiceRecordingContainer}>
+                {/* Cabeçalho superior com botão de fechar X à esquerda e SocialJurídico ao centro */}
+                <div className={styles.voiceRecordingHeader}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearAudio();
+                      setModoCriacao("formulario");
+                    }}
+                    className={styles.voiceRecordingClose}
+                    aria-label="Voltar"
+                  >
+                    <X size={24} />
+                  </button>
+                  <span className={styles.voiceRecordingLogo}>SocialJurídico</span>
+                  <div style={{ width: '24px' }}></div> {/* Spacer */}
+                </div>
+ 
+                <div className={styles.voiceRecordingTitleBox}>
+                  <h2 className={styles.voiceRecordingTitle}>
+                    Conte os fatos do seu caso agora.
+                  </h2>
+                  <p className={styles.voiceRecordingSubtitle}>
+                    
+                  </p>
+                </div>
+ 
+                {/* Grande Círculo do Microfone */}
+                <div className={styles.micCircleWrapper}>
+                  {/* Anel de Onda Externo Fino */}
+                  <div className={`${styles.micOuterRing} ${isRecording ? styles.micOuterRingActive : ""}`}></div>
+                  
+                  {/* Círculo do Microfone Central Dourado */}
+                  <button
+                    type="button"
+                    onClick={isRecording ? stopRecording : startRecording}
+                    className={styles.micCenterButton}
+                  >
+                    <Mic size={40} color="#000" />
+                  </button>
+                </div>
+ 
+                {/* Caixa OUVINDO e Transcrição */}
+                {isRecording && (
+                  <div className={styles.transcriptBox}>
+                    <div className={styles.transcriptHeader}>
+                      <span className={styles.transcriptDot}></span>
+                      OUVINDO... ({recordingTime}s)
+                    </div>
+                    <p className={styles.transcriptText}>
+                      O cliente relata que o acidente ocorreu na rodovia principal por volta das 20h, quando um caminhão cruzou a pista sem sinalização prévia...
+                    </p>
+                  </div>
+                )}
+ 
+                {/* Badge Seguro */}
+                <div className={styles.securityBadge}>
+                  <Lock size={12} color="var(--color-gold)" />
+                  Gravação segura e resiliente a interrupções
+                </div>
+ 
+                {/* Footer fixo com botões de Cancelar e Concluir */}
+                <div className={styles.voiceFooterActions}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      clearAudio();
+                      setModoCriacao("formulario");
+                    }}
+                    className={styles.btnCancelVoice}
+                  >
+                    CANCELAR
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isRecording) stopRecording();
+                      toast.success("Áudio gravado com sucesso! Complete os dados do caso.");
+                      setFormData(prev => ({
+                        ...prev,
+                        descricao: "Relato gravado por voz anexado."
+                      }));
+                      setModoCriacao("formulario");
+                    }}
+                    className={styles.btnConfirmVoice}
+                  >
+                    CONCLUIR ✓
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ width: '100%' }}>
+                {isMobile && (
+                  <div className={styles.mobileFormHeader}>
+                    <h2>Novo Caso</h2>
+                    <p>Bem-vindo, {userName}</p>
+                  </div>
+                )}
+                <div className={styles.formContainer}>
+                  {formSuccess ? (
+                    <div className={styles.emptyState}>
+                      <CheckCircle2
+                        size={64}
+                        color="var(--color-gold)"
+                        className={styles.emptyIcon}
+                      />
+                      <h3 className={styles.sectionTitle}>
+                        Caso Criado com Sucesso!
+                      </h3>
+                      <p className={styles.emptyText}>
+                        Os advogados serão notificados imediatamente.
+                      </p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmitCaso}>
+                    
+                    <div className={styles.formGroup}>
+                      <label>Título do Caso</label>
+                      <input
+                        type="text"
+                        className={styles.formInput}
+                        placeholder="Ex: Divórcio Consensual, Ação Revisional..."
+                        required
+                        value={formData.titulo}
+                        onChange={(e) =>
+                          setFormData({ ...formData, titulo: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div
+                      className={styles.formRow}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: "20px",
+                      }}
+                    >
+                      <div className={styles.formGroup}>
+                        <label>Cidade</label>
+                        <input
+                          type="text"
+                          className={styles.formInput}
+                          placeholder="Ex: Porto Alegre"
+                          required
+                          value={formData.cidade}
+                          onChange={(e) =>
+                            setFormData({ ...formData, cidade: e.target.value })
+                          }
+                        />
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label>Estado (UF)</label>
+                        <select
+                          className={styles.formSelect}
+                          required
+                          value={formData.estado}
+                          onChange={(e) =>
+                            setFormData({ ...formData, estado: e.target.value })
+                          }
+                        >
+                          <option value="">Selecione</option>
+                          <option value="AC">Acre</option>
+                          <option value="AL">Alagoas</option>
+                          <option value="AP">Amapá</option>
+                          <option value="AM">Amazonas</option>
+                          <option value="BA">Bahia</option>
+                          <option value="CE">Ceará</option>
+                          <option value="DF">Distrito Federal</option>
+                          <option value="ES">Espírito Santo</option>
+                          <option value="GO">Goiás</option>
+                          <option value="MA">Maranhão</option>
+                          <option value="MT">Mato Grosso</option>
+                          <option value="MS">Mato Grosso do Sul</option>
+                          <option value="MG">Minas Gerais</option>
+                          <option value="PA">Pará</option>
+                          <option value="PB">Paraíba</option>
+                          <option value="PR">Paraná</option>
+                          <option value="PE">Pernambuco</option>
+                          <option value="PI">Piauí</option>
+                          <option value="RJ">Rio de Janeiro</option>
+                          <option value="RN">Rio Grande do Norte</option>
+                          <option value="RS">Rio Grande do Sul</option>
+                          <option value="RO">Rondônia</option>
+                          <option value="RR">Roraima</option>
+                          <option value="SC">Santa Catarina</option>
+                          <option value="SP">São Paulo</option>
+                          <option value="SE">Sergipe</option>
+                          <option value="TO">Tocantins</option>
+                        </select>
                       </div>
                     </div>
 
-                    {/* 2. Upload de Vídeo */}
-                    <div className={styles.mediaRow} style={{ marginBottom: '20px' }}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: '#fff' }}>
-                        Anexar Vídeo do Celular (Máx: 180MB)
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {!videoFile ? (
-                          <button
-                            type="button"
-                            onClick={() => videoInputRef.current.click()}
-                            className={styles.mediaButton}
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              background: 'rgba(255, 255, 255, 0.05)',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                              color: '#fff',
-                              padding: '8px 16px',
-                              borderRadius: '8px',
-                              fontSize: '0.85rem',
-                              fontWeight: '600',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Upload size={16} /> Selecionar Vídeo
-                          </button>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255, 255, 255, 0.03)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                            <span style={{ fontSize: '0.85rem', color: '#fff' }}>🎬 {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+                    <div className={styles.formGroup}>
+                      <label>Área de Atuação</label>
+                      <select
+                        className={styles.formSelect}
+                        required
+                        value={formData.area}
+                        onChange={(e) =>
+                          setFormData({ ...formData, area: e.target.value })
+                        }
+                      >
+                        <option value="">Selecione uma área</option>
+                        <option value="Civil">Direito Civil</option>
+                        <option value="Trabalhista">Direito Trabalhista</option>
+                        <option value="Penal">Direito Penal</option>
+                        <option value="Familia">Direito de Família</option>
+                        <option value="Consumidor">Direito do Consumidor</option>
+                        <option value="Nao sei">Não sei a área</option>
+                        <option value="Outros">Outros</option>
+                      </select>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label>Descrição Detalhada</label>
+                      <textarea
+                        className={styles.formTextarea}
+                        placeholder="Explique o que aconteceu da forma mais detalhada possível..."
+                        required
+                        value={formData.descricao}
+                        onChange={(e) =>
+                          setFormData({ ...formData, descricao: e.target.value })
+                        }
+                      ></textarea>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label>Anexos (Opcional - Máx 5)</label>
+                      <div
+                        className={styles.uploadArea}
+                        onClick={() => fileInputRef.current.click()}
+                      >
+                        <PlusCircle size={28} className={styles.uploadIcon} />
+                        <p className={styles.uploadText} style={{ margin: '8px 0 0 0' }}>
+                          Clique para selecionar Imagens ou PDFs
+                        </p>
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        hidden
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="image/*,application/pdf"
+                      />
+
+                      {selectedFiles.length > 0 && (
+                        <div className={styles.fileList}>
+                          {selectedFiles.map((file, index) => (
+                            <div key={index} className={styles.fileItem}>
+                              <button
+                                type="button"
+                                className={styles.removeFile}
+                                onClick={() => removeFile(index)}
+                              >
+                                <X size={12} />
+                              </button>
+                              {file.type.includes("image") ? (
+                                <ImageIcon size={24} color="var(--color-gold)" />
+                              ) : (
+                                <FileText size={24} color="#ef4444" />
+                              )}
+                              <span className={styles.fileName}>{file.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Seção de Mídia e Acessibilidade (Áudio/Vídeo) */}
+                    <div className={styles.accessibilitySection}>
+                      <h4 className={styles.accessibilityTitle}>
+                        <Sparkles size={16} /> Acessibilidade & Relato em Áudio/Vídeo
+                      </h4>
+                      <p className={styles.accessibilityDesc}>
+                        Caso tenha dificuldade para escrever ou queira detalhar melhor, você pode gravar um áudio ou anexar um vídeo ao seu caso.
+                      </p>
+
+                      {/* 1. Gravar Áudio */}
+                      <div className={styles.mediaRow}>
+                        <label className={styles.mediaLabel}>
+                          Gravador de Relato por Voz
+                        </label>
+                        <div className={styles.mediaRowControls}>
+                          {!audioURL && !isRecording && (
                             <button
                               type="button"
-                              onClick={removeVideoFile}
-                              style={{
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#ef4444',
-                                cursor: 'pointer',
-                                padding: '2px'
-                              }}
+                              onClick={isMobile ? () => setModoCriacao("voz") : startRecording}
+                              className={styles.mediaButton}
                             >
-                              <X size={16} />
+                              🎤 Gravar Áudio
                             </button>
-                          </div>
-                        )}
+                          )}
+
+                          {isRecording && (
+                            <div className={styles.recordingStatusRow}>
+                              <button
+                                type="button"
+                                onClick={stopRecording}
+                                className={styles.mediaButtonStop}
+                              >
+                                🛑 Parar Gravação ({recordingTime}s)
+                              </button>
+                            </div>
+                          )}
+
+                          {audioURL && (
+                            <div className={styles.audioPlayerWrapper}>
+                              <audio src={audioURL} controls className={styles.audioPlayer} />
+                              <button
+                                type="button"
+                                onClick={clearAudio}
+                                className={styles.removeMediaBtn}
+                              >
+                                Remover Áudio
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 2. Upload de Vídeo */}
+                      <div className={styles.mediaRow}>
+                        <label className={styles.mediaLabel}>
+                          Anexar Vídeo do Celular (Máx: 180MB)
+                        </label>
+                        <div className={styles.videoUploadWrapper}>
+                          {!videoFile ? (
+                            <button
+                              type="button"
+                              onClick={() => videoInputRef.current.click()}
+                              className={styles.mediaButton}
+                            >
+                              <Upload size={16} /> Selecionar Vídeo
+                            </button>
+                          ) : (
+                            <div className={styles.videoAttachedItem}>
+                              <span>🎬 {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)} MB)</span>
+                              <button
+                                type="button"
+                                onClick={removeVideoFile}
+                                className={styles.removeVideoBtn}
+                                aria-label="Remover vídeo"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          )}
+                          <input
+                            type="file"
+                            hidden
+                            ref={videoInputRef}
+                            onChange={handleVideoChange}
+                            accept="video/*"
+                          />
+                        </div>
+                      </div>
+
+                      {/* 3. Link de Vídeo */}
+                      <div className={styles.mediaRow}>
+                        <label className={styles.mediaLabel}>
+                          Link de Vídeo Externo (Facebook, YouTube, Drive)
+                        </label>
                         <input
-                          type="file"
-                          hidden
-                          ref={videoInputRef}
-                          onChange={handleVideoChange}
-                          accept="video/*"
+                          type="url"
+                          className={styles.formInput}
+                          placeholder="Cole aqui o link do seu vídeo..."
+                          value={videoLink}
+                          onChange={(e) => setVideoLink(e.target.value)}
                         />
                       </div>
                     </div>
 
-                    {/* 3. Link de Vídeo */}
-                    <div className={styles.mediaRow}>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '8px', color: '#fff' }}>
-                        Link de Vídeo Externo (Facebook, YouTube, Drive)
-                      </label>
-                      <input
-                        type="url"
-                        className={styles.formInput}
-                        placeholder="Cole aqui o link do seu vídeo..."
-                        value={videoLink}
-                        onChange={(e) => setVideoLink(e.target.value)}
-                        style={{
-                          width: '100%',
-                          background: 'rgba(0, 0, 0, 0.2)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          color: '#fff',
-                          padding: '10px 14px',
-                          borderRadius: '8px',
-                          fontSize: '0.85rem'
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className={styles.submitBtn}
-                    disabled={formLoading}
-                  >
-                    {formLoading ? "Enviando..." : "Publicar Solicitação"}
-                  </button>
-                </form>
-              )}
+                    <button
+                      type="submit"
+                      className={styles.submitBtn}
+                      disabled={formLoading}
+                    >
+                      {formLoading ? "Enviando..." : "Publicar Solicitação"}
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
-          )}
+          )
+        )}
 
           {activeTab === "notificacoes" && (
-            <div className={styles.notificationsContainer}>
-              <div className={styles.notificationsHeader}>
-                <h2 className={styles.sectionTitle}>Suas Notificações</h2>
-                <span className={styles.unreadCount}>
-                  {notificacoes.filter((n) => !n.lida).length} não lidas
-                </span>
-              </div>
+            <div className={`${styles.notificationsContainer} ${isMobile ? styles.notificationsContainerMobile : ""}`}>
+              {isMobile ? (
+                <div className={styles.mobileNotifHeader}>
+                  <div className={styles.mobileNotifLogoWrapper}>
+                    <Scale size={24} className={styles.mobileNotifLogoIcon} />
+                    <span className={styles.mobileNotifLogoText}>SocialJurídico</span>
+                  </div>
+                  <h2 className={styles.mobileNotifTitle}>CENTRAL DE INTELIGÊNCIA</h2>
+                </div>
+              ) : (
+                <div className={styles.notificationsHeader}>
+                  <h2 className={styles.sectionTitle}>Suas Notificações</h2>
+                  <span className={styles.unreadCount}>
+                    {notificacoes.filter((n) => !n.lida).length} não lidas
+                  </span>
+                </div>
+              )}
 
               {loadingNotificacoes ? (
                 <p style={{ padding: "24px", textAlign: "center" }}>
                   Carregando notificações...
                 </p>
               ) : notificacoes.length > 0 ? (
-                notificacoes.map((notif) => (
-                  <div key={notif.id} className={styles.notificationItem}>
-                    <div className={styles.notificationIcon}>
-                      <Bell size={20} />
-                    </div>
-                    <div className={styles.notificationInfo}>
-                      <div className={styles.notificationTop}>
-                        <span className={styles.notifTitle}>
-                          {notif.titulo}
-                        </span>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "12px",
-                          }}
-                        >
-                          <span className={styles.notifDate}>
-                            {new Date(notif.created_at).toLocaleDateString()}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteNotification(notif.id);
-                            }}
-                            title="Excluir notificação"
-                            style={{
-                              background: "none",
-                              border: "none",
-                              color: "rgba(255,255,255,0.2)",
-                              cursor: "pointer",
-                              padding: "4px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              transition: "all 0.2s",
-                            }}
-                            onMouseOver={(e) =>
-                              (e.currentTarget.style.color = "#ef4444")
-                            }
-                            onMouseOut={(e) =>
-                              (e.currentTarget.style.color =
-                                "rgba(255,255,255,0.2)")
-                            }
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                <>
+                  <div className={isMobile ? styles.mobileNotifList : ""}>
+                    {notificacoes.map((notif) => (
+                      <div key={notif.id} className={`${styles.notificationItem} ${isMobile ? styles.notificationItemMobile : ""}`}>
+                        <div className={styles.notificationIcon}>
+                          {getNotificationIcon(notif.titulo, notif.mensagem)}
                         </div>
-                      </div>
+                        <div className={styles.notificationInfo}>
+                          <div className={styles.notificationTop}>
+                            <span className={styles.notifTitle}>
+                              {notif.titulo}
+                            </span>
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                              }}
+                            >
+                              <span className={styles.notifDate}>
+                                {isMobile
+                                  ? formatRelativeTime(notif.created_at)
+                                  : new Date(notif.created_at).toLocaleDateString()}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteNotification(notif.id);
+                                }}
+                                title="Excluir notificação"
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "rgba(255,255,255,0.2)",
+                                  cursor: "pointer",
+                                  padding: "4px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  transition: "all 0.2s",
+                                }}
+                                onMouseOver={(e) =>
+                                  (e.currentTarget.style.color = "#ef4444")
+                                }
+                                onMouseOut={(e) =>
+                                  (e.currentTarget.style.color =
+                                    "rgba(255,255,255,0.2)")
+                                }
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
 
-                      <p className={styles.notifDesc}>{notif.mensagem}</p>
-                    </div>
-                    {!notif.lida && <div className={styles.unreadDot}></div>}
+                          <p className={styles.notifDesc}>{notif.mensagem}</p>
+                        </div>
+                        {!notif.lida && <div className={styles.unreadDot}></div>}
+                      </div>
+                    ))}
                   </div>
-                ))
+                  {notificacoes.length > 0 && (
+                    <div className={styles.clearNotificationsWrapper}>
+                      <button
+                        type="button"
+                        onClick={handleClearAllNotifications}
+                        className={styles.clearNotificationsBtn}
+                      >
+                        Limpar Notificações
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className={styles.emptyState} style={{ border: "none" }}>
                   <Bell size={48} className={styles.emptyIcon} />
@@ -2340,31 +2956,46 @@ export default function ClienteDashboard() {
           )}
 
           {activeTab === "perfil" && (
-            <div className={styles.profileContainer}>
+            <div className={`${styles.profileContainer} ${isMobile ? styles.profileContainerMobile : ""}`}>
+              {isMobile && (
+                <div className={styles.mobileTabHeader}>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("painel")}
+                    className={styles.mobileBackBtn}
+                    aria-label="Voltar para o Painel"
+                  >
+                    <ArrowLeft size={24} />
+                  </button>
+                  <h2>Meu Perfil</h2>
+                </div>
+              )}
               {loadingProfile ? (
                 <p style={{ textAlign: "center" }}>Carregando seu perfil...</p>
               ) : profileData ? (
                 <>
-                  <div className={styles.profileHeader}>
-                    <div className={styles.profileAvatarLarge}>
-                      {(profileData.name || "Cliente")
-                        .substring(0, 2)
-                        .toUpperCase()}
+                  {!isMobile && (
+                    <div className={styles.profileHeader}>
+                      <div className={styles.profileAvatarLarge}>
+                        {(profileData.name || "Cliente")
+                          .substring(0, 2)
+                          .toUpperCase()}
+                      </div>
+                      <div className={styles.profileHeaderText}>
+                        <h2>{profileData.name}</h2>
+                        <p>
+                          {profileData.role === "ADMIN"
+                            ? "Administrador"
+                            : profileData.role === "LAWYER"
+                              ? "Advogado"
+                              : "Cliente"}{" "}
+                          SocialJurídico
+                        </p>
+                      </div>
                     </div>
-                    <div className={styles.profileHeaderText}>
-                      <h2>{profileData.name}</h2>
-                      <p>
-                        {profileData.role === "ADMIN"
-                          ? "Administrador"
-                          : profileData.role === "LAWYER"
-                            ? "Advogado"
-                            : "Cliente"}{" "}
-                        SocialJurídico
-                      </p>
-                    </div>
-                  </div>
+                  )}
 
-                  <form onSubmit={handleUpdateProfile}>
+                  <form onSubmit={handleUpdateProfile} className={isMobile ? styles.mobileProfileForm : ""}>
                     <div className={styles.profileGrid}>
                       <div
                         className={`${styles.profileField} ${styles.editable}`}
@@ -3443,6 +4074,40 @@ export default function ClienteDashboard() {
       )}
       <AdvogadoMesPopup />
       <PesquisaSatisfacaoClientePopup />
+      {isMobile && (
+        <nav className={styles.mobileBottomNav}>
+          <button
+            className={`${styles.mobileNavItem} ${activeTab === "painel" ? styles.activeMobileNavItem : ""}`}
+            onClick={() => setActiveTab("painel")}
+          >
+            <Home size={22} />
+            <span>Home</span>
+          </button>
+          <button
+            className={`${styles.mobileNavItem} ${activeTab === "meus-casos" ? styles.activeMobileNavItem : ""}`}
+            onClick={() => setActiveTab("meus-casos")}
+          >
+            <Folder size={22} />
+            <span>Casos</span>
+          </button>
+          <button
+            className={`${styles.mobileNavItem} ${activeTab === "conversas" ? styles.activeMobileNavItem : ""}`}
+            onClick={() => setActiveTab("conversas")}
+            style={{ position: "relative" }}
+          >
+            <MessageSquare size={22} />
+            <span className={styles.mobileMsgDot}></span>
+            <span>Mensagens</span>
+          </button>
+          <button
+            className={`${styles.mobileNavItem} ${activeTab === "perfil" ? styles.activeMobileNavItem : ""}`}
+            onClick={() => setActiveTab("perfil")}
+          >
+            <User size={22} />
+            <span>Perfil</span>
+          </button>
+        </nav>
+      )}
     </div>
   );
 }

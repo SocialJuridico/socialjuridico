@@ -851,13 +851,21 @@
 
 /* FORM NOVO CASO */
 .formContainer {
-  background: var(--color-black-light);
-  border: 1px solid rgba(212, 175, 55, 0.1);
+  background: #14151b; /* Cinza escuro sólido premium */
+  border: 1px solid rgba(255, 255, 255, 0.04);
   border-radius: 24px;
   padding: 40px;
   max-width: 800px;
   margin: 0 auto;
   animation: fadeIn 0.4s ease-out;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+  .formContainer {
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
 }
 
 @keyframes fadeIn {
@@ -901,13 +909,21 @@
 .formSelect,
 .formTextarea {
   width: 100%;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(212, 175, 55, 0.1);
+  background: #080808; /* Totalmente preto sólido */
+  border: 1px solid rgba(255, 255, 255, 0.08); /* Borda cinza muito sutil */
   border-radius: 12px;
   padding: 12px 16px;
   color: var(--color-white);
   font-size: 0.95rem;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+}
+
+.formInput:focus,
+.formSelect:focus,
+.formTextarea:focus {
+  outline: none;
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
 }
 
 .formSelect option {
@@ -933,23 +949,34 @@
 }
 
 .uploadArea {
-  border: 2px dashed rgba(212, 175, 55, 0.2);
+  border: 1.5px dashed rgba(255, 255, 255, 0.12); /* Borda pontilhada cinza */
   border-radius: 16px;
-  padding: 30px;
+  padding: 32px 20px;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s;
-  background: rgba(212, 175, 55, 0.02);
+  transition: all 0.2s ease;
+  background: #080808; /* Fundo preto sólido */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
 }
 
 .uploadArea:hover {
   border-color: var(--color-gold);
-  background: rgba(212, 175, 55, 0.05);
+  background: rgba(212, 175, 55, 0.02);
 }
 
 .uploadIcon {
   color: var(--color-gold);
-  margin-bottom: 12px;
+  padding: 6px;
+  border: 1.5px solid var(--color-gold); /* Círculo sutil ao redor do mais */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0;
 }
 
 .uploadText {
@@ -1008,32 +1035,455 @@
 
 .submitBtn {
   width: 100%;
-  background: linear-gradient(
-    135deg,
-    var(--color-gold) 0%,
-    var(--color-gold-dark) 100%
-  );
+  background: var(--color-gold); /* Dourado sólido premium */
   color: var(--color-black);
   border: none;
   padding: 16px;
   border-radius: 12px;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 1.05rem;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s ease;
   margin-top: 20px;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15);
 }
 
 .submitBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3);
+  background: var(--color-gold-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.25);
 }
 
 .submitBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+
+/* SEÇÃO DE ACESSIBILIDADE E MÍDIAS (AUDIO/VIDEO) */
+.accessibilitySection {
+  margin-top: 32px;
+  padding: 24px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .accessibilitySection {
+    padding: 18px;
+    border-radius: 14px;
+  }
+}
+
+.accessibilityTitle {
+  color: var(--color-gold);
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.accessibilityDesc {
+  color: var(--color-silver-dark);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+
+.mediaRow {
+  margin-bottom: 24px;
+}
+
+.mediaRow:last-child {
+  margin-bottom: 0;
+}
+
+.mediaLabel {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--color-white);
+}
+
+.mediaRowControls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mediaButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid var(--color-gold);
+  color: var(--color-gold);
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mediaButton:hover {
+  background: var(--color-gold);
+  color: var(--color-black);
+}
+
+.recordingStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mediaButtonStop {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ef4444;
+  border: none;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  animation: stopPulse 1.5s infinite;
+}
+
+@keyframes stopPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+.audioPlayerWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.audioPlayer {
+  height: 36px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.removeMediaBtn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.removeMediaBtn:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.videoUploadWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.videoAttachedItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.videoAttachedItem span {
+  font-size: 0.85rem;
+  color: var(--color-white);
+}
+
+.removeVideoBtn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.removeVideoBtn:hover {
+  transform: scale(1.1);
+}
+
+/* GRAVAÇÃO POR VOZ MOBILE (REFERÊNCIA 1) */
+.voiceRecordingContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  box-sizing: border-box;
+  padding: 10px 0 30px 0;
+  min-height: calc(100vh - 120px);
+}
+
+.voiceRecordingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 16px;
+  margin-bottom: 8px;
+}
+
+.voiceRecordingClose {
+  background: transparent;
+  border: none;
+  color: var(--color-silver-dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  transition: color 0.2s;
+}
+
+.voiceRecordingClose:hover {
+  color: #ef4444;
+}
+
+.voiceRecordingLogo {
+  color: var(--color-gold);
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: -0.5px;
+}
+
+.voiceRecordingTitleBox {
+  text-align: center;
+}
+
+.voiceRecordingTitle {
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+}
+
+.voiceRecordingSubtitle {
+  color: var(--color-silver-dark);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.micCircleWrapper {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px 0;
+}
+
+.micOuterRing {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(212, 175, 55, 0.25);
+  transition: all 0.3s ease;
+}
+
+.micOuterRingActive {
+  box-shadow: 0 0 35px rgba(212, 175, 55, 0.3);
+  animation: pulseMic 2s infinite;
+}
+
+@keyframes pulseMic {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.micCenterButton {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: var(--color-gold);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(212, 175, 55, 0.35);
+  z-index: 3;
+  transition: transform 0.2s;
+}
+
+.micCenterButton:active {
+  transform: scale(0.95);
+}
+
+.transcriptBox {
+  width: 100%;
+  background: rgba(18, 21, 28, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.transcriptHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #10b981;
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.transcriptDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  display: inline-block;
+  animation: blinkDot 1s infinite;
+}
+
+@keyframes blinkDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.transcriptText {
+  color: var(--color-silver);
+  font-size: 0.85rem;
+  font-style: italic;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.securityBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 0.78rem;
+  color: var(--color-silver-dark);
+  margin-top: 10px;
+}
+
+.voiceFooterActions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  margin-top: auto;
+  padding: 20px 0 10px 0;
+}
+
+.btnCancelVoice {
+  flex: 1;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.btnCancelVoice:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.btnConfirmVoice {
+  flex: 1;
+  background: var(--color-gold);
+  color: #000;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.btnConfirmVoice:hover {
+  background: var(--color-gold-dark);
+}
+
+/* CABEÇALHO DO FORMULÁRIO MOBILE */
+.mobileFormHeader {
+  margin-bottom: 24px;
+  padding: 0 4px;
+}
+
+.mobileFormHeader h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 4px;
+}
+
+.mobileFormHeader p {
+  font-size: 0.88rem;
+  color: var(--color-silver-dark);
 }
 
 /* NOTIFICAÇÕES */
@@ -2489,3 +2939,1093 @@
   font-size: 0.9rem;
   margin: 0;
 }
+
+/* ==========================================
+   MOBILE RESPONSIVE STYLES (max-width: 768px)
+   ========================================== */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none !important;
+  }
+  /* Page structure adjustments */
+  .mainContent {
+    margin-left: 0 !important;
+    padding: 80px 16px 90px 16px !important; /* Top header and bottom nav buffers */
+    background-color: #0b0d10 !important;
+    min-height: 100vh;
+    box-sizing: border-box;
+    overflow-x: hidden !important;
+    width: 100%;
+  }
+
+  .pageBody {
+    padding: 24px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Sticky Top Header */
+  .mobileTopHeader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: rgba(11, 13, 16, 0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    z-index: 1000;
+  }
+
+  .mobileLogo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+
+  .mobileLogoIcon {
+    color: var(--color-gold);
+  }
+
+  .mobileLogoText {
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .mobileNotifBtn {
+    background: transparent;
+    border: none;
+    color: var(--color-silver);
+    position: relative;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobileNotifBadge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #0b0d10;
+  }
+
+  /* Sticky Bottom Navigation */
+  .mobileBottomNav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: rgba(18, 21, 28, 0.98);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(212, 175, 55, 0.15);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 1000;
+    padding-bottom: env(safe-area-inset-bottom, 5px);
+  }
+
+  .mobileNavItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--color-silver-dark);
+    text-decoration: none;
+    font-size: 0.72rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    background: none;
+    border: none;
+    cursor: pointer;
+    flex: 1;
+    height: 100%;
+  }
+
+  .mobileNavItem svg {
+    color: var(--color-silver-dark);
+    transition: all 0.2s ease;
+  }
+
+  .activeMobileNavItem {
+    color: var(--color-gold) !important;
+  }
+
+  .activeMobileNavItem svg {
+    color: var(--color-gold) !important;
+    transform: translateY(-2px);
+  }
+
+  /* Mobile Painel Layout */
+  .mobilePainelContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  /* Greeting Section */
+  .mobileGreetingSection {
+    margin-bottom: 4px;
+    animation: fadeIn 0.4s ease-out;
+  }
+
+  .mobileGreetingSection h2 {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 6px 0;
+  }
+
+  .mobileGreetingSection p {
+    font-size: 0.88rem;
+    color: var(--color-silver);
+    margin: 0 0 12px 0;
+  }
+
+  .mobileOnlineBar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 50px;
+    padding: 6px 14px;
+    font-size: 0.78rem;
+    color: #34d399;
+    font-weight: 700;
+  }
+
+  .onlineDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 8px #34d399;
+    animation: pulse 2s infinite;
+  }
+
+  /* Microphone / Novo Caso Card */
+  .mobileMicCard {
+    background: rgba(18, 21, 28, 0.6) !important;
+    border: 1px solid var(--color-gold) !important;
+    border-radius: 20px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+  }
+
+  .mobileMicCard:active {
+    transform: scale(0.98);
+  }
+
+  .mobileMicIconCircle {
+    width: 54px;
+    height: 54px;
+    background: var(--color-gold) !important;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+  }
+
+  .mobileMicIconCircle svg {
+    color: #000000 !important;
+  }
+
+  .mobileMicCard h3 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--color-gold) !important;
+    margin: 0 0 6px 0;
+  }
+
+  .mobileMicCard p {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--color-silver) !important;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  /* Cards Base Styles */
+  .mobileStatusCard,
+  .mobilePendenciesCard,
+  .mobileContactLawyerCard,
+  .mobileComplianceCard {
+    background: rgba(18, 21, 28, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-sizing: border-box;
+  }
+
+  .mobileCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .mobileCardHeader h4 {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--color-silver-dark);
+    margin: 0;
+    text-transform: uppercase;
+  }
+
+  /* Status Caso Card */
+  .mobileActiveStatusBadge {
+    background: rgba(212, 175, 55, 0.15);
+    color: var(--color-gold);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 6px;
+  }
+
+  .mobileCaseTitle {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+  }
+
+  .mobileCaseNum {
+    font-size: 0.75rem;
+    font-family: monospace;
+    color: var(--color-silver-dark);
+    margin: -8px 0 0 0;
+  }
+
+  .mobileCaseMetaGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  .mobileCaseMetaItem {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobileCaseMetaItem span {
+    font-size: 0.68rem;
+    color: var(--color-silver-dark);
+  }
+
+  .mobileCaseMetaItem strong {
+    font-size: 0.82rem;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .mobileProgressLineWrapper {
+    position: relative;
+    padding: 10px 0;
+    margin: 6px 0;
+  }
+
+  .mobileProgressLineWrapper::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    z-index: 1;
+  }
+
+  .mobileProgressPoints {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+  }
+
+  .mobileProgressPoint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    width: 60px;
+  }
+
+  .progressPointDot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #1e293b;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .mobileProgressPoint span {
+    font-size: 0.68rem;
+    color: var(--color-silver-dark);
+    font-weight: 700;
+  }
+
+  .progressActive .progressPointDot {
+    background: var(--color-gold);
+    border-color: rgba(212, 175, 55, 0.3);
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+  }
+
+  .progressActive span {
+    color: var(--color-gold);
+  }
+
+  .mobileCaseNextStep {
+    font-size: 0.78rem;
+    color: var(--color-silver);
+    line-height: 1.4;
+    margin: 4px 0 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 12px;
+  }
+
+  .mobileNoCaseText,
+  .mobileNoLawyerText {
+    font-size: 0.85rem;
+    color: var(--color-silver);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* Pendências Card */
+  .mobilePendencyCount {
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 50px;
+  }
+
+  .mobilePendenciesList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mobilePendencyItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(239, 68, 68, 0.04);
+    border: 1px solid rgba(239, 68, 68, 0.12);
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .mobilePendencyIcon {
+    font-size: 1.2rem;
+  }
+
+  .mobilePendencyText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobilePendencyText strong {
+    font-size: 0.85rem;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .mobilePendencyText span {
+    font-size: 0.72rem;
+    color: #fca5a5;
+  }
+
+  .mobileVerTodosBtn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--color-silver);
+    border-radius: 12px;
+    padding: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  /* Contato Advogado */
+  .mobileLawyerRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mobileLawyerAvatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1.5px solid var(--color-gold);
+  }
+
+  .mobileLawyerAvatarPlaceholder {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+    color: #000;
+    font-weight: 800;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobileLawyerInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobileLawyerInfo strong {
+    font-size: 0.9rem;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .mobileLawyerInfo span {
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: var(--color-gold);
+    text-transform: uppercase;
+  }
+
+  .mobileLawyerMsg {
+    font-size: 0.82rem;
+    font-style: italic;
+    color: var(--color-silver);
+    background: rgba(255, 255, 255, 0.02);
+    border-left: 3px solid var(--color-gold);
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin: 0;
+  }
+
+  .mobileChatBtn {
+    width: 100%;
+    background: var(--color-gold);
+    color: #000;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  /* Compliance Card */
+  .mobileComplianceList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mobileComplianceItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 14px;
+    padding: 12px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .mobileComplianceItem:active {
+    background: rgba(212, 175, 55, 0.05);
+    border-color: rgba(212, 175, 55, 0.2);
+  }
+
+  .mobileComplianceIcon {
+    font-size: 1.1rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobileComplianceText {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobileComplianceText strong {
+    font-size: 0.85rem;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .mobileComplianceText span {
+    font-size: 0.72rem;
+    color: var(--color-silver-dark);
+  }
+
+  /* Marketplace / Search Wrap */
+  .mobileMarketplaceSection {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .lawyerSearchWrap {
+    position: relative;
+    width: 100%;
+    margin-bottom: 6px;
+  }
+
+  .lawyerSearchIcon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-silver-dark);
+  }
+
+  .lawyerSearchInput {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(212, 175, 55, 0.15);
+    border-radius: 14px;
+    padding: 14px 14px 14px 40px;
+    color: #fff;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s;
+  }
+
+  .lawyerSearchInput:focus {
+    border-color: var(--color-gold);
+    background: rgba(212, 175, 55, 0.02);
+  }
+
+  /* Mobile Horizontal Scroll for Offices */
+  .mobileOfficesSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .officesTitle {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .mobileOfficesScroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    padding: 4px 4px 16px 4px;
+    scrollbar-width: none; /* Hide scrollbar for Firefox */
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    width: 100%;
+  }
+
+  .mobileOfficesScroll::-webkit-scrollbar {
+    display: none; /* Hide scrollbar for Chrome/Safari */
+  }
+
+  .mobileOfficeCard {
+    flex: 0 0 110px;
+    background: rgba(18, 21, 28, 0.6);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    border-radius: 16px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .mobileOfficeCard .officeLogoWrapper {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+
+  .mobileOfficeCard .officeName {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+  }
+
+  /* Mobile Interesses */
+  .mobileInteressesSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .interessesTitle {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+  }
+
+  .mobileInteressesList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mobileInteresseCard {
+    background: rgba(18, 21, 28, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .interesseInfo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .interesseAvatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+  }
+
+  .interesseTextWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .interesseAdvName {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+  }
+
+  .interesseCasoName {
+    font-size: 0.72rem;
+    color: var(--color-silver-dark);
+    margin: 0;
+  }
+
+  .interesseActions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .mobileInteresseActionBtn {
+    flex: 1;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+  }
+
+  /* Specialties Grid/Scroll Section */
+  .mobileSpecialtySection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 8px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .specialtyTitle {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .specialtyCount {
+    color: var(--color-silver-dark);
+    font-size: 0.8rem;
+  }
+
+  .mobileLawyersScroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto !important;
+    overflow-y: hidden;
+    padding: 4px 4px 16px 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    width: 100%;
+  }
+
+  .mobileLawyersScroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobileLawyersScroll > div {
+    flex: 0 0 220px !important;
+  }
+
+  .mobileBadgeBasic {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--color-silver-dark);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+
+  .mobileBadgePro {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: var(--color-black);
+    background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-dark) 100%);
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    text-transform: uppercase;
+    vertical-align: middle;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+  }
+
+  .mobileChatBtnDisabled {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--color-silver-dark);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: not-allowed;
+  }
+
+  .mobileMsgDot {
+    position: absolute;
+    top: 14px;
+    right: 44%;
+    width: 6px;
+    height: 6px;
+    background-color: var(--color-gold);
+    border-radius: 50%;
+    box-shadow: 0 0 5px var(--color-gold);
+  }
+}
+
+/* Custom mobile return header (for profile & notifications) */
+.mobileTabHeader {
+  display: none;
+}
+
+/* Custom mobile notifications header */
+.mobileNotifHeader {
+  display: none;
+}
+
+/* Clear notifications button styling */
+.clearNotificationsWrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.clearNotificationsBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-silver);
+  padding: 10px 24px;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.clearNotificationsBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  /* Profile Mobile Styles */
+  .profileContainerMobile {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .mobileTabHeader {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .mobileTabHeader h2 {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--color-white);
+    margin: 0;
+  }
+
+  .mobileBackBtn {
+    background: transparent;
+    border: none;
+    color: var(--color-gold);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+  }
+
+  .mobileBackBtn:active {
+    transform: scale(0.9);
+  }
+
+  .mobileProfileForm {
+    background: rgba(18, 21, 28, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Form subcards styling */
+  .mobileProfileForm .profileField {
+    background: #1d1e24 !important;
+    border: 1px solid rgba(255, 255, 255, 0.03) !important;
+    border-radius: 12px !important;
+    padding: 14px 16px !important;
+    margin-bottom: 12px;
+  }
+
+  .mobileProfileForm .profileField label {
+    color: var(--color-gold) !important;
+    text-transform: uppercase !important;
+    font-size: 0.72rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px !important;
+  }
+
+  .mobileProfileForm .profileField .value {
+    color: var(--color-white) !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+  }
+
+  .mobileProfileForm .profileInput {
+    color: var(--color-white) !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+  }
+
+  /* Excluir conta button */
+  .mobileProfileForm .deleteAccountBtn {
+    background: transparent !important;
+    color: #ef4444 !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .mobileProfileForm .deleteAccountBtn:active {
+    background: rgba(239, 68, 68, 0.1) !important;
+  }
+
+  /* Notifications Mobile Styles */
+  .notificationsContainerMobile {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+  }
+
+  .mobileNotifHeader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 24px;
+    gap: 8px;
+  }
+
+  .mobileNotifLogoWrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .mobileNotifLogoIcon {
+    color: var(--color-gold);
+    animation: pulseScale 2s infinite ease-in-out;
+  }
+
+  .mobileNotifLogoText {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--color-gold);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .mobileNotifTitle {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: var(--color-white);
+    letter-spacing: 1px;
+    margin: 0;
+  }
+
+  .mobileNotifList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .notificationItemMobile {
+    background: rgba(18, 21, 28, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 16px !important;
+    padding: 16px !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    margin-bottom: 0 !important;
+  }
+
+  .notificationItemMobile:hover {
+    background: rgba(25, 29, 38, 0.8) !important;
+  }
+}
+
+@keyframes pulseScale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+

@@ -131,7 +131,7 @@ export default function LoginAnunciante() {
           
           <div style={{ marginTop: "30px", fontSize: "0.85rem", color: "rgba(255,255,255,0.4)", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "20px" }}>
             Não tem uma conta de anunciante? <br />
-            <a href="https://wa.me/5551993392983" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-gold)", fontWeight: 700, textDecoration: "none" }}>Fale com a Administração</a>
+            <a href="https://wa.me/5515992653066" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-gold)", fontWeight: 700, textDecoration: "none" }}>Fale com a Administração</a>
           </div>
         </div>
       </div>

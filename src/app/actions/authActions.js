@@ -193,7 +193,7 @@ export async function signUpAction(formData) {
                 </p>
                 <p style="font-size: 14px; line-height: 1.5; margin-bottom: 0;">
                   Após confirmar seu email, clique no link abaixo para falar com nosso suporte jurídico e validar seus dados: <br><br>
-                  <a href="https://wa.me/5515981657317?text=Olá, acabei de criar minha conta e gostaria de verificar minha OAB. Nome: ${name}" style="background-color: #25d366; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">Verificar OAB via WhatsApp</a>
+                  <a href="https://wa.me/5515992653066?text=Olá, acabei de criar minha conta e gostaria de verificar minha OAB. Nome: ${name}" style="background-color: #25d366; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">Verificar OAB via WhatsApp</a>
                 </p>
               </div>
               ` : ""}

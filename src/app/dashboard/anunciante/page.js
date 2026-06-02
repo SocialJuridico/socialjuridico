@@ -380,7 +380,7 @@ export default function AnuncianteDashboard() {
                     type="text" 
                     value={newAd.contato} 
                     onChange={e => setNewAd({...newAd, contato: e.target.value})} 
-                    placeholder="Ex: 51993392983"
+                    placeholder="Ex: 15992653066"
                     required
                   />
                 </div>

@@ -84,7 +84,7 @@ Este projeto foi auditado e refatorado para atingir os mais altos padrões de se
 **Desenvolvido por Saulo Pavanello**  
 *Desenvolvedor FullStack e Eng. de Software*  
 
-📱 **Contato:** (51) 99339-2983  
+📱 **Contato:** +55 15 99265-3066  
 🌐 **Site:** [www.saulopavanello.com](https://www.saulopavanello.com)
 
 ---

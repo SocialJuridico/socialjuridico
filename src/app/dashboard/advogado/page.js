@@ -2068,7 +2068,7 @@ export default function AdvogadoDashboard() {
     const whatsappMsg = encodeURIComponent(
       "Olá sou advogado pró do site Social Jurídico, e gostaria de contratar o meu site com o desconto de 50%.",
     );
-    const whatsappUrl = `https://wa.me/5551993392983?text=${whatsappMsg}`;
+    const whatsappUrl = `https://wa.me/5515992653066?text=${whatsappMsg}`;
 
     return (
       <div className={styles.toolContainer}>
@@ -19030,7 +19030,7 @@ INSTRUÇÕES IMPORTANTES PARA A IA:
             </p>
 
             <a
-              href="https://wa.me/5515981657317?text=Olá, gostaria de solicitar a verificação manual da minha OAB no SocialJurídico. Meu nome é "
+              href="https://wa.me/5515992653066?text=Olá, gostaria de solicitar a verificação manual da minha OAB no SocialJurídico. Meu nome é "
               target="_blank"
               rel="noopener noreferrer"
               className={styles.supportBtn}

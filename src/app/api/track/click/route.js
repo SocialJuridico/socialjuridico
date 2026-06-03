@@ -53,6 +53,19 @@ export async function GET(request) {
             .update(updates)
             .eq("id", trackId);
         }
+        
+        // Se a rota for pública (como confirmação de email ou recuperação de senha), direcionamos diretamente
+        const isPublicDest = dest && (
+          dest.includes("/confirmar-email") || 
+          dest.includes("/atualizar-senha") ||
+          dest.includes("/login") ||
+          dest.includes("/cadastro")
+        );
+
+        if (isPublicDest) {
+          return NextResponse.redirect(redirectTarget);
+        }
+
         // Redirect to login page and pass the trackId and destination url
         const loginRedirect = `${loginUrl}?trackId=${trackId}${dest ? `&redirectTo=${encodeURIComponent(dest)}` : ""}`;
         return NextResponse.redirect(loginRedirect);

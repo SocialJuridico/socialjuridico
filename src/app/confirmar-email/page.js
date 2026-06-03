@@ -12,7 +12,7 @@ function ConfirmarEmailContent() {
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") || "signup";
 
-  const [status, setStatus] = useState("idle"); // "idle" | "loading" | "success" | "error"
+  const [status, setStatus] = useState("loading"); // Começa em loading para confirmação automática
   const [message, setMessage] = useState("");
 
   const handleConfirm = async () => {
@@ -22,7 +22,6 @@ function ConfirmarEmailContent() {
       return;
     }
 
-    setStatus("loading");
     try {
       const result = await confirmEmailAction({ token_hash, type });
       if (result.success) {
@@ -34,7 +33,7 @@ function ConfirmarEmailContent() {
         }, 3000);
       } else {
         setStatus("error");
-        setMessage(result.message || "Erro ao confirmar e-mail. O link pode ter expirado.");
+        setMessage(result.message || "Erro ao confirmar e-mail. O link pode ter expirado ou já ter sido validado.");
       }
     } catch (err) {
       setStatus("error");
@@ -42,10 +41,22 @@ function ConfirmarEmailContent() {
     }
   };
 
-  // Se o token estiver presente, podemos iniciar a confirmação automaticamente ou esperar clique.
-  // Para evitar robôs de antivírus de consumirem o token em requests GET automáticas de e-mail,
-  // nós NÃO confirmamos automaticamente no mount, mas sim exigimos que o usuário CLIQUE no botão.
-  // Isso garante 100% de taxa de sucesso e evita a expiração silenciosa.
+  useEffect(() => {
+    if (!token_hash) {
+      setStatus("error");
+      setMessage("Link de confirmação inválido ou incompleto.");
+      return;
+    }
+
+    // Delay de 1.2 segundos para garantir que link scanners automáticos não consumam o token
+    // e o usuário tenha uma transição visual suave de carregamento.
+    const timer = setTimeout(() => {
+      handleConfirm();
+    }, 1200);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token_hash]);
   
   return (
     <div className={styles.container}>
@@ -55,29 +66,14 @@ function ConfirmarEmailContent() {
           <span className={styles.logoText}>SocialJurídico</span>
         </div>
 
-        {status === "idle" && (
-          <div className={styles.stateContent}>
-            <div className={styles.iconWrapper}>
-              <Mail size={48} className={styles.pulseIcon} />
-            </div>
-            <h2 className={styles.title}>Ative sua conta</h2>
-            <p className={styles.description}>
-              Clique no botão abaixo para confirmar seu endereço de e-mail e desbloquear seu acesso à plataforma.
-            </p>
-            <button className={styles.actionBtn} onClick={handleConfirm}>
-              Confirmar minha conta
-            </button>
-          </div>
-        )}
-
         {status === "loading" && (
           <div className={styles.stateContent}>
             <div className={styles.iconWrapperLoading}>
               <Loader2 size={48} className={styles.spinIcon} />
             </div>
-            <h2 className={styles.title}>Confirmando...</h2>
+            <h2 className={styles.title}>Confirmando sua conta...</h2>
             <p className={styles.description}>
-              Estamos validando sua credencial de segurança junto ao servidor. Por favor, aguarde.
+              Estamos validando sua credencial de segurança. Isso levará apenas um instante.
             </p>
           </div>
         )}
@@ -110,11 +106,11 @@ function ConfirmarEmailContent() {
               {message}
             </p>
             <p className={styles.subtext}>
-              Isso geralmente ocorre se o link já foi utilizado ou se expirou (validade de 24 horas).
+              Isso geralmente ocorre se o link já foi utilizado ou se expirou (validade de 24 horas). Tente fazer login; se o erro persistir, use o suporte abaixo.
             </p>
             <div className={styles.buttonGroup}>
               <button className={styles.actionBtn} onClick={() => router.push("/login")}>
-                Voltar ao Login
+                Ir para o Login
               </button>
               <a 
                 href="https://wa.me/5515992653066?text=Olá, tive um problema ao confirmar meu e-mail de cadastro no SocialJurídico e gostaria de ajuda."

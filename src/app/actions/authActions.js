@@ -168,8 +168,8 @@ export async function signUpAction(formData) {
         }
       });
 
-      if (!linkError && linkData?.properties?.action_link) {
-        const verifyLink = linkData.properties.action_link;
+      if (!linkError && linkData?.properties?.hashed_token) {
+        const verifyLink = `https://socialjuridico.com.br/confirmar-email?token_hash=${linkData.properties.hashed_token}&type=signup`;
         
         // --- Enviar Email via Resend com HTML Estilizado ---
         await resend.emails.send({
@@ -579,3 +579,56 @@ export async function deleteAccountAction(userId) {
     };
   }
 }
+
+export async function confirmEmailAction({ token_hash, type }) {
+  try {
+    const supabase = createClient();
+
+    if (!token_hash || !type) {
+      throw new Error("Parâmetros inválidos para confirmação.");
+    }
+
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type,
+    });
+
+    if (error) throw error;
+
+    // Se for advogado, atualizamos a tabela correspondente para verified = true
+    if (data?.user) {
+      const userId = data.user.id;
+      const role = data.user.user_metadata?.role;
+
+      if (role === "LAWYER") {
+        if (!supabaseAdmin) {
+          throw new Error("Cliente Admin do Supabase não configurado.");
+        }
+
+        const { error: dbError } = await supabaseAdmin
+          .from("advogados")
+          .update({
+            verified: true,
+            oab_verification_status: "VERIFIED",
+          })
+          .eq("id", userId);
+
+        if (dbError) {
+          console.error("Erro ao atualizar status de advogado no banco:", dbError);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: "E-mail confirmado com sucesso!",
+    };
+  } catch (error) {
+    console.error("Erro no confirmEmailAction:", error);
+    return {
+      success: false,
+      message: error.message || "Não foi possível confirmar o e-mail.",
+    };
+  }
+}
+

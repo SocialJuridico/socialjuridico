@@ -21,7 +21,7 @@ export async function GET() {
     const db = supabaseAdmin || supabase;
     const { data: admin, error } = await db
       .from("admins")
-      .select("id, name, email, role, created_at")
+      .select("id, name, email, role, created_at, google_sync_enabled")
       .eq("id", user.id)
       .eq("role", "ADMIN")
       .single();

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Trash2, Scale, RotateCcw, Search } from "lucide-react";
+import { ArrowLeft, Trash2, Scale, RotateCcw, Search, Download } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./AdvogadosAdmin.module.css";
 
@@ -22,6 +22,8 @@ export default function AdminAdvogadosPage() {
   const [editEstado, setEditEstado] = useState("");
   const [selectedPlan, setSelectedPlan] = useState("PRO");
   const [selectedDuration, setSelectedDuration] = useState(30);
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const ESTADOS = [
     "AC",
@@ -66,9 +68,16 @@ export default function AdminAdvogadosPage() {
         }
 
         setAdvogados(data.data || []);
+
+        // Verificar status de conexao Google do administrador
+        const meRes = await fetch("/api/admin/me", { cache: "no-store" });
+        const meData = await meRes.json();
+        if (meRes.ok && meData.success && meData.data) {
+          setGoogleConnected(!!meData.data.google_sync_enabled);
+        }
       } catch (error) {
-        console.error("Erro ao carregar advogados:", error);
-        toast.error("Erro ao carregar advogados.");
+        console.error("Erro ao carregar dados:", error);
+        toast.error("Erro ao carregar dados do painel.");
       } finally {
         setLoading(false);
       }
@@ -355,6 +364,104 @@ export default function AdminAdvogadosPage() {
     }
   };
 
+  const handleExportCSV = () => {
+    const headers = [
+      "Name",
+      "Given Name",
+      "Family Name",
+      "Phone 1 - Value",
+      "E-mail 1 - Value",
+      "Group Membership"
+    ];
+
+    const rows = filteredAdvogados.map((a) => {
+      const fullName = a.name || "";
+      const nameParts = fullName.trim().split(/\s+/);
+      const givenName = nameParts[0] || "";
+      const familyName = nameParts.slice(1).join(" ") || "";
+      
+      let phone = a.phone || "";
+      const digitsOnly = phone.replace(/\D/g, "");
+      
+      if (digitsOnly) {
+        if (digitsOnly.startsWith("55") && digitsOnly.length >= 12) {
+          phone = `+${digitsOnly}`;
+        } else if (digitsOnly.length >= 10 && digitsOnly.length <= 11) {
+          phone = `+55${digitsOnly}`;
+        } else {
+          phone = phone.startsWith("+") ? phone : `+${digitsOnly}`;
+        }
+      } else {
+        phone = "";
+      }
+
+      const email = a.email || "";
+      const tag = "Advogados SocialJurídico";
+
+      return [
+        fullName,
+        givenName,
+        familyName,
+        phone,
+        email,
+        tag
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => 
+        row.map(val => {
+          const escaped = String(val).replace(/"/g, '""');
+          return `"${escaped}"`;
+        }).join(",")
+      )
+    ].join("\n");
+
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Advogados_Google_Contatos.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("CSV de Advogados exportado com sucesso!");
+  };
+
+  const handleConnectGoogle = () => {
+    window.location.href = "/api/auth/google-contacts";
+  };
+
+  const handleSyncAPI = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/admin/google-contacts/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "ADVOGADOS" })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success(data.message || "Sincronização com o Google concluída!");
+      } else {
+        if (data.message === "google_not_connected") {
+          toast.error("Sua conta do Google não está conectada.");
+          setGoogleConnected(false);
+        } else {
+          toast.error(data.message || "Falha ao sincronizar com Google Contatos.");
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao sincronizar contatos:", error);
+      toast.error("Erro de rede ao sincronizar contatos.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) {
     return <div className={styles.loading}>Carregando advogados...</div>;
   }
@@ -370,35 +477,131 @@ export default function AdminAdvogadosPage() {
             <Scale size={18} /> Advogados cadastrados
           </h1>
         </div>
-        <button
-          type="button"
-          onClick={handleGeneratePDF}
-          style={{
-            background: "linear-gradient(135deg, #d4af37 0%, #b8962e 100%)",
-            color: "#0d0f12",
-            border: "none",
-            borderRadius: "8px",
-            padding: "10px 18px",
-            fontWeight: "700",
-            fontSize: "0.88rem",
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            boxShadow: "0 4px 12px rgba(212, 175, 55, 0.2)",
-            transition: "transform 0.2s, box-shadow 0.2s"
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.transform = "translateY(-1px)";
-            e.currentTarget.style.boxShadow = "0 6px 16px rgba(212, 175, 55, 0.3)";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.transform = "none";
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(212, 175, 55, 0.2)";
-          }}
-        >
-          📄 Gerar Relatório PDF
-        </button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={handleGeneratePDF}
+            style={{
+              background: "linear-gradient(135deg, #d4af37 0%, #b8962e 100%)",
+              color: "#0d0f12",
+              border: "none",
+              borderRadius: "8px",
+              padding: "10px 18px",
+              fontWeight: "700",
+              fontSize: "0.88rem",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 4px 12px rgba(212, 175, 55, 0.2)",
+              transition: "transform 0.2s, box-shadow 0.2s"
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 6px 16px rgba(212, 175, 55, 0.3)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(212, 175, 55, 0.2)";
+            }}
+          >
+            📄 Gerar Relatório PDF
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            style={{
+              background: "linear-gradient(135deg, #475569 0%, #334155 100%)",
+              color: "#ffffff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "10px 18px",
+              fontWeight: "700",
+              fontSize: "0.88rem",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 4px 12px rgba(71, 85, 105, 0.2)",
+              transition: "transform 0.2s, box-shadow 0.2s"
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 6px 16px rgba(71, 85, 105, 0.3)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = "none";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(71, 85, 105, 0.2)";
+            }}
+          >
+            <Download size={16} /> Exportar CSV
+          </button>
+          {googleConnected ? (
+            <button
+              type="button"
+              onClick={handleSyncAPI}
+              disabled={syncing}
+              style={{
+                background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "10px 18px",
+                fontWeight: "700",
+                fontSize: "0.88rem",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)",
+                transition: "transform 0.2s, box-shadow 0.2s",
+                opacity: syncing ? 0.7 : 1
+              }}
+              onMouseOver={(e) => {
+                if (syncing) return;
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 6px 16px rgba(16, 185, 129, 0.3)";
+              }}
+              onMouseOut={(e) => {
+                if (syncing) return;
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(16, 185, 129, 0.2)";
+              }}
+            >
+              {syncing ? "Sincronizando..." : "Sincronizar Google Contatos (API)"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleConnectGoogle}
+              style={{
+                background: "linear-gradient(135deg, #4b5563 0%, #374151 100%)",
+                color: "#ffffff",
+                border: "none",
+                borderRadius: "8px",
+                padding: "10px 18px",
+                fontWeight: "700",
+                fontSize: "0.88rem",
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 4px 12px rgba(75, 85, 99, 0.2)",
+                transition: "transform 0.2s, box-shadow 0.2s"
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 6px 16px rgba(75, 85, 99, 0.3)";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(75, 85, 99, 0.2)";
+              }}
+            >
+              Conectar Google Contatos
+            </button>
+          )}
+        </div>
       </header>
 
       <div className={styles.searchWrap} style={{ display: 'flex', gap: '10px' }}>

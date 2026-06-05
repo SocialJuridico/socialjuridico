@@ -113,7 +113,7 @@ function ConfirmarEmailContent() {
                 Ir para o Login
               </button>
               <a 
-                href="https://wa.me/5515981657317?text=Olá, tive um problema ao confirmar meu e-mail de cadastro no SocialJurídico e gostaria de ajuda."
+                href="https://wa.me/5515992653066?text=Olá, tive um problema ao confirmar meu e-mail de cadastro no SocialJurídico e gostaria de ajuda."
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.supportBtn}

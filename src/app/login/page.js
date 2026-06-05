@@ -343,7 +343,7 @@ function LoginContent() {
             </p>
             
             <a 
-              href="https://wa.me/5515981657317?text=Olá, tive um problema com a verificação da minha OAB no SocialJurídico e gostaria de regularizar." 
+              href="https://wa.me/5515992653066?text=Olá, tive um problema com a verificação da minha OAB no SocialJurídico e gostaria de regularizar." 
               target="_blank" 
               rel="noopener noreferrer"
               className={styles.supportBtn}
@@ -383,7 +383,7 @@ function LoginContent() {
             </p>
             
             <a 
-              href="https://wa.me/5515981657317?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20a%20implantação%20do%20plano%20Enterprise%20do%20SocialJurídico%20para%20o%20meu%20escritório." 
+              href="https://wa.me/5515992653066?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20a%20implantação%20do%20plano%20Enterprise%20do%20SocialJurídico%20para%20o%20meu%20escritório." 
               target="_blank" 
               rel="noopener noreferrer"
               className={styles.supportBtn}

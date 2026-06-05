@@ -31,8 +31,11 @@ export default function Contato() {
                 </div>
                 <div className={styles.itemText}>
                   <h4>E-mail</h4>
-                  <p>contato@socialjuridico.com.br</p>
-                  <p>suporte@socialjuridico.com.br</p>
+                  <p>
+                    <a href="mailto:suporte@socialjuridico.com.br" style={{ color: 'inherit', textDecoration: 'none' }}>
+                      suporte@socialjuridico.com.br
+                    </a>
+                  </p>
                 </div>
               </div>
 
@@ -42,7 +45,11 @@ export default function Contato() {
                 </div>
                 <div className={styles.itemText}>
                   <h4>WhatsApp</h4>
-                  <p>+55 (11) 99999-9999</p>
+                  <p>
+                    <a href="https://wa.me/5515992653066" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                      +55 (15) 99265-3066
+                    </a>
+                  </p>
                   <p>Seg à Sex, 09h às 18h</p>
                 </div>
               </div>
@@ -53,8 +60,7 @@ export default function Contato() {
                 </div>
                 <div className={styles.itemText}>
                   <h4>Escritório</h4>
-                  <p>Av. Paulista, 1000 - Bela Vista</p>
-                  <p>São Paulo - SP, 01310-100</p>
+                  <p>Sorocaba - SP</p>
                 </div>
               </div>
 

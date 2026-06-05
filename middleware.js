@@ -134,36 +134,11 @@ export async function middleware(request) {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // 🔒 HEADERS DE SEGURANÇA
+  // 🔒 HEADERS DE SEGURANÇA (GERENCIADOS GLOBALMENTE NO NEXT.CONFIG.MJS)
   // ═══════════════════════════════════════════════════════════════════
-
-  // Previne clickjacking
-  response.headers.set("X-Frame-Options", "DENY");
-
-  // Previne MIME type sniffing
-  response.headers.set("X-Content-Type-Options", "nosniff");
-
-  // Habilita proteção XSS no navegador
-  response.headers.set("X-XSS-Protection", "1; mode=block");
 
   // Cabeçalho de diagnóstico para saber se o middleware está rodando
   response.headers.set("X-Middleware-Debug", "SocialJuridico-Active");
-
-  // Removendo CSP complexo por enquanto para testar a entrega de headers
-  response.headers.set("Access-Control-Allow-Origin", "*");
-
-  // HSTS (HTTP Strict Transport Security) - força HTTPS
-  // Nota: Usar com cuidado, ativar apenas quando tiver certificado SSL válido
-  // response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-
-  // Referrer Policy - não enviar referrer para externos
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-
-  // Disable de característica de rastreamento para externos, mas mantendo habilitado no próprio domínio (self) para Comando de Voz e Videoconferências (Jitsi)
-  response.headers.set(
-    "Permissions-Policy",
-    "geolocation=(self), microphone=(self), camera=(self)"
-  );
 
   // Remove X-Powered-By (não expor tecnologia usada)
   response.headers.delete("X-Powered-By");

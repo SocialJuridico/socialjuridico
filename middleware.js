@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
 
 // Rotas que exigem autenticação
 const PROTECTED_ROUTES = ["/dashboard", "/chat", "/admin"];
@@ -91,9 +92,31 @@ export async function middleware(request) {
     return NextResponse.redirect(url);
   }
 
-  // ── VERIFICAÇÃO DE EXPIRAÇÃO DA SESSÃO DE 4 HORAS ──
+  // ── VERIFICAÇÃO DE EXPIRAÇÃO DA SESSÃO DE 4 HORAS E STATUS OAB ──
   // Apenas para rotas protegidas com usuário autenticado
   if (isProtected && isAuthenticated) {
+    // 1. Validar Status da OAB se for advogado
+    const role = user.user_metadata?.role || "CLIENT";
+    if (role === "LAWYER") {
+      const db = supabaseAdmin || supabase;
+      const { data: profile } = await db
+        .from("advogados")
+        .select("oab_verification_status")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile?.oab_verification_status === "ERROR") {
+        await supabase.auth.signOut();
+        const url = request.nextUrl.clone();
+        url.pathname = "/login";
+        url.searchParams.set("oab_error", "true");
+        const errorResponse = NextResponse.redirect(url);
+        errorResponse.cookies.delete("sj_login_time");
+        return errorResponse;
+      }
+    }
+
+    // 2. Verificar expiração da sessão de 4 horas
     const loginTimeCookie = request.cookies.get("sj_login_time");
 
     if (loginTimeCookie?.value) {

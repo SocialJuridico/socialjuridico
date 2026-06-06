@@ -97,6 +97,12 @@ export function DashboardProvider({ children }) {
     try {
       const res = await fetch("/api/perfil");
       const data = await res.json();
+      if (res.status === 403 || data.blocked || (data.success && data.data?.oab_verification_status === "ERROR")) {
+        const { supabase } = await import("@/lib/supabase");
+        await supabase.auth.signOut();
+        window.location.href = "/login?oab_error=true";
+        return;
+      }
       if (data.success) {
         setProfileData(data.data);
         setUserName(data.data.name);

@@ -11,6 +11,20 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
     }
 
+    // Validar status OAB do advogado
+    const { data: profile } = await supabase
+      .from("advogados")
+      .select("oab_verification_status")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.oab_verification_status === "ERROR") {
+      return NextResponse.json(
+        { success: false, message: "Acesso restrito devido a pendências na OAB." },
+        { status: 403 }
+      );
+    }
+
     const { priceId, successUrl, cancelUrl, stripeCouponId, internalCouponId } = await request.json();
 
     if (!priceId) {

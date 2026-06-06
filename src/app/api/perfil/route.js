@@ -167,6 +167,17 @@ export async function GET(request) {
       }
     }
 
+    if (profile.role === "LAWYER" && profile.oab_verification_status === "ERROR") {
+      return NextResponse.json(
+        {
+          success: false,
+          blocked: true,
+          message: "Acesso suspenso por inconsistências na verificação da OAB.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Se o advogado for membro de escritório, buscar o nome do escritório
     if (profile.role === "LAWYER" && profile.escritorio_id) {
       const { data: officeData } = await db

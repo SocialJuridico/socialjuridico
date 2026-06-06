@@ -53,11 +53,36 @@ export async function GET() {
       if (!authError) authUsers = users || [];
     }
 
+    const lawyerIds = (data || []).map(adv => adv.id);
+    let latestLogMap = {};
+    if (lawyerIds.length > 0) {
+      const { data: latestLogs } = await db
+        .from("access_logs")
+        .select("user_id, created_at")
+        .in("user_id", lawyerIds)
+        .order("created_at", { ascending: false });
+
+      if (latestLogs) {
+        for (const log of latestLogs) {
+          if (!latestLogMap[log.user_id]) {
+            latestLogMap[log.user_id] = log.created_at;
+          }
+        }
+      }
+    }
+
     const formattedData = (data || []).map(adv => {
       const authUser = authUsers.find(u => u.id === adv.id);
+      const lastActiveLog = latestLogMap[adv.id];
+      let lastLogin = authUser ? authUser.last_sign_in_at : null;
+      if (lastActiveLog) {
+        if (!lastLogin || new Date(lastActiveLog) > new Date(lastLogin)) {
+          lastLogin = lastActiveLog;
+        }
+      }
       return {
         ...adv,
-        last_sign_in_at: authUser ? authUser.last_sign_in_at : null
+        last_sign_in_at: lastLogin
       };
     });
 

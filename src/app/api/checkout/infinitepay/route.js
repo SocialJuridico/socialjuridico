@@ -1,7 +1,30 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export async function POST(request) {
   try {
+    const supabase = createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+    }
+
+    const db = supabaseAdmin || supabase;
+    const { data: profile } = await db
+      .from("advogados")
+      .select("oab_verification_status")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.oab_verification_status === "ERROR") {
+      return NextResponse.json(
+        { success: false, message: "Acesso restrito devido a pendências na OAB." },
+        { status: 403 }
+      );
+    }
+
     const { planType, jurisAmount, customer, isPromoEligible } = await request.json();
 
     console.log("🚀 [Checkout InfinitePay] Iniciando geração de link para:", customer.email);

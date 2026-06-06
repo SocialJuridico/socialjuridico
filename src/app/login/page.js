@@ -27,6 +27,12 @@ function LoginContent() {
     }
   }, []);
 
+  useEffect(() => {
+    if (searchParams.get("oab_error") === "true") {
+      setOabError(true);
+    }
+  }, [searchParams]);
+
   const [formData, setFormData] = useState({
     email: "",
     senha: "",

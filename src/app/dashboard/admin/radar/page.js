@@ -22,6 +22,7 @@ import {
   Trash2,
   Edit2,
   Archive,
+  Mail,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import styles from "./page.module.css";
@@ -81,6 +82,10 @@ export default function AdminRadarPage() {
   const [rejectMotive, setRejectMotive] = useState("");
   const [showRejectModal, setShowRejectModal] = useState(false);
 
+  // Envio de E-mails em Lote
+  const [pendingEmailsCount, setPendingEmailsCount] = useState(0);
+  const [sendingEmails, setSendingEmails] = useState(false);
+
   // Carregar dados administrativos e de perfil
   useEffect(() => {
     const checkAuth = async () => {
@@ -131,9 +136,22 @@ export default function AdminRadarPage() {
     }
   };
 
+  const fetchPendingEmailsCount = async () => {
+    try {
+      const res = await fetch("/api/admin/radar/enviar-emails");
+      const json = await res.json();
+      if (json.success) {
+        setPendingEmailsCount(json.count);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar contagem de e-mails pendentes do radar:", err);
+    }
+  };
+
   useEffect(() => {
     if (admin) {
       fetchOportunidades();
+      fetchPendingEmailsCount();
     }
   }, [admin, page, statusFilter, catFilter, reportFilter, fonteTipoFilter]);
 
@@ -170,6 +188,7 @@ export default function AdminRadarPage() {
           status: "pendente",
         });
         fetchOportunidades();
+        fetchPendingEmailsCount();
       } else {
         toast.error(json.message || "Erro ao cadastrar.");
       }
@@ -313,11 +332,36 @@ export default function AdminRadarPage() {
       if (json.success) {
         toast.success("Oportunidade aprovada e publicada!");
         fetchOportunidades();
+        fetchPendingEmailsCount();
       } else {
         toast.error(json.message || "Erro ao aprovar.");
       }
     } catch (err) {
       toast.error("Erro na requisição.");
+    }
+  };
+
+  // Enviar e-mails em lote
+  const handleEnviarEmails = async () => {
+    if (pendingEmailsCount === 0) return;
+    if (!confirm(`Deseja disparar o e-mail de lote com ${pendingEmailsCount} nova(s) oportunidade(s) para todos os advogados cadastrados?`)) {
+      return;
+    }
+    setSendingEmails(true);
+    const toastId = toast.loading("Enviando e-mails em lote...");
+    try {
+      const res = await fetch("/api/admin/radar/enviar-emails", { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(`E-mails enviados com sucesso! ${json.totalOportunidades} oportunidade(s) enviadas para ${json.totalAdvogados} advogados.`, { id: toastId });
+        setPendingEmailsCount(0);
+      } else {
+        toast.error(json.message || "Erro ao enviar e-mails.", { id: toastId });
+      }
+    } catch (err) {
+      toast.error("Erro na requisição.", { id: toastId });
+    } finally {
+      setSendingEmails(false);
     }
   };
 
@@ -386,6 +430,7 @@ export default function AdminRadarPage() {
         toast.success("Oportunidade editada com sucesso!");
         setEditingItem(null);
         fetchOportunidades();
+        fetchPendingEmailsCount();
       } else {
         toast.error(json.message || "Erro ao atualizar.");
       }
@@ -477,6 +522,30 @@ export default function AdminRadarPage() {
             ) : (
               <>
                 <Sparkles size={16} /> Executar busca automática agora
+              </>
+            )}
+          </button>
+          <button
+            onClick={handleEnviarEmails}
+            disabled={sendingEmails || pendingEmailsCount === 0}
+            className={styles.actionBtn}
+            style={{
+              background: pendingEmailsCount > 0 
+                ? "linear-gradient(135deg, #f59e0b, #d97706)"
+                : "rgba(255,255,255,0.06)",
+              color: pendingEmailsCount > 0 ? "#000" : "rgba(255,255,255,0.3)",
+              fontWeight: 700,
+              cursor: pendingEmailsCount > 0 ? "pointer" : "not-allowed",
+              border: pendingEmailsCount > 0 ? "none" : "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
+            {sendingEmails ? (
+              <>
+                <Loader2 size={16} className="animate-spin" /> Enviando...
+              </>
+            ) : (
+              <>
+                <Mail size={16} /> Enviar E-mail ({pendingEmailsCount})
               </>
             )}
           </button>

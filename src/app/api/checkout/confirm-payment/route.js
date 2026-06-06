@@ -19,13 +19,13 @@ export async function POST(request) {
     }
 
     // Validar status OAB do advogado
-    const { data: profile } = await supabaseAdmin
+    const { data: profileOabCheck } = await supabaseAdmin
       .from("advogados")
       .select("oab_verification_status")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (profile?.oab_verification_status === "ERROR") {
+    if (profileOabCheck?.oab_verification_status === "ERROR") {
       return NextResponse.json(
         { success: false, message: "Acesso restrito devido a pendências na OAB." },
         { status: 403 }

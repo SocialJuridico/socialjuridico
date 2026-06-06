@@ -334,7 +334,7 @@ export default function AdminRadarPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/admin/radar/${reportingId || rejectingId}/rejeitar`, {
+      const res = await fetch(`/api/admin/radar/${rejectingId}/rejeitar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ motivo: rejectMotive }),

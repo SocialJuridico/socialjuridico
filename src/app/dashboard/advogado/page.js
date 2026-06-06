@@ -76,6 +76,7 @@ import autoTable from "jspdf-autotable";
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
 import LawyerTutorial from "@/components/Onboarding/LawyerTutorial";
 import PesquisaSatisfacaoPopup from "@/components/PesquisaSatisfacaoPopup/PesquisaSatisfacaoPopup";
+import RadarTab from "./components/RadarTab";
 import { HelpCircle } from "lucide-react";
 import {
   PlusCircle,
@@ -331,6 +332,7 @@ export default function AdvogadoDashboard() {
   } = useDashboard();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [oportunidadesSubTab, setOportunidadesSubTab] = useState("plataforma");
   const [delegatingClient, setDelegatingClient] = useState(null);
   const [isDelegating, setIsDelegating] = useState(false);
   const [crmFilter, setCrmFilter] = useState("all"); // "my" or "all"
@@ -4780,20 +4782,79 @@ export default function AdvogadoDashboard() {
     );
   };
 
-  const renderOportunidades = () => (
-    <div className={styles.toolContainer}>
+  const renderOportunidades = () => {
+    return (
+      <div className={styles.toolContainer}>
       <PWAInlineBanner />
       <PlanUsageCard />
 
-      <div className={styles.searchWrapper}>
-        <input
-          type="text"
-          placeholder="Buscar por qualquer coisa..."
-          className={styles.searchInput}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
+      {/* Sub-abas de Oportunidades */}
+      <div style={{ display: "flex", gap: "10px", borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: "12px", marginBottom: "16px" }}>
+        <button
+          onClick={() => setOportunidadesSubTab("plataforma")}
+          style={{
+            background: oportunidadesSubTab === "plataforma" ? "rgba(255,255,255,0.08)" : "transparent",
+            border: "none",
+            borderRadius: "6px",
+            padding: "8px 16px",
+            color: oportunidadesSubTab === "plataforma" ? "#fff" : "rgba(255,255,255,0.6)",
+            fontWeight: oportunidadesSubTab === "plataforma" ? "bold" : "normal",
+            cursor: "pointer",
+            fontSize: "0.88rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            outline: "none"
+          }}
+        >
+          <Briefcase size={16} /> Oportunidades da Plataforma
+        </button>
+        <button
+          onClick={() => {
+            const isEligible = profileData?.is_premium || profileData?.plan_type === "START" || profileData?.plan_type === "PRO";
+            const isBlocked = ["canceled", "cancelled", "unpaid", "blocked"].includes((profileData?.subscription_status || "").toLowerCase());
+            if (!isEligible || isBlocked) {
+              toast.error("O Radar Jurídico é exclusivo para advogados START e PRO ativos.");
+              setShowProModal(true);
+              return;
+            }
+            setOportunidadesSubTab("radar");
+          }}
+          style={{
+            background: oportunidadesSubTab === "radar" ? "rgba(255,255,255,0.08)" : "transparent",
+            border: "none",
+            borderRadius: "6px",
+            padding: "8px 16px",
+            color: oportunidadesSubTab === "radar" ? "#fff" : "rgba(255,255,255,0.6)",
+            fontWeight: oportunidadesSubTab === "radar" ? "bold" : "normal",
+            cursor: "pointer",
+            fontSize: "0.88rem",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            outline: "none"
+          }}
+        >
+          <Globe size={16} /> Radar Jurídico (START/PRO)
+          {!(profileData?.is_premium || profileData?.plan_type === "START" || profileData?.plan_type === "PRO") && (
+            <Lock size={12} style={{ opacity: 0.6 }} />
+          )}
+        </button>
       </div>
+
+      {oportunidadesSubTab === "radar" ? (
+        <RadarTab />
+      ) : (
+        <>
+          <div className={styles.searchWrapper}>
+            <input
+              type="text"
+              placeholder="Buscar por qualquer coisa..."
+              className={styles.searchInput}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
 
       {avisos.length > 0 && (
         <div className={styles.avisosMarquee}>
@@ -5437,8 +5498,11 @@ export default function AdvogadoDashboard() {
           </div>
         </div>
       )}
-    </div>
-  );
+    </>
+  )}
+</div>
+    );
+  };
 
   const executeVincularCaso = async (casoId) => {
     try {

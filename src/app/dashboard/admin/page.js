@@ -692,6 +692,12 @@ export default function AdminDashboardPage() {
                   <strong>Ver Pedidos</strong>
                 </article>
               </Link>
+              <Link href="/dashboard/admin/radar" className={styles.cardLink}>
+                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #00b4d8", background: "rgba(0, 180, 216, 0.03)" }}>
+                  <div className={styles.cardTop}><Shield size={16} color="#00b4d8" /> Radar Jurídico</div>
+                  <strong>Gerenciar Oportunidades</strong>
+                </article>
+              </Link>
             </div>
           </section>
         </div>

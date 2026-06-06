@@ -4825,13 +4825,6 @@ export default function AdvogadoDashboard() {
         </button>
         <button
           onClick={() => {
-            const isEligible = profileData?.is_premium || profileData?.plan_type === "START" || profileData?.plan_type === "PRO";
-            const isBlocked = ["canceled", "cancelled", "unpaid", "blocked"].includes((profileData?.subscription_status || "").toLowerCase());
-            if (!isEligible || isBlocked) {
-              toast.error("O Radar Jurídico é exclusivo para advogados START e PRO ativos.");
-              setShowProModal(true);
-              return;
-            }
             setOportunidadesSubTab("radar");
           }}
           className={radarCount > 0 && oportunidadesSubTab !== "radar" ? styles.pulseGoldRadar : ""}
@@ -4877,7 +4870,7 @@ export default function AdvogadoDashboard() {
       </div>
 
       {oportunidadesSubTab === "radar" ? (
-        <RadarTab />
+        <RadarTab setShowProModal={setShowProModal} profileData={profileData} />
       ) : (
         <>
           <div className={styles.searchWrapper}>

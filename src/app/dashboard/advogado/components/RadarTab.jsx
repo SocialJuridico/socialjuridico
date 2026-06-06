@@ -14,12 +14,14 @@ import {
   CheckCircle2,
   Eye,
   Megaphone,
+  Lock,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-export default function RadarTab() {
+export default function RadarTab({ setShowProModal, profileData }) {
   const [oportunidades, setOportunidades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isDemo, setIsDemo] = useState(false);
   
   // Filtros & Paginação
   const [search, setSearch] = useState("");
@@ -60,6 +62,7 @@ export default function RadarTab() {
       if (json.success) {
         setOportunidades(json.data || []);
         setPagination(json.pagination || { total: 0, pages: 1, limit: 9 });
+        setIsDemo(!!json.is_demo);
       } else {
         toast.error(json.message || "Erro ao carregar oportunidades públicas.");
       }
@@ -148,7 +151,19 @@ export default function RadarTab() {
   };
 
   return (
-    <div style={{ color: "#fff", display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div style={{ position: "relative", minHeight: "450px", width: "100%" }}>
+      <div 
+        style={{ 
+          color: "#fff", 
+          display: "flex", 
+          flexDirection: "column", 
+          gap: "20px",
+          filter: isDemo ? "blur(5px) grayscale(40%)" : "none",
+          pointerEvents: isDemo ? "none" : "auto",
+          userSelect: isDemo ? "none" : "auto",
+          transition: "filter 0.3s ease"
+        }}
+      >
       
       {/* ⚠️ Aviso Legal Obrigatório LGPD */}
       <div
@@ -744,6 +759,84 @@ export default function RadarTab() {
         </div>
       )}
 
+      </div>
+
+      {isDemo && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            paddingTop: "120px",
+            zIndex: 100,
+            background: "rgba(8, 9, 11, 0.45)",
+            borderRadius: "16px"
+          }}
+        >
+          <div
+            style={{
+              background: "linear-gradient(135deg, #171a21 0%, #0d0f12 100%)",
+              border: "1px solid rgba(212, 175, 55, 0.3)",
+              borderRadius: "16px",
+              padding: "40px 30px",
+              width: "90%",
+              maxWidth: "480px",
+              textAlign: "center",
+              boxShadow: "0 15px 35px rgba(0, 0, 0, 0.7), 0 0 25px rgba(212, 175, 55, 0.12)",
+              backdropFilter: "blur(4px)",
+              position: "sticky",
+              top: "120px"
+            }}
+          >
+            <div style={{ display: "inline-flex", padding: "16px", background: "rgba(212, 175, 55, 0.08)", borderRadius: "50%", marginBottom: "20px" }}>
+              <Lock size={32} color="#d4af37" />
+            </div>
+            
+            <h3 style={{ margin: "0 0 12px 0", color: "#fff", fontSize: "1.4rem", fontWeight: 800 }}>
+              Radar Jurídico Bloqueado
+            </h3>
+            
+            <p style={{ margin: "0 0 24px 0", color: "rgba(255, 255, 255, 0.75)", fontSize: "0.92rem", lineHeight: "1.6" }}>
+              O Radar Jurídico é uma funcionalidade exclusiva para assinantes ativos dos planos <strong style={{ color: "#d4af37" }}>START</strong> e <strong style={{ color: "#d4af37" }}>PRO</strong>. 
+              Assine um plano para desbloquear detalhes completos de contato, resumos de IA e links originais das oportunidades.
+            </p>
+            
+            <button
+              type="button"
+              onClick={() => setShowProModal && setShowProModal(true)}
+              style={{
+                width: "100%",
+                background: "linear-gradient(135deg, #d4af37 0%, #aa820a 100%)",
+                border: "none",
+                borderRadius: "8px",
+                padding: "14px 28px",
+                color: "#000",
+                fontWeight: 800,
+                fontSize: "0.95rem",
+                cursor: "pointer",
+                boxShadow: "0 4px 15px rgba(212, 175, 55, 0.3)",
+                transition: "all 0.2s"
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = "translateY(-1px)";
+                e.currentTarget.style.boxShadow = "0 6px 20px rgba(212, 175, 55, 0.5)";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = "none";
+                e.currentTarget.style.boxShadow = "0 4px 15px rgba(212, 175, 55, 0.3)";
+              }}
+            >
+              Assinar Plano Agora
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

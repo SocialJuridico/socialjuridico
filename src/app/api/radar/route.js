@@ -64,12 +64,6 @@ export async function GET(request) {
       (lawyer.subscription_status || "").toLowerCase()
     );
 
-    if (!isStartOrPro || isBlocked) {
-      return NextResponse.json(
-        { success: false, message: "O Radar Jurídico é de uso exclusivo para advogados START e PRO ativos." },
-        { status: 403 }
-      );
-    }
     const categoria = searchParams.get("categoria");
     const estado = searchParams.get("estado");
     const cidade = searchParams.get("cidade");
@@ -125,9 +119,44 @@ export async function GET(request) {
       );
     }
 
+    if (!isStartOrPro || isBlocked) {
+      const sanitizedData = (data || []).map((item) => ({
+        id: item.id,
+        titulo: item.titulo,
+        categoria: item.categoria,
+        cidade: item.cidade,
+        estado: item.estado,
+        score_intencao: item.score_intencao,
+        urgencia: item.urgencia,
+        criado_em: item.criado_em,
+        detectado_em: item.detectado_em,
+        publicado_em: item.publicado_em,
+        // Ocultar dados confidenciais de contato
+        url_original: "#",
+        trecho_publico: "Trecho ocultado. Assine o plano START ou PRO para ver os detalhes e links de contato deste caso.",
+        resumo_ia: "Resumo da inteligência artificial ocultado.",
+        fonte: "Ocultada",
+        fonte_tipo: "Ocultada",
+        reportado: false,
+      }));
+
+      return NextResponse.json({
+        success: true,
+        data: sanitizedData,
+        is_demo: true,
+        pagination: {
+          total: count,
+          page,
+          limit,
+          pages: Math.ceil(count / limit),
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       data: data || [],
+      is_demo: false,
       pagination: {
         total: count,
         page,

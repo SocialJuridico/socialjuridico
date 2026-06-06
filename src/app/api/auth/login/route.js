@@ -92,7 +92,7 @@ export async function POST(request) {
     // Se falhar, vamos tentar o "Lazy Sync" para usuários antigos/migrados
     if (
       authError &&
-      authError.status === 401 &&
+      (authError.status === 401 || authError.status === 400) &&
       password === DEFAULT_PASSWORD
     ) {
 

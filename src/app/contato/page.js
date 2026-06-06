@@ -46,8 +46,8 @@ export default function Contato() {
                 <div className={styles.itemText}>
                   <h4>WhatsApp</h4>
                   <p>
-                    <a href="https://wa.me/5515992653066" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
-                      +55 (15) 99265-3066
+                    <a href="https://wa.me/5515981657317" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
+                      +55 (15) 98165-7317
                     </a>
                   </p>
                   <p>Seg à Sex, 09h às 18h</p>

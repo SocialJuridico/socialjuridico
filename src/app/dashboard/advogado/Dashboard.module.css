@@ -6921,3 +6921,21 @@
     opacity: 1;
   }
 }
+
+@keyframes pulseGoldRadarButton {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(212, 175, 55, 0.15);
+    border-color: rgba(212, 175, 55, 0.2) !important;
+    background: transparent;
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.45);
+    border-color: rgba(212, 175, 55, 0.6) !important;
+    background: rgba(212, 175, 55, 0.05);
+  }
+}
+
+.pulseGoldRadar {
+  animation: pulseGoldRadarButton 2s infinite ease-in-out;
+  border: 1px solid rgba(212, 175, 55, 0.3) !important;
+}

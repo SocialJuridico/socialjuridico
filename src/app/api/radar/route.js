@@ -35,6 +35,30 @@ export async function GET(request) {
       );
     }
 
+    // Leitura dos parâmetros de busca e filtros
+    const { searchParams } = new URL(request.url);
+    const countOnly = searchParams.get("count_only") === "true";
+
+    if (countOnly) {
+      const { count, error: countError } = await supabaseAdmin
+        .from("radar_oportunidades")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "aprovado");
+
+      if (countError) {
+        console.error("Erro ao obter contagem de oportunidades:", countError.message);
+        return NextResponse.json(
+          { success: false, message: "Erro ao obter contagem de oportunidades" },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        count: count || 0
+      });
+    }
+
     const isStartOrPro = lawyer.plan_type === "START" || lawyer.plan_type === "PRO" || lawyer.is_premium === true;
     const isBlocked = ["canceled", "cancelled", "unpaid", "blocked"].includes(
       (lawyer.subscription_status || "").toLowerCase()
@@ -46,9 +70,6 @@ export async function GET(request) {
         { status: 403 }
       );
     }
-
-    // Leitura dos parâmetros de busca e filtros
-    const { searchParams } = new URL(request.url);
     const categoria = searchParams.get("categoria");
     const estado = searchParams.get("estado");
     const cidade = searchParams.get("cidade");

@@ -33,6 +33,7 @@ export default function AdminDashboardPage() {
     totalAdvogados: 0,
     totalCasos: 0,
     totalNotificacoes: 0,
+    totalRadarPendente: 0,
   });
   const [generatingPDF, setGeneratingPDF] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
@@ -693,9 +694,16 @@ export default function AdminDashboardPage() {
                 </article>
               </Link>
               <Link href="/dashboard/admin/radar" className={styles.cardLink}>
-                <article className={`${styles.card} ${styles.cardClickable}`} style={{ borderLeft: "4px solid #00b4d8", background: "rgba(0, 180, 216, 0.03)" }}>
+                <article 
+                  className={`${styles.card} ${styles.cardClickable} ${stats.totalRadarPendente > 0 ? styles.radarCardHighlight : ""}`} 
+                  style={{ borderLeft: "4px solid #00b4d8", background: "rgba(0, 180, 216, 0.03)" }}
+                >
                   <div className={styles.cardTop}><Shield size={16} color="#00b4d8" /> Radar Jurídico</div>
-                  <strong>Gerenciar Oportunidades</strong>
+                  <strong>
+                    {stats.totalRadarPendente > 0 
+                      ? `${stats.totalRadarPendente} Pendente${stats.totalRadarPendente !== 1 ? "s" : ""}`
+                      : "Sem Pendências"}
+                  </strong>
                 </article>
               </Link>
             </div>

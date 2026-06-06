@@ -34,11 +34,12 @@ export async function GET() {
       );
     }
 
-    const [clientesRes, advRes, casosRes, notifRes] = await Promise.all([
+    const [clientesRes, advRes, casosRes, notifRes, radarPendenteRes] = await Promise.all([
       db.from("clientes").select("id", { count: "exact", head: true }),
       db.from("advogados").select("id", { count: "exact", head: true }),
       db.from("casos").select("id", { count: "exact", head: true }),
       db.from("notificacoes").select("id", { count: "exact", head: true }),
+      db.from("radar_oportunidades").select("id", { count: "exact", head: true }).eq("status", "pendente"),
     ]);
 
     return NextResponse.json({
@@ -48,6 +49,7 @@ export async function GET() {
         totalAdvogados: advRes.count || 0,
         totalCasos: casosRes.count || 0,
         totalNotificacoes: notifRes.count || 0,
+        totalRadarPendente: radarPendenteRes.count || 0,
       },
     });
   } catch (error) {

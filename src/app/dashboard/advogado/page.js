@@ -333,6 +333,7 @@ export default function AdvogadoDashboard() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [oportunidadesSubTab, setOportunidadesSubTab] = useState("plataforma");
+  const [radarCount, setRadarCount] = useState(0);
   const [delegatingClient, setDelegatingClient] = useState(null);
   const [isDelegating, setIsDelegating] = useState(false);
   const [crmFilter, setCrmFilter] = useState("all"); // "my" or "all"
@@ -1567,6 +1568,18 @@ export default function AdvogadoDashboard() {
     }
   }, []);
 
+  const fetchRadarCount = useCallback(async () => {
+    try {
+      const res = await fetch("/api/radar?count_only=true");
+      const data = await res.json();
+      if (data.success) {
+        setRadarCount(data.count || 0);
+      }
+    } catch (err) {
+      console.error("Erro fetchRadarCount:", err);
+    }
+  }, []);
+
   const fetchIndicacoes = useCallback(async (explicitId) => {
     if (!explicitId && !profileData?.id) return;
     setLoadingIndicacoes(true);
@@ -1695,6 +1708,7 @@ export default function AdvogadoDashboard() {
         await fetchAgenda(profile.id);
         await fetchAllDocuments(profile.id);
         await syncNotificacoes(profile.id);
+        await fetchRadarCount();
 
         // Buscar média de avaliações do próprio advogado
         try {
@@ -4820,6 +4834,7 @@ export default function AdvogadoDashboard() {
             }
             setOportunidadesSubTab("radar");
           }}
+          className={radarCount > 0 && oportunidadesSubTab !== "radar" ? styles.pulseGoldRadar : ""}
           style={{
             background: oportunidadesSubTab === "radar" ? "rgba(255,255,255,0.08)" : "transparent",
             border: "none",
@@ -4836,8 +4851,27 @@ export default function AdvogadoDashboard() {
           }}
         >
           <Globe size={16} /> Radar Jurídico (START/PRO)
+          {radarCount > 0 && (
+            <span
+              style={{
+                background: "linear-gradient(135deg, #d4af37, #aa820a)",
+                color: "#000",
+                fontSize: "0.68rem",
+                fontWeight: "bold",
+                padding: "2px 6px",
+                borderRadius: "10px",
+                marginLeft: "4px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 0 5px rgba(212, 175, 55, 0.4)",
+              }}
+            >
+              + {radarCount} Casos
+            </span>
+          )}
           {!(profileData?.is_premium || profileData?.plan_type === "START" || profileData?.plan_type === "PRO") && (
-            <Lock size={12} style={{ opacity: 0.6 }} />
+            <Lock size={20} style={{ opacity: 0.6, marginLeft: "4px" }} />
           )}
         </button>
       </div>

@@ -323,3 +323,19 @@
   to { transform: scale(1); opacity: 1; }
 }
 
+@keyframes pulseGlowRadar {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(0, 180, 216, 0.2), inset 0 0 5px rgba(0, 180, 216, 0.1);
+    border-color: rgba(0, 180, 216, 0.3) !important;
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(0, 180, 216, 0.6), inset 0 0 10px rgba(0, 180, 216, 0.3);
+    border-color: rgba(0, 180, 216, 0.8) !important;
+  }
+}
+
+.radarCardHighlight {
+  animation: pulseGlowRadar 2s infinite ease-in-out;
+  border-left: 4px solid #00b4d8 !important;
+}
+

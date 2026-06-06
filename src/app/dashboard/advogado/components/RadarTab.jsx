@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-export default function RadarTab({ setShowProModal, profileData }) {
+export default function RadarTab({ setShowProModal, profileData, loadProfileData }) {
   const [oportunidades, setOportunidades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
@@ -96,19 +96,32 @@ export default function RadarTab({ setShowProModal, profileData }) {
   };
 
   const handleOpenOriginal = async (op) => {
-    // 1. Gravar clique na API (métricas em background)
+    const toastId = toast.loading("Carregando link do caso...");
     try {
-      await fetch("/api/radar/clique", {
+      const res = await fetch("/api/radar/clique", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ radar_oportunidade_id: op.id }),
       });
+      const json = await res.json();
+      
+      if (!res.ok || !json.success) {
+        toast.error(json.message || "Erro ao obter acesso ao caso.", { id: toastId });
+        return;
+      }
+      
+      toast.dismiss(toastId);
+      // Atualizar o saldo de Juris exibido na tela principal do advogado
+      if (loadProfileData) {
+        loadProfileData();
+      }
+      
+      // Abrir publicação original em aba segura
+      window.open(op.url_original, "_blank", "noopener,noreferrer,nofollow");
     } catch (err) {
-      console.error("Erro ao registrar métrica de clique:", err);
+      console.error("Erro ao registrar clique:", err);
+      toast.error("Erro de conexão ao acessar o link.", { id: toastId });
     }
-
-    // 2. Abrir publicação original em aba segura
-    window.open(op.url_original, "_blank", "noopener,noreferrer,nofollow");
   };
 
   const handleReportClick = (opId) => {

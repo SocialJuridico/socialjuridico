@@ -43,7 +43,8 @@ export async function GET(request) {
       const { count, error: countError } = await supabaseAdmin
         .from("radar_oportunidades")
         .select("id", { count: "exact", head: true })
-        .eq("status", "aprovado");
+        .eq("status", "aprovado")
+        .lt("cliques_count", 5);
 
       if (countError) {
         console.error("Erro ao obter contagem de oportunidades:", countError.message);
@@ -81,7 +82,8 @@ export async function GET(request) {
         "id, titulo, categoria, fonte, url_original, trecho_publico, cidade, estado, score_intencao, urgencia, resumo_ia, status, criado_em, detectado_em, publicado_em, fonte_tipo, reportado",
         { count: "exact" }
       )
-      .eq("status", "aprovado");
+      .eq("status", "aprovado")
+      .lt("cliques_count", 5);
 
     if (categoria) {
       query = query.eq("categoria", categoria);

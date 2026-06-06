@@ -53,7 +53,7 @@ export async function GET(request) {
 
     let query = supabaseAdmin
       .from("radar_oportunidades")
-      .select("*, cliques:radar_cliques(count)", { count: "exact" });
+      .select("*, cliques:radar_cliques(criado_em, advogados(id, name, email))", { count: "exact" });
 
     if (status) {
       query = query.eq("status", status);

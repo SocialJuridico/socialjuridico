@@ -945,7 +945,8 @@ export default function AdminRadarPage() {
         ) : (
           <div className={styles.list}>
             {oportunidades.map((op) => {
-              const cliCount = op.cliques?.[0]?.count || 0;
+              const cliCount = op.cliques?.length || 0;
+              const uniqueClickingLawyers = [...new Set(op.cliques?.map(c => c.advogados?.name).filter(Boolean))];
               return (
                 <div key={op.id} className={styles.card}>
                   <div className={styles.cardHeader}>
@@ -971,6 +972,12 @@ export default function AdminRadarPage() {
                       <Eye size={12} color="#00b4d8" /> cliques: <strong style={{ color: "#00b4d8" }}>{cliCount}</strong>
                     </span>
                   </div>
+
+                  {uniqueClickingLawyers.length > 0 && (
+                    <div style={{ marginTop: "-8px", marginBottom: "12px", fontSize: "0.8rem", color: "rgba(255, 255, 255, 0.55)", background: "rgba(255,255,255,0.03)", padding: "6px 10px", borderRadius: "6px" }}>
+                      <strong>Clicado por:</strong> <span style={{ color: "#d4af37", fontWeight: 600 }}>{uniqueClickingLawyers.join(", ")}</span>
+                    </div>
+                  )}
 
                   <p className={styles.cardExcerpt}>{op.trecho_publico}</p>
 

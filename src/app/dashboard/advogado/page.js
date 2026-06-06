@@ -1671,71 +1671,52 @@ export default function AdvogadoDashboard() {
     }
   }, []);
 
-  const loadDataFull = useCallback(async () => {
-    setLoadingProfile(true);
-    try {
-      const res = await fetch("/api/perfil");
-      const data = await res.json();
-      if (res.status === 403 || data.blocked || (data.success && data.data?.oab_verification_status === "ERROR")) {
-        await supabase.auth.signOut();
-        window.location.href = "/login?oab_error=true";
-        return;
+  useEffect(() => {
+    if (profileData?.id) {
+      if (profileData.oab_verification_status === "PENDING") {
+        setShowPendingOABModal(true);
       }
-      if (data.success) {
-        const profile = data.data;
-        setProfileData(profile);
-        setUserName(profile.name);
+      setProfileForm({
+        name: profileData.name || "",
+        phone: profileData.phone || "",
+        specialties: profileData.specialties || "",
+        bio: profileData.bio || "",
+        oab: profileData.oab || "",
+        consulta: profileData.consulta || "Gratuita",
+        tempo: profileData.tempo || "",
+        valor: profileData.valor || 0,
+        avatar: profileData.avatar || "",
+        password: "",
+        estado: profileData.estado || "",
+      });
+      const isIncomplete =
+        !profileData.avatar || !profileData.bio || !profileData.specialties;
+      setShowProfileReminder(isIncomplete);
 
-        if (profile.oab_verification_status === "PENDING") {
-          setShowPendingOABModal(true);
-        }
-        setProfileForm({
-          name: profile.name || "",
-          phone: profile.phone || "",
-          specialties: profile.specialties || "",
-          bio: profile.bio || "",
-          oab: profile.oab || "",
-          consulta: profile.consulta || "Gratuita",
-          tempo: profile.tempo || "",
-          valor: profile.valor || 0,
-          avatar: profile.avatar || "",
-          password: "",
-          estado: profile.estado || "",
-        });
-        const isIncomplete =
-          !profile.avatar || !profile.bio || !profile.specialties;
-        setShowProfileReminder(isIncomplete);
+      // Buscar dados que não estão no initial load do context
+      fetchMyInterests(profileData.id);
+      fetchCasos(profileData.id);
+      fetchAllDocuments(profileData.id);
+      fetchRadarCount();
 
-        // Chamada sequencial passando o profile.id explicitamente para evitar closures obsoletas
-        await fetchMyInterests(profile.id);
-        await fetchCasos(profile.id);
-        await fetchCrmClients(profile.id);
-        await fetchAgenda(profile.id);
-        await fetchAllDocuments(profile.id);
-        await syncNotificacoes(profile.id);
-        await fetchRadarCount();
-
-        // Buscar média de avaliações do próprio advogado
+      // Buscar média de avaliações do próprio advogado
+      const getRating = async () => {
         try {
-          const ratingRes = await fetch(`/api/avaliacoes/media/${profile.id}`);
+          const ratingRes = await fetch(`/api/avaliacoes/media/${profileData.id}`);
           const ratingData = await ratingRes.json();
           if (ratingData.success) setAvgRating(ratingData.data);
         } catch (e) {
           console.warn("Erro ao buscar média de avaliações:", e);
         }
-      }
-    } catch (e) {
-      console.error("Erro loadDataFull:", e);
-    } finally {
-      setLoadingProfile(false);
+      };
+      getRating();
     }
   }, [
+    profileData,
     fetchMyInterests,
     fetchCasos,
-    fetchCrmClients,
-    fetchAgenda,
     fetchAllDocuments,
-    syncNotificacoes,
+    fetchRadarCount
   ]);
 
   // Configurar filtro padrão do CRM com base no cargo (admin vê tudo, membro vê seus casos)
@@ -1825,10 +1806,9 @@ export default function AdvogadoDashboard() {
   }, []);
 
   useEffect(() => {
-    loadDataFull();
     fetchAvisos();
     fetchSidebarBanners();
-  }, [loadDataFull, fetchAvisos, fetchSidebarBanners]);
+  }, [fetchAvisos, fetchSidebarBanners]);
 
   useEffect(() => {
     const interval = setInterval(() => {

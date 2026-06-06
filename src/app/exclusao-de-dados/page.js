@@ -57,16 +57,16 @@ export default function ExclusaoDados() {
           <ul className={styles.list}>
             <li className={styles.listItem}>
               <strong>
-                Passo A (Autoatendimento) - <em>Em Breve</em>:
+                Passo A (Autoatendimento):
               </strong>{" "}
               Dentro do painel de usuário, acessando &quot;Configurações da
               Conta&quot;, basta clicar no botão vermelho &quot;Excluir Minha
-              Conta&quot;. A exclusão é imediata dos sistemas visíveis.
+              Conta&quot;. A exclusão é processada imediatamente.
             </li>
             <li className={styles.listItem}>
               <strong>Passo B (E-mail):</strong> Enviar um e-mail com o título{" "}
               <strong>[EXCLUSÃO DE DADOS]</strong> a partir do seu e-mail de
-              conta cadastrado para <em>suporte@socialjuridico.com</em>{" "}
+              conta cadastrado para <em>suporte@socialjuridico.com.br</em>{" "}
               confirmando sua identidade e sua vontade de encerramento
               contratual irrevogável.
             </li>

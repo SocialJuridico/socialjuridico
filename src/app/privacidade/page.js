@@ -83,8 +83,39 @@ export default function Privacidade() {
             <li className={styles.listItem}>Acesso facilitado às informações sobre o tratamento de seus dados.</li>
             <li className={styles.listItem}>Correção célere de dados incompletos, inexatos ou desatualizados via painel de controle.</li>
             <li className={styles.listItem}>Revogação do consentimento a qualquer momento.</li>
+            <li className={styles.listItem}><strong>Portabilidade e exportação</strong> de seus dados cadastrais em formato estruturado.</li>
             <li className={styles.listItem}><strong>Exclusão definitiva ou anonimização</strong> dos dados (Consulte nossa aba exclusiva de <em>Exclusão de Dados</em>).</li>
           </ul>
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>
+            <Eye className={styles.icon} size={24} />
+            6. Política de Cookies
+          </h2>
+          <p className={styles.text}>
+            Os cookies são pequenos arquivos de texto armazenados em seu dispositivo para garantir o funcionamento adequado da Plataforma. Nós utilizamos:
+          </p>
+          <ul className={styles.list}>
+            <li className={styles.listItem}><strong>Cookies Essenciais (Segurança e Sessão):</strong> Necessários para manter você conectado de forma segura à sua conta (via Supabase Auth) e guardar suas preferências básicas.</li>
+            <li className={styles.listItem}><strong>Cookies Analíticos e de PWA:</strong> Utilizados para aferir métricas estatísticas agregadas de acesso (via Google Tag Manager) e viabilizar o funcionamento offline do aplicativo.</li>
+          </ul>
+          <p className={styles.text}>
+            Você pode bloquear ou remover os cookies diretamente nas configurações de privacidade do seu navegador, embora isso possa limitar algumas funcionalidades do sistema.
+          </p>
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>
+            <ShieldCheck className={styles.icon} size={24} />
+            7. Controlador de Dados e Encarregado (DPO)
+          </h2>
+          <p className={styles.text}>
+            O **SocialJurídico** é o Controlador dos Dados Pessoais tratados no âmbito desta Plataforma.
+          </p>
+          <p className={styles.text}>
+            Para qualquer esclarecimento, consulta, portabilidade ou requisição relativa a privacidade e proteção de dados, entre em contato diretamente com o nosso Encarregado pelo tratamento de dados pessoais (DPO) através do e-mail oficial: **suporte@socialjuridico.com.br**.
+          </p>
         </section>
 
       </main>

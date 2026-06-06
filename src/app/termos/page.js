@@ -6,6 +6,8 @@ import {
   FileText,
   AlertTriangle,
   Scale3D,
+  Brain,
+  CreditCard,
 } from "lucide-react";
 
 export const metadata = {
@@ -41,13 +43,10 @@ export default function Termos() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>
             <Users className={styles.icon} size={24} />
-            2. Natureza da Plataforma
+            2. Natureza da Plataforma (Marketplace)
           </h2>
           <p className={styles.text}>
-            O SocialJurídico atua estritamente como um{" "}
-            <strong>Portal de Conexão</strong> entre cidadãos
-            (&quot;Clientes&quot;) e profissionais da advocacia
-            (&quot;Advogados&quot;).
+            O SocialJurídico atua como plataforma tecnológica de conexão entre clientes e advogados, não participando da relação contratual firmada entre as partes.
           </p>
           <ul className={styles.list}>
             <li className={styles.listItem}>
@@ -123,8 +122,62 @@ export default function Termos() {
 
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>
+            <Brain className={styles.icon} size={24} />
+            5. Inteligência Artificial e Responsabilidade
+          </h2>
+          <p className={styles.text}>
+            O SocialJurídico disponibiliza funcionalidades baseadas em Inteligência Artificial Generativa (como o Smart Docs e o Anjo Jurídico) para suporte informacional e redação automatizada.
+          </p>
+          <ul className={styles.list}>
+            <li className={styles.listItem}>
+              As ferramentas de Inteligência Artificial possuem caráter puramente auxiliar e de produtividade, e **não substituem** a análise, revisão e validação jurídica realizada por um advogado habilitado.
+            </li>
+            <li className={styles.listItem}>
+              A responsabilidade final pela qualidade, exatidão e adequação de petições, minutas, contratos ou quaisquer documentos gerados pela IA é integralmente do profissional jurídico que os utiliza e assina.
+            </li>
+          </ul>
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>
+            <FileText className={styles.icon} size={24} />
+            6. Conteúdo do Usuário
+          </h2>
+          <p className={styles.text}>
+            Ao utilizar a Plataforma, você pode carregar, armazenar e compartilhar arquivos de áudio, vídeo, imagens e documentos.
+          </p>
+          <ul className={styles.list}>
+            <li className={styles.listItem}>
+              O usuário declara possuir todos os direitos, titularidade, autorizações e consentimentos necessários para compartilhar e processar os conteúdos enviados à Plataforma.
+            </li>
+            <li className={styles.listItem}>
+              É expressamente proibido enviar conteúdos falsos, fraudulentos, que violem o sigilo profissional, direitos autorais de terceiros, ou que infrinjam a legislação vigente no país.
+            </li>
+          </ul>
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>
+            <CreditCard className={styles.icon} size={24} />
+            7. Segurança de Pagamentos e Transações
+          </h2>
+          <p className={styles.text}>
+            As transações de compra de créditos (Juris) ou assinaturas PRO/Enterprise na Plataforma são realizadas por meio de gateways de pagamento terceirizados integrados.
+          </p>
+          <ul className={styles.list}>
+            <li className={styles.listItem}>
+              Todos os pagamentos e dados de cartão de crédito são processados de forma inteiramente criptografada por parceiros em conformidade com o padrão PCI-DSS (Stripe e InfinitePay).
+            </li>
+            <li className={styles.listItem}>
+              O SocialJurídico não armazena nem processa diretamente dados sensíveis de cartões de crédito em seus próprios servidores.
+            </li>
+          </ul>
+        </section>
+
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>
             <AlertTriangle className={styles.icon} size={24} />
-            5. Limitação de Responsabilidade
+            8. Limitação de Responsabilidade
           </h2>
           <p className={styles.text}>
             A Plataforma não avaliza, endossa ou garante o sucesso de qualquer
@@ -134,7 +187,7 @@ export default function Termos() {
           <p className={styles.text}>
             Isentamo-nos de responsabilidade por perdas ou danos diretos,
             indiretos ou lucros cessantes decorrentes do uso de nossos serviços
-            ou do resultado do serviço jurídico contratado por meio d
+            ou do resultado do serviço jurídico contratado por meio da
             Plataforma.
           </p>
         </section>
@@ -142,7 +195,7 @@ export default function Termos() {
         <section className={styles.section}>
           <h2 className={styles.sectionTitle}>
             <Scale3D className={styles.icon} size={24} />
-            6. Modificações dos Termos
+            9. Modificações dos Termos
           </h2>
           <p className={styles.text}>
             A Plataforma reserva-se o direito de modificar o presente Termo a

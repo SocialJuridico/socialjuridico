@@ -364,7 +364,7 @@ export default function Sidebar() {
             onClick={() => handleTabClick("calculadora", hasCalculadoraAccess)}
           >
             <Calculator size={18} /> <span>Calculadora</span>
-            {(!isPremiumUser || !hasCalculadoraAccess) && (
+            {(profileData?.plan_type === "START" || !isPremiumUser || !hasCalculadoraAccess) && (
               <Lock
                 size={12}
                 style={{
@@ -380,7 +380,7 @@ export default function Sidebar() {
             onClick={() => handleTabClick("juris", hasJurisprudenciaAccess)}
           >
             <BookOpen size={18} /> <span>Jurisprudência</span>
-            {(!isPremiumUser || !hasJurisprudenciaAccess) && (
+            {(profileData?.plan_type === "START" || !isPremiumUser || !hasJurisprudenciaAccess) && (
               <Lock
                 size={12}
                 style={{

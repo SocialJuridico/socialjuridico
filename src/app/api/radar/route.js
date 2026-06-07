@@ -155,9 +155,29 @@ export async function GET(request) {
       });
     }
 
+    // Buscar cliques anteriores para identificar casos já desbloqueados pelo advogado
+    let clickedIds = [];
+    if (data && data.length > 0) {
+      const opportunityIds = data.map((op) => op.id);
+      const { data: clicks, error: clicksError } = await supabaseAdmin
+        .from("radar_cliques")
+        .select("radar_oportunidade_id")
+        .eq("advogado_id", user.id)
+        .in("radar_oportunidade_id", opportunityIds);
+
+      if (!clicksError && clicks) {
+        clickedIds = clicks.map((c) => c.radar_oportunidade_id);
+      }
+    }
+
+    const dataWithClicked = (data || []).map((item) => ({
+      ...item,
+      clicado: clickedIds.includes(item.id),
+    }));
+
     return NextResponse.json({
       success: true,
-      data: data || [],
+      data: dataWithClicked,
       is_demo: false,
       pagination: {
         total: count,

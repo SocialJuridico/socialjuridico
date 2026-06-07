@@ -15,6 +15,7 @@ import {
   Eye,
   Megaphone,
   Lock,
+  Coins,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -40,6 +41,11 @@ export default function RadarTab({ setShowProModal, profileData, loadProfileData
   const [reportingId, setReportingId] = useState(null);
   const [reportReason, setReportReason] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
+
+  // Modal de Confirmação de Débito de Juris (START)
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingOportunidade, setPendingOportunidade] = useState(null);
+  const [processingClique, setProcessingClique] = useState(false);
 
   const fetchOportunidades = async () => {
     setLoading(true);
@@ -95,8 +101,9 @@ export default function RadarTab({ setShowProModal, profileData, loadProfileData
     setPage(1);
   };
 
-  const handleOpenOriginal = async (op) => {
+  const executeClique = async (op) => {
     const toastId = toast.loading("Carregando link do caso...");
+    setProcessingClique(true);
     try {
       const res = await fetch("/api/radar/clique", {
         method: "POST",
@@ -111,17 +118,49 @@ export default function RadarTab({ setShowProModal, profileData, loadProfileData
       }
       
       toast.dismiss(toastId);
+      
       // Atualizar o saldo de Juris exibido na tela principal do advogado
       if (loadProfileData) {
         loadProfileData();
       }
+      
+      // Atualizar lista local para marcar como clicado, evitando modais futuros
+      setOportunidades(prev =>
+        prev.map(item => (item.id === op.id ? { ...item, clicado: true } : item))
+      );
       
       // Abrir publicação original em aba segura
       window.open(op.url_original, "_blank", "noopener,noreferrer,nofollow");
     } catch (err) {
       console.error("Erro ao registrar clique:", err);
       toast.error("Erro de conexão ao acessar o link.", { id: toastId });
+    } finally {
+      setProcessingClique(false);
+      setShowConfirmModal(false);
+      setPendingOportunidade(null);
     }
+  };
+
+  const handleOpenOriginal = (op) => {
+    // 1. Se já foi clicado por este advogado anteriormente, libera acesso direto
+    if (op.clicado) {
+      window.open(op.url_original, "_blank", "noopener,noreferrer,nofollow");
+      return;
+    }
+
+    // 2. Se for plano PRO (ou premium manual que não seja START), libera direto sem modal e sem custo de Juris
+    const isPro = profileData?.plan_type === "PRO";
+    const isStart = profileData?.plan_type === "START";
+    const isPremium = profileData?.is_premium === true;
+
+    if (isPro || (isPremium && !isStart)) {
+      executeClique(op);
+      return;
+    }
+
+    // 3. Se for plano START, exige confirmação (modal)
+    setPendingOportunidade(op);
+    setShowConfirmModal(true);
   };
 
   const handleReportClick = (opId) => {
@@ -668,6 +707,106 @@ export default function RadarTab({ setShowProModal, profileData, loadProfileData
             </div>
           )}
         </>
+      )}
+
+      {/* Modal de Confirmação de Débito de Juris (START) */}
+      {showConfirmModal && pendingOportunidade && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: "#161b22",
+              border: "1px solid rgba(212, 175, 55, 0.3)",
+              borderRadius: "12px",
+              padding: "24px",
+              width: "90%",
+              maxWidth: "450px",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.5), 0 0 20px rgba(212, 175, 55, 0.08)",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ display: "inline-flex", padding: "12px", background: "rgba(212, 175, 55, 0.08)", borderRadius: "50%", marginBottom: "16px" }}>
+              <Coins size={28} color="#d4af37" />
+            </div>
+            <h3 style={{ margin: "0 0 10px 0", fontSize: "1.2rem", fontWeight: 700, color: "#fff" }}>
+              Confirmar Acesso à Oportunidade
+            </h3>
+            <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.85)", margin: "0 0 12px 0", lineHeight: "1.5" }}>
+              Para acessar a <strong style={{ color: "#d4af37" }}>OPORTUNIDADE</strong> será descontado <strong>1 juri</strong> da sua carteira.
+            </p>
+            <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,0.5)", margin: "0 0 20px 0", lineHeight: "1.4" }}>
+              💡 Se você fosse plano <strong style={{ color: "#d4af37" }}>PRO</strong>, não seria cobrado nenhum juri para acessar a oportunidade.
+            </p>
+
+            <div style={{ display: "flex", justifyContent: "center", gap: "12px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setPendingOportunidade(null);
+                }}
+                disabled={processingClique}
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: "8px",
+                  padding: "10px 20px",
+                  color: "#fff",
+                  fontSize: "0.88rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  transition: "0.2s",
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.3)")}
+                onMouseOut={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.15)")}
+              >
+                Não aceitar
+              </button>
+              <button
+                type="button"
+                onClick={() => executeClique(pendingOportunidade)}
+                disabled={processingClique}
+                style={{
+                  background: "linear-gradient(135deg, #d4af37, #aa820a)",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "10px 24px",
+                  color: "#000",
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: "0 4px 12px rgba(212, 175, 55, 0.2)",
+                  transition: "0.2s",
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.opacity = "0.9")}
+                onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+              >
+                {processingClique ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" /> Processando...
+                  </>
+                ) : (
+                  "Aceitar"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de Sinalização/Reporte */}

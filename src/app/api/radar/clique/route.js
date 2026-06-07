@@ -78,8 +78,8 @@ export async function POST(request) {
       });
     }
 
-    // 2. Determinar custo do clique (START = 3 Juris, PRO = 0 Juris)
-    const cost = (lawyer.plan_type === "START" && lawyer.is_premium !== true) ? 3 : 0;
+    // 2. Determinar custo do clique (START = 1 Juris, PRO = 0 Juris)
+    const cost = lawyer.plan_type === "START" ? 1 : 0;
 
     if (cost > 0) {
       if ((lawyer.balance || 0) < cost) {

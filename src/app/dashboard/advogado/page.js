@@ -4855,7 +4855,7 @@ export default function AdvogadoDashboard() {
       </div>
 
       {oportunidadesSubTab === "radar" ? (
-        <RadarTab setShowProModal={setShowProModal} profileData={profileData} />
+        <RadarTab setShowProModal={setShowProModal} profileData={profileData} loadProfileData={refreshProfile} />
       ) : (
         <>
           <div className={styles.searchWrapper}>
@@ -8959,6 +8959,22 @@ export default function AdvogadoDashboard() {
             Inteligência Jurisprudencial.
           </p>
         </div>
+      );
+    }
+
+    const isStart = profileData?.plan_type === "START";
+    const isFree =
+      !profileData?.is_premium &&
+      profileData?.plan_type !== "START" &&
+      profileData?.plan_type !== "PRO";
+
+    if (isStart || isFree) {
+      return (
+        <PlanLock
+          title="Pesquisa de Jurisprudência"
+          description="Acesso exclusivo para membros do Plano PRO. No Plano START, você tem acesso às ferramentas de CRM e IA básica."
+          onUpgrade={() => setShowProModal(true)}
+        />
       );
     }
 

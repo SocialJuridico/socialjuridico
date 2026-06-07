@@ -283,7 +283,35 @@ export default function AdminDashboardPage() {
       const hasSecondPage = reportPeriod === 30;
       const pageCount = hasSecondPage ? 2 : 1;
 
+      // Renderizar seção de uso de ferramentas premium
+      const premiumHeaders = ['Ferramenta Premium', 'Consumo Total Acumulado', 'Média por Advogado'];
+      const premiumUsage = reportData.premiumUsageSummary;
+      const premiumBody = [
+        ['Redator IA Jurídico', `${premiumUsage?.redator?.total || 0} minutos`, `${premiumUsage?.redator?.avg || 0} min/adv`],
+        ['Triagem IA & Diagnóstico', `${premiumUsage?.triagem?.total || 0} diagnósticos`, `${premiumUsage?.triagem?.avg || 0} diag/adv`],
+        ['Agenda & Prazos Inteligentes', `${premiumUsage?.agenda?.total || 0} registros`, `${premiumUsage?.agenda?.avg || 0} reg/adv`],
+        ['IA Smart Docs (Armazenamento)', `${(premiumUsage?.storage?.total || 0).toFixed(1)} MB`, `${(premiumUsage?.storage?.avg || 0).toFixed(1)} MB/adv`],
+      ];
+
       if (!hasSecondPage) {
+        // Renderizar tabela premium no final da página 1
+        let premiumStartY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 12 : 120;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 19, 24);
+        doc.text("2. Consumo de Ferramentas Premium", 14, premiumStartY);
+
+        autoTable(doc, {
+          startY: premiumStartY + 4,
+          head: [premiumHeaders],
+          body: premiumBody,
+          theme: 'striped',
+          headStyles: { fillColor: [15, 19, 24], textColor: [212, 175, 55], fontStyle: 'bold', fontSize: 9 },
+          bodyStyles: { fontSize: 8.5 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          margin: { left: 14, right: 14 }
+        });
+
         // Rodapé da página 1
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7.5);
@@ -401,6 +429,24 @@ export default function AdminDashboardPage() {
           startY: nextY + 4,
           head: [monthlyHeaders],
           body: monthlyBody,
+          theme: 'striped',
+          headStyles: { fillColor: [15, 19, 24], textColor: [212, 175, 55], fontStyle: 'bold', fontSize: 9 },
+          bodyStyles: { fontSize: 8.5 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          margin: { left: 14, right: 14 }
+        });
+
+        // Renderizar tabela premium na página 2
+        let premiumStartY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY + 12 : 140;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.setTextColor(15, 19, 24);
+        doc.text("4. Consumo de Ferramentas Premium", 14, premiumStartY);
+
+        autoTable(doc, {
+          startY: premiumStartY + 4,
+          head: [premiumHeaders],
+          body: premiumBody,
           theme: 'striped',
           headStyles: { fillColor: [15, 19, 24], textColor: [212, 175, 55], fontStyle: 'bold', fontSize: 9 },
           bodyStyles: { fontSize: 8.5 },

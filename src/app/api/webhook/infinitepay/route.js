@@ -71,6 +71,7 @@ export async function POST(request) {
       updateData = {
         plan_type: planType,
         is_premium: true,
+        premium_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         balance: (userData.balance || 0) + bonusJuris,
         [planType === "PRO" ? "promo_pro_used" : "promo_start_used"]: true
       };
@@ -82,6 +83,7 @@ export async function POST(request) {
       updateData = {
         plan_type: "START",
         is_premium: true,
+        premium_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         balance: (userData.balance || 0) + bonusJuris
       };
       message = "Plano Start ativado! Adicionados 7 Juris de bônus.";
@@ -92,6 +94,7 @@ export async function POST(request) {
       updateData = {
         plan_type: "PRO",
         is_premium: true,
+        premium_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         balance: (userData.balance || 0) + bonusJuris
       };
       message = "Plano Pro ativado! Adicionados 20 Juris de bônus.";
@@ -115,12 +118,22 @@ export async function POST(request) {
     // Planos Anuais (Fallback caso usem)
     else if (amountInCents === 43188) {
       bonusJuris = 7;
-      updateData = { plan_type: "START", is_premium: true, balance: (userData.balance || 0) + bonusJuris };
+      updateData = { 
+        plan_type: "START", 
+        is_premium: true, 
+        premium_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        balance: (userData.balance || 0) + bonusJuris 
+      };
       message = "Plano Start Anual ativado! Adicionados 7 Juris de bônus.";
     }
     else if (amountInCents === 91188) {
       bonusJuris = 20;
-      updateData = { plan_type: "PRO", is_premium: true, balance: (userData.balance || 0) + bonusJuris };
+      updateData = { 
+        plan_type: "PRO", 
+        is_premium: true, 
+        premium_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        balance: (userData.balance || 0) + bonusJuris 
+      };
       message = "Plano Pro Anual ativado! Adicionados 20 Juris de bônus.";
     }
     else {
@@ -197,7 +210,7 @@ export async function POST(request) {
           html: boasVindasPlanoTemplate({
             lawyerName,
             planType,
-            jurisBonus
+            jurisBonus: bonusJuris
           })
         });
         console.log(`📧 Email de boas-vindas do plano ${planType} enviado para ${email}`);

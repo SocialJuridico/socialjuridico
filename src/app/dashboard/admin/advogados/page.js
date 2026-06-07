@@ -12,6 +12,8 @@ export default function AdminAdvogadosPage() {
   const [loading, setLoading] = useState(true);
   const [advogados, setAdvogados] = useState([]);
   const [search, setSearch] = useState("");
+  const [planFilter, setPlanFilter] = useState("ALL");
+  const [dateFilter, setDateFilter] = useState("ALL");
   const [inactivityFilter, setInactivityFilter] = useState("ALL");
   const [deletingId, setDeletingId] = useState(null);
   const [resettingId, setResettingId] = useState(null);
@@ -89,6 +91,7 @@ export default function AdminAdvogadosPage() {
   const filteredAdvogados = useMemo(() => {
     let result = advogados;
 
+    // 1. Filtro por inatividade
     if (inactivityFilter !== "ALL") {
       const now = new Date();
       result = result.filter((a) => {
@@ -103,6 +106,33 @@ export default function AdminAdvogadosPage() {
       });
     }
 
+    // 2. Filtro por plano
+    if (planFilter !== "ALL") {
+      result = result.filter((a) => {
+        const pType = a.plan_type || (a.is_premium ? "PRO" : "FREE");
+        return pType === planFilter;
+      });
+    }
+
+    // 3. Filtro por data de cadastro
+    if (dateFilter !== "ALL") {
+      const now = new Date();
+      result = result.filter((a) => {
+        if (!a.created_at) return false;
+        const createdAt = new Date(a.created_at);
+        const diffDays = Math.floor((now - createdAt) / (1000 * 60 * 60 * 24));
+
+        if (dateFilter === "TODAY") {
+          return createdAt.toDateString() === now.toDateString();
+        }
+        if (dateFilter === "7DAYS") return diffDays <= 7;
+        if (dateFilter === "30DAYS") return diffDays <= 30;
+
+        return true;
+      });
+    }
+
+    // 4. Busca por nome e email
     const term = search.trim().toLowerCase();
     if (term) {
       result = result.filter((a) => {
@@ -113,7 +143,7 @@ export default function AdminAdvogadosPage() {
     }
 
     return result;
-  }, [advogados, search, inactivityFilter]);
+  }, [advogados, search, inactivityFilter, planFilter, dateFilter]);
 
   const confirmDelete = async (advogado) => {
     setDeletingId(advogado.id);
@@ -246,10 +276,10 @@ export default function AdminAdvogadosPage() {
       doc.setFontSize(22);
       doc.text("SOCIAL JURÍDICO", 15, 18);
 
-      doc.setTextColor(255, 255, 255);
+            doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text("RELATÓRIO DE AUDITORIA - STATUS OAB", 15, 25);
+      doc.text("RELATÓRIO DE AUDITORIA E USO DE FERRAMENTAS PREMIUM", 15, 25);
 
       // Date in top right
       const nowStr = new Date().toLocaleString("pt-BR");
@@ -298,38 +328,41 @@ export default function AdminAdvogadosPage() {
       doc.setTextColor(13, 15, 18);
       doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
-      doc.text("LISTAGEM DETALHADA DE ADVOGADOS", 15, 82);
+      doc.text("LISTAGEM DETALHADA E TELEMETRIA DE USO", 15, 82);
 
       const tableData = advogados.map(a => [
         a.name || "-",
         a.email || "-",
-        a.phone || "-",
         a.oab ? `${a.oab}/${a.estado || ""}` : "-",
         a.oab_verification_status === "VERIFIED" ? "Verificado" :
         a.oab_verification_status === "ERROR" ? "Erro" : "Pendente",
+        `${a.uso_redator_ia || 0} min`,
+        `${a.uso_triagem || 0} diag`,
+        `${a.uso_agenda || 0} reg`,
+        `${(a.uso_storage_mb || 0).toFixed(1)} MB`,
         a.created_at ? new Date(a.created_at).toLocaleDateString("pt-BR") : "-"
       ]);
 
       autoTable(doc, {
         startY: 87,
-        head: [["Nome", "E-mail", "Telefone", "OAB/UF", "Status OAB", "Cadastro"]],
+        head: [["Nome", "E-mail", "OAB/UF", "Status OAB", "Redator IA", "Triagem IA", "Agenda", "Smart Docs", "Cadastro"]],
         body: tableData,
         theme: "striped",
         headStyles: {
           fillColor: [13, 15, 18],
           textColor: [212, 175, 55],
           fontStyle: "bold",
-          fontSize: 8.5
-        },
-        bodyStyles: {
           fontSize: 8
         },
+        bodyStyles: {
+          fontSize: 7
+        },
         columnStyles: {
-          4: { fontStyle: "bold" } // Status column bold
+          3: { fontStyle: "bold" } // Status column bold
         },
         didParseCell: function(data) {
           // Highlight status column
-          if (data.column.index === 4 && data.cell.section === 'body') {
+          if (data.column.index === 3 && data.cell.section === 'body') {
             const status = data.cell.raw;
             if (status === "Verificado") {
               data.cell.styles.textColor = [16, 185, 129]; // Green
@@ -604,8 +637,8 @@ export default function AdminAdvogadosPage() {
         </div>
       </header>
 
-      <div className={styles.searchWrap} style={{ display: 'flex', gap: '10px' }}>
-        <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+      <div className={styles.searchWrap} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
+        <div style={{ position: 'relative', flex: '1 1 300px', display: 'flex', alignItems: 'center' }}>
           <Search size={16} className={styles.searchIcon} />
           <input
             className={styles.searchInput}
@@ -615,13 +648,41 @@ export default function AdminAdvogadosPage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+
+        {/* Filtro por Plano */}
         <select
           className={styles.searchInput}
-          style={{ paddingLeft: '1rem', width: 'auto', flex: 'none', appearance: 'auto', background: '#1e293b' }}
+          style={{ paddingLeft: '1rem', width: 'auto', flex: '1 1 150px', appearance: 'auto', background: '#1e293b' }}
+          value={planFilter}
+          onChange={(e) => setPlanFilter(e.target.value)}
+        >
+          <option value="ALL">Todos os Planos</option>
+          <option value="FREE">Plano FREE</option>
+          <option value="START">Plano START</option>
+          <option value="PRO">Plano PRO</option>
+        </select>
+
+        {/* Filtro por Data de Cadastro */}
+        <select
+          className={styles.searchInput}
+          style={{ paddingLeft: '1rem', width: 'auto', flex: '1 1 150px', appearance: 'auto', background: '#1e293b' }}
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+        >
+          <option value="ALL">Qualquer data de cadastro</option>
+          <option value="TODAY">Cadastrados hoje</option>
+          <option value="7DAYS">Cadastrados nos últimos 7 dias</option>
+          <option value="30DAYS">Cadastrados nos últimos 30 dias</option>
+        </select>
+
+        {/* Filtro por Inatividade */}
+        <select
+          className={styles.searchInput}
+          style={{ paddingLeft: '1rem', width: 'auto', flex: '1 1 150px', appearance: 'auto', background: '#1e293b' }}
           value={inactivityFilter}
           onChange={(e) => setInactivityFilter(e.target.value)}
         >
-          <option value="ALL">Todos os advogados</option>
+          <option value="ALL">Sem filtro de inatividade</option>
           <option value="7DAYS">Inativos há +7 dias</option>
           <option value="15DAYS">Inativos há +15 dias</option>
           <option value="30DAYS">Inativos há +30 dias</option>
@@ -650,7 +711,11 @@ export default function AdminAdvogadosPage() {
             </thead>
             <tbody>
               {filteredAdvogados.map((advogado) => (
-                <tr key={advogado.id}>
+                <tr
+                  key={advogado.id}
+                  className={styles.clickableRow}
+                  onClick={() => setModalAction({ type: "usage", item: advogado })}
+                >
                   <td>{advogado.name || "-"}</td>
                   <td>{advogado.email || "-"}</td>
                   <td>{advogado.phone || "-"}</td>
@@ -712,22 +777,23 @@ export default function AdminAdvogadosPage() {
                       <button
                         type="button"
                         className={styles.manageBtn}
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setModalAction({ type: "manage", item: advogado });
                           setEditOAB(advogado.oab || "");
                           setEditEstado(advogado.estado || "");
                         }}
                         disabled={updatingId === advogado.id}
                       >
-                        <RotateCcw size={14} style={{ display: "none" }} />
                         Gerenciar
                       </button>
                       <button
                         type="button"
                         className={styles.resetBtn}
-                        onClick={() =>
-                          setModalAction({ type: "reset", item: advogado })
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setModalAction({ type: "reset", item: advogado });
+                        }}
                         disabled={resettingId === advogado.id}
                       >
                         <RotateCcw size={14} />
@@ -736,9 +802,10 @@ export default function AdminAdvogadosPage() {
                       <button
                         type="button"
                         className={styles.deleteBtn}
-                        onClick={() =>
-                          setModalAction({ type: "delete", item: advogado })
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setModalAction({ type: "delete", item: advogado });
+                        }}
                         disabled={deletingId === advogado.id}
                       >
                         <Trash2 size={14} />
@@ -767,11 +834,122 @@ export default function AdminAdvogadosPage() {
                 ? "Excluir advogado"
                 : modalAction.type === "reset"
                   ? "Resetar senha"
-                  : "Gerenciar Advogado"}
+                  : modalAction.type === "usage"
+                    ? "Uso de Ferramentas Premium"
+                    : "Gerenciar Advogado"}
             </h3>
 
             <div className={styles.modalContent}>
-              {modalAction.type === "manage" ? (
+              {modalAction.type === "usage" ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "5px" }}>
+                  <p style={{ margin: 0, fontSize: "0.9rem", color: "#cbd5e1" }}>
+                    Advogado: <strong style={{ color: "#fff" }}>{modalAction.item.name}</strong><br/>
+                    Plano Atual: <strong style={{ color: "#d4af37" }}>{modalAction.item.plan_type || (modalAction.item.is_premium ? "PRO" : "FREE")}</strong>
+                  </p>
+                  
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "10px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", padding: "15px", borderRadius: "10px" }}>
+                    {/* Redator IA */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: "6px" }}>
+                        <span style={{ color: "#9ca3af" }}>Redator IA Jurídico</span>
+                        <span style={{ fontWeight: "bold", color: "#fff" }}>
+                          {modalAction.item.uso_redator_ia || 0} / {
+                            (modalAction.item.plan_type === "PRO" ? 200 : modalAction.item.plan_type === "START" ? 20 : 0) + (modalAction.item.extra_redator_ia || 0)
+                          } min
+                        </span>
+                      </div>
+                      <div style={{ width: "100%", height: "8px", background: "rgba(255,255,255,0.08)", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{
+                          width: `${Math.min(100, ((modalAction.item.uso_redator_ia || 0) / (((modalAction.item.plan_type === "PRO" ? 200 : modalAction.item.plan_type === "START" ? 20 : 0) + (modalAction.item.extra_redator_ia || 0)) || 1)) * 100)}%`,
+                          height: "100%",
+                          background: "linear-gradient(90deg, #d4af37, #f3e8ff)",
+                          borderRadius: "4px"
+                        }} />
+                      </div>
+                    </div>
+
+                    {/* Clientes CRM */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: "6px" }}>
+                        <span style={{ color: "#9ca3af" }}>Clientes CRM</span>
+                        <span style={{ fontWeight: "bold", color: "#fff" }}>
+                          {modalAction.item.crm_count || 0} / {
+                            modalAction.item.plan_type === "PRO" ? "Ilimitado" : `${modalAction.item.plan_type === "START" ? 10 : 0} clientes`
+                          }
+                        </span>
+                      </div>
+                      <div style={{ width: "100%", height: "8px", background: "rgba(255,255,255,0.08)", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{
+                          width: `${modalAction.item.plan_type === "PRO" ? 0 : Math.min(100, ((modalAction.item.crm_count || 0) / (modalAction.item.plan_type === "START" ? 10 : 1)) * 100)}%`,
+                          height: "100%",
+                          background: "linear-gradient(90deg, #6366f1, #a5b4fc)",
+                          borderRadius: "4px"
+                        }} />
+                      </div>
+                    </div>
+
+                    {/* Triagem IA */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: "6px" }}>
+                        <span style={{ color: "#9ca3af" }}>Triagem IA & Diagnóstico</span>
+                        <span style={{ fontWeight: "bold", color: "#fff" }}>
+                          {modalAction.item.uso_triagem || 0} / {
+                            (modalAction.item.plan_type === "PRO" ? 200 : modalAction.item.plan_type === "START" ? 10 : 0) + (modalAction.item.extra_triagem || 0)
+                          } diag.
+                        </span>
+                      </div>
+                      <div style={{ width: "100%", height: "8px", background: "rgba(255,255,255,0.08)", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{
+                          width: `${Math.min(100, ((modalAction.item.uso_triagem || 0) / (((modalAction.item.plan_type === "PRO" ? 200 : modalAction.item.plan_type === "START" ? 10 : 0) + (modalAction.item.extra_triagem || 0)) || 1)) * 100)}%`,
+                          height: "100%",
+                          background: "linear-gradient(90deg, #10b981, #6ee7b7)",
+                          borderRadius: "4px"
+                        }} />
+                      </div>
+                    </div>
+
+                    {/* Agenda */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: "6px" }}>
+                        <span style={{ color: "#9ca3af" }}>Agenda & Prazos</span>
+                        <span style={{ fontWeight: "bold", color: "#fff" }}>
+                          {modalAction.item.uso_agenda || 0} / {
+                            modalAction.item.plan_type === "PRO" ? "Ilimitado" : `${modalAction.item.plan_type === "START" ? 30 : 0} reg.`
+                          }
+                        </span>
+                      </div>
+                      <div style={{ width: "100%", height: "8px", background: "rgba(255,255,255,0.08)", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{
+                          width: `${modalAction.item.plan_type === "PRO" ? 0 : Math.min(100, ((modalAction.item.uso_agenda || 0) / (modalAction.item.plan_type === "START" ? 30 : 1)) * 100)}%`,
+                          height: "100%",
+                          background: "linear-gradient(90deg, #3b82f6, #60a5fa)",
+                          borderRadius: "4px"
+                        }} />
+                      </div>
+                    </div>
+
+                    {/* Smart Docs */}
+                    <div>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: "6px" }}>
+                        <span style={{ color: "#9ca3af" }}>Smart Docs (Armazenamento)</span>
+                        <span style={{ fontWeight: "bold", color: "#fff" }}>
+                          {(modalAction.item.uso_storage_mb || 0).toFixed(1)} / {
+                            (modalAction.item.plan_type === "PRO" ? 10240 : modalAction.item.plan_type === "START" ? 500 : 0) + (modalAction.item.extra_storage_mb || 0)
+                          } MB
+                        </span>
+                      </div>
+                      <div style={{ width: "100%", height: "8px", background: "rgba(255,255,255,0.08)", borderRadius: "4px", overflow: "hidden" }}>
+                        <div style={{
+                          width: `${Math.min(100, ((modalAction.item.uso_storage_mb || 0) / (((modalAction.item.plan_type === "PRO" ? 10240 : modalAction.item.plan_type === "START" ? 500 : 0) + (modalAction.item.extra_storage_mb || 0)) || 1)) * 100)}%`,
+                          height: "100%",
+                          background: "linear-gradient(90deg, #f59e0b, #fbbf24)",
+                          borderRadius: "4px"
+                        }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : modalAction.type === "manage" ? (
                 <div className={styles.manageOptions}>
                   <p>
                     Advogado: <strong>{modalAction.item.name}</strong>
@@ -981,6 +1159,39 @@ export default function AdminAdvogadosPage() {
                         </button>
                       </div>
                     </div>
+
+                    <div className={styles.manageSection} style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "15px", marginTop: "15px" }}>
+                      <h4>Uso de Ferramentas Premium</h4>
+                      <p className={styles.manageDesc}>
+                        Consumo no ciclo mensal atual:
+                      </p>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
+                        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "10px", borderRadius: "8px" }}>
+                          <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", display: "block", textTransform: "uppercase", marginBottom: "2px" }}>Redator IA</span>
+                          <span style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#fff" }}>
+                            {modalAction.item.uso_redator_ia || 0} min
+                          </span>
+                        </div>
+                        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "10px", borderRadius: "8px" }}>
+                          <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", display: "block", textTransform: "uppercase", marginBottom: "2px" }}>Triagem IA</span>
+                          <span style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#fff" }}>
+                            {modalAction.item.uso_triagem || 0} diag.
+                          </span>
+                        </div>
+                        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "10px", borderRadius: "8px" }}>
+                          <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", display: "block", textTransform: "uppercase", marginBottom: "2px" }}>Agenda & Prazos</span>
+                          <span style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#fff" }}>
+                            {modalAction.item.uso_agenda || 0} reg.
+                          </span>
+                        </div>
+                        <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)", padding: "10px", borderRadius: "8px" }}>
+                          <span style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.5)", display: "block", textTransform: "uppercase", marginBottom: "2px" }}>Smart Docs</span>
+                          <span style={{ fontSize: "0.95rem", fontWeight: "bold", color: "#fff" }}>
+                            {(modalAction.item.uso_storage_mb || 0).toFixed(1)} MB
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1009,10 +1220,10 @@ export default function AdminAdvogadosPage() {
                 className={styles.cancelBtn}
                 onClick={() => setModalAction(null)}
               >
-                {modalAction.type === "manage" ? "Fechar" : "Cancelar"}
+                {modalAction.type === "manage" || modalAction.type === "usage" ? "Fechar" : "Cancelar"}
               </button>
 
-              {modalAction.type !== "manage" && (
+              {modalAction.type !== "manage" && modalAction.type !== "usage" && (
                 <button
                   type="button"
                   className={styles.confirmBtn}

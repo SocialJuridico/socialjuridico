@@ -41,7 +41,52 @@ export async function GET(req) {
       const diffTime = expiresAt.getTime() - today.getTime();
       const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-      // Verificamos se está nos marcos: 3 dias, 2 dias ou último dia (1 ou 0 dias restantes)
+      // 1. O plano expirou (data no passado)
+      if (diffDays < 0) {
+        const { error: downgradeError } = await db
+          .from("advogados")
+          .update({
+            is_premium: false,
+            plan_type: "FREE",
+            premium_expires_at: null
+          })
+          .eq("id", lawyer.id);
+
+        if (downgradeError) {
+          console.error(`[cron/verificar-planos] Erro ao expirar plano do advogado ${lawyer.id}:`, downgradeError);
+          continue;
+        }
+
+        // Criar notificação de expiração no banco
+        const nowStr = new Date().toISOString();
+        await db.from("notificacoes").insert([{
+          id: crypto.randomUUID(),
+          user_id: lawyer.id,
+          titulo: "Assinatura Expirada 🚨",
+          mensagem: `Prezado(a) Dr(a), sua assinatura do plano ${lawyer.plan_type} expirou. Renove agora para reativar o acesso às ferramentas premium.`,
+          tipo: "PLANO_EXPIRADO",
+          meta: JSON.stringify({ expired: true }),
+          lida: false,
+          created_at: nowStr
+        }]);
+
+        // Enviar push notification
+        try {
+          await sendPushNotification({
+            userIds: [lawyer.id],
+            title: "Assinatura Expirada 🚨",
+            message: `Sua assinatura do plano ${lawyer.plan_type} expirou. Renove agora para reativar seu acesso.`,
+            url: "/dashboard/advogado"
+          });
+        } catch (pushErr) {
+          console.error(`[cron/verificar-planos] Erro push notification expiração para ${lawyer.id}:`, pushErr);
+        }
+
+        console.log(`[cron/verificar-planos] Plano do advogado ${lawyer.name} (${lawyer.id}) expirado.`);
+        continue;
+      }
+
+      // 2. Verificamos se está nos marcos: 3 dias, 2 dias ou último dia (1 ou 0 dias restantes)
       if (diffDays !== 3 && diffDays !== 2 && diffDays !== 1 && diffDays !== 0) {
         continue;
       }

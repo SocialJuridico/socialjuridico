@@ -42,10 +42,24 @@ export async function GET() {
 
     const { data, error } = await db
       .from("advogados")
-      .select("id, name, email, phone, oab, estado, is_premium, premium_expires_at, balance, created_at, oab_verification_status, plan_type")
+      .select("id, name, email, phone, oab, estado, is_premium, premium_expires_at, balance, created_at, oab_verification_status, plan_type, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb")
       .order("created_at", { ascending: false });
 
     if (error) throw error;
+
+    // Buscar contagem de crm_clients por advogado
+    let crmCountMap = {};
+    const { data: crmCounts } = await db
+      .from("crm_clients")
+      .select("advogado_id");
+
+    if (crmCounts) {
+      for (const client of crmCounts) {
+        if (client.advogado_id) {
+          crmCountMap[client.advogado_id] = (crmCountMap[client.advogado_id] || 0) + 1;
+        }
+      }
+    }
 
     let authUsers = [];
     if (supabaseAdmin) {
@@ -82,6 +96,7 @@ export async function GET() {
       }
       return {
         ...adv,
+        crm_count: crmCountMap[adv.id] || 0,
         last_sign_in_at: lastLogin
       };
     });

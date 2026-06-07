@@ -67,9 +67,9 @@
 .table th,
 .table td {
   text-align: left;
-  padding: 12px;
+  padding: 10px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
 .table th {
@@ -371,4 +371,13 @@
   .table {
     min-width: 980px;
   }
+}
+
+.clickableRow {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.clickableRow:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
 }

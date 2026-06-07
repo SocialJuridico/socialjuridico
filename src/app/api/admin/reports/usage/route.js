@@ -126,11 +126,34 @@ export async function GET() {
       ORDER BY date_trunc('month', created_at AT TIME ZONE 'America/Sao_Paulo') ASC;
     `);
 
-    // Buscar contagem total de cadastrados no banco
-    const [totalLawyersRes, totalClientsRes] = await Promise.all([
+    // Buscar contagem total de cadastrados e uso de ferramentas premium
+    const [totalLawyersRes, totalClientsRes, usageStatsRes] = await Promise.all([
       db.from("advogados").select("id", { count: "exact", head: true }),
       db.from("clientes").select("id", { count: "exact", head: true }),
+      db.from("advogados").select("uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb"),
     ]);
+
+    const usageData = usageStatsRes.data || [];
+    const totalLawyersWithStats = usageData.length || 1;
+
+    const premiumUsageSummary = {
+      redator: {
+        total: usageData.reduce((acc, item) => acc + (item.uso_redator_ia || 0), 0),
+        avg: Number((usageData.reduce((acc, item) => acc + (item.uso_redator_ia || 0), 0) / totalLawyersWithStats).toFixed(2)),
+      },
+      triagem: {
+        total: usageData.reduce((acc, item) => acc + (item.uso_triagem || 0), 0),
+        avg: Number((usageData.reduce((acc, item) => acc + (item.uso_triagem || 0), 0) / totalLawyersWithStats).toFixed(2)),
+      },
+      agenda: {
+        total: usageData.reduce((acc, item) => acc + (item.uso_agenda || 0), 0),
+        avg: Number((usageData.reduce((acc, item) => acc + (item.uso_agenda || 0), 0) / totalLawyersWithStats).toFixed(2)),
+      },
+      storage: {
+        total: Number(usageData.reduce((acc, item) => acc + (item.uso_storage_mb || 0), 0).toFixed(2)),
+        avg: Number((usageData.reduce((acc, item) => acc + (item.uso_storage_mb || 0), 0) / totalLawyersWithStats).toFixed(2)),
+      },
+    };
 
     // Buscar pesquisas de satisfação para calcular médias
     const [advSurveysRes, cliSurveysRes] = await Promise.all([
@@ -194,7 +217,8 @@ export async function GET() {
           advAvg: Number(advAvg.toFixed(1)),
           cliAvg: Number(cliAvg.toFixed(1)),
           totalSurveys: totalSurveys,
-        }
+        },
+        premiumUsageSummary
       }
     });
 

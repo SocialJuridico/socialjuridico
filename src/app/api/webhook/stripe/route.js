@@ -360,7 +360,7 @@ async function handleProSubscription(session, userId, cupomId) {
       is_premium: true,
       plan_type: planType,
       premium_expires_at: new Date(
-        Date.now() + 30 * 24 * 60 * 60 * 1000,
+        Date.now() + (billingCycle === 'ANNUAL' ? 365 : 30) * 24 * 60 * 60 * 1000,
       ).toISOString(),
       balance: newBalance,
     })
@@ -466,7 +466,8 @@ async function handleSubscriptionDeleted(subscription) {
         .from("advogados")
         .update({ 
           is_premium: false,
-          plan_type: 'FREE'
+          plan_type: 'FREE',
+          premium_expires_at: null
         })
         .eq("email", email);
       

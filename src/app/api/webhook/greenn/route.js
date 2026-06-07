@@ -50,7 +50,7 @@ export async function POST(request) {
 
       // 3. Buscar usuário no Supabase pelo email
       const { data: userData, error: userError } = await supabaseAdmin
-        .from("profiles")
+        .from("advogados")
         .select("id, plan_type")
         .eq("email", email)
         .single();
@@ -62,11 +62,11 @@ export async function POST(request) {
 
       // 4. Atualizar o plano do usuário
       const { error: updateError } = await supabaseAdmin
-        .from("profiles")
+        .from("advogados")
         .update({
           plan_type: planType,
           is_premium: true,
-          // Adicionar outras atualizações necessárias, como data de expiração se houver
+          premium_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         })
         .eq("id", userData.id);
 

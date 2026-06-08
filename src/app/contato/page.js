@@ -1,112 +1,234 @@
-import styles from './Contato.module.css';
-import { Mail, Phone, MapPin, Send, MessageCircle } from 'lucide-react';
+import Link from "next/link";
+import {
+  Clock3,
+  ExternalLink,
+  Mail,
+  MapPin,
+  MessageCircle,
+  MessagesSquare,
+  ShieldCheck,
+} from "lucide-react";
+
+import ContactForm from "./ContactForm";
+import styles from "./Contato.module.css";
 
 export const metadata = {
-  title: "Contato | SocialJurídico",
-  description: "Entre em contato com a equipe do SocialJurídico. Estamos prontos para ajudar.",
+  title: "Contato",
+  description:
+    "Entre em contato com o Social Jurídico para suporte, pagamentos, privacidade, parcerias e outras solicitações.",
+  alternates: {
+    canonical: "/contato",
+  },
 };
 
-export default function Contato() {
+const whatsappContacts = [
+  {
+    label: "WhatsApp principal",
+    displayNumber: "+55 (15) 98165-7317",
+    href: "https://wa.me/5515981657317",
+  },
+  {
+    label: "WhatsApp de atendimento",
+    displayNumber: "+55 (15) 99265-3066",
+    href: "https://wa.me/5515992653066",
+  },
+];
+
+export default function ContatoPage() {
   return (
     <main className={styles.page}>
-      <div className={styles.container}>
-        
-        <header className={styles.header}>
-          <h1 className={styles.title}>Fale Conosco</h1>
+      <section
+        className={styles.hero}
+        aria-labelledby="contact-title"
+      >
+        <div className={styles.heroGlow} aria-hidden="true" />
+
+        <div className={styles.heroContent}>
+          <div className={styles.heroIcon} aria-hidden="true">
+            <MessagesSquare size={30} strokeWidth={1.8} />
+          </div>
+
+          <h1 id="contact-title" className={styles.title}>
+            Como podemos
+            <span className={styles.highlight}> ajudar?</span>
+          </h1>
+
           <p className={styles.subtitle}>
-            Dúvidas, sugestões ou suporte? Nossa equipe técnica e jurídica está à disposição para te ouvir.
+            Entre em contato para tratar de suporte técnico,
+            pagamentos, privacidade, parcerias ou dúvidas sobre o
+            funcionamento do Social Jurídico.
           </p>
-        </header>
 
-        <div className={styles.grid}>
-          
-          {/* Info Side */}
-          <aside className={styles.infoCard}>
-            <h2 className={styles.infoTitle}>Informações de Contato</h2>
-            <div className={styles.contactItems}>
-              
-              <div className={styles.contactItem}>
-                <div className={styles.iconWrapper}>
-                  <Mail size={24} />
+          <div className={styles.heroNotice}>
+            <ShieldCheck size={16} aria-hidden="true" />
+
+            <span>
+              Este canal não presta consultoria ou orientação
+              jurídica.
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.contactSection}>
+        <div className={styles.contactLayout}>
+          <aside
+            className={styles.contactInfo}
+            aria-labelledby="contact-channels-title"
+          >
+            <header className={styles.infoHeader}>
+              <span className={styles.eyebrow}>
+                Canais de atendimento
+              </span>
+
+              <h2 id="contact-channels-title">
+                Escolha a forma mais adequada para falar conosco
+              </h2>
+
+              <p>
+                Para agilizar o atendimento, informe o e-mail
+                utilizado no cadastro e descreva sua solicitação
+                com clareza.
+              </p>
+            </header>
+
+            <div className={styles.contactCards}>
+              <article className={styles.contactCard}>
+                <div className={styles.contactIcon} aria-hidden="true">
+                  <Mail size={22} strokeWidth={1.8} />
                 </div>
-                <div className={styles.itemText}>
-                  <h4>E-mail</h4>
+
+                <div className={styles.contactCardContent}>
+                  <span className={styles.contactLabel}>E-mail</span>
+
+                  <a href="mailto:socialjuridico3@gmail.com">
+                    socialjuridico3@gmail.com
+                  </a>
+
                   <p>
-                    <a href="mailto:suporte@socialjuridico.com.br" style={{ color: 'inherit', textDecoration: 'none' }}>
-                      suporte@socialjuridico.com.br
-                    </a>
+                    Suporte, financeiro, privacidade e solicitações
+                    administrativas.
                   </p>
                 </div>
-              </div>
+              </article>
 
-              <div className={styles.contactItem}>
-                <div className={styles.iconWrapper}>
-                  <MessageCircle size={24} />
-                </div>
-                <div className={styles.itemText}>
-                  <h4>WhatsApp</h4>
-                  <p>
-                    <a href="https://wa.me/5515981657317" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}>
-                      +55 (15) 98165-7317
+              {whatsappContacts.map((contact) => (
+                <article
+                  className={styles.contactCard}
+                  key={contact.href}
+                >
+                  <div
+                    className={styles.contactIcon}
+                    aria-hidden="true"
+                  >
+                    <MessageCircle size={22} strokeWidth={1.8} />
+                  </div>
+
+                  <div className={styles.contactCardContent}>
+                    <span className={styles.contactLabel}>
+                      {contact.label}
+                    </span>
+
+                    <a
+                      href={contact.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {contact.displayNumber}
+
+                      <ExternalLink
+                        size={14}
+                        aria-hidden="true"
+                      />
                     </a>
+
+                    <p>
+                      Atendimento por mensagem durante o horário
+                      comercial.
+                    </p>
+                  </div>
+                </article>
+              ))}
+
+              <article className={styles.contactCard}>
+                <div className={styles.contactIcon} aria-hidden="true">
+                  <MapPin size={22} strokeWidth={1.8} />
+                </div>
+
+                <div className={styles.contactCardContent}>
+                  <span className={styles.contactLabel}>
+                    Localidade
+                  </span>
+
+                  <strong>Sorocaba — SP</strong>
+
+                  <p>
+                    Operação e atendimento realizados de forma
+                    digital.
                   </p>
-                  <p>Seg à Sex, 09h às 18h</p>
                 </div>
-              </div>
+              </article>
 
-              <div className={styles.contactItem}>
-                <div className={styles.iconWrapper}>
-                  <MapPin size={24} />
+              <article className={styles.contactCard}>
+                <div className={styles.contactIcon} aria-hidden="true">
+                  <Clock3 size={22} strokeWidth={1.8} />
                 </div>
-                <div className={styles.itemText}>
-                  <h4>Escritório</h4>
-                  <p>Sorocaba - SP</p>
-                </div>
-              </div>
 
+                <div className={styles.contactCardContent}>
+                  <span className={styles.contactLabel}>
+                    Horário de atendimento
+                  </span>
+
+                  <strong>Segunda a sexta, das 9h às 18h</strong>
+
+                  <p>
+                    Mensagens enviadas fora do horário serão
+                    respondidas no próximo período útil.
+                  </p>
+                </div>
+              </article>
+            </div>
+
+            <div className={styles.legalLinks}>
+              <Link href="/privacidade">
+                Política de Privacidade
+              </Link>
+
+              <span aria-hidden="true" />
+
+              <Link href="/termos">Termos de Uso</Link>
+
+              <span aria-hidden="true" />
+
+              <Link href="/exclusao-de-dados">
+                Exclusão de dados
+              </Link>
             </div>
           </aside>
 
-          {/* Form Side */}
-          <section className={styles.formBox}>
-            <form>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Nome Completo</label>
-                <input type="text" className={styles.input} placeholder="Como podemos te chamar?" required />
-              </div>
+          <section
+            className={styles.formSection}
+            aria-labelledby="contact-form-title"
+          >
+            <header className={styles.formHeader}>
+              <span className={styles.eyebrow}>
+                Envie uma mensagem
+              </span>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>E-mail Corporativo</label>
-                <input type="email" className={styles.input} placeholder="seu@email.com" required />
-              </div>
+              <h2 id="contact-form-title">
+                Conte-nos o que aconteceu
+              </h2>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Assunto</label>
-                <select className={styles.input} required defaultValue="">
-                  <option value="" disabled>Selecione um assunto</option>
-                  <option value="suporte">Suporte Técnico</option>
-                  <option value="financeiro">Financeiro / Pagamentos</option>
-                  <option value="parcerias">Parcerias / Imprensa</option>
-                  <option value="lgpd">Privacidade / LGPD</option>
-                  <option value="outro">Outros Assuntos</option>
-                </select>
-              </div>
+              <p>
+                Preencha os dados abaixo. A mensagem será encaminhada
+                à equipe responsável pelo atendimento.
+              </p>
+            </header>
 
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Mensagem</label>
-                <textarea className={styles.textarea} placeholder="Descreva sua solicitação com detalhes..." required></textarea>
-              </div>
-
-              <button type="submit" className={styles.submitBtn}>
-                Enviar Mensagem
-                <Send size={20} />
-              </button>
-            </form>
+            <ContactForm />
           </section>
-
         </div>
-
-      </div>
+      </section>
     </main>
   );
 }

@@ -6,6 +6,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import OneSignalSetup from "@/components/PWA/OneSignalSetup";
 import PWAInstallPrompt from "@/components/PWA/PWAInstallPrompt";
 import AccessTracker from "@/components/AccessTracker";
+import CookieNotice from "@/components/CookieNotice";
 
 import "./globals.css";
 
@@ -113,11 +114,11 @@ export default function RootLayout({ children }) {
 
         <main>{children}</main>
 
-        <PWAInstallPrompt />
-
         <Footer />
-
+        <CookieNotice />
+        <PWAInstallPrompt />
         <ScrollToTop />
+       
       </body>
     </html>
   );

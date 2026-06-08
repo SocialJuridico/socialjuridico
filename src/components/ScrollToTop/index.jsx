@@ -1,43 +1,53 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { ArrowUp } from 'lucide-react';
-import styles from './ScrollToTop.module.css';
+import { useEffect, useState } from "react";
+import { ArrowUp } from "lucide-react";
+
+import styles from "./ScrollToTop.module.css";
+
+const VISIBILITY_THRESHOLD = 500;
 
 export default function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
 
-  // Exibe a seta quando rolar mais de 400px pra baixo
-  const toggleVisibility = () => {
-    if (window.scrollY > 400) {
-      setIsVisible(true);
-    } else {
-      setIsVisible(false);
+  useEffect(() => {
+    function updateVisibility() {
+      setIsVisible(window.scrollY > VISIBILITY_THRESHOLD);
     }
-  };
 
-  // Move a tela todo o caminho de volta para o pixel zero (topo)
-  const scrollToTop = () => {
+    updateVisibility();
+
+    window.addEventListener("scroll", updateVisibility, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", updateVisibility);
+    };
+  }, []);
+
+  function scrollToTop() {
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
     window.scrollTo({
       top: 0,
-      behavior: 'smooth' // Efeito suave de rolagem nativo do navegador
+      behavior: prefersReducedMotion ? "auto" : "smooth",
     });
-  };
-
-  useEffect(() => {
-    window.addEventListener('scroll', toggleVisibility);
-    
-    // Limpeza na hora que a página morre
-    return () => window.removeEventListener('scroll', toggleVisibility);
-  }, []);
+  }
 
   return (
     <button
+      type="button"
       onClick={scrollToTop}
-      className={`${styles.scrollToTopBtn} ${isVisible ? styles.visible : ''}`}
-      aria-label="Voltar ao Topo"
+      className={`${styles.scrollToTopButton} ${
+        isVisible ? styles.visible : ""
+      }`}
+      aria-label="Voltar ao topo da página"
+      title="Voltar ao topo"
     >
-      <ArrowUp size={24} strokeWidth={2.5} />
+      <ArrowUp size={21} strokeWidth={2.3} aria-hidden="true" />
     </button>
   );
 }

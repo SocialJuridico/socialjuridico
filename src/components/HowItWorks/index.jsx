@@ -1,109 +1,188 @@
-import { Users, Gavel, ChevronRight } from 'lucide-react';
-import Link from 'next/link';
-import styles from './HowItWorks.module.css';
+import Link from "next/link";
+import {
+  ArrowRight,
+  BriefcaseBusiness,
+  FileText,
+  Gavel,
+  MessageCircleMore,
+  Radar,
+  UserRoundSearch,
+  Users,
+  Video,
+} from "lucide-react";
+
+import styles from "./HowItWorks.module.css";
+
+const clientSteps = [
+  {
+    icon: FileText,
+    title: "Conte o que aconteceu",
+    description:
+      "Relate seu problema por texto, áudio ou vídeo, da forma que for mais confortável para você.",
+  },
+  {
+    icon: UserRoundSearch,
+    title: "Publique gratuitamente",
+    description:
+      "Seu caso fica disponível para que advogados cadastrados possam visualizar e demonstrar interesse.",
+  },
+  {
+    icon: Video,
+    title: "Escolha e converse",
+    description:
+      "Analise os contatos recebidos e converse por mensagens, áudio ou videochamada dentro da plataforma.",
+  },
+];
+
+const lawyerSteps = [
+  {
+    icon: BriefcaseBusiness,
+    title: "Crie seu perfil profissional",
+    description:
+      "Cadastre suas informações profissionais e áreas de atuação para apresentar seu trabalho na plataforma.",
+  },
+  {
+    icon: Radar,
+    title: "Acesse oportunidades",
+    description:
+      "Visualize casos publicados por clientes e oportunidades disponíveis no Radar Jurídico.",
+  },
+  {
+    icon: MessageCircleMore,
+    title: "Atenda e organize",
+    description:
+      "Converse com clientes e centralize contatos, documentos, histórico e atendimentos em um único ambiente.",
+  },
+];
+
+function JourneyColumn({
+  type,
+  title,
+  icon: HeaderIcon,
+  steps,
+  href,
+  linkLabel,
+}) {
+  const isLawyer = type === "lawyer";
+
+  return (
+    <article
+      className={`${styles.column} ${
+        isLawyer ? styles.lawyerColumn : styles.clientColumn
+      }`}
+    >
+      <header className={styles.columnHeader}>
+        <div
+          className={`${styles.columnIcon} ${
+            isLawyer ? styles.lawyerIcon : styles.clientIcon
+          }`}
+          aria-hidden="true"
+        >
+          <HeaderIcon size={24} strokeWidth={1.8} />
+        </div>
+
+        <div>
+          <span className={styles.columnEyebrow}>
+            {isLawyer ? "Para profissionais" : "Para quem precisa de ajuda"}
+          </span>
+
+          <h3 className={styles.columnTitle}>{title}</h3>
+        </div>
+      </header>
+
+      <ol className={styles.stepsList}>
+        {steps.map((step, index) => {
+          const StepIcon = step.icon;
+
+          return (
+            <li key={step.title} className={styles.stepItem}>
+              <div
+                className={`${styles.stepMarker} ${
+                  isLawyer
+                    ? styles.stepMarkerLawyer
+                    : styles.stepMarkerClient
+                }`}
+                aria-hidden="true"
+              >
+                <span className={styles.stepNumber}>{index + 1}</span>
+              </div>
+
+              <div className={styles.stepContent}>
+                <div className={styles.stepTitleRow}>
+                  <StepIcon
+                    size={18}
+                    strokeWidth={1.8}
+                    className={styles.stepIcon}
+                    aria-hidden="true"
+                  />
+
+                  <h4 className={styles.stepTitle}>{step.title}</h4>
+                </div>
+
+                <p className={styles.stepDescription}>
+                  {step.description}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+
+      <Link
+        prefetch={false}
+        href={href}
+        className={`${styles.actionLink} ${
+          isLawyer
+            ? styles.lawyerAction
+            : styles.clientAction
+        }`}
+      >
+        {linkLabel}
+        <ArrowRight size={18} aria-hidden="true" />
+      </Link>
+    </article>
+  );
+}
 
 export default function HowItWorks() {
   return (
-    <section id="como-funciona" className={styles.section}>
-      <div className={styles.header}>
-        <span className={styles.badge}>Passo a Passo</span>
-        <h2 className={styles.title}>Como funciona na prática?</h2>
-      </div>
+    <section
+      id="como-funciona"
+      className={styles.section}
+      aria-labelledby="how-it-works-title"
+    >
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <h2 id="how-it-works-title" className={styles.title}>
+            Como funciona
+            <span className={styles.titleHighlight}> na prática?</span>
+          </h2>
 
-      <div className={styles.grid}>
-        
-        {/* Coluna 1: Para Clientes */}
-        <div className={styles.column}>
-          <div className={styles.columnHeader}>
-            <div className={styles.iconBoxSolid}>
-              <Users size={24} />
-            </div>
-            <h3 className={styles.columnTitle}>Para Clientes</h3>
-          </div>
+          <p className={styles.subtitle}>
+            Entenda como clientes publicam seus casos e como advogados
+            encontram oportunidades e organizam seus atendimentos.
+          </p>
+        </header>
 
-          <div className={styles.stepsList}>
-            <div className={styles.stepItem}>
-              <div className={styles.stepNumberClient}>1</div>
-              <div className={styles.stepContent}>
-                <h4 className={styles.stepTitle}>Relate seu problema</h4>
-                <p className={styles.stepDesc}>
-                  Nossa Inteligência Artificial ajuda você a descrever o caso e categoriza a área jurídica correta automaticamente.
-                </p>
-              </div>
-            </div>
+        <div className={styles.grid}>
+          <JourneyColumn
+            type="client"
+            title="Para clientes"
+            icon={Users}
+            steps={clientSteps}
+            href="/cadastro"
+            linkLabel="Publicar meu caso gratuitamente"
+          />
 
-            <div className={styles.stepItem}>
-              <div className={styles.stepNumberClient}>2</div>
-              <div className={styles.stepContent}>
-                <h4 className={styles.stepTitle}>Publicação Instantânea</h4>
-                <p className={styles.stepDesc}>
-                  Seu caso é publicado 100% gratuitamente na plataforma. Advogados especializados visualizam seu problema e manifestam interesse.
-                </p>
-              </div>
-            </div>
-
-            <div className={styles.stepItem}>
-              <div className={styles.stepNumberClient}>3</div>
-              <div className={styles.stepContent}>
-                <h4 className={styles.stepTitle}>Resolução Digital</h4>
-                <p className={styles.stepDesc}>
-                  Advogados qualificados entram em contato. Converse, envie provas, faça videochamadas e acompanhe a resolução.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <Link href="#criar-conta-cliente" className={styles.linkButtonClient}>
-            Criar minha conta de cliente <ChevronRight size={16} />
-          </Link>
+          <JourneyColumn
+            type="lawyer"
+            title="Para advogados"
+            icon={Gavel}
+            steps={lawyerSteps}
+            href="/sou-advogado"
+            linkLabel="Conhecer a plataforma para advogados"
+          />
         </div>
-
-        {/* Coluna 2: Para Advogados */}
-        <div className={styles.column}>
-          <div className={styles.columnHeader}>
-            <div className={styles.iconBoxGold}>
-              <Gavel size={24} />
-            </div>
-            <h3 className={styles.columnTitle}>Para Advogados</h3>
-          </div>
-
-          <div className={styles.stepsList}>
-            <div className={styles.stepItem}>
-              <div className={styles.stepNumberLawyer}>1</div>
-              <div className={styles.stepContent}>
-                <h4 className={styles.stepTitle}>Cadastro Profissional</h4>
-                <p className={styles.stepDesc}>
-                  Crie seu perfil profissional e insira suas áreas de atuação para receber as demandas certas.
-                </p>
-              </div>
-            </div>
-
-            <div className={styles.stepItem}>
-              <div className={styles.stepNumberLawyer}>2</div>
-              <div className={styles.stepContent}>
-                <h4 className={styles.stepTitle}>Clientes Reais e Comprometidos</h4>
-                <p className={styles.stepDesc}>
-                  Você tem acesso apenas a demandas reais e sérias de clientes genuínos interessados em resolver seus problemas.
-                </p>
-              </div>
-            </div>
-
-            <div className={styles.stepItem}>
-              <div className={styles.stepNumberLawyer}>3</div>
-              <div className={styles.stepContent}>
-                <h4 className={styles.stepTitle}>Gestão Integrada</h4>
-                <p className={styles.stepDesc}>
-                  Gerencie múltiplos clientes em um único dashboard. Histórico, arquivos e chat centralizados.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <Link href="#criar-conta-advogado" className={styles.linkButtonLawyer}>
-            Cadastrar como advogado <ChevronRight size={16} />
-          </Link>
-        </div>
-
       </div>
     </section>
   );

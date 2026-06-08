@@ -1,87 +1,225 @@
-'use client';
-import Link from 'next/link';
-import { Scale, Facebook, Instagram, Linkedin, Lock } from 'lucide-react';
-import styles from './Footer.module.css';
-import { usePathname } from 'next/navigation';
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Facebook,
+  Mail,
+  Scale,
+  ShieldCheck,
+} from "lucide-react";
+
+import styles from "./Footer.module.css";
+
+const platformLinks = [
+  {
+    href: "/cadastro",
+    label: "Publicar um caso",
+  },
+  {
+    href: "/sou-advogado",
+    label: "Para advogados",
+  },
+  {
+    href: "/#como-funciona",
+    label: "Como funciona",
+  },
+  {
+    href: "/seguranca",
+    label: "Segurança",
+  },
+];
+
+const institutionalLinks = [
+  {
+    href: "/sobre",
+    label: "Sobre o Social Jurídico",
+  },
+  {
+    href: "/#comunidade",
+    label: "Nossa comunidade",
+  },
+  {
+    href: "/contato",
+    label: "Contato",
+  },
+];
+
+const legalLinks = [
+  {
+    href: "/termos",
+    label: "Termos de uso",
+  },
+  {
+    href: "/privacidade",
+    label: "Política de privacidade",
+  },
+  {
+    href: "/exclusao-de-dados",
+    label: "Exclusão de dados",
+  },
+];
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
   const pathname = usePathname();
+  const currentYear = new Date().getFullYear();
 
-  // Esconder footer nas páginas de dashboard para evitar sobreposição
-  if (pathname?.startsWith('/dashboard')) return null;
+  if (pathname?.startsWith("/dashboard")) {
+    return null;
+  }
 
   return (
     <footer className={styles.footer}>
       <div className={styles.container}>
-        
-        {/* Coluna 1: Logo e Descrição */}
         <div className={styles.brandColumn}>
-          <Link prefetch={false} href="/" className={styles.logoWrapper}>
-            <Scale size={28} strokeWidth={2.5} className={styles.logoIcon} />
-            <span>Social<span className={styles.goldText}>Jurídico</span></span>
+          <Link
+            prefetch={false}
+            href="/"
+            className={styles.logoWrapper}
+            aria-label="Ir para a página inicial do Social Jurídico"
+          >
+            <span className={styles.logoIcon} aria-hidden="true">
+              <Scale size={26} strokeWidth={2.2} />
+            </span>
+
+            <span className={styles.logoText}>
+              Social
+              <span className={styles.goldText}> Jurídico</span>
+            </span>
           </Link>
-          <p className={styles.brandDesc}>
-            A plataforma líder em conectar clientes a oportunidades jurídicas. Tecnologia a serviço da Justiça.
+
+          <p className={styles.brandDescription}>
+            Uma plataforma digital criada para facilitar o contato entre
+            pessoas que precisam de apoio jurídico e advogados cadastrados.
           </p>
-          <div className={styles.socials}>
-            {/* Os ícones de redes sociais podem ir pros links reais no futuro */}
-            <a href="#" className={styles.socialIcon} aria-label="Facebook">
-              <Facebook size={18} />
+
+          <div className={styles.socialLinks}>
+            <a
+              href="https://www.facebook.com/groups/1667675480204134"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.socialLink}
+              aria-label="Visitar a comunidade Preciso de um Advogado no Facebook"
+            >
+              <Facebook size={18} aria-hidden="true" />
             </a>
-            <a href="#" className={styles.socialIcon} aria-label="Instagram">
-              <Instagram size={18} />
-            </a>
-            <a href="#" className={styles.socialIcon} aria-label="LinkedIn">
-              <Linkedin size={18} />
-            </a>
+
+            <Link
+              prefetch={false}
+              href="/contato"
+              className={styles.socialLink}
+              aria-label="Entrar em contato com o Social Jurídico"
+            >
+              <Mail size={18} aria-hidden="true" />
+            </Link>
           </div>
         </div>
 
-        {/* Coluna 2: Plataforma */}
-        <div className={styles.linkColumn}>
-          <h4 className={styles.columnTitle}>Plataforma</h4>
+        <nav
+          className={styles.linkColumn}
+          aria-labelledby="footer-platform-title"
+        >
+          <h2
+            id="footer-platform-title"
+            className={styles.columnTitle}
+          >
+            Plataforma
+          </h2>
+
           <ul className={styles.linkList}>
-            <li><Link prefetch={false} href="/clientes" className={styles.navLink}>Para Clientes</Link></li>
-            <li><Link prefetch={false} href="/advogados" className={styles.navLink}>Para Advogados</Link></li>
-            <li><Link prefetch={false} href="/seguranca" className={styles.navLink}>Segurança</Link></li>
+            {platformLinks.map((item) => (
+              <li key={item.href}>
+                <Link
+                  prefetch={false}
+                  href={item.href}
+                  className={styles.navLink}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
-        </div>
+        </nav>
 
-        {/* Coluna 3: Empresa */}
-        <div className={styles.linkColumn}>
-          <h4 className={styles.columnTitle}>Empresa</h4>
+        <nav
+          className={styles.linkColumn}
+          aria-labelledby="footer-institutional-title"
+        >
+          <h2
+            id="footer-institutional-title"
+            className={styles.columnTitle}
+          >
+            Institucional
+          </h2>
+
           <ul className={styles.linkList}>
-            <li><Link prefetch={false} href="/sobre" className={styles.navLink}>Sobre Nós</Link></li>
-            <li><Link prefetch={false} href="/contato" className={styles.navLink}>Contato</Link></li>
+            {institutionalLinks.map((item) => (
+              <li key={item.href}>
+                <Link
+                  prefetch={false}
+                  href={item.href}
+                  className={styles.navLink}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
-        </div>
+        </nav>
 
-        {/* Coluna 4: Legal / Admin */}
-        <div className={styles.linkColumn}>
-          <h4 className={styles.columnTitle}>Legal</h4>
+        <nav
+          className={styles.linkColumn}
+          aria-labelledby="footer-legal-title"
+        >
+          <h2
+            id="footer-legal-title"
+            className={styles.columnTitle}
+          >
+            Legal
+          </h2>
+
           <ul className={styles.linkList}>
-            <li><Link prefetch={false} href="/termos" className={styles.navLink}>Termos de Uso</Link></li>
-            <li>
-              <Link prefetch={false} href="/privacidade" className={styles.navLink}>
-                <span className={styles.desktopOnly}>Política de Privacidade</span>
-                <span className={styles.mobileOnly}>Privacidade</span>
-              </Link>
-            </li>
-            <li className={styles.desktopOnly}>
-              <Link prefetch={false} href="/exclusao-de-dados" className={styles.navLink}>Exclusão de Dados</Link>
-            </li>
+            {legalLinks.map((item) => (
+              <li key={item.href}>
+                <Link
+                  prefetch={false}
+                  href={item.href}
+                  className={styles.navLink}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
+        </nav>
+      </div>
 
-          <Link prefetch={false} href="/admin" className={styles.adminBtn}>
-            <Lock size={16} /> Área Administrativa
-          </Link>
-        </div>
+      <div className={styles.legalNotice}>
+        <ShieldCheck size={18} aria-hidden="true" />
 
+        <p>
+          O Social Jurídico é uma plataforma de tecnologia e não presta
+          serviços advocatícios. A contratação e a relação profissional são
+          estabelecidas diretamente entre cliente e advogado.
+        </p>
       </div>
 
       <div className={styles.bottomRow}>
-        © {currentYear} SocialJurídico Tecnologia Jurídica Ltda. Todos os direitos reservados.
+        <p>
+          © {currentYear} Social Jurídico. Todos os direitos reservados.
+        </p>
+
+        <div className={styles.bottomLinks}>
+          <Link prefetch={false} href="/privacidade">
+            Privacidade
+          </Link>
+
+          <span aria-hidden="true">•</span>
+
+          <Link prefetch={false} href="/termos">
+            Termos
+          </Link>
+        </div>
       </div>
     </footer>
   );

@@ -1,79 +1,92 @@
-import { Clock, X, Zap, CheckCircle2 } from 'lucide-react';
-import styles from './Differences.module.css';
+import {
+  CircleDollarSign,
+  MessagesSquare,
+  ShieldCheck,
+  UserRoundSearch,
+} from "lucide-react";
+
+import styles from "./Differences.module.css";
+
+const differences = [
+  {
+    icon: CircleDollarSign,
+    title: "Publicação gratuita",
+    description:
+      "Você pode cadastrar e publicar seu caso sem pagar taxas para iniciar a busca por um advogado.",
+  },
+  {
+    icon: UserRoundSearch,
+    title: "Advogados demonstram interesse",
+    description:
+      "Profissionais cadastrados visualizam as demandas e podem manifestar interesse em conversar com você.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Você mantém a escolha",
+    description:
+      "Receber o interesse de um advogado não cria obrigação de contratação. A decisão continua sendo sua.",
+  },
+  {
+    icon: MessagesSquare,
+    title: "Atendimento centralizado",
+    description:
+      "Mensagens, áudios, documentos e videochamadas ficam organizados em um único ambiente.",
+  },
+];
 
 export default function Differences() {
   return (
-    <section id="diferenciais" className={styles.section}>
-      <div className={styles.header}>
-        <h2 className={styles.title}>
-          Por que o <span className={styles.titleHighlight}>SocialJurídico</span> é diferente?
-        </h2>
-        <p className={styles.subtitle}>
-          Deixamos a burocracia no passado. Trouxemos a advocacia para a era digital.
-        </p>
-      </div>
+    <section
+      id="diferenciais"
+      className={styles.section}
+      aria-labelledby="differences-title"
+    >
+      <div className={styles.container}>
+        <header className={styles.header}>
+          <h2 id="differences-title" className={styles.title}>
+            Uma forma mais simples de iniciar
+            <span className={styles.titleHighlight}>
+              {" "}
+              seu atendimento jurídico
+            </span>
+          </h2>
 
-      <div className={styles.cardsContainer}>
-        {/* Card: Advocacia Tradicional */}
-        <div className={styles.cardTraditional}>
-          <div className={styles.cardTraditionalHeader}>
-            <Clock size={24} />
-            <span>Advocacia Tradicional</span>
-          </div>
-          
-          <ul className={styles.listTraditional}>
-            <li className={styles.listItemTraditional}>
-              <X className={styles.iconX} size={18} />
-              Custas iniciais altas e imprevisíveis.
-            </li>
-            <li className={styles.listItemTraditional}>
-              <X className={styles.iconX} size={18} />
-              Atendimento lento e presencial.
-            </li>
-            <li className={styles.listItemTraditional}>
-              <X className={styles.iconX} size={18} />
-              Linguagem difícil e complexa.
-            </li>
-          </ul>
+          <p className={styles.subtitle}>
+            O Social Jurídico organiza o primeiro contato entre clientes e
+            advogados, preservando sua liberdade de escolha em todas as etapas.
+          </p>
+        </header>
+
+        <div className={styles.grid}>
+          {differences.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <article key={item.title} className={styles.card}>
+                <div className={styles.iconWrapper} aria-hidden="true">
+                  <Icon size={26} strokeWidth={1.7} />
+                </div>
+
+                <div className={styles.cardContent}>
+                  <h3 className={styles.cardTitle}>{item.title}</h3>
+
+                  <p className={styles.cardDescription}>
+                    {item.description}
+                  </p>
+                </div>
+              </article>
+            );
+          })}
         </div>
 
-        {/* Card: SocialJurídico */}
-        <div className={styles.cardPremium}>
-          <div className={styles.cardPremiumHeader}>
-            <div className={styles.premiumTitleWrapper}>
-              <Zap size={24} fill="currentColor" />
-              <span>SocialJurídico</span>
-            </div>
-            <span className={styles.tagFuturo}>GRÁTIS</span>
-          </div>
+        <div className={styles.finalNote}>
+          <ShieldCheck size={20} aria-hidden="true" />
 
-          <ul className={styles.listPremium}>
-            <li className={styles.listItemPremium}>
-              <CheckCircle2 className={styles.iconCheck} size={20} />
-              <div>
-                <span className={styles.itemHeading}>Publicação Grátis: </span>
-                sem custos ou taxas.
-              </div>
-            </li>
-            
-            <li className={styles.listItemPremium}>
-              <CheckCircle2 className={styles.iconCheck} size={20} />
-              <div>
-                <span className={styles.itemHeading}>Resolução Digital: </span>
-                Tudo via chat e vídeo.
-              </div>
-            </li>
-
-            <li className={styles.listItemPremium}>
-              <CheckCircle2 className={styles.iconCheck} size={20} />
-              <div>
-                <span className={styles.itemHeading}>IA Integrada: </span>
-                Peças processuais em segundos.
-              </div>
-            </li>
-          </ul>
+          <p>
+            O Social Jurídico facilita o contato, mas a contratação e a relação
+            profissional são definidas diretamente entre cliente e advogado.
+          </p>
         </div>
-
       </div>
     </section>
   );

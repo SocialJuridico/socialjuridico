@@ -1,44 +1,75 @@
-.scrollToTopBtn {
+.scrollToTopButton {
   position: fixed;
-  bottom: 40px;
-  right: 40px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background-color: var(--color-gold);
-  color: var(--color-black);
-  border: none;
+  right: 28px;
+  bottom: 28px;
+  z-index: 9000;
   display: flex;
+  width: 46px;
+  height: 46px;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  padding: 0;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  border-radius: 14px;
+  color: var(--color-black);
+  background: var(--color-gold);
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(212, 175, 55, 0.1);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(20px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 9999; /* Fica acima de quase tudo */
+  cursor: pointer;
+  transform: translateY(14px);
+  pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    visibility 180ms ease,
+    transform 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
-/* Quando visível (classe condicional do JS) */
 .visible {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+  pointer-events: auto;
 }
 
-.scrollToTopBtn:hover {
-  background-color: var(--color-white);
-  color: var(--color-gold);
-  transform: translateY(-4px); /* Pulinho charmoso ao focar com mouse */
-  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4); /* Brilho dourado atrás */
+.scrollToTopButton:hover {
+  background: #e2c159;
+  box-shadow:
+    0 15px 34px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(212, 175, 55, 0.16);
+  transform: translateY(-2px);
 }
 
-@media (max-width: 600px) {
-  .scrollToTopBtn {
-    bottom: 24px;
-    right: 24px;
-    width: 44px;
-    height: 44px;
+.scrollToTopButton:active {
+  transform: scale(0.94);
+}
+
+.scrollToTopButton:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 4px;
+}
+
+@media (max-width: 767px) {
+  .scrollToTopButton {
+    right: 16px;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollToTopButton {
+    transition: none;
+  }
+
+  .scrollToTopButton:hover,
+  .scrollToTopButton:active {
+    transform: none;
   }
 }

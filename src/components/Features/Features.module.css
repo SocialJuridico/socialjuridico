@@ -1,120 +1,223 @@
 .featuresSection {
-  background-color: var(--color-black-light); /* Preto um pouco mais claro para destacar do Hero */
-  border-top: 1px solid rgba(212, 175, 55, 0.15); /* Linha sutil dourada no topo */
-  border-bottom: 1px solid rgba(212, 175, 55, 0.15); /* Linha sutil dourada embaixo */
-  padding: 40px 0;
   width: 100%;
+  padding: 88px 24px;
+  border-top: 1px solid rgba(212, 175, 55, 0.12);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+  background:
+    linear-gradient(
+      180deg,
+      var(--color-black-light) 0%,
+      var(--color-black) 100%
+    );
 }
 
 .container {
-  max-width: 1200px;
+  width: min(100%, 1200px);
   margin: 0 auto;
+}
+
+.sectionHeader {
+  max-width: 760px;
+  margin: 0 auto 48px;
+  text-align: center;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--color-white);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  line-height: 1.16;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.highlight {
+  color: var(--color-gold);
+}
+
+.sectionDescription {
+  max-width: 680px;
+  margin: 20px auto 0;
+  color: rgba(224, 224, 224, 0.7);
+  font-size: 1.04rem;
+  line-height: 1.7;
+  text-wrap: balance;
+}
+
+.featuresGrid {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 32px;
-  padding: 0 24px;
-}
-
-/* Responsivo para Tablet */
-@media (min-width: 768px) {
-  .container {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* Responsivo para Desktop (Fica em 1 linha, igual na imagem) */
-@media (min-width: 1024px) {
-  .container {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0; /* Remove o gap para usar bordas divisórias */
-  }
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid rgba(212, 175, 55, 0.14);
+  border-radius: 20px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.018);
+  box-shadow:
+    0 22px 70px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 .featureItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 16px 24px;
   position: relative;
-  transition: transform 0.3s ease;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 34px 28px;
+  text-align: left;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.featureItem:not(:last-child) {
+  border-right: 1px solid rgba(224, 224, 224, 0.08);
 }
 
 .featureItem:hover {
-  transform: translateY(-5px);
-}
-
-/* Adiciona as linhas divisórias apenas no desktop (parecido com a imagem) */
-@media (min-width: 1024px) {
-  .featureItem:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 15%;
-    bottom: 15%;
-    width: 1px;
-    background-color: rgba(224, 224, 224, 0.1); /* Linha Prata ultra suave */
-  }
+  background: rgba(212, 175, 55, 0.035);
 }
 
 .iconWrapper {
-  color: var(--color-gold); /* Ícones Dourados (Mantendo a paleta!) */
-  margin-bottom: 16px;
   display: flex;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  background-color: rgba(212, 175, 55, 0.05); /* Fundo sutil circular para o ícone */
-  padding: 16px;
-  border-radius: 50%;
+  margin-bottom: 22px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 14px;
+  color: var(--color-gold);
+  background: rgba(212, 175, 55, 0.07);
+}
+
+.featureContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .title {
-  font-size: 1.15rem;
-  font-weight: 800;
+  margin: 0;
   color: var(--color-white);
-  margin-bottom: 8px;
-  letter-spacing: -0.5px;
+  font-size: 1.08rem;
+  font-weight: 750;
+  line-height: 1.35;
+  letter-spacing: -0.025em;
 }
 
-.subtitle {
-  font-size: 0.70rem;
-  font-weight: 700;
-  color: var(--color-silver-dark);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+.description {
+  margin: 0;
+  color: rgba(224, 224, 224, 0.62);
+  font-size: 0.91rem;
+  line-height: 1.65;
 }
 
-@media (max-width: 768px) {
-  .container {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 0 16px;
+.aiNotice {
+  max-width: 760px;
+  margin: 22px auto 0;
+  color: rgba(224, 224, 224, 0.45);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 1024px) {
+  .featuresGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .featureItem:nth-child(2) {
+    border-right: none;
+  }
+
+  .featureItem:nth-child(-n + 2) {
+    border-bottom: 1px solid rgba(224, 224, 224, 0.08);
+  }
+}
+
+@media (max-width: 640px) {
+  .featuresSection {
+    padding: 64px 16px;
+  }
+
+  .sectionHeader {
+    margin-bottom: 34px;
+  }
+
+  .sectionTitle {
+    font-size: clamp(1.85rem, 8vw, 2.35rem);
+  }
+
+  .sectionDescription {
+    margin-top: 16px;
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+
+  .featuresGrid {
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+  }
+
   .featureItem {
     flex-direction: row;
-    align-items: center;
-    text-align: left;
-    background-color: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 16px;
-    padding: 16px 20px;
     gap: 16px;
+    padding: 22px 18px;
   }
-  .featureItem:first-of-type {
-    border-left: 3px solid var(--color-gold);
+
+  .featureItem:not(:last-child),
+  .featureItem:nth-child(2) {
+    border-right: none;
+    border-bottom: 1px solid rgba(224, 224, 224, 0.08);
   }
+
   .iconWrapper {
+    width: 46px;
+    height: 46px;
     margin-bottom: 0;
-    padding: 12px;
     border-radius: 12px;
-    background-color: rgba(212, 175, 55, 0.08);
   }
+
+  .featureContent {
+    flex: 1;
+    gap: 6px;
+  }
+
   .title {
-    font-size: 1.05rem;
-    margin-bottom: 4px;
+    font-size: 1rem;
   }
-  .subtitle {
-    font-size: 0.65rem;
-    letter-spacing: 0.5px;
+
+  .description {
+    font-size: 0.86rem;
+    line-height: 1.55;
+  }
+
+  .aiNotice {
+    margin-top: 18px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .featuresSection {
+    padding-inline: 12px;
+  }
+
+  .featureItem {
+    padding: 19px 15px;
+  }
+
+  .iconWrapper {
+    width: 42px;
+    height: 42px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featureItem {
+    transition: none;
   }
 }

@@ -71,19 +71,11 @@ const faqs = [
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState(null);
 
-  function toggleFAQ(index) {
-    setOpenIndex((currentIndex) => {
-      const willOpen = currentIndex !== index;
-
-      if (willOpen) {
-        trackEvent("faq_open", {
-          question: faqs[index].question,
-        });
-      }
-
-      return willOpen ? index : null;
-    });
-  }
+ function toggleFAQ(index) {
+  setOpenIndex((currentIndex) =>
+    currentIndex === index ? null : index,
+  );
+}
 
   return (
     <section

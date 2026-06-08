@@ -1,167 +1,569 @@
-import Link from 'next/link';
-import { ArrowRight, CheckCircle2, ShieldCheck, Zap, BarChart3, Users, Scale, Briefcase, Sparkles, FileText } from 'lucide-react';
-import Button from '@/components/Button';
-import styles from './page.module.css';
+import Link from "next/link";
+import {
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  BriefcaseBusiness,
+  CalendarDays,
+  CheckCircle2,
+  FileSignature,
+  FileText,
+  FolderKanban,
+  MessagesSquare,
+  Radar,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
+  WandSparkles,
+} from "lucide-react";
+import Button from "@/components/Button";
+import styles from "./page.module.css";
 
 export const metadata = {
-  title: 'Para Advogados - Social Jurídico',
-  description: 'Aumente sua carteira de clientes e gerencie seus casos com eficiência no Social Jurídico.',
+  title: "Plataforma para Advogados",
+  description:
+    "Acesse casos publicados, acompanhe oportunidades no Radar Jurídico e organize clientes, documentos e atendimentos no Social Jurídico.",
+  alternates: {
+    canonical: "/sou-advogado",
+  },
 };
 
 export default function SouAdvogadoPage() {
   return (
     <div className={styles.container}>
       {/* HERO SECTION */}
-      <section className={styles.hero}>
+      <section className={styles.hero} aria-labelledby="lawyer-hero-title">
+        <div className={styles.heroGlow} aria-hidden="true" />
+
         <div className={styles.heroContent}>
-          <span className={styles.badge}>TECNOLOGIA PARA ADVOGADOS</span>
-          <h1 className={styles.title}>
-            Capte Clientes Reais e <br />
-            <span className={styles.highlight}>Automatize seu Escritório com IA</span>
+          <h1 id="lawyer-hero-title" className={styles.title}>
+            Mais oportunidades e mais organização
+            <span className={styles.highlight}> para sua advocacia.</span>
           </h1>
+
           <p className={styles.subtitle}>
-            Captação Ativa de Casos, Redator de Petições por IA e <strong>Notificação Extrajudicial com Geolocalização</strong>. Tudo com a segurança da <strong>Blindagem Digital SHA-512</strong>.
+            Encontre casos publicados, acompanhe oportunidades no Radar Jurídico
+            e gerencie clientes, documentos e atendimentos em um único ambiente.
           </p>
+
           <div className={styles.ctaWrapper}>
-            <Link href="/cadastro?perfil=advogado">
-              <Button variant="primary" className={styles.ctaButton}>
-                Começar Agora (Grátis)
-                <ArrowRight size={20} />
-              </Button>
+            <Link
+              prefetch={false}
+              href="/cadastro?perfil=advogado"
+              className={styles.primaryAction}
+            >
+              Criar meu perfil profissional
+              <ArrowRight size={19} aria-hidden="true" />
             </Link>
-            <Link href="#planos">
-              <Button variant="secondary" className={styles.ctaButton}>
-                Conhecer Recursos Premium
-              </Button>
+
+            <Link
+              prefetch={false}
+              href="#planos"
+              className={styles.secondaryAction}
+            >
+              Conhecer os planos
             </Link>
+          </div>
+
+          <div className={styles.heroTrust}>
+            <span className={styles.trustItem}>
+              <BadgeCheck size={16} aria-hidden="true" />
+              Cadastro profissional
+            </span>
+
+            <span className={styles.trustDivider} aria-hidden="true" />
+
+            <span className={styles.trustItem}>
+              <ShieldCheck size={16} aria-hidden="true" />
+              Ambiente organizado e seguro
+            </span>
+          </div>
+
+          <div
+            className={styles.heroHighlights}
+            aria-label="Principais recursos para advogados"
+          >
+            <article className={styles.highlightItem}>
+              <div className={styles.highlightIcon} aria-hidden="true">
+                <BriefcaseBusiness size={21} strokeWidth={1.8} />
+              </div>
+
+              <div>
+                <strong>Casos publicados</strong>
+                <span>Acompanhe demandas de clientes na plataforma.</span>
+              </div>
+            </article>
+
+            <article className={styles.highlightItem}>
+              <div className={styles.highlightIcon} aria-hidden="true">
+                <Radar size={21} strokeWidth={1.8} />
+              </div>
+
+              <div>
+                <strong>Radar Jurídico</strong>
+                <span>Consulte oportunidades organizadas diariamente.</span>
+              </div>
+            </article>
+
+            <article className={styles.highlightItem}>
+              <div className={styles.highlightIcon} aria-hidden="true">
+                <BarChart3 size={21} strokeWidth={1.8} />
+              </div>
+
+              <div>
+                <strong>Gestão integrada</strong>
+                <span>Centralize clientes, documentos e atendimentos.</span>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
       {/* COMO FUNCIONA (MINI TUTORIAL) */}
-      <section className={styles.section}>
+      <section
+        id="como-funciona"
+        className={styles.section}
+        aria-labelledby="lawyer-how-title"
+      >
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Como Funciona?</h2>
-          <p className={styles.sectionSubtitle}>Três passos simples para você começar a atender</p>
+          <h2 id="lawyer-how-title" className={styles.sectionTitle}>
+            Como funciona para
+            <span className={styles.sectionHighlight}> advogados</span>
+          </h2>
+
+          <p className={styles.sectionSubtitle}>
+            Crie seu perfil, encontre oportunidades alinhadas à sua atuação e
+            organize o relacionamento com seus clientes em um único ambiente.
+          </p>
         </div>
-        
+
         <div className={styles.stepsGrid}>
-          <div className={styles.stepCard}>
-            <div className={styles.stepNumber}>01</div>
-            <h3>Crie seu Perfil</h3>
-            <p>Cadastre-se na plataforma, preencha suas áreas de atuação e mostre sua experiência para potenciais clientes.</p>
-          </div>
-          
-          <div className={styles.stepCard}>
-            <div className={styles.stepNumber}>02</div>
-            <h3>Analise os Casos</h3>
-            <p>Receba e filtre casos publicados por usuários da plataforma. Use nossa IA para analisar a viabilidade do caso.</p>
-          </div>
-          
-          <div className={styles.stepCard}>
-            <div className={styles.stepNumber}>03</div>
-            <h3>Faça sua Proposta</h3>
-            <p>Inicie uma negociação direta com o cliente. Use seus "Juris" para liberar o contato e fechar o contrato.</p>
-          </div>
+          <article className={styles.stepCard}>
+            <div className={styles.stepTop}>
+              <span className={styles.stepNumber}>01</span>
+
+              <div className={styles.stepIcon} aria-hidden="true">
+                <BriefcaseBusiness size={23} strokeWidth={1.8} />
+              </div>
+            </div>
+
+            <h3>Crie seu perfil profissional</h3>
+
+            <p>
+              Informe seus dados profissionais, número de inscrição na OAB,
+              áreas de atuação e informações relevantes sobre sua experiência.
+            </p>
+          </article>
+
+          <article className={styles.stepCard}>
+            <div className={styles.stepTop}>
+              <span className={styles.stepNumber}>02</span>
+
+              <div className={styles.stepIcon} aria-hidden="true">
+                <Radar size={23} strokeWidth={1.8} />
+              </div>
+            </div>
+
+            <h3>Encontre oportunidades</h3>
+
+            <p>
+              Consulte casos publicados por clientes e acompanhe novas
+              oportunidades organizadas no Radar Jurídico.
+            </p>
+          </article>
+
+          <article className={styles.stepCard}>
+            <div className={styles.stepTop}>
+              <span className={styles.stepNumber}>03</span>
+
+              <div className={styles.stepIcon} aria-hidden="true">
+                <MessagesSquare size={23} strokeWidth={1.8} />
+              </div>
+            </div>
+
+            <h3>Converse e organize</h3>
+
+            <p>
+              Manifeste interesse, converse com o cliente e centralize
+              mensagens, documentos, tarefas e histórico de atendimento.
+            </p>
+          </article>
+        </div>
+
+        <div className={styles.stepsNotice}>
+          <ShieldCheck size={19} aria-hidden="true" />
+
+          <p>
+            A manifestação de interesse não garante contratação. A relação
+            profissional e os honorários são definidos diretamente entre
+            advogado e cliente.
+          </p>
         </div>
       </section>
 
       {/* BENEFÍCIOS (RECURSOS PREMIUM) */}
-      <section className={styles.section + ' ' + styles.bgAlternate}>
+      <section
+        id="recursos"
+        className={`${styles.section} ${styles.bgAlternate}`}
+        aria-labelledby="lawyer-tools-title"
+      >
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Recursos Tecnológicos de Ponta</h2>
-          <p className={styles.sectionSubtitle}>O que torna o Social Jurídico indispensável para o seu escritório</p>
+          <h2 id="lawyer-tools-title" className={styles.sectionTitle}>
+            Tudo o que você precisa para
+            <span className={styles.sectionHighlight}>
+              {" "}
+              atender e organizar sua advocacia
+            </span>
+          </h2>
+
+          <p className={styles.sectionSubtitle}>
+            O Social Jurídico reúne oportunidades, relacionamento com clientes,
+            documentos e ferramentas profissionais em um único ambiente.
+          </p>
         </div>
 
-        <div className={styles.featuresGrid}>
-          <div className={styles.featureCard}>
-            <div className={styles.featureIcon}><ShieldCheck size={24} /></div>
-            <h3>Blindagem Digital SHA-512</h3>
-            <p>Gere cadeia de custódia válida para uso judicial. Proteja contratos, procurações e provas digitais com imutabilidade garantida.</p>
-          </div>
+        <div className={styles.toolsGrid}>
+          <article className={styles.toolCard}>
+            <div className={styles.toolIcon} aria-hidden="true">
+              <BriefcaseBusiness size={24} strokeWidth={1.8} />
+            </div>
 
-          <div className={styles.featureCard}>
-            <div className={styles.featureIcon}><Zap size={24} /></div>
-            <h3>Redator IA Avançado</h3>
-            <p>Gere petições, contratos e documentos jurídicos complexos em segundos com nossa inteligência artificial especializada.</p>
-          </div>
+            <h3>Casos publicados</h3>
 
-          <div className={styles.featureCard}>
-            <div className={styles.featureIcon}><FileText size={24} /></div>
-            <h3>Notificação com Geolocalização</h3>
-            <p>Envie notificações extrajudiciais blindadas com confirmação de entrega e registro de geolocalização do destinatário.</p>
-          </div>
+            <p>
+              Visualize demandas publicadas por clientes e manifeste interesse
+              nas oportunidades relacionadas à sua atuação.
+            </p>
+          </article>
 
-          <div className={styles.featureCard}>
-            <div className={styles.featureIcon}><BarChart3 size={24} /></div>
-            <h3>Análise de Viabilidade</h3>
-            <p>Nossa IA analisa o caso publicado e gera um relatório prévio de viabilidade para você decidir se vale a pena investir tempo.</p>
-          </div>
+          <article className={styles.toolCard}>
+            <div className={styles.toolIcon} aria-hidden="true">
+              <Radar size={24} strokeWidth={1.8} />
+            </div>
+
+            <h3>Radar Jurídico</h3>
+
+            <p>
+              Acompanhe oportunidades jurídicas organizadas diariamente e
+              consulte as informações disponíveis conforme seu plano.
+            </p>
+          </article>
+
+          <article className={styles.toolCard}>
+            <div className={styles.toolIcon} aria-hidden="true">
+              <FolderKanban size={24} strokeWidth={1.8} />
+            </div>
+
+            <h3>CRM Jurídico</h3>
+
+            <p>
+              Organize contatos, etapas de atendimento, histórico, documentos e
+              informações importantes de cada cliente.
+            </p>
+          </article>
+
+          <article className={styles.toolCard}>
+            <div className={styles.toolIcon} aria-hidden="true">
+              <CalendarDays size={24} strokeWidth={1.8} />
+            </div>
+
+            <h3>Agenda e prazos</h3>
+
+            <p>
+              Registre compromissos, tarefas e prazos para manter sua rotina
+              profissional centralizada.
+            </p>
+          </article>
+
+          <article className={styles.toolCard}>
+            <div className={styles.toolIcon} aria-hidden="true">
+              <FileSignature size={24} strokeWidth={1.8} />
+            </div>
+
+            <h3>Assinatura digital</h3>
+
+            <p>
+              Envie documentos para assinatura e acompanhe o processo dentro da
+              própria plataforma.
+            </p>
+          </article>
+
+          <article className={styles.toolCard}>
+            <div className={styles.toolIcon} aria-hidden="true">
+              <ShieldCheck size={24} strokeWidth={1.8} />
+            </div>
+
+            <h3>Notificação Extrajudicial Blindada</h3>
+
+            <p>
+              Crie notificações com recursos de rastreabilidade digital e
+              registros relacionados ao envio e ao acesso.
+            </p>
+          </article>
+
+          <article className={styles.toolCard}>
+            <div className={styles.toolIcon} aria-hidden="true">
+              <WandSparkles size={24} strokeWidth={1.8} />
+            </div>
+
+            <h3>Inteligência Artificial Jurídica</h3>
+
+            <p>
+              Utilize ferramentas de apoio para estruturar textos, documentos,
+              análises e atividades da rotina profissional.
+            </p>
+          </article>
+
+          <article className={styles.toolCard}>
+            <div className={styles.toolIcon} aria-hidden="true">
+              <MessagesSquare size={24} strokeWidth={1.8} />
+            </div>
+
+            <h3>Atendimento centralizado</h3>
+
+            <p>
+              Converse com clientes por mensagens, áudios, arquivos e
+              videochamadas, mantendo o histórico organizado.
+            </p>
+          </article>
+        </div>
+
+        <div className={styles.toolsSummary}>
+          <UsersRound size={20} aria-hidden="true" />
+
+          <p>
+            Os recursos disponíveis, limites de uso e acesso às oportunidades
+            variam conforme o plano contratado.
+          </p>
         </div>
       </section>
 
       {/* PLANOS */}
-      <section id="planos" className={styles.section}>
+      <section
+        id="planos"
+        className={styles.section}
+        aria-labelledby="lawyer-plans-title"
+      >
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Escolha o plano ideal</h2>
-          <p className={styles.sectionSubtitle}>Desbloqueie o potencial máximo da sua advocacia</p>
+          <h2 id="lawyer-plans-title" className={styles.sectionTitle}>
+            Escolha o plano que acompanha
+            <span className={styles.sectionHighlight}>
+              {" "}
+              o momento da sua advocacia
+            </span>
+          </h2>
+
+          <p className={styles.sectionSubtitle}>
+            Tenha acesso a oportunidades e ferramentas profissionais em uma
+            única assinatura, com condições pensadas para diferentes rotinas de
+            atuação.
+          </p>
         </div>
 
         <div className={styles.plansGrid}>
-          {/* PLANO START */}
-          <div className={styles.planCard}>
-            <div className={styles.planHeader}>
-              <h3>Plano START</h3>
-              <p className={styles.planPrice}>Consultar Valor</p>
-            </div>
-            <ul className={styles.planFeatures}>
-              <li><CheckCircle2 size={16} /> 7 Juris todo mês para abrir casos</li>
-              <li><CheckCircle2 size={16} /> CRM de Clientes básico</li>
-              <li><CheckCircle2 size={16} /> Acesso à IA de Viabilidade</li>
-              <li><CheckCircle2 size={16} /> Blindagem de Provas (Custo por uso)</li>
-              <li><CheckCircle2 size={16} /> Notificação Extrajudicial (R$ 10,00)</li>
-            </ul>
-            <Link href="/cadastro?perfil=advogado" className={styles.planLink}>
-              <Button variant="secondary" className={styles.planButton}>Começar Agora</Button>
-            </Link>
-          </div>
+          <article className={styles.planCard}>
+            <header className={styles.planHeader}>
+              <div>
+                <span className={styles.planCategory}>Para começar</span>
+                <h3>Plano Start</h3>
+              </div>
 
-          {/* PLANO PRO */}
-          <div className={styles.planCard + ' ' + styles.planCardFeatured}>
-            <div className={styles.featuredBadge}>MAIS POPULAR</div>
-            <div className={styles.planHeader}>
-              <h3>Plano PRO</h3>
-              <p className={styles.planPrice}>Consultar Valor</p>
+              <p className={styles.planDescription}>
+                Para advogados que desejam acessar oportunidades e organizar os
+                primeiros atendimentos dentro da plataforma.
+              </p>
+            </header>
+
+            <div className={styles.priceBlock}>
+              <span className={styles.priceCurrency}>R$</span>
+              <strong className={styles.priceValue}>40,99</strong>
+              <span className={styles.pricePeriod}>/mês</span>
             </div>
+
+            <p className={styles.promotionalPrice}>
+              Primeiro mês por <strong>R$ 10,99</strong>
+            </p>
+
             <ul className={styles.planFeatures}>
-              <li><CheckCircle2 size={16} /> 20 Juris todo mês</li>
-              <li><CheckCircle2 size={16} /> Selo PRO de autoridade no perfil</li>
-              <li><CheckCircle2 size={16} /> Acesso Ilimitado aos casos da plataforma</li>
-              <li><CheckCircle2 size={16} /> Redator IA de Petições Ilimitado</li>
-              <li><CheckCircle2 size={16} /> Blindagem de Provas Digitais Inclusa</li>
-              <li><CheckCircle2 size={16} /> CRM Jurídico Completo</li>
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Acesso aos casos disponíveis para o plano
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Oportunidades do Radar Jurídico
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                CRM para organização de clientes
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Agenda, tarefas e controle de prazos
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Chat e histórico de atendimento
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Ferramentas profissionais com limites do plano
+              </li>
             </ul>
-            <Link href="/cadastro?perfil=advogado" className={styles.planLink}>
-              <Button variant="primary" className={styles.planButton}>
-                Seja PRO
-                <Sparkles size={16} style={{ marginLeft: 8 }} />
-              </Button>
+
+            <Link
+              prefetch={false}
+              href="/cadastro?perfil=advogado&plano=start"
+              className={`${styles.planAction} ${styles.startAction}`}
+            >
+              Começar com o Start
+              <ArrowRight size={18} aria-hidden="true" />
             </Link>
-          </div>
+          </article>
+
+          <article className={`${styles.planCard} ${styles.planCardFeatured}`}>
+            <div className={styles.featuredBadge}>Plano mais completo</div>
+
+            <header className={styles.planHeader}>
+              <div>
+                <span className={styles.planCategory}>Mais recursos</span>
+                <h3>Plano Pro</h3>
+              </div>
+
+              <p className={styles.planDescription}>
+                Para profissionais que desejam ampliar o acesso às oportunidades
+                e utilizar recursos avançados de gestão e produtividade.
+              </p>
+            </header>
+
+            <div className={styles.priceBlock}>
+              <span className={styles.priceCurrency}>R$</span>
+              <strong className={styles.priceValue}>87,90</strong>
+              <span className={styles.pricePeriod}>/mês</span>
+            </div>
+
+            <p className={styles.promotionalPrice}>
+              Primeiro mês por <strong>R$ 10,99</strong>
+            </p>
+
+            <ul className={styles.planFeatures}>
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Mais acesso aos casos e oportunidades disponíveis
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Radar Jurídico conforme os limites do plano
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                CRM Jurídico completo
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Inteligência Artificial Jurídica
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Assinatura e gestão de documentos
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Notificação Extrajudicial Blindada
+              </li>
+
+              <li>
+                <CheckCircle2 size={17} aria-hidden="true" />
+                Agenda, prazos e atendimento centralizado
+              </li>
+            </ul>
+
+            <Link
+              prefetch={false}
+              href="/cadastro?perfil=advogado&plano=pro"
+              className={`${styles.planAction} ${styles.proAction}`}
+            >
+              Começar com o Pro
+              <Sparkles size={17} aria-hidden="true" />
+            </Link>
+          </article>
+        </div>
+
+        <div className={styles.plansNotice}>
+          <ShieldCheck size={19} aria-hidden="true" />
+
+          <p>
+            Os limites, condições promocionais e recursos incluídos podem variar
+            conforme as regras comerciais vigentes. Consulte os detalhes antes
+            da contratação.
+          </p>
         </div>
       </section>
 
       {/* CTA FINAL */}
-      <section className={styles.ctaFooter}>
+      <section
+        className={styles.ctaFooter}
+        aria-labelledby="lawyer-final-cta-title"
+      >
+        <div className={styles.ctaFooterGlow} aria-hidden="true" />
+
         <div className={styles.ctaFooterContent}>
-          <h2>Pronto para transformar sua advocacia?</h2>
-          <p>Junte-se a centenas de advogados que já estão fechando casos no Social Jurídico.</p>
-          <Link href="/cadastro?perfil=advogado">
-            <Button variant="primary" className={styles.ctaButton}>
-              Criar Minha Conta Grátis
-              <ArrowRight size={20} />
-            </Button>
-          </Link>
+          <h2 id="lawyer-final-cta-title">
+            Centralize oportunidades, clientes e ferramentas
+            <span className={styles.ctaHighlight}>
+              {" "}
+              em uma única plataforma
+            </span>
+          </h2>
+
+          <p>
+            Crie seu perfil profissional, conheça os planos disponíveis e
+            descubra como o Social Jurídico pode apoiar sua rotina de
+            atendimento e organização.
+          </p>
+
+          <div className={styles.ctaFooterActions}>
+            <Link
+              prefetch={false}
+              href="/cadastro?perfil=advogado"
+              className={styles.ctaFooterPrimary}
+            >
+              Criar meu perfil profissional
+              <ArrowRight size={19} aria-hidden="true" />
+            </Link>
+
+            <Link
+              prefetch={false}
+              href="#planos"
+              className={styles.ctaFooterSecondary}
+            >
+              Comparar planos
+            </Link>
+          </div>
+
+          <div className={styles.ctaFooterTrust}>
+            <span>
+              <BadgeCheck size={16} aria-hidden="true" />
+              Cadastro profissional
+            </span>
+
+            <span className={styles.ctaTrustDivider} aria-hidden="true" />
+
+            <span>
+              <ShieldCheck size={16} aria-hidden="true" />
+              Você escolhe o plano antes de contratar
+            </span>
+          </div>
         </div>
       </section>
     </div>

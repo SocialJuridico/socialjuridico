@@ -2,139 +2,380 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, AlertCircle, Zap } from "lucide-react";
-import styles from "../login/Login.module.css";
 import { useRouter } from "next/navigation";
+import {
+  AlertCircle,
+  ArrowLeft,
+  BriefcaseBusiness,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
+  LockKeyhole,
+  Megaphone,
+  Scale,
+  ShieldCheck,
+} from "lucide-react";
 
-export default function LoginAnunciante() {
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
+import styles from "./LoginAnunciante.module.css";
+
+const initialForm = {
+  usuario: "",
+  senha: "",
+};
+
+export default function LoginAnunciantePage() {
   const router = useRouter();
 
-  const [formData, setFormData] = useState({
-    usuario: "",
-    senha: "",
-  });
+  const [formData, setFormData] = useState(initialForm);
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  function handleChange(event) {
+    const { name, value } = event.target;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }));
+
     setErrorMsg("");
     setSuccessMsg("");
+  }
+
+  function validateForm() {
+    const username = formData.usuario.trim();
+
+    if (!username) {
+      return "Informe seu nome de usuário.";
+    }
+
+    if (username.length > 80) {
+      return "O nome de usuário informado é inválido.";
+    }
+
+    if (!formData.senha) {
+      return "Informe sua senha.";
+    }
+
+    if (formData.senha.length > 128) {
+      return "A senha informada é inválida.";
+    }
+
+    return null;
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    if (loading) {
+      return;
+    }
+
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    const validationError = validateForm();
+
+    if (validationError) {
+      setErrorMsg(validationError);
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/anunciante", {
+      const response = await fetch("/api/auth/anunciante", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          usuario: formData.usuario.trim().toLowerCase(),
+          senha: formData.senha,
+        }),
       });
-      const response = await res.json();
 
-      if (response.success) {
-        setSuccessMsg("Login realizado! Redirecionando...");
-        setTimeout(() => {
-          router.push("/dashboard/anunciante");
-        }, 1500);
-      } else {
-        setErrorMsg(response.message || "Credenciais inválidas.");
-        setLoading(false);
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        setErrorMsg(
+          data?.message ||
+            "Não foi possível realizar o acesso. Verifique suas credenciais.",
+        );
+
+        return;
       }
-    } catch (err) {
-      setErrorMsg("Erro na conexão com o servidor.");
+
+      setSuccessMsg("Acesso autorizado. Redirecionando...");
+
+      window.setTimeout(() => {
+        router.push("/dashboard/anunciante");
+      }, 900);
+    } catch (error) {
+      console.error("[Login anunciante] Erro:", error);
+
+      setErrorMsg(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
+    } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
-    <div className={styles.pageWrapper}>
-      {/* LEFT SIDE */}
-      <div className={styles.leftSide} style={{ background: "linear-gradient(135deg, #0a0a0a 0%, #151525 100%)" }}>
-        <div className={styles.leftPattern}></div>
-        <Link href="/" className={styles.backButton}>
-          <ArrowLeft size={20} /> Voltar a Home
-        </Link>
-        <div className={styles.leftContent}>
-          <div style={{ background: "rgba(212, 175, 55, 0.15)", color: "#d4af37", padding: "8px 16px", borderRadius: "20px", display: "inline-flex", alignItems: "center", gap: "8px", marginBottom: "20px", fontWeight: 800, fontSize: "0.75rem", letterSpacing: "1px", border: "1px solid rgba(212, 175, 55, 0.3)" }}>
-            <Zap size={14} fill="#d4af37" /> PORTAL DO ANUNCIANTE
-          </div>
-          <h1 className={styles.leftTitle}>
-            Sua vitrine para <br />
-            <span style={{ color: "var(--color-gold)" }}>Advogados</span>
-          </h1>
-          <p className={styles.leftDesc}>
-            Seja encontrado por milhares de advogados que buscam prepostos, diligências e serviços técnicos especializados em todo o Brasil.
-          </p>
-        </div>
-      </div>
+    <main className={styles.pageWrapper}>
+      <section className={styles.leftSide}>
+        <div
+          className={styles.leftPattern}
+          aria-hidden="true"
+        />
 
-      {/* RIGHT SIDE */}
-      <div className={styles.rightSide}>
-        <div className={styles.formContainer}>
-          <div className={styles.formHeader}>
-            <h2 className={styles.formTitle}>Acesso Restrito</h2>
-            <p className={styles.formSubtitle}>Entre com as credenciais fornecidas pela administração.</p>
+        <Link
+          href="/"
+          prefetch={false}
+          className={styles.backButton}
+        >
+          <ArrowLeft size={19} aria-hidden="true" />
+          Voltar para a Home
+        </Link>
+
+        <div className={styles.leftContent}>
+          <div className={styles.portalBadge}>
+            <Megaphone size={16} aria-hidden="true" />
+            Portal do anunciante
           </div>
+
+          <h1 className={styles.leftTitle}>
+            Apresente seus serviços para profissionais do
+            <span className={styles.highlight}>
+              {" "}
+              setor jurídico.
+            </span>
+          </h1>
+
+          <p className={styles.leftDescription}>
+            Gerencie seus anúncios, acompanhe sua presença na
+            plataforma e mantenha seus dados comerciais atualizados.
+          </p>
+
+          <div className={styles.trustList}>
+            <div>
+              <BriefcaseBusiness
+                size={20}
+                aria-hidden="true"
+              />
+
+              <span>
+                Área exclusiva para anunciantes autorizados
+              </span>
+            </div>
+
+            <div>
+              <ShieldCheck
+                size={20}
+                aria-hidden="true"
+              />
+
+              <span>
+                Sessão protegida e acesso individual
+              </span>
+            </div>
+
+            <div>
+              <LockKeyhole
+                size={20}
+                aria-hidden="true"
+              />
+
+              <span>
+                Credenciais fornecidas pela administração
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.rightSide}>
+        <div className={styles.formContainer}>
+          <Link
+            href="/"
+            prefetch={false}
+            className={styles.mobileLogo}
+          >
+            <Scale size={28} aria-hidden="true" />
+            Social Jurídico
+          </Link>
+
+          <header className={styles.formHeader}>
+            <span className={styles.eyebrow}>
+              Acesso comercial
+            </span>
+
+            <h1 className={styles.formTitle}>
+              Portal do anunciante
+            </h1>
+
+            <p className={styles.formSubtitle}>
+              Entre com as credenciais fornecidas pela equipe do
+              Social Jurídico.
+            </p>
+          </header>
 
           {errorMsg && (
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "12px", padding: "16px", marginBottom: "20px", color: "#ef4444", fontSize: "0.9rem", fontWeight: 600 }}>
-              <AlertCircle size={18} style={{ flexShrink: 0 }} /> {errorMsg}
+            <div
+              className={styles.errorMessage}
+              role="alert"
+              aria-live="assertive"
+            >
+              <AlertCircle size={18} aria-hidden="true" />
+              <span>{errorMsg}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          {successMsg && (
+            <div
+              className={styles.successMessage}
+              role="status"
+              aria-live="polite"
+            >
+              <CheckCircle2 size={18} aria-hidden="true" />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            className={styles.form}
+            noValidate
+          >
             <div className={styles.formGroup}>
-              <label className={styles.label}>Nome de Usuário</label>
+              <label
+                htmlFor="advertiser-username"
+                className={styles.label}
+              >
+                Nome de usuário
+              </label>
+
               <input
+                id="advertiser-username"
                 type="text"
                 name="usuario"
                 value={formData.usuario}
                 onChange={handleChange}
                 className={styles.input}
-                placeholder="john_doe"
+                placeholder="Seu nome de usuário"
+                autoComplete="username"
+                maxLength={80}
                 required
+                disabled={loading}
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Senha</label>
-              <input
-                type="password"
-                name="senha"
-                value={formData.senha}
-                onChange={handleChange}
-                className={styles.input}
-                placeholder="********"
-                required
-              />
+              <label
+                htmlFor="advertiser-password"
+                className={styles.label}
+              >
+                Senha
+              </label>
+
+              <div className={styles.passwordField}>
+                <input
+                  id="advertiser-password"
+                  type={showPassword ? "text" : "password"}
+                  name="senha"
+                  value={formData.senha}
+                  onChange={handleChange}
+                  className={styles.input}
+                  placeholder="Digite sua senha"
+                  autoComplete="current-password"
+                  maxLength={128}
+                  required
+                  disabled={loading}
+                />
+
+                <button
+                  type="button"
+                  className={styles.passwordToggle}
+                  onClick={() =>
+                    setShowPassword((current) => !current)
+                  }
+                  aria-label={
+                    showPassword
+                      ? "Ocultar senha"
+                      : "Mostrar senha"
+                  }
+                >
+                  {showPassword ? (
+                    <EyeOff size={18} aria-hidden="true" />
+                  ) : (
+                    <Eye size={18} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
             </div>
 
-            {successMsg && (
-                <div style={{ backgroundColor: "rgba(16,185,129,0.15)", color: "#10B981", padding: "14px", borderRadius: "12px", marginBottom: "20px", fontSize: "0.9rem", fontWeight: "bold", textAlign: "center" }}>
-                    ✅ {successMsg}
-                </div>
-            )}
+            <div className={styles.securityNotice}>
+              <LockKeyhole size={15} aria-hidden="true" />
 
-            <button type="submit" className={styles.submitBtn} disabled={loading} style={{ background: "linear-gradient(135deg, #d4af37 0%, #b8860b 100%)", color: "#000", fontWeight: 800 }}>
+              <span>
+                Sua sessão permanecerá ativa por até oito horas.
+              </span>
+            </div>
+
+            <button
+              type="submit"
+              className={styles.submitButton}
+              disabled={loading || Boolean(successMsg)}
+            >
               {loading ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                  <Loader2 className="animate-spin" size={20} />
-                  Verificando...
-                </div>
-              ) : "Acessar Painel"}
+                <>
+                  <Loader2
+                    size={19}
+                    className={styles.spinner}
+                    aria-hidden="true"
+                  />
+                  Verificando acesso...
+                </>
+              ) : (
+                "Acessar painel"
+              )}
             </button>
           </form>
-          
-          <div style={{ marginTop: "30px", fontSize: "0.85rem", color: "rgba(255,255,255,0.4)", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "20px" }}>
-            Não tem uma conta de anunciante? <br />
-            <a href="https://wa.me/5515981657317" target="_blank" rel="noopener noreferrer" style={{ color: "var(--color-gold)", fontWeight: 700, textDecoration: "none" }}>Fale com a Administração</a>
+
+          <div className={styles.commercialContact}>
+            <strong>
+              Ainda não possui acesso de anunciante?
+            </strong>
+
+            <p>
+              Fale com a equipe comercial para conhecer as opções
+              de divulgação.
+            </p>
+
+            <div className={styles.contactActions}>
+              <a
+                href="https://wa.me/5515981657317?text=Ol%C3%A1%2C%20gostaria%20de%20conhecer%20as%20op%C3%A7%C3%B5es%20para%20anunciar%20no%20Social%20Jur%C3%ADdico."
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp: (15) 98165-7317
+              </a>
+
+              <a
+                href="https://wa.me/5515992653066?text=Ol%C3%A1%2C%20gostaria%20de%20conhecer%20as%20op%C3%A7%C3%B5es%20para%20anunciar%20no%20Social%20Jur%C3%ADdico."
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp: (15) 99265-3066
+              </a>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

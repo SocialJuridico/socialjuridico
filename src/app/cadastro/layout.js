@@ -1,8 +1,11 @@
+import { privateRobots } from "@/lib/seo";
+
 export const metadata = {
-  title: "Cadastro | SocialJurídico",
-  description: "Crie sua conta no SocialJurídico.",
+  title: "Criar conta",
+  description: "Crie sua conta no Social Jurídico.",
+  robots: privateRobots,
 };
 
-export default function Layout({ children }) {
-  return <>{children}</>;
+export default function CadastroLayout({ children }) {
+  return children;
 }

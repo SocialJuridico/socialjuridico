@@ -7,6 +7,8 @@ import OneSignalSetup from "@/components/PWA/OneSignalSetup";
 import PWAInstallPrompt from "@/components/PWA/PWAInstallPrompt";
 import AccessTracker from "@/components/AccessTracker";
 import CookieNotice from "@/components/CookieNotice";
+import GlobalJsonLd from "@/components/SEO/GlobalJsonLd";
+import { SITE_NAME, SITE_URL } from "@/lib/seo";
 
 import "./globals.css";
 
@@ -23,32 +25,50 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://www.socialjuridico.com.br"),
+  metadataBase: new URL(SITE_URL),
 
   title: {
-    default: "Social Jurídico",
-    template: "%s | Social Jurídico",
+    default:
+      "Social Jurídico | Conectando Pessoas e Advogados",
+    template: `%s | ${SITE_NAME}`,
   },
 
   description:
-    "Publique seu caso gratuitamente e encontre advogados cadastrados de forma simples, digital e segura.",
+    "Publique seu caso gratuitamente, converse com advogados cadastrados e conheça ferramentas criadas para apoiar clientes e profissionais jurídicos.",
 
-  applicationName: "Social Jurídico",
+  applicationName: SITE_NAME,
+
+  authors: [
+    {
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
+  ],
+
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "Tecnologia jurídica",
+
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
 
   openGraph: {
     title: "Social Jurídico",
     description:
-      "Publique seu caso gratuitamente e encontre advogados cadastrados.",
+      "Uma plataforma para aproximar pessoas e advogados e organizar atendimentos, oportunidades e ferramentas jurídicas.",
     url: "/",
-    siteName: "Social Jurídico",
+    siteName: SITE_NAME,
     locale: "pt_BR",
     type: "website",
     images: [
       {
-        url: "/image.png",
+        url: "/opengraph-image.png",
         width: 1200,
         height: 630,
-        alt: "Social Jurídico",
+        alt: "Social Jurídico — conectando pessoas e advogados",
       },
     ],
   },
@@ -57,8 +77,8 @@ export const metadata = {
     card: "summary_large_image",
     title: "Social Jurídico",
     description:
-      "Publique seu caso gratuitamente e encontre advogados cadastrados.",
-    images: ["/image.png"],
+      "Uma plataforma para aproximar pessoas e advogados.",
+    images: ["/opengraph-image.png"],
   },
 
   robots: {
@@ -81,7 +101,8 @@ export const metadata = {
   },
 
   verification: {
-    google: "Y2-JflZUZY1EhRahBox6UlsanmZnHHA7o3HpVVx2Ma4",
+    google:
+      "Y2-JflZUZY1EhRahBox6UlsanmZnHHA7o3HpVVx2Ma4",
   },
 };
 
@@ -95,6 +116,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <GlobalJsonLd />
         <AccessTracker />
 
         <OneSignalSetup />

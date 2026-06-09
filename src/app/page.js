@@ -16,8 +16,7 @@ export const metadata = {
   },
   twitter: {
     title: "Encontre um Advogado para o seu Caso",
-    description:
-      "Publique seu caso gratuitamente no Social Jurídico.",
+    description: "Publique seu caso gratuitamente no Social Jurídico.",
   },
 };
 
@@ -31,44 +30,9 @@ import FAQ from "@/components/FAQ";
 import CTA from "@/components/CTA";
 import MobileNav from "@/components/MobileNav";
 
-const organizationJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "Social Jurídico",
-  url: "https://www.socialjuridico.com.br",
-  logo: "https://www.socialjuridico.com.br/icon.png",
-  description:
-    "Plataforma digital que facilita o contato entre clientes e advogados cadastrados.",
-  sameAs: [
-    "https://www.facebook.com/groups/1667675480204134",
-  ],
-};
-
-const websiteJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  name: "Social Jurídico",
-  url: "https://www.socialjuridico.com.br",
-  inLanguage: "pt-BR",
-};
-
 export default function Home() {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(organizationJsonLd),
-        }}
-      />
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(websiteJsonLd),
-        }}
-      />
-
       <Header />
       <Hero />
       <Features />

@@ -1,8 +1,11 @@
+import { privateRobots } from "@/lib/seo";
+
 export const metadata = {
-  title: "Login | SocialJurídico",
-  description: "Acesse sua conta no SocialJurídico.",
+  title: "Acessar conta",
+  description: "Acesse sua conta no Social Jurídico.",
+  robots: privateRobots,
 };
 
-export default function Layout({ children }) {
-  return <>{children}</>;
+export default function LoginLayout({ children }) {
+  return children;
 }

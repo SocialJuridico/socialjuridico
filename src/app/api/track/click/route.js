@@ -2,15 +2,51 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 
+const SITE_URL = "https://www.socialjuridico.com.br";
+const DASHBOARD_URL = `${SITE_URL}/dashboard/cliente`;
+const LOGIN_URL = `${SITE_URL}/login`;
+
+function isPublicDestination(value) {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+
+    const isSocialJuridicoHost =
+      url.hostname === "socialjuridico.com.br" ||
+      url.hostname === "www.socialjuridico.com.br";
+
+    const isSocialJuridicoPublicRoute =
+      isSocialJuridicoHost &&
+      (
+        url.pathname.startsWith("/confirmar-email") ||
+        url.pathname.startsWith("/atualizar-senha") ||
+        url.pathname.startsWith("/api/auth/confirm-email") ||
+        url.pathname.startsWith("/login") ||
+        url.pathname.startsWith("/cadastro")
+      );
+
+    const isSupabaseVerification =
+      url.hostname.endsWith(".supabase.co") &&
+      url.pathname.includes("/auth/v1/verify") &&
+      (
+        url.searchParams.get("type") === "recovery" ||
+        url.searchParams.get("type") === "signup"
+      );
+
+    return isSocialJuridicoPublicRoute || isSupabaseVerification;
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const trackId = searchParams.get("trackId");
   const dest = searchParams.get("dest");
-  const dashboardUrl = "https://socialjuridico.com.br/dashboard/cliente";
-  const loginUrl = "https://socialjuridico.com.br/login";
-
-  // Determine actual target destination redirect
-  const redirectTarget = dest ? dest : dashboardUrl;
+  const redirectTarget = dest || DASHBOARD_URL;
 
   if (!trackId) {
     return NextResponse.redirect(redirectTarget);
@@ -18,7 +54,7 @@ export async function GET(request) {
 
   try {
     const db = supabaseAdmin;
-    // Fetch current track
+
     const { data: track } = await db
       .from("email_tracking_logs")
       .select("clicked_at, logged_in_at")
@@ -27,11 +63,11 @@ export async function GET(request) {
 
     if (track) {
       const updates = {};
+
       if (!track.clicked_at) {
         updates.clicked_at = new Date().toISOString();
       }
 
-      // Check if user is already logged in
       const supabase = createClient();
       const { data: { user } = {} } = await supabase.auth.getUser();
 
@@ -39,40 +75,40 @@ export async function GET(request) {
         if (!track.logged_in_at) {
           updates.logged_in_at = new Date().toISOString();
         }
+
         if (Object.keys(updates).length > 0) {
           await db
             .from("email_tracking_logs")
             .update(updates)
             .eq("id", trackId);
         }
+
         return NextResponse.redirect(redirectTarget);
-      } else {
-        if (Object.keys(updates).length > 0) {
-          await db
-            .from("email_tracking_logs")
-            .update(updates)
-            .eq("id", trackId);
-        }
-        
-        // Se a rota for pública (como confirmação de email ou recuperação de senha), direcionamos diretamente
-        const isPublicDest = dest && (
-          dest.includes("/confirmar-email") || 
-          dest.includes("/atualizar-senha") ||
-          dest.includes("/login") ||
-          dest.includes("/cadastro")
-        );
-
-        if (isPublicDest) {
-          return NextResponse.redirect(redirectTarget);
-        }
-
-        // Redirect to login page and pass the trackId and destination url
-        const loginRedirect = `${loginUrl}?trackId=${trackId}${dest ? `&redirectTo=${encodeURIComponent(dest)}` : ""}`;
-        return NextResponse.redirect(loginRedirect);
       }
+
+      if (Object.keys(updates).length > 0) {
+        await db
+          .from("email_tracking_logs")
+          .update(updates)
+          .eq("id", trackId);
+      }
+
+      // Confirmation and recovery links must remain usable without an existing session.
+      if (isPublicDestination(dest)) {
+        return NextResponse.redirect(redirectTarget);
+      }
+
+      const loginRedirect = new URL("/login", SITE_URL);
+      loginRedirect.searchParams.set("trackId", trackId);
+
+      if (dest) {
+        loginRedirect.searchParams.set("redirectTo", dest);
+      }
+
+      return NextResponse.redirect(loginRedirect);
     }
-  } catch (err) {
-    console.error("Error tracking click:", err);
+  } catch (error) {
+    console.error("Error tracking click:", error);
   }
 
   return NextResponse.redirect(redirectTarget);

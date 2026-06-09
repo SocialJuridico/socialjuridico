@@ -25,13 +25,11 @@ async function transformAndLogPayload(payload) {
       singleEmail = toEmail.split(",")[0].trim();
     }
 
-    // Check if the email was already pre-tracked
     const existingTrackMatch = (payload.html || "").match(
       /trackId=([a-f0-9-]{36})/i,
     );
 
     if (existingTrackMatch) {
-      // Already tracked, send as-is
       return payload;
     }
 
@@ -39,7 +37,6 @@ async function transformAndLogPayload(payload) {
     const hasHtml = typeof html === "string" && html.length > 0;
 
     if (hasHtml) {
-      // 1. Inject open tracking pixel before </body> (or at the end of html)
       const trackingPixel = `<img src="https://www.socialjuridico.com.br/api/track/open?trackId=${trackId}" width="1" height="1" alt="" style="display:none;" />`;
 
       if (html.includes("</body>")) {
@@ -48,8 +45,6 @@ async function transformAndLogPayload(payload) {
         html += trackingPixel;
       }
 
-      // 2. Automatically wrap ordinary links to track clicks.
-      // Authentication, account confirmation and recovery links must remain direct.
       const hrefRegex = /href="((https?):\/\/[^\"]+)"/g;
 
       html = html.replace(hrefRegex, (match, url) => {
@@ -75,6 +70,7 @@ async function transformAndLogPayload(payload) {
         const isSensitiveAuthLink =
           isSupabaseAuthLink ||
           parsedUrl.pathname.includes("/api/auth/confirm-email") ||
+          parsedUrl.pathname.includes("/api/auth/recover-password") ||
           parsedUrl.pathname.includes("/atualizar-senha") ||
           parsedUrl.pathname.includes("/confirmar-email");
 
@@ -94,7 +90,6 @@ async function transformAndLogPayload(payload) {
       });
     }
 
-    // Infer email_type from subject line
     let emailType = "SISTEMA";
     const subjectUpper = (payload.subject || "").toUpperCase();
 
@@ -144,13 +139,11 @@ async function transformAndLogPayload(payload) {
       emailType = "ADMIN";
     }
 
-    // Try to resolve user_id and client_id from database based on recipient email
     let dbUserId = null;
     let dbClientId = null;
 
     if (supabaseAdmin && singleEmail) {
       try {
-        // Try to find in clientes first
         const { data: client } = await supabaseAdmin
           .from("clientes")
           .select("id")
@@ -161,7 +154,6 @@ async function transformAndLogPayload(payload) {
           dbUserId = client.id;
           dbClientId = client.id;
         } else {
-          // Try to find in advogados
           const { data: lawyer } = await supabaseAdmin
             .from("advogados")
             .select("id")
@@ -177,7 +169,6 @@ async function transformAndLogPayload(payload) {
       }
     }
 
-    // Save email sending record in public.email_tracking_logs
     if (supabaseAdmin) {
       try {
         await supabaseAdmin.from("email_tracking_logs").insert([

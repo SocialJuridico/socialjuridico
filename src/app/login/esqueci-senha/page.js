@@ -13,23 +13,16 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { forgotPasswordAction } from "@/app/actions/authActions";
+import { forgotPasswordAction } from "@/app/actions/passwordActions";
 
 import styles from "./EsqueciSenha.module.css";
 
 export default function EsqueciSenhaPage() {
   const [email, setEmail] = useState("");
-  const [submittedEmail, setSubmittedEmail] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [errorMsg, setErrorMsg] =
-    useState("");
-
-  const [successMsg, setSuccessMsg] =
-    useState("");
+  const [submittedEmail, setSubmittedEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   function handleEmailChange(event) {
     setEmail(event.target.value);
@@ -37,19 +30,15 @@ export default function EsqueciSenhaPage() {
   }
 
   function validateEmail() {
-    const normalizedEmail =
-      email.trim().toLowerCase();
+    const normalizedEmail = email.trim().toLowerCase();
 
     if (
       !normalizedEmail ||
       normalizedEmail.length > 160 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-        normalizedEmail,
-      )
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
     ) {
       return {
-        error:
-          "Informe um endereço de e-mail válido.",
+        error: "Informe um endereço de e-mail válido.",
         email: "",
       };
     }
@@ -80,32 +69,23 @@ export default function EsqueciSenhaPage() {
     setLoading(true);
 
     try {
-      const response =
-        await forgotPasswordAction(
-          validation.email,
-        );
+      const response = await forgotPasswordAction(validation.email);
 
       if (!response.success) {
         setErrorMsg(
           response.message ||
             "Não foi possível processar a solicitação.",
         );
-
         return;
       }
 
       setSubmittedEmail(validation.email);
-
       setSuccessMsg(
         response.message ||
           "Se o e-mail estiver cadastrado, enviaremos as instruções de recuperação.",
       );
     } catch (error) {
-      console.error(
-        "[Esqueci minha senha] Erro:",
-        error,
-      );
-
+      console.error("[Esqueci minha senha] Erro:", error);
       setErrorMsg(
         "Não foi possível processar sua solicitação. Tente novamente.",
       );
@@ -123,77 +103,44 @@ export default function EsqueciSenhaPage() {
   return (
     <main className={styles.pageWrapper}>
       <section className={styles.leftSide}>
-        <div
-          className={styles.leftPattern}
-          aria-hidden="true"
-        />
+        <div className={styles.leftPattern} aria-hidden="true" />
 
         <Link
           prefetch={false}
           href="/login"
           className={styles.backButton}
         >
-          <ArrowLeft
-            size={19}
-            aria-hidden="true"
-          />
-
+          <ArrowLeft size={19} aria-hidden="true" />
           Voltar ao login
         </Link>
 
         <div className={styles.leftContent}>
-          <span className={styles.eyebrow}>
-            Recuperação de acesso
-          </span>
+          <span className={styles.eyebrow}>Recuperação de acesso</span>
 
           <h1 className={styles.leftTitle}>
             Recupere o acesso à sua conta com
-            <span className={styles.highlight}>
-              {" "}
-              segurança.
-            </span>
+            <span className={styles.highlight}> segurança.</span>
           </h1>
 
           <p className={styles.leftDesc}>
-            Informe o e-mail utilizado no cadastro.
-            Caso exista uma conta associada, enviaremos
-            um link para você criar uma nova senha.
+            Informe o e-mail utilizado no cadastro. Caso exista uma conta
+            associada, enviaremos um link para você criar uma nova senha.
           </p>
 
           <div className={styles.trustList}>
             <div>
-              <ShieldCheck
-                size={20}
-                aria-hidden="true"
-              />
-
-              <span>
-                A solicitação não altera imediatamente
-                sua senha
-              </span>
+              <ShieldCheck size={20} aria-hidden="true" />
+              <span>A solicitação não altera imediatamente sua senha</span>
             </div>
 
             <div>
-              <KeyRound
-                size={20}
-                aria-hidden="true"
-              />
-
-              <span>
-                O link possui validade limitada
-              </span>
+              <KeyRound size={20} aria-hidden="true" />
+              <span>O link possui validade limitada</span>
             </div>
 
             <div>
-              <Mail
-                size={20}
-                aria-hidden="true"
-              />
-
-              <span>
-                As instruções são enviadas somente por
-                e-mail
-              </span>
+              <Mail size={20} aria-hidden="true" />
+              <span>As instruções são enviadas somente por e-mail</span>
             </div>
           </div>
         </div>
@@ -206,28 +153,19 @@ export default function EsqueciSenhaPage() {
             href="/"
             className={styles.logoMobileOnly}
           >
-            <Scale
-              size={28}
-              aria-hidden="true"
-            />
-
+            <Scale size={28} aria-hidden="true" />
             Social Jurídico
           </Link>
 
           {!successMsg ? (
             <>
               <header className={styles.formHeader}>
-                <span className={styles.eyebrow}>
-                  Esqueceu sua senha?
-                </span>
+                <span className={styles.eyebrow}>Esqueceu sua senha?</span>
 
-                <h1 className={styles.formTitle}>
-                  Solicite um novo acesso
-                </h1>
+                <h1 className={styles.formTitle}>Solicite um novo acesso</h1>
 
                 <p className={styles.formSubtitle}>
-                  Enviaremos as instruções de
-                  recuperação ao e-mail informado.
+                  Enviaremos as instruções de recuperação ao e-mail informado.
                 </p>
               </header>
 
@@ -237,11 +175,7 @@ export default function EsqueciSenhaPage() {
                   role="alert"
                   aria-live="assertive"
                 >
-                  <AlertCircle
-                    size={18}
-                    aria-hidden="true"
-                  />
-
+                  <AlertCircle size={18} aria-hidden="true" />
                   <span>{errorMsg}</span>
                 </div>
               )}
@@ -276,9 +210,8 @@ export default function EsqueciSenhaPage() {
                 </div>
 
                 <p className={styles.privacyNotice}>
-                  Por segurança, não informaremos se o
-                  endereço possui ou não uma conta
-                  cadastrada.
+                  Por segurança, não informaremos se o endereço possui ou não
+                  uma conta cadastrada.
                 </p>
 
                 <button
@@ -293,16 +226,12 @@ export default function EsqueciSenhaPage() {
                         className={styles.spinner}
                         aria-hidden="true"
                       />
-
                       Enviando instruções...
                     </>
                   ) : (
                     <>
                       Enviar instruções
-                      <Mail
-                        size={18}
-                        aria-hidden="true"
-                      />
+                      <Mail size={18} aria-hidden="true" />
                     </>
                   )}
                 </button>
@@ -320,53 +249,31 @@ export default function EsqueciSenhaPage() {
               </form>
             </>
           ) : (
-            <section
-              className={styles.successCard}
-              aria-live="polite"
-            >
+            <section className={styles.successCard} aria-live="polite">
               <div className={styles.successIcon}>
-                <CheckCircle2
-                  size={45}
-                  aria-hidden="true"
-                />
+                <CheckCircle2 size={45} aria-hidden="true" />
               </div>
 
-              <span className={styles.eyebrow}>
-                Solicitação recebida
-              </span>
+              <span className={styles.eyebrow}>Solicitação recebida</span>
 
-              <h1 className={styles.successTitle}>
-                Verifique seu e-mail
-              </h1>
+              <h1 className={styles.successTitle}>Verifique seu e-mail</h1>
 
-              <p className={styles.successDescription}>
-                {successMsg}
-              </p>
+              <p className={styles.successDescription}>{successMsg}</p>
 
               {submittedEmail && (
-                <strong
-                  className={
-                    styles.submittedEmail
-                  }
-                >
+                <strong className={styles.submittedEmail}>
                   {submittedEmail}
                 </strong>
               )}
 
               <div className={styles.emailInstructions}>
-                <Mail
-                  size={19}
-                  aria-hidden="true"
-                />
+                <Mail size={19} aria-hidden="true" />
 
                 <div>
-                  <strong>
-                    Não encontrou a mensagem?
-                  </strong>
-
+                  <strong>Não encontrou a mensagem?</strong>
                   <p>
-                    Verifique também as pastas Spam,
-                    Promoções, Atualizações e Lixeira.
+                    Verifique também as pastas Spam, Promoções, Atualizações e
+                    Lixeira.
                   </p>
                 </div>
               </div>

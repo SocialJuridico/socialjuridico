@@ -1,169 +1,194 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle2, AlertCircle, Loader2, Scale, Mail } from "lucide-react";
+import { Suspense, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  Scale,
+} from "lucide-react";
+
 import styles from "./ConfirmarEmail.module.css";
-import { confirmEmailAction } from "@/app/actions/authActions";
 
-function ConfirmarEmailContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const token_hash = searchParams.get("token_hash");
-  const type = searchParams.get("type") || "signup";
-  const statusParam = searchParams.get("status");
-  const messageParam = searchParams.get("message");
-
-  const [status, setStatus] = useState("loading"); // Começa em loading para confirmação automática
-  const [message, setMessage] = useState("");
-
-  const handleConfirm = async () => {
-    if (!token_hash) {
-      setStatus("error");
-      setMessage("Link de confirmação inválido ou incompleto.");
-      return;
-    }
-
-    try {
-      const result = await confirmEmailAction({ token_hash, type });
-      if (result.success) {
-        setStatus("success");
-        setMessage(result.message || "Sua conta foi ativada com sucesso!");
-        // Redireciona para o login após 3 segundos
-        setTimeout(() => {
-          router.push("/login");
-        }, 3000);
-      } else {
-        setStatus("error");
-        setMessage(result.message || "Erro ao confirmar e-mail. O link pode ter expirado ou já ter sido validado.");
-      }
-    } catch (err) {
-      setStatus("error");
-      setMessage("Erro de conexão ao tentar confirmar o e-mail.");
-    }
-  };
-
-  useEffect(() => {
-    if (statusParam === "success") {
-      setStatus("success");
-      setMessage(messageParam || "Sua conta foi ativada com sucesso!");
-      const timer = setTimeout(() => {
-        router.push("/login");
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-
-    if (statusParam === "error") {
-      setStatus("error");
-      setMessage(
-        messageParam ||
-          "Erro ao confirmar e-mail. O link pode ter expirado ou ja ter sido validado.",
-      );
-      return;
-    }
-
-    if (!token_hash) {
-      setStatus("error");
-      setMessage("Link de confirmação inválido ou incompleto.");
-      return;
-    }
-
-    // Delay de 1.2 segundos para garantir que link scanners automáticos não consumam o token
-    // e o usuário tenha uma transição visual suave de carregamento.
-    const timer = setTimeout(() => {
-      handleConfirm();
-    }, 1200);
-
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token_hash, statusParam, messageParam]);
-  
+function ConfirmationCard({ children }) {
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
+    <main className={styles.container}>
+      <section className={styles.card}>
         <div className={styles.logoRow}>
-          <Scale size={32} color="var(--color-gold)" />
-          <span className={styles.logoText}>SocialJurídico</span>
+          <Scale
+            size={32}
+            color="var(--color-gold)"
+            aria-hidden="true"
+          />
+
+          <span className={styles.logoText}>
+            Social Jurídico
+          </span>
         </div>
 
-        {status === "loading" && (
-          <div className={styles.stateContent}>
-            <div className={styles.iconWrapperLoading}>
-              <Loader2 size={48} className={styles.spinIcon} />
-            </div>
-            <h2 className={styles.title}>Confirmando sua conta...</h2>
-            <p className={styles.description}>
-              Estamos validando sua credencial de segurança. Isso levará apenas um instante.
-            </p>
-          </div>
-        )}
-
-        {status === "success" && (
-          <div className={styles.stateContent}>
-            <div className={styles.iconWrapperSuccess}>
-              <CheckCircle2 size={48} color="#10b981" />
-            </div>
-            <h2 className={styles.title} style={{ color: "#10b981" }}>Conta Ativada!</h2>
-            <p className={styles.description}>
-              {message}
-            </p>
-            <p className={styles.subtext}>
-              Redirecionando você para a página de login...
-            </p>
-            <button className={styles.actionBtn} onClick={() => router.push("/login")}>
-              Ir para o Login agora
-            </button>
-          </div>
-        )}
-
-        {status === "error" && (
-          <div className={styles.stateContent}>
-            <div className={styles.iconWrapperError}>
-              <AlertCircle size={48} color="#ef4444" />
-            </div>
-            <h2 className={styles.title} style={{ color: "#ef4444" }}>Ops! Algo deu errado</h2>
-            <p className={styles.description}>
-              {message}
-            </p>
-            <p className={styles.subtext}>
-              Isso geralmente ocorre se o link já foi utilizado ou se expirou (validade de 24 horas). Tente fazer login; se o erro persistir, use o suporte abaixo.
-            </p>
-            <div className={styles.buttonGroup}>
-              <button className={styles.actionBtn} onClick={() => router.push("/login")}>
-                Ir para o Login
-              </button>
-              <a 
-                href="https://wa.me/5515981657317?text=Olá, tive um problema ao confirmar meu e-mail de cadastro no SocialJurídico e gostaria de ajuda."
-                target="_blank"
-                rel="noopener noreferrer"
-                className={styles.supportBtn}
-              >
-                Falar com Suporte
-              </a>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+        {children}
+      </section>
+    </main>
   );
 }
 
-export default function ConfirmarEmail() {
+function ConfirmarEmailContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const status = searchParams.get("status");
+  const message = searchParams.get("message");
+
+  const isSuccess = status === "success";
+  const isError = status === "error";
+
+  useEffect(() => {
+    if (!isSuccess) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      router.push("/login");
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isSuccess, router]);
+
+  if (isSuccess) {
+    return (
+      <ConfirmationCard>
+        <div className={styles.stateContent}>
+          <div className={styles.iconWrapperSuccess}>
+            <CheckCircle2
+              size={48}
+              aria-hidden="true"
+            />
+          </div>
+
+          <h1 className={styles.successTitle}>
+            Conta ativada
+          </h1>
+
+          <p className={styles.description}>
+            {message ||
+              "Seu e-mail foi confirmado com sucesso."}
+          </p>
+
+          <p className={styles.subtext}>
+            Você será encaminhado para a página de login em
+            alguns segundos.
+          </p>
+
+          <button
+            type="button"
+            className={styles.actionBtn}
+            onClick={() => router.push("/login")}
+          >
+            Ir para o login
+          </button>
+        </div>
+      </ConfirmationCard>
+    );
+  }
+
+  if (isError) {
+    return (
+      <ConfirmationCard>
+        <div className={styles.stateContent}>
+          <div className={styles.iconWrapperError}>
+            <AlertCircle
+              size={48}
+              aria-hidden="true"
+            />
+          </div>
+
+          <h1 className={styles.errorTitle}>
+            Não foi possível confirmar
+          </h1>
+
+          <p className={styles.description}>
+            {message ||
+              "O link pode ter expirado, já ter sido utilizado ou estar incompleto."}
+          </p>
+
+          <p className={styles.subtext}>
+            Tente fazer login. Caso a conta continue pendente,
+            solicite um novo e-mail de confirmação.
+          </p>
+
+          <div className={styles.buttonGroup}>
+            <button
+              type="button"
+              className={styles.actionBtn}
+              onClick={() => router.push("/login")}
+            >
+              Ir para o login
+            </button>
+
+            <a
+              href="mailto:socialjuridico3@gmail.com?subject=Problema%20na%20confirma%C3%A7%C3%A3o%20de%20e-mail"
+              className={styles.supportBtn}
+            >
+              <Mail
+                size={17}
+                aria-hidden="true"
+              />
+
+              Falar com atendimento
+            </a>
+          </div>
+        </div>
+      </ConfirmationCard>
+    );
+  }
+
+  return (
+    <ConfirmationCard>
+      <div className={styles.stateContent}>
+        <div className={styles.iconWrapperLoading}>
+          <Loader2
+            size={48}
+            className={styles.spinIcon}
+            aria-hidden="true"
+          />
+        </div>
+
+        <h1 className={styles.title}>
+          Processando confirmação...
+        </h1>
+
+        <p className={styles.description}>
+          Aguarde enquanto verificamos o resultado da
+          confirmação da sua conta.
+        </p>
+      </div>
+    </ConfirmationCard>
+  );
+}
+
+export default function ConfirmarEmailPage() {
   return (
     <Suspense
       fallback={
-        <div className={styles.container}>
-          <div className={styles.card}>
-            <div className={styles.logoRow}>
-              <Scale size={32} color="var(--color-gold)" />
-              <span className={styles.logoText}>SocialJurídico</span>
-            </div>
+        <main className={styles.container}>
+          <section className={styles.card}>
             <div className={styles.stateContent}>
-              <Loader2 size={48} className={styles.spinIcon} />
-              <p className={styles.description}>Carregando componentes de segurança...</p>
+              <Loader2
+                size={42}
+                className={styles.spinIcon}
+                aria-label="Carregando"
+              />
+
+              <p className={styles.description}>
+                Carregando confirmação...
+              </p>
             </div>
-          </div>
-        </div>
+          </section>
+        </main>
       }
     >
       <ConfirmarEmailContent />

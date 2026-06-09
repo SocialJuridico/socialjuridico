@@ -5,10 +5,228 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { resend } from "@/lib/resend";
 import { formatStoredOAB, normalizeOAB, normalizeUF } from "@/lib/oab";
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://www.socialjuridico.com.br";
+
+const RESEND_FROM = "Social Jurídico <contato@socialjuridico.com.br>";
+
+const RESEND_COOLDOWN_MS = 60 * 1000;
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function createConfirmationEmailHtml({ name, role, verifyLink }) {
+  const safeName = escapeHtml(name || "usuário");
+  const encodedName = encodeURIComponent(name || "");
+
+  const lawyerInstructions =
+    role === "LAWYER"
+      ? `
+        <div
+          style="
+            margin: 24px 0;
+            padding: 20px;
+            border: 1px solid #d4af37;
+            border-radius: 10px;
+            background: #29251a;
+          "
+        >
+          <p
+            style="
+              margin: 0 0 12px;
+              color: #d4af37;
+              font-weight: bold;
+            "
+          >
+            Verificação profissional necessária
+          </p>
+
+          <p style="font-size:14px;line-height:1.6;">
+            Após confirmar seu e-mail, entre em contato com a equipe
+            do Social Jurídico para concluir a validação manual da sua OAB.
+          </p>
+
+          <p
+            style="
+              font-size:14px;
+              line-height:1.6;
+              color:#ff6b6b;
+              font-weight:bold;
+            "
+          >
+            A validação profissional deve ser concluída em até sete dias.
+          </p>
+
+          <a
+            href="https://wa.me/5515981657317?text=Ol%C3%A1%2C%20acabei%20de%20criar%20minha%20conta%20e%20gostaria%20de%20verificar%20minha%20OAB.%20Nome%3A%20${encodedName}"
+            style="
+              display:inline-block;
+              padding:11px 18px;
+              border-radius:7px;
+              color:#ffffff;
+              background:#25d366;
+              text-decoration:none;
+              font-size:14px;
+              font-weight:bold;
+            "
+          >
+            Iniciar validação da OAB
+          </a>
+        </div>
+      `
+      : "";
+
+  return `
+    <!doctype html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width" />
+        <title>Confirme sua conta</title>
+      </head>
+
+      <body
+        style="
+          margin:0;
+          padding:24px;
+          background:#111111;
+          font-family:Arial,sans-serif;
+          color:#ffffff;
+        "
+      >
+        <div
+          style="
+            max-width:620px;
+            margin:0 auto;
+            overflow:hidden;
+            border:1px solid #d4af37;
+            border-radius:14px;
+            background:#0d0f12;
+          "
+        >
+          <div style="padding:34px 36px;">
+            <h1
+              style="
+                margin:0 0 24px;
+                color:#d4af37;
+                text-align:center;
+                font-size:28px;
+              "
+            >
+              Bem-vindo ao Social Jurídico
+            </h1>
+
+            <p style="font-size:16px;line-height:1.65;">
+              Olá, <strong>${safeName}</strong>.
+            </p>
+
+            <p style="font-size:16px;line-height:1.65;">
+              Confirme seu endereço de e-mail para ativar sua conta
+              e acessar a plataforma.
+            </p>
+
+            ${lawyerInstructions}
+
+            <div style="margin:32px 0;text-align:center;">
+              <a
+                href="${verifyLink}"
+                style="
+                  display:inline-block;
+                  padding:14px 28px;
+                  border-radius:8px;
+                  color:#111111;
+                  background:#d4af37;
+                  text-decoration:none;
+                  font-size:16px;
+                  font-weight:bold;
+                "
+              >
+                Confirmar minha conta
+              </a>
+            </div>
+
+            <p
+              style="
+                margin:0;
+                color:#a8a8a8;
+                font-size:13px;
+                line-height:1.55;
+                text-align:center;
+              "
+            >
+              O link possui validade limitada. Caso você não tenha
+              solicitado este cadastro, ignore esta mensagem.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+async function sendConfirmationEmail({ email, name, role }) {
+  const { data: linkData, error: linkError } =
+    await supabaseAdmin.auth.admin.generateLink({
+      type: "signup",
+      email,
+      options: {
+        redirectTo: `${SITE_URL}/login`,
+      },
+    });
+
+  if (linkError) {
+    throw linkError;
+  }
+
+  const hashedToken = linkData?.properties?.hashed_token;
+
+  if (!hashedToken) {
+    throw new Error("Não foi possível gerar o token de confirmação.");
+  }
+
+  const verifyUrl = new URL("/api/auth/confirm-email", SITE_URL);
+
+  verifyUrl.searchParams.set("token_hash", hashedToken);
+  verifyUrl.searchParams.set("type", "signup");
+
+  const { error: resendError } = await resend.emails.send({
+    from: RESEND_FROM,
+    to: email,
+    subject: "Bem-vindo ao Social Jurídico — confirme sua conta",
+    html: createConfirmationEmailHtml({
+      name,
+      role,
+      verifyLink: verifyUrl.toString(),
+    }),
+  });
+
+  if (resendError) {
+    throw new Error(
+      resendError.message || "Erro ao enviar o e-mail de confirmação.",
+    );
+  }
+}
+
 export async function signUpAction(formData) {
-  const { email, password, name, phone, role, oab, estado, origem_descoberta, referral_code } =
-    formData;
-  const supabase = createClient();
+  const {
+    email,
+    password,
+    name,
+    phone,
+    role,
+    oab,
+    estado,
+    origem_descoberta,
+    referral_code,
+  } = formData;
   const normalizedEmail = email.trim().toLowerCase();
 
   try {
@@ -136,18 +354,22 @@ export async function signUpAction(formData) {
           .single();
 
         if (referrer) {
-           console.log(`Usuário ${name} indicado por ${referrer.name} (${referral_code})`);
-           
-           // Inserir registro na tabela de indicações para transparência
-           await supabaseAdmin.from("indicacoes").insert([{
-              indicador_id: referral_code, 
+          console.log(
+            `Usuário ${name} indicado por ${referrer.name} (${referral_code})`,
+          );
+
+          // Inserir registro na tabela de indicações para transparência
+          await supabaseAdmin.from("indicacoes").insert([
+            {
+              indicador_id: referral_code,
               nome_indicado: name,
               email_indicado: normalizedEmail,
-              status: 'CADASTRADO'
-           }]);
-           
-           // Atualizar o 'indicado_por' no perfil recém criado (para histórico no perfil)
-           await supabaseAdmin
+              status: "CADASTRADO",
+            },
+          ]);
+
+          // Atualizar o 'indicado_por' no perfil recém criado (para histórico no perfil)
+          await supabaseAdmin
             .from(table)
             .update({ indicado_por: referral_code })
             .eq("id", user.id);
@@ -158,77 +380,146 @@ export async function signUpAction(formData) {
       }
     }
 
-    // 3. Gerar link de verificação para enviar via Resend
+    // 3. Enviar o e-mail de confirmação pelo Resend
     try {
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: "signup",
+      await sendConfirmationEmail({
         email: normalizedEmail,
-        options: {
-          redirectTo: "https://socialjuridico.com.br/login"
-        }
+        name,
+        role,
       });
+    } catch (emailError) {
+      console.error("[Cadastro] Falha ao enviar confirmação:", emailError);
 
-      if (!linkError && linkData?.properties?.hashed_token) {
-        const verifyLink = `https://socialjuridico.com.br/api/auth/confirm-email?token_hash=${linkData.properties.hashed_token}&type=signup`;
-        
-        // --- Enviar Email via Resend com HTML Estilizado ---
-        await resend.emails.send({
-          from: 'Social Jurídico <contato@socialjuridico.com.br>',
-          to: normalizedEmail,
-          subject: 'Bem-vindo ao Social Jurídico - Confirme sua conta',
-          html: `
-            <div style="font-family: sans-serif; background-color: #0d0f12; color: #ffffff; padding: 40px; border-radius: 12px; max-width: 600px; margin: auto; border: 1px solid #d4af37;">
-              <h1 style="color: #d4af37; text-align: center;">Bem-vindo ao Social Jurídico!</h1>
-              <p style="font-size: 16px; line-height: 1.6;">Olá, <strong>${name}</strong>!</p>
-              <p style="font-size: 16px; line-height: 1.6;">Obrigado por se juntar à nossa plataforma dedicada a conectar talentos jurídicos e soluções práticas.</p>
-              
-              ${role === "LAWYER" ? `
-              <div style="background: rgba(212,175,55,0.1); border: 1px solid #d4af37; padding: 20px; border-radius: 10px; margin: 20px 0;">
-                <p style="margin-top: 0; font-weight: bold; color: #d4af37;">⚠️ Ação Necessária: Verificação de OAB</p>
-                <p style="font-size: 14px; line-height: 1.5;">
-                  Olá Dr(a). Para garantir a segurança da nossa comunidade, todos os perfis de advogados devem passar por uma verificação manual.
-                </p>
-                <p style="font-size: 14px; line-height: 1.5; font-weight: bold; color: #ff4d4d; margin: 10px 0;">
-                  IMPORTANTE: Você tem 7 dias para realizar a verificação da sua OAB, caso contrário, sua conta será suspensa temporariamente por segurança.
-                </p>
-                <p style="font-size: 14px; line-height: 1.5; margin-bottom: 0;">
-                  Após confirmar seu email, clique no link abaixo para falar com nosso suporte jurídico e validar seus dados: <br><br>
-                  <a href="https://wa.me/5515981657317?text=Olá, acabei de criar minha conta e gostaria de verificar minha OAB. Nome: ${name}" style="background-color: #25d366; color: #fff; padding: 10px 18px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px; display: inline-block;">Verificar OAB via WhatsApp</a>
-                </p>
-              </div>
-              ` : ""}
-
-              <p style="font-size: 16px; line-height: 1.6; text-align: center; margin: 30px 0;">
-                Para começar, por favor confirme seu endereço de email clicando no botão abaixo:
-              </p>
-              <div style="text-align: center;">
-                <a href="${verifyLink}" style="background-color: #d4af37; color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Confirmar minha conta</a>
-              </div>
-              <p style="font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 30px; text-align: center;">
-                Este link expira em 24 horas. Se você não solicitou esta conta, ignore este email.
-              </p>
-              <hr style="border: 0; border-top: 1px solid rgba(212,175,55,0.2); margin: 30px 0;">
-              <p style="font-size: 12px; color: rgba(255,255,255,0.4); text-align: center;">
-                Social Jurídico - Conectando o direito ao futuro.
-              </p>
-            </div>
-          `
-        });
-      }
-    } catch (emailErr) {
-      console.error("Erro ao enviar email de boas-vindas via Resend:", emailErr);
-      // Não trava o cadastro se o email falhar, o usuário ainda existe e pode pedir reenvio
+      // A conta continua criada para permitir o reenvio.
     }
 
     return {
       success: true,
-      message: "Conta criada! Por favor, verifique sua caixa de entrada para confirmar seu email antes de fazer login.",
+      message:
+        "Conta criada! Verifique sua caixa de entrada para confirmar seu e-mail antes de fazer login.",
     };
   } catch (error) {
     console.error("Erro no signUpAction:", error);
+
     return {
       success: false,
-      message: error.message || "Erro inesperado ao cadastrar.",
+      message: error?.message || "Erro inesperado ao cadastrar.",
+    };
+  }
+}
+
+export async function resendConfirmationAction(email) {
+  const genericResponse = {
+    success: true,
+    message:
+      "Se existir uma conta pendente para este e-mail, enviaremos um novo link de confirmação.",
+  };
+
+  try {
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
+
+    if (
+      !normalizedEmail ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
+    ) {
+      return {
+        success: false,
+        message: "Informe um endereço de e-mail válido.",
+      };
+    }
+
+    let profile = null;
+    let role = null;
+
+    const { data: lawyer, error: lawyerError } = await supabaseAdmin
+      .from("advogados")
+      .select("id, name, email")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+
+    if (lawyerError) {
+      console.error("[Reenvio] Erro ao consultar advogado:", lawyerError);
+    }
+
+    if (lawyer) {
+      profile = lawyer;
+      role = "LAWYER";
+    }
+
+    if (!profile) {
+      const { data: client, error: clientError } = await supabaseAdmin
+        .from("clientes")
+        .select("id, name, email")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (clientError) {
+        console.error("[Reenvio] Erro ao consultar cliente:", clientError);
+      }
+
+      if (client) {
+        profile = client;
+        role = "CLIENT";
+      }
+    }
+
+    // Não revela se o endereço existe.
+    if (!profile?.id) {
+      return genericResponse;
+    }
+
+    const { data: userData, error: userError } =
+      await supabaseAdmin.auth.admin.getUserById(profile.id);
+
+    if (userError || !userData?.user) {
+      console.warn("[Reenvio] Usuário Auth não encontrado:", normalizedEmail);
+
+      return genericResponse;
+    }
+
+    const user = userData.user;
+
+    // Não revela que a conta já está confirmada.
+    if (user.email_confirmed_at) {
+      return genericResponse;
+    }
+
+    const lastSentAt = user.user_metadata?.confirmation_email_last_sent_at;
+
+    if (lastSentAt) {
+      const elapsed = Date.now() - new Date(lastSentAt).getTime();
+
+      if (Number.isFinite(elapsed) && elapsed < RESEND_COOLDOWN_MS) {
+        return {
+          success: false,
+          code: "RESEND_COOLDOWN",
+          message: "Aguarde um minuto antes de solicitar outro e-mail.",
+        };
+      }
+    }
+
+    await sendConfirmationEmail({
+      email: normalizedEmail,
+      name: profile.name || user.user_metadata?.full_name || "usuário",
+      role,
+    });
+
+    await supabaseAdmin.auth.admin.updateUserById(user.id, {
+      user_metadata: {
+        ...user.user_metadata,
+        confirmation_email_last_sent_at: new Date().toISOString(),
+      },
+    });
+
+    return genericResponse;
+  } catch (error) {
+    console.error("[Reenvio] Erro inesperado:", error);
+
+    return {
+      success: false,
+      message:
+        "Não foi possível reenviar agora. Aguarde alguns minutos e tente novamente.",
     };
   }
 }
@@ -239,31 +530,36 @@ export async function signUpAction(formData) {
 export async function forgotPasswordAction(email) {
   try {
     const normalizedEmail = email.trim().toLowerCase();
-    
+
     // 1. Gerar link de recuperação via Supabase Admin
     const redirectUrl = "https://socialjuridico.com.br/atualizar-senha";
 
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-       type: "recovery",
-       email: normalizedEmail,
-       options: {
-         redirectTo: redirectUrl
-       }
-    });
+    const { data: linkData, error: linkError } =
+      await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email: normalizedEmail,
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
 
     if (linkError) {
       // Por segurança, não confirmamos se o email existe ou não (prevenção de enumeração)
       console.warn("Erro ao gerar link de recuperação:", linkError.message);
-      return { success: true, message: "Se o email estiver cadastrado, você receberá um link de recuperação em breve." };
+      return {
+        success: true,
+        message:
+          "Se o email estiver cadastrado, você receberá um link de recuperação em breve.",
+      };
     }
 
     const recoveryLink = linkData.properties.action_link;
 
     // 2. Enviar email customizado via Resend
     await resend.emails.send({
-      from: 'Social Jurídico <contato@socialjuridico.com.br>',
+      from: "Social Jurídico <contato@socialjuridico.com.br>",
       to: normalizedEmail,
-      subject: 'Recuperação de Senha - Social Jurídico',
+      subject: "Recuperação de Senha - Social Jurídico",
       html: `
         <div style="font-family: sans-serif; background-color: #0d0f12; color: #ffffff; padding: 40px; border-radius: 12px; max-width: 600px; margin: auto; border: 1px solid #d4af37;">
           <h1 style="color: #d4af37; text-align: center;">Redefinição de Senha</h1>
@@ -282,16 +578,20 @@ export async function forgotPasswordAction(email) {
             Social Jurídico - Segurança e Praticidade para sua Advocacia.
           </p>
         </div>
-      `
+      `,
     });
 
-    return { 
-      success: true, 
-      message: "Se o email estiver cadastrado, você receberá um link de recuperação em breve." 
+    return {
+      success: true,
+      message:
+        "Se o email estiver cadastrado, você receberá um link de recuperação em breve.",
     };
   } catch (error) {
     console.error("Erro no forgotPasswordAction:", error);
-    return { success: false, message: "Ocorreu um erro ao processar sua solicitação." };
+    return {
+      success: false,
+      message: "Ocorreu um erro ao processar sua solicitação.",
+    };
   }
 }
 

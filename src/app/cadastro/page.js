@@ -1,494 +1,1024 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import Link from "next/link";
-import { ArrowLeft, Scale, Loader2, CheckCircle2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import {
+  AlertCircle,
+  ArrowLeft,
+  BadgeCheck,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
+  Mail,
+  Scale,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
+
+import {
+  resendConfirmationAction,
+  signUpAction,
+} from "@/app/actions/authActions";
+import {
+  normalizeOABNumber,
+  normalizeUF,
+} from "@/lib/oab";
+
 import styles from "./Cadastro.module.css";
-import { verifyOAB } from "@/app/actions/verifyOAB";
-import { signUpAction } from "@/app/actions/authActions";
-import { normalizeOABNumber, normalizeUF } from "@/lib/oab";
+
+const states = [
+  ["AC", "Acre"],
+  ["AL", "Alagoas"],
+  ["AP", "Amapá"],
+  ["AM", "Amazonas"],
+  ["BA", "Bahia"],
+  ["CE", "Ceará"],
+  ["DF", "Distrito Federal"],
+  ["ES", "Espírito Santo"],
+  ["GO", "Goiás"],
+  ["MA", "Maranhão"],
+  ["MT", "Mato Grosso"],
+  ["MS", "Mato Grosso do Sul"],
+  ["MG", "Minas Gerais"],
+  ["PA", "Pará"],
+  ["PB", "Paraíba"],
+  ["PR", "Paraná"],
+  ["PE", "Pernambuco"],
+  ["PI", "Piauí"],
+  ["RJ", "Rio de Janeiro"],
+  ["RN", "Rio Grande do Norte"],
+  ["RS", "Rio Grande do Sul"],
+  ["RO", "Rondônia"],
+  ["RR", "Roraima"],
+  ["SC", "Santa Catarina"],
+  ["SP", "São Paulo"],
+  ["SE", "Sergipe"],
+  ["TO", "Tocantins"],
+];
+
+const initialForm = {
+  nome: "",
+  email: "",
+  whatsapp: "",
+  senha: "",
+  confirmarSenha: "",
+  oab: "",
+  estado: "",
+  origem_descoberta: "",
+  termsAccepted: false,
+};
+
+function formatPhone(value) {
+  const numbers = value.replace(/\D/g, "").slice(0, 11);
+
+  if (numbers.length <= 2) {
+    return numbers;
+  }
+
+  if (numbers.length <= 7) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+  }
+
+  if (numbers.length <= 10) {
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(
+      2,
+      6,
+    )}-${numbers.slice(6)}`;
+  }
+
+  return `(${numbers.slice(0, 2)}) ${numbers.slice(
+    2,
+    7,
+  )}-${numbers.slice(7)}`;
+}
 
 function CadastroContent() {
-  const [activeTab, setActiveTab] = useState("client");
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
-  
   const searchParams = useSearchParams();
+
   const referralCode = searchParams.get("ref");
+  const requestedProfile =
+    searchParams.get("perfil");
+  const requestedPlan =
+    searchParams.get("plano");
 
-  // Form State
-  const [formData, setFormData] = useState({
-    nome: "",
-    email: "",
-    whatsapp: "",
-    senha: "",
-    confirmarSenha: "",
-    // Advogados fields
-    oab: "",
-    estado: "",
-    origem_descoberta: "",
-  });
+  const [activeTab, setActiveTab] =
+    useState("client");
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const [formData, setFormData] =
+    useState(initialForm);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [resending, setResending] =
+    useState(false);
+
+  const [errorMsg, setErrorMsg] =
+    useState("");
+
+  const [successMsg, setSuccessMsg] =
+    useState("");
+
+  const [resendMessage, setResendMessage] =
+    useState("");
+
+  const [registeredEmail, setRegisteredEmail] =
+    useState("");
+
+  const [registeredRole, setRegisteredRole] =
+    useState("");
+
+  const [showPassword, setShowPassword] =
+    useState(false);
+
+  useEffect(() => {
+    if (
+      requestedProfile === "advogado" ||
+      requestedPlan === "start" ||
+      requestedPlan === "pro"
+    ) {
+      setActiveTab("lawyer");
+    }
+  }, [requestedProfile, requestedPlan]);
+
+  const planLabel = useMemo(() => {
+    if (requestedPlan === "start") {
+      return "Plano Start";
+    }
+
+    if (requestedPlan === "pro") {
+      return "Plano Pro";
+    }
+
+    return null;
+  }, [requestedPlan]);
+
+  function updateField(name, value) {
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  function handleChange(event) {
+    const { name, value, type, checked } =
+      event.target;
+
+    if (type === "checkbox") {
+      updateField(name, checked);
+      return;
+    }
 
     if (name === "oab") {
-      setFormData({ ...formData, oab: normalizeOABNumber(value) });
+      updateField(
+        name,
+        normalizeOABNumber(value),
+      );
       return;
     }
 
     if (name === "estado") {
-      setFormData({ ...formData, estado: normalizeUF(value) });
+      updateField(
+        name,
+        normalizeUF(value),
+      );
       return;
     }
 
-    setFormData({ ...formData, [name]: value });
-  };
+    if (name === "whatsapp") {
+      updateField(
+        name,
+        formatPhone(value),
+      );
+      return;
+    }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    updateField(name, value);
+  }
+
+  function changeProfile(profile) {
+    setActiveTab(profile);
     setErrorMsg("");
     setSuccessMsg("");
+    setResendMessage("");
 
-    // Validação básica do Front (senhas iguais)
-    if (formData.senha !== formData.confirmarSenha) {
-      setErrorMsg("As senhas não conferem. Verifique a digitação.");
+    if (profile === "client") {
+      setFormData((current) => ({
+        ...current,
+        oab: "",
+        estado: "",
+      }));
+    }
+  }
+
+  function validateForm() {
+    if (formData.nome.trim().length < 3) {
+      return "Informe seu nome completo.";
+    }
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        formData.email.trim(),
+      )
+    ) {
+      return "Informe um endereço de e-mail válido.";
+    }
+
+    const phoneNumbers =
+      formData.whatsapp.replace(/\D/g, "");
+
+    if (
+      phoneNumbers.length < 10 ||
+      phoneNumbers.length > 11
+    ) {
+      return "Informe um número de WhatsApp válido.";
+    }
+
+    if (formData.senha.length < 8) {
+      return "A senha deve possuir pelo menos oito caracteres.";
+    }
+
+    if (
+      formData.senha !==
+      formData.confirmarSenha
+    ) {
+      return "As senhas não conferem.";
+    }
+
+    if (
+      activeTab === "lawyer" &&
+      (!formData.estado ||
+        formData.oab.length < 3)
+    ) {
+      return "Informe uma UF e um número de OAB válidos.";
+    }
+
+    if (!formData.origem_descoberta) {
+      return "Informe onde conheceu o Social Jurídico.";
+    }
+
+    if (!formData.termsAccepted) {
+      return "Você precisa aceitar os Termos de Uso e a Política de Privacidade.";
+    }
+
+    return null;
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    if (loading) {
+      return;
+    }
+
+    setErrorMsg("");
+    setSuccessMsg("");
+    setResendMessage("");
+
+    const validationError =
+      validateForm();
+
+    if (validationError) {
+      setErrorMsg(validationError);
       return;
     }
 
     setLoading(true);
 
-    // Se for advogado, antes de criar o usuário no Supabase, verificamos a OAB
-    if (activeTab === "lawyer") {
-      const vResp = await verifyOAB(
-        formData.oab,
-        formData.estado,
-        formData.nome,
-      );
+    const normalizedEmail =
+      formData.email.trim().toLowerCase();
 
-      if (!vResp.isValid) {
-        setErrorMsg(vResp.message);
-        setLoading(false);
+    try {
+      const response = await signUpAction({
+        email: normalizedEmail,
+        password: formData.senha,
+        name: formData.nome.trim(),
+        phone: formData.whatsapp,
+        role:
+          activeTab === "lawyer"
+            ? "LAWYER"
+            : "CLIENT",
+        oab: formData.oab,
+        estado: formData.estado,
+        origem_descoberta:
+          formData.origem_descoberta,
+        referral_code: referralCode,
+        requested_plan: requestedPlan,
+      });
+
+      if (!response.success) {
+        setErrorMsg(
+          response.message ||
+            "Não foi possível concluir o cadastro.",
+        );
+
         return;
       }
-      setSuccessMsg(
-        vResp.skipped
-          ? vResp.message
-          : `OAB ${vResp.data?.oab || formData.oab} validada junto ao CNA.`,
+
+      setRegisteredEmail(normalizedEmail);
+      setRegisteredRole(
+        activeTab === "lawyer"
+          ? "LAWYER"
+          : "CLIENT",
       );
+
+      setSuccessMsg(
+        response.message ||
+          "Conta criada com sucesso.",
+      );
+
+      setFormData(initialForm);
+    } catch (error) {
+      console.error(
+        "[Cadastro] Erro:",
+        error,
+      );
+
+      setErrorMsg(
+        "Ocorreu um erro ao criar sua conta. Tente novamente.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResendConfirmation() {
+    if (!registeredEmail || resending) {
+      return;
     }
 
-    // Preparar dados para o Server Action
-    const authPayload = {
-      email: formData.email,
-      password: formData.senha,
-      name: formData.nome,
-      phone: formData.whatsapp,
-      role: activeTab === "lawyer" ? "LAWYER" : "CLIENT",
-      oab: formData.oab,
-      estado: formData.estado,
-      origem_descoberta: formData.origem_descoberta,
-      referral_code: referralCode,
-    };
+    setResending(true);
+    setResendMessage("");
+    setErrorMsg("");
 
-    const response = await signUpAction(authPayload);
+    try {
+      const response =
+        await resendConfirmationAction(
+          registeredEmail,
+        );
 
-    if (response.success) {
-      setSuccessMsg(response.message);
-      // Opcional: Limpar formulário
-      setFormData({
-        nome: "",
-        email: "",
-        whatsapp: "",
-        senha: "",
-        confirmarSenha: "",
-        oab: "",
-        estado: "",
-        origem_descoberta: "",
-      });
-    } else {
-      // Capturamos o código do erro para exibir links especiais
-      if (response.code === "USER_ALREADY_EXISTS") {
-        setErrorMsg({
-          type: "USER_ALREADY_EXISTS",
-          text: response.message
-        });
-      } else {
+      if (!response.success) {
         setErrorMsg(response.message);
+        return;
       }
-    }
 
-    setLoading(false);
-  };
+      setResendMessage(response.message);
+    } catch {
+      setErrorMsg(
+        "Não foi possível reenviar o e-mail agora.",
+      );
+    } finally {
+      setResending(false);
+    }
+  }
+
+  function resetRegistration() {
+    setRegisteredEmail("");
+    setRegisteredRole("");
+    setSuccessMsg("");
+    setResendMessage("");
+    setErrorMsg("");
+  }
 
   return (
-    <div className={styles.pageWrapper}>
-      {/* LADO ESQUERDO: Branding */}
-      <div className={styles.leftSide}>
-        <div className={styles.leftPattern}></div>
+    <main className={styles.pageWrapper}>
+      <section className={styles.leftSide}>
+        <div
+          className={styles.leftPattern}
+          aria-hidden="true"
+        />
 
-        <Link href="/" className={styles.backButton}>
-          <ArrowLeft size={20} />
-          Voltar a Home
+        <Link
+          href="/"
+          className={styles.backButton}
+        >
+          <ArrowLeft size={19} aria-hidden="true" />
+          Voltar para a Home
         </Link>
 
         <div className={styles.leftContent}>
+          <span className={styles.eyebrow}>
+            Social Jurídico
+          </span>
+
           <h1 className={styles.leftTitle}>
-            Comece sua jornada no <br />
-            <span style={{ color: "var(--color-gold)" }}>SocialJurídico</span>
+            Crie sua conta e escolha como deseja
+            utilizar a plataforma.
           </h1>
+
           <p className={styles.leftDesc}>
-            Junte-se a milhares de advogados e clientes que já resolveram seus
-            problemas de forma prática e segura com o uso da nossa plataforma.
+            Clientes podem publicar casos gratuitamente.
+            Advogados acessam oportunidades e ferramentas
+            profissionais conforme o plano contratado.
           </p>
 
-          <div className={styles.usersProof}>
-            <div className={styles.avatars}>
-              <div className={styles.avatar}>RC</div>
-              <div className={styles.avatar}>JS</div>
-              <div className={styles.avatar}>AL</div>
+          <div className={styles.trustList}>
+            <div>
+              <ShieldCheck size={20} aria-hidden="true" />
+
+              <span>
+                Dados tratados conforme nossa Política de
+                Privacidade
+              </span>
             </div>
-            <span className={styles.proofText}>Junte-se a +1.000 usuários</span>
+
+            <div>
+              <BadgeCheck size={20} aria-hidden="true" />
+
+              <span>
+                Perfis profissionais passam por validação
+                manual
+              </span>
+            </div>
+
+            <div>
+              <UserRound size={20} aria-hidden="true" />
+
+              <span>
+                Você escolhe como deseja utilizar a plataforma
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* LADO DIREITO: Formulario */}
-      <div className={styles.rightSide}>
+      <section className={styles.rightSide}>
         <div className={styles.formContainer}>
-          <Link href="/" className={styles.logoMobileOnly}>
-            <Scale size={28} />
-            SocialJurídico
+          <Link
+            href="/"
+            className={styles.logoMobileOnly}
+          >
+            <Scale size={28} aria-hidden="true" />
+            Social Jurídico
           </Link>
 
-          <div className={styles.formHeader}>
-            <h2 className={styles.formTitle}>Crie sua conta</h2>
-            <p className={styles.formSubtitle}>
-              Estamos animados para ter você a bordo
-            </p>
-          </div>
-
-          {/* TABS (Cliente / Advogado) */}
-          <div className={styles.tabs}>
-            <button
-              className={`${styles.tab} ${activeTab === "client" ? styles.tabActive : ""}`}
-              onClick={() => {
-                setActiveTab("client");
-                setErrorMsg("");
-                setSuccessMsg("");
-              }}
-              type="button"
+          {successMsg ? (
+            <section
+              className={styles.successCard}
+              aria-live="polite"
             >
-              Sou Cliente
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "lawyer" ? styles.tabActive : ""}`}
-              onClick={() => {
-                setActiveTab("lawyer");
-                setErrorMsg("");
-                setSuccessMsg("");
-              }}
-              type="button"
-            >
-              Sou Advogado
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit}>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Nome completo</label>
-              <input
-                type="text"
-                name="nome"
-                value={formData.nome}
-                onChange={handleChange}
-                className={styles.input}
-                placeholder="Seu nome completo"
-                required
-              />
-            </div>
-
-            <div className={styles.formRow}>
-              <div>
-                <label className={styles.label}>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={styles.input}
-                  placeholder="seu@email.com"
-                  required
+              <div className={styles.successIcon}>
+                <CheckCircle2
+                  size={44}
+                  aria-hidden="true"
                 />
               </div>
-              <div>
-                <label className={styles.label}>WhatsApp</label>
-                <input
-                  type="tel"
-                  name="whatsapp"
-                  value={formData.whatsapp}
-                  onChange={handleChange}
-                  className={styles.input}
-                  placeholder="(11) 90000-0000"
-                  required
-                />
-              </div>
-            </div>
 
-            {/* Campos Específicos de Advogado */}
-            {activeTab === "lawyer" && (
-              <div className={styles.formRow}>
-                <div>
-                  <label className={styles.label}>OAB (somente números)</label>
-                  <input
-                    type="text"
-                    name="oab"
-                    value={formData.oab}
-                    onChange={handleChange}
-                    className={styles.input}
-                    placeholder="Ex: 123456"
-                    required
+              <h1>
+                Verifique seu e-mail
+              </h1>
+
+              <p>
+                Enviamos um link de confirmação para:
+              </p>
+
+              <strong className={styles.registeredEmail}>
+                {registeredEmail}
+              </strong>
+
+              <p className={styles.successInstructions}>
+                Abra a mensagem enviada pelo Social Jurídico
+                e clique em “Confirmar minha conta”.
+              </p>
+
+              {registeredRole === "LAWYER" && (
+                <div className={styles.lawyerNotice}>
+                  Após confirmar o e-mail, siga as instruções
+                  recebidas para concluir a validação manual
+                  da sua OAB.
+                </div>
+              )}
+
+              <div className={styles.emailTips}>
+                <Mail size={18} aria-hidden="true" />
+
+                <span>
+                  Verifique também as pastas Spam,
+                  Promoções e Lixeira.
+                </span>
+              </div>
+
+              {resendMessage && (
+                <div className={styles.successMessage}>
+                  <CheckCircle2
+                    size={17}
+                    aria-hidden="true"
                   />
+
+                  {resendMessage}
                 </div>
-                <div>
-                  <label className={styles.label}>Estado (UF)</label>
-                  <select
-                    name="estado"
-                    value={formData.estado}
-                    onChange={handleChange}
-                    className={styles.input}
-                    required
-                  >
-                    <option value="" disabled>
-                      Selecione
-                    </option>
-                    <option value="AC">AC - Acre</option>
-                    <option value="AL">AL - Alagoas</option>
-                    <option value="AP">AP - Amapá</option>
-                    <option value="AM">AM - Amazonas</option>
-                    <option value="BA">BA - Bahia</option>
-                    <option value="CE">CE - Ceará</option>
-                    <option value="DF">DF - Distrito Federal</option>
-                    <option value="ES">ES - Espírito Santo</option>
-                    <option value="GO">GO - Goiás</option>
-                    <option value="MA">MA - Maranhão</option>
-                    <option value="MT">MT - Mato Grosso</option>
-                    <option value="MS">MS - Mato Grosso do Sul</option>
-                    <option value="MG">MG - Minas Gerais</option>
-                    <option value="PA">PA - Pará</option>
-                    <option value="PB">PB - Paraíba</option>
-                    <option value="PR">PR - Paraná</option>
-                    <option value="PE">PE - Pernambuco</option>
-                    <option value="PI">PI - Piauí</option>
-                    <option value="RJ">RJ - Rio de Janeiro</option>
-                    <option value="RN">RN - Rio Grande do Norte</option>
-                    <option value="RS">RS - Rio Grande do Sul</option>
-                    <option value="RO">RO - Rondônia</option>
-                    <option value="RR">RR - Roraima</option>
-                    <option value="SC">SC - Santa Catarina</option>
-                    <option value="SP">SP - São Paulo</option>
-                    <option value="SE">SE - Sergipe</option>
-                    <option value="TO">TO - Tocantins</option>
-                  </select>
+              )}
+
+              {errorMsg && (
+                <div
+                  className={styles.errorMessage}
+                  role="alert"
+                >
+                  <AlertCircle
+                    size={17}
+                    aria-hidden="true"
+                  />
+
+                  {errorMsg}
                 </div>
-              </div>
-            )}
+              )}
 
-            {activeTab === "lawyer" && formData.estado && formData.oab && (
-              <div
-                style={{
-                  marginTop: "8px",
-                  marginBottom: "16px",
-                  color: "var(--color-gold)",
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                }}
-              >
-                Formato salvo: {formData.estado} {formData.oab}
-              </div>
-            )}
-
-            <div className={styles.formGroup} style={{ marginTop: "16px" }}>
-              <label className={styles.label}>
-                Onde conheceu o Social Jurídico?
-              </label>
-              <select
-                name="origem_descoberta"
-                value={formData.origem_descoberta}
-                onChange={handleChange}
-                className={styles.input}
-                required
-              >
-                <option value="" disabled>
-                  Selecione uma opção
-                </option>
-                <option value="Grupo do Facebook">Grupo do Facebook</option>
-                <option value="Linkedin">Linkedin</option>
-                <option value="Instagram">Instagram</option>
-                <option value="Pesquisa Google">Pesquisa Google</option>
-              </select>
-            </div>
-
-            <div className={styles.formRow}>
-              <div>
-                <label className={styles.label}>Senha</label>
-                <input
-                  type="password"
-                  name="senha"
-                  value={formData.senha}
-                  onChange={handleChange}
-                  className={styles.input}
-                  placeholder="Mínimo 8 caracteres"
-                  required
-                />
-              </div>
-              <div>
-                <label className={styles.label}>Confirmar senha</label>
-                <input
-                  type="password"
-                  name="confirmarSenha"
-                  value={formData.confirmarSenha}
-                  onChange={handleChange}
-                  className={styles.input}
-                  placeholder="Mínimo 8 caracteres"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className={styles.checkboxGroup}>
-              <input
-                type="checkbox"
-                className={styles.checkbox}
-                required
-                id="terms"
-              />
-              <label htmlFor="terms" className={styles.checkboxLabel}>
-                Eu concordo com os{" "}
-                <Link href="/termos" className={styles.linkTag}>
-                  Termos de Uso
-                </Link>{" "}
-                e a{" "}
-                <Link href="/privacidade" className={styles.linkTag}>
-                  Política de Privacidade
+              <div className={styles.successActions}>
+                <Link
+                  href="/login"
+                  className={styles.primaryButton}
+                >
+                  Ir para o login
                 </Link>
-                .
-              </label>
-            </div>
 
-            {/* ERROR AND SUCCESS MESSAGES */}
-            {errorMsg && (
-              <div
-                style={{
-                  backgroundColor: "rgba(239, 68, 68, 0.1)",
-                  color: "#EF4444",
-                  padding: "16px",
-                  borderRadius: "10px",
-                  marginBottom: "20px",
-                  fontSize: "0.92rem",
-                  border: "1px solid rgba(239, 68, 68, 0.2)",
-                  lineHeight: "1.5"
-                }}
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={
+                    handleResendConfirmation
+                  }
+                  disabled={resending}
+                >
+                  {resending ? (
+                    <>
+                      <Loader2
+                        size={18}
+                        className={styles.spinner}
+                        aria-hidden="true"
+                      />
+                      Reenviando...
+                    </>
+                  ) : (
+                    "Reenviar confirmação"
+                  )}
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className={styles.newRegistrationButton}
+                onClick={resetRegistration}
               >
-                <div style={{ fontWeight: "bold", marginBottom: typeof errorMsg === 'object' ? "8px" : "0" }}>
-                  🚨 {typeof errorMsg === 'object' ? errorMsg.text : errorMsg}
-                </div>
-                
-                {typeof errorMsg === 'object' && errorMsg.type === "USER_ALREADY_EXISTS" && (
-                  <div style={{ display: "flex", gap: "12px", marginTop: "10px", flexWrap: "wrap" }}>
-                    <Link 
-                      href="/login/esqueci-senha" 
-                      style={{ 
-                        color: "var(--color-gold)", 
-                        textDecoration: "underline", 
-                        fontWeight: "600",
-                        fontSize: "0.85rem"
-                      }}
-                    >
-                      Esqueci minha senha
-                    </Link>
-                    <Link 
-                      href="/contato" 
-                      style={{ 
-                        color: "var(--color-gold)", 
-                        textDecoration: "underline", 
-                        fontWeight: "600",
-                        fontSize: "0.85rem"
-                      }}
-                    >
-                      Falar com suporte
-                    </Link>
+                Fazer outro cadastro
+              </button>
+            </section>
+          ) : (
+            <>
+              <header className={styles.formHeader}>
+                <span className={styles.eyebrow}>
+                  Criar conta
+                </span>
+
+                <h1 className={styles.formTitle}>
+                  Comece no Social Jurídico
+                </h1>
+
+                <p className={styles.formSubtitle}>
+                  Escolha seu perfil e preencha seus dados.
+                </p>
+
+                {planLabel && (
+                  <div className={styles.planIntent}>
+                    Interesse inicial: {planLabel}
                   </div>
                 )}
-              </div>
-            )}
+              </header>
 
-            {successMsg && (
-              <div style={{ textAlign: 'center', padding: '16px' }}>
-                <div style={{ color: 'var(--color-gold)', fontSize: '48px', marginBottom: '16px' }}>
-                  <CheckCircle2 size={64} style={{ margin: '0 auto' }} />
-                </div>
-                <h3 style={{ color: '#fff', fontSize: '1.25rem', marginBottom: '8px' }}>Verifique seu email!</h3>
-                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', marginBottom: '24px' }}>
-                  Enviamos um link de confirmação para <strong>{formData.email}</strong>. Por favor, clique no link para ativar sua conta antes de fazer o login.
-                </p>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                   <Link href="/login" className={styles.submitBtn} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    Ir para Login
-                   </Link>
-                   <button onClick={() => setSuccessMsg("")} className={styles.submitBtn} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    Fazer novo cadastro
-                   </button>
-                </div>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className={styles.submitBtn}
-              disabled={loading}
-            >
-              {loading ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                  }}
+              <div
+                className={styles.tabs}
+                role="tablist"
+                aria-label="Tipo de cadastro"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={
+                    activeTab === "client"
+                  }
+                  className={`${styles.tab} ${
+                    activeTab === "client"
+                      ? styles.tabActive
+                      : ""
+                  }`}
+                  onClick={() =>
+                    changeProfile("client")
+                  }
                 >
-                  <Loader2 className="animate-spin" size={20} />
-                  {activeTab === "lawyer"
-                    ? "Validando dados da OAB..."
-                    : "Criando Conta..."}
-                </div>
-              ) : (
-                "Criar conta"
-              )}
-            </button>
+                  Sou cliente
+                </button>
 
-            <div className={styles.loginHint}>
-              Já tem uma conta?{" "}
-              <Link href="/login" className={styles.linkTag}>
-                Fazer login
-              </Link>
-            </div>
-          </form>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={
+                    activeTab === "lawyer"
+                  }
+                  className={`${styles.tab} ${
+                    activeTab === "lawyer"
+                      ? styles.tabActive
+                      : ""
+                  }`}
+                  onClick={() =>
+                    changeProfile("lawyer")
+                  }
+                >
+                  Sou advogado
+                </button>
+              </div>
+
+              {activeTab === "lawyer" && (
+                <div className={styles.professionalNotice}>
+                  <BadgeCheck
+                    size={18}
+                    aria-hidden="true"
+                  />
+
+                  <p>
+                    Seus dados profissionais serão conferidos
+                    manualmente após a confirmação do e-mail.
+                  </p>
+                </div>
+              )}
+
+              <form
+                className={styles.form}
+                onSubmit={handleSubmit}
+                noValidate
+              >
+                <div className={styles.formGroup}>
+                  <label
+                    htmlFor="cadastro-nome"
+                    className={styles.label}
+                  >
+                    Nome completo
+                  </label>
+
+                  <input
+                    id="cadastro-nome"
+                    type="text"
+                    name="nome"
+                    value={formData.nome}
+                    onChange={handleChange}
+                    className={styles.input}
+                    placeholder="Seu nome completo"
+                    autoComplete="name"
+                    minLength={3}
+                    maxLength={120}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label
+                      htmlFor="cadastro-email"
+                      className={styles.label}
+                    >
+                      E-mail
+                    </label>
+
+                    <input
+                      id="cadastro-email"
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      className={styles.input}
+                      placeholder="seu@email.com"
+                      autoComplete="email"
+                      maxLength={160}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label
+                      htmlFor="cadastro-whatsapp"
+                      className={styles.label}
+                    >
+                      WhatsApp
+                    </label>
+
+                    <input
+                      id="cadastro-whatsapp"
+                      type="tel"
+                      name="whatsapp"
+                      value={formData.whatsapp}
+                      onChange={handleChange}
+                      className={styles.input}
+                      placeholder="(15) 99999-9999"
+                      autoComplete="tel"
+                      inputMode="tel"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                {activeTab === "lawyer" && (
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label
+                        htmlFor="cadastro-oab"
+                        className={styles.label}
+                      >
+                        Número da OAB
+                      </label>
+
+                      <input
+                        id="cadastro-oab"
+                        type="text"
+                        name="oab"
+                        value={formData.oab}
+                        onChange={handleChange}
+                        className={styles.input}
+                        placeholder="Somente números"
+                        inputMode="numeric"
+                        maxLength={10}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label
+                        htmlFor="cadastro-estado"
+                        className={styles.label}
+                      >
+                        Seccional
+                      </label>
+
+                      <select
+                        id="cadastro-estado"
+                        name="estado"
+                        value={formData.estado}
+                        onChange={handleChange}
+                        className={styles.input}
+                        required
+                        disabled={loading}
+                      >
+                        <option value="">
+                          Selecione
+                        </option>
+
+                        {states.map(([uf, name]) => (
+                          <option key={uf} value={uf}>
+                            {uf} — {name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                <div className={styles.formGroup}>
+                  <label
+                    htmlFor="cadastro-origem"
+                    className={styles.label}
+                  >
+                    Onde conheceu o Social Jurídico?
+                  </label>
+
+                  <select
+                    id="cadastro-origem"
+                    name="origem_descoberta"
+                    value={
+                      formData.origem_descoberta
+                    }
+                    onChange={handleChange}
+                    className={styles.input}
+                    required
+                    disabled={loading}
+                  >
+                    <option value="">
+                      Selecione uma opção
+                    </option>
+
+                    <option value="Grupo do Facebook">
+                      Grupo do Facebook
+                    </option>
+
+                    <option value="Instagram">
+                      Instagram
+                    </option>
+
+                    <option value="LinkedIn">
+                      LinkedIn
+                    </option>
+
+                    <option value="Pesquisa Google">
+                      Pesquisa no Google
+                    </option>
+
+                    <option value="Indicação">
+                      Indicação
+                    </option>
+
+                    <option value="Outro">
+                      Outro
+                    </option>
+                  </select>
+                </div>
+
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label
+                      htmlFor="cadastro-senha"
+                      className={styles.label}
+                    >
+                      Senha
+                    </label>
+
+                    <div className={styles.passwordField}>
+                      <input
+                        id="cadastro-senha"
+                        type={
+                          showPassword
+                            ? "text"
+                            : "password"
+                        }
+                        name="senha"
+                        value={formData.senha}
+                        onChange={handleChange}
+                        className={styles.input}
+                        placeholder="Mínimo de 8 caracteres"
+                        autoComplete="new-password"
+                        minLength={8}
+                        required
+                        disabled={loading}
+                      />
+
+                      <button
+                        type="button"
+                        className={styles.passwordToggle}
+                        onClick={() =>
+                          setShowPassword(
+                            (current) => !current,
+                          )
+                        }
+                        aria-label={
+                          showPassword
+                            ? "Ocultar senha"
+                            : "Mostrar senha"
+                        }
+                      >
+                        {showPassword ? (
+                          <EyeOff
+                            size={18}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Eye
+                            size={18}
+                            aria-hidden="true"
+                          />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label
+                      htmlFor="cadastro-confirmar-senha"
+                      className={styles.label}
+                    >
+                      Confirmar senha
+                    </label>
+
+                    <input
+                      id="cadastro-confirmar-senha"
+                      type={
+                        showPassword
+                          ? "text"
+                          : "password"
+                      }
+                      name="confirmarSenha"
+                      value={
+                        formData.confirmarSenha
+                      }
+                      onChange={handleChange}
+                      className={styles.input}
+                      placeholder="Repita a senha"
+                      autoComplete="new-password"
+                      minLength={8}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div className={styles.checkboxGroup}>
+                  <input
+                    id="cadastro-termos"
+                    type="checkbox"
+                    name="termsAccepted"
+                    checked={
+                      formData.termsAccepted
+                    }
+                    onChange={handleChange}
+                    className={styles.checkbox}
+                    required
+                    disabled={loading}
+                  />
+
+                  <label
+                    htmlFor="cadastro-termos"
+                    className={styles.checkboxLabel}
+                  >
+                    Concordo com os{" "}
+                    <Link
+                      href="/termos"
+                      className={styles.linkTag}
+                    >
+                      Termos de Uso
+                    </Link>{" "}
+                    e com a{" "}
+                    <Link
+                      href="/privacidade"
+                      className={styles.linkTag}
+                    >
+                      Política de Privacidade
+                    </Link>
+                    .
+                  </label>
+                </div>
+
+                {errorMsg && (
+                  <div
+                    className={styles.errorMessage}
+                    role="alert"
+                  >
+                    <AlertCircle
+                      size={18}
+                      aria-hidden="true"
+                    />
+
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className={styles.submitBtn}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2
+                        size={19}
+                        className={styles.spinner}
+                        aria-hidden="true"
+                      />
+
+                      {activeTab === "lawyer"
+                        ? "Criando perfil profissional..."
+                        : "Criando sua conta..."}
+                    </>
+                  ) : (
+                    "Criar conta"
+                  )}
+                </button>
+
+                <p className={styles.loginHint}>
+                  Já possui uma conta?{" "}
+                  <Link
+                    href="/login"
+                    className={styles.linkTag}
+                  >
+                    Fazer login
+                  </Link>
+                </p>
+              </form>
+            </>
+          )}
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
 
-export default function Cadastro() {
+export default function CadastroPage() {
   return (
-    <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0d0f12', color: '#d4af37' }}>
-        Carregando formulário...
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <main className={styles.loadingPage}>
+          <Loader2
+            size={35}
+            className={styles.spinner}
+            aria-label="Carregando cadastro"
+          />
+        </main>
+      }
+    >
       <CadastroContent />
     </Suspense>
   );

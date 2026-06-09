@@ -1,189 +1,23 @@
-.container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at center, #151821 0%, #090a0f 100%);
-  padding: 20px;
-  font-family: 'Inter', sans-serif;
-  color: #ffffff;
-}
-
-.card {
-  width: 100%;
-  max-width: 480px;
-  background: rgba(18, 20, 28, 0.7);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  border-radius: 20px;
-  padding: 40px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.logoRow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 35px;
-}
-
-.logoText {
-  font-size: 1.5rem;
+.successTitle {
+  margin: 0;
+  color: #10b981;
+  font-size: 2rem;
   font-weight: 800;
-  letter-spacing: 0.5px;
-  background: linear-gradient(135deg, #ffffff 0%, #a0a0a0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  line-height: 1.2;
 }
 
-.stateContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  animation: fadeIn 0.5s ease-out forwards;
-}
-
-.iconWrapper {
-  width: 90px;
-  height: 90px;
-  border-radius: 50%;
-  background: rgba(212, 175, 55, 0.1);
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 25px;
-  color: var(--color-gold, #d4af37);
-}
-
-.iconWrapperLoading {
-  composes: iconWrapper;
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-.iconWrapperSuccess {
-  composes: iconWrapper;
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.2);
-}
-
-.iconWrapperError {
-  composes: iconWrapper;
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.2);
-}
-
-.title {
-  font-size: 1.6rem;
+.errorTitle {
+  margin: 0;
+  color: #ef4444;
+  font-size: 2rem;
   font-weight: 800;
-  margin-bottom: 12px;
-  color: #ffffff;
-  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
-.description {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 30px;
+.iconWrapperSuccess svg {
+  color: #10b981;
 }
 
-.subtext {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.4);
-  margin-bottom: 20px;
-}
-
-.actionBtn {
-  width: 100%;
-  padding: 14px 28px;
-  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
-  border: none;
-  border-radius: 12px;
-  color: #000000;
-  font-size: 0.95rem;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.25);
-  transition: all 0.2s ease;
-}
-
-.actionBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
-}
-
-.actionBtn:active {
-  transform: translateY(0);
-}
-
-.buttonGroup {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.supportBtn {
-  width: 100%;
-  padding: 13px 28px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: #ffffff;
-  font-size: 0.95rem;
-  font-weight: 700;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.supportBtn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* Animations */
-.pulseIcon {
-  animation: pulse 2s infinite ease-in-out;
-}
-
-.spinIcon {
-  animation: spin 1s infinite linear;
-  color: var(--color-gold, #d4af37);
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.iconWrapperError svg {
+  color: #ef4444;
 }

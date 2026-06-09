@@ -525,72 +525,231 @@ export async function resendConfirmationAction(email) {
 }
 
 /**
- * Solicitação de recuperação de senha via Resend
+ * Solicitação de recuperação de senha via Resend.
+ *
+ * A resposta é sempre genérica para não revelar se o e-mail
+ * possui ou não uma conta cadastrada.
  */
 export async function forgotPasswordAction(email) {
-  try {
-    const normalizedEmail = email.trim().toLowerCase();
+  const genericResponse = {
+    success: true,
+    message:
+      "Se o e-mail estiver cadastrado, você receberá um link de recuperação em breve.",
+  };
 
-    // 1. Gerar link de recuperação via Supabase Admin
-    const redirectUrl = "https://socialjuridico.com.br/atualizar-senha";
+  try {
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
+
+    if (
+      !normalizedEmail ||
+      normalizedEmail.length > 160 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)
+    ) {
+      return {
+        success: false,
+        message: "Informe um endereço de e-mail válido.",
+      };
+    }
+
+    const redirectUrl = new URL("/atualizar-senha", SITE_URL);
+
+    redirectUrl.searchParams.set("type", "recovery");
 
     const { data: linkData, error: linkError } =
       await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
         email: normalizedEmail,
         options: {
-          redirectTo: redirectUrl,
+          redirectTo: redirectUrl.toString(),
         },
       });
 
     if (linkError) {
-      // Por segurança, não confirmamos se o email existe ou não (prevenção de enumeração)
-      console.warn("Erro ao gerar link de recuperação:", linkError.message);
+      console.warn(
+        "[Recuperação de senha] Não foi possível gerar o link:",
+        linkError.message,
+      );
+
+      return genericResponse;
+    }
+
+    const recoveryLink = linkData?.properties?.action_link;
+
+    if (!recoveryLink) {
+      console.warn("[Recuperação de senha] Link não retornado pelo Supabase.");
+
+      return genericResponse;
+    }
+
+    const { error: resendError } = await resend.emails.send({
+      from: RESEND_FROM,
+      to: normalizedEmail,
+      subject: "Redefinição de senha — Social Jurídico",
+      html: `
+          <!doctype html>
+          <html lang="pt-BR">
+            <head>
+              <meta charset="utf-8" />
+              <meta
+                name="viewport"
+                content="width=device-width"
+              />
+              <title>Redefinição de senha</title>
+            </head>
+
+            <body
+              style="
+                margin: 0;
+                padding: 24px;
+                background: #111111;
+                color: #ffffff;
+                font-family: Arial, sans-serif;
+              "
+            >
+              <div
+                style="
+                  max-width: 620px;
+                  margin: 0 auto;
+                  overflow: hidden;
+                  border: 1px solid rgba(212, 175, 55, 0.35);
+                  border-radius: 14px;
+                  background: #0d0f12;
+                "
+              >
+                <div style="padding: 34px 36px;">
+                  <p
+                    style="
+                      margin: 0 0 10px;
+                      color: #d4af37;
+                      font-size: 12px;
+                      font-weight: 700;
+                      letter-spacing: 0.08em;
+                      text-align: center;
+                      text-transform: uppercase;
+                    "
+                  >
+                    Social Jurídico
+                  </p>
+
+                  <h1
+                    style="
+                      margin: 0;
+                      color: #ffffff;
+                      font-size: 27px;
+                      line-height: 1.25;
+                      text-align: center;
+                    "
+                  >
+                    Redefinição de senha
+                  </h1>
+
+                  <p
+                    style="
+                      margin: 25px 0 0;
+                      color: #d7d7d7;
+                      font-size: 16px;
+                      line-height: 1.65;
+                    "
+                  >
+                    Recebemos uma solicitação para redefinir
+                    a senha da sua conta no Social Jurídico.
+                  </p>
+
+                  <p
+                    style="
+                      margin: 14px 0 0;
+                      color: #d7d7d7;
+                      font-size: 16px;
+                      line-height: 1.65;
+                    "
+                  >
+                    Clique no botão abaixo para criar uma nova
+                    senha.
+                  </p>
+
+                  <div
+                    style="
+                      margin: 32px 0;
+                      text-align: center;
+                    "
+                  >
+                    <a
+                      href="${recoveryLink}"
+                      style="
+                        display: inline-block;
+                        padding: 14px 27px;
+                        border-radius: 8px;
+                        color: #111111;
+                        background: #d4af37;
+                        font-size: 16px;
+                        font-weight: 700;
+                        text-decoration: none;
+                      "
+                    >
+                      Redefinir minha senha
+                    </a>
+                  </div>
+
+                  <div
+                    style="
+                      padding: 16px;
+                      border: 1px solid rgba(255, 255, 255, 0.08);
+                      border-radius: 10px;
+                      background: rgba(255, 255, 255, 0.025);
+                    "
+                  >
+                    <p
+                      style="
+                        margin: 0;
+                        color: #a8a8a8;
+                        font-size: 13px;
+                        line-height: 1.6;
+                      "
+                    >
+                      O link possui validade limitada. Caso você
+                      não tenha solicitado a redefinição, ignore
+                      esta mensagem. Sua senha atual permanecerá
+                      inalterada.
+                    </p>
+                  </div>
+
+                  <p
+                    style="
+                      margin: 26px 0 0;
+                      color: #737373;
+                      font-size: 12px;
+                      line-height: 1.5;
+                      text-align: center;
+                    "
+                  >
+                    Esta é uma mensagem automática do
+                    Social Jurídico.
+                  </p>
+                </div>
+              </div>
+            </body>
+          </html>
+        `,
+    });
+
+    if (resendError) {
+      console.error("[Recuperação de senha] Erro no Resend:", resendError);
+
       return {
-        success: true,
+        success: false,
         message:
-          "Se o email estiver cadastrado, você receberá um link de recuperação em breve.",
+          "Não foi possível enviar o e-mail agora. Aguarde alguns minutos e tente novamente.",
       };
     }
 
-    const recoveryLink = linkData.properties.action_link;
-
-    // 2. Enviar email customizado via Resend
-    await resend.emails.send({
-      from: "Social Jurídico <contato@socialjuridico.com.br>",
-      to: normalizedEmail,
-      subject: "Recuperação de Senha - Social Jurídico",
-      html: `
-        <div style="font-family: sans-serif; background-color: #0d0f12; color: #ffffff; padding: 40px; border-radius: 12px; max-width: 600px; margin: auto; border: 1px solid #d4af37;">
-          <h1 style="color: #d4af37; text-align: center;">Redefinição de Senha</h1>
-          <p style="font-size: 16px; line-height: 1.6;">Você solicitou a recuperação da sua senha no <strong>Social Jurídico</strong>.</p>
-          <p style="font-size: 16px; line-height: 1.6; text-align: center; margin: 30px 0;">
-            Clique no botão abaixo para criar uma nova senha:
-          </p>
-          <div style="text-align: center;">
-            <a href="${recoveryLink}" style="background-color: #d4af37; color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; display: inline-block;">Redefinir Senha</a>
-          </div>
-          <p style="font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 30px;">
-            Este link é válido por tempo limitado. Se você não solicitou isso, pode ignorar este email com segurança.
-          </p>
-          <hr style="border: 0; border-top: 1px solid rgba(212,175,55,0.2); margin: 30px 0;">
-          <p style="font-size: 12px; color: rgba(255,255,255,0.4); text-align: center;">
-            Social Jurídico - Segurança e Praticidade para sua Advocacia.
-          </p>
-        </div>
-      `,
-    });
-
-    return {
-      success: true,
-      message:
-        "Se o email estiver cadastrado, você receberá um link de recuperação em breve.",
-    };
+    return genericResponse;
   } catch (error) {
-    console.error("Erro no forgotPasswordAction:", error);
+    console.error("[Recuperação de senha] Erro inesperado:", error);
+
     return {
       success: false,
-      message: "Ocorreu um erro ao processar sua solicitação.",
+      message: "Não foi possível processar sua solicitação agora.",
     };
   }
 }

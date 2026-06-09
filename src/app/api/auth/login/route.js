@@ -73,21 +73,22 @@ export async function POST(request) {
     }
 
     // Se o erro for "Email not confirmed", retornar erro amigável orientando a confirmação
-    if (authError && (
-      authError.message?.toLowerCase().includes("email not confirmed") ||
-      authError.message?.toLowerCase().includes("email_not_confirmed") ||
-      authError.code === "email_not_confirmed"
-    )) {
+    if (
+      authError &&
+      (authError.message?.toLowerCase().includes("email not confirmed") ||
+        authError.message?.toLowerCase().includes("email_not_confirmed") ||
+        authError.code === "email_not_confirmed")
+    ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Seu e-mail ainda não foi confirmado. Por favor, verifique sua caixa de entrada (e a pasta de spam) e clique no link de confirmação enviado.",
+          code: "EMAIL_NOT_CONFIRMED",
+          message:
+            "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou solicite um novo link.",
         },
         { status: 401 },
       );
     }
-
-    const DEFAULT_PASSWORD = "socialjuridico1!";
 
     // Se falhar, vamos tentar o "Lazy Sync" para usuários antigos/migrados
     if (
@@ -95,7 +96,6 @@ export async function POST(request) {
       (authError.status === 401 || authError.status === 400) &&
       password === DEFAULT_PASSWORD
     ) {
-
       const db = supabaseAdmin || supabase;
       let existingProfile = null;
 
@@ -113,7 +113,6 @@ export async function POST(request) {
       }
 
       if (existingProfile) {
-
         // Criar ou atualizar usuário no Auth com a senha padrão e flag de troca obrigatória
         const { data: syncData, error: syncError } =
           await supabaseAdmin.auth.admin.createUser({
@@ -184,14 +183,17 @@ export async function POST(request) {
 
     // BLOQUEIO ADICIONAL: Mesmo que o Supabase permita o login, nós verificamos se o email foi confirmado
     if (!user.email_confirmed_at) {
-       await supabase.auth.signOut(); // Revoga a sessão criada
-       return NextResponse.json(
-         {
-           success: false,
-           message: "Seu e-mail ainda não foi confirmado. Por favor, verifique sua caixa de entrada e clique no link de confirmação.",
-         },
-         { status: 401 },
-       );
+      await supabase.auth.signOut();
+
+      return NextResponse.json(
+        {
+          success: false,
+          code: "EMAIL_NOT_CONFIRMED",
+          message:
+            "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou solicite um novo link.",
+        },
+        { status: 401 },
+      );
     }
 
     const db = supabaseAdmin || supabase;
@@ -202,7 +204,9 @@ export async function POST(request) {
     for (const table of tables) {
       const { data } = await db
         .from(table)
-        .select(`id, name, email, role, phone, avatar${table === "advogados" ? ", oab_verification_status, oab_warning_started_at, escritorio_id" : ""}`)
+        .select(
+          `id, name, email, role, phone, avatar${table === "advogados" ? ", oab_verification_status, oab_warning_started_at, escritorio_id" : ""}`,
+        )
         .eq("id", user.id)
         .maybeSingle();
       if (data) {
@@ -217,9 +221,10 @@ export async function POST(request) {
       return NextResponse.json(
         {
           success: false,
-          message: "Acesso restrito. Membros de escritório (Enterprise) devem efetuar o login pela aba 'Escritórios (Enterprise)'."
+          message:
+            "Acesso restrito. Membros de escritório (Enterprise) devem efetuar o login pela aba 'Escritórios (Enterprise)'.",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -228,24 +233,34 @@ export async function POST(request) {
       let isError = profile.oab_verification_status === "ERROR";
 
       // Se estiver pendente, verifica se o prazo de 7 dias já estourou enquanto estava offline
-      if (!isError && profile.oab_verification_status === "PENDING" && profile.oab_warning_started_at) {
+      if (
+        !isError &&
+        profile.oab_verification_status === "PENDING" &&
+        profile.oab_warning_started_at
+      ) {
         const startedDate = new Date(profile.oab_warning_started_at);
-        const daysPassed = (new Date().getTime() - startedDate.getTime()) / (1000 * 60 * 60 * 24);
-        
+        const daysPassed =
+          (new Date().getTime() - startedDate.getTime()) /
+          (1000 * 60 * 60 * 24);
+
         if (daysPassed >= 7) {
           isError = true;
           // Suspende a conta imediatamente no banco
-          await db.from("advogados").update({ oab_verification_status: "ERROR" }).eq("id", profile.id);
+          await db
+            .from("advogados")
+            .update({ oab_verification_status: "ERROR" })
+            .eq("id", profile.id);
         }
       }
 
       if (isError) {
         await supabase.auth.signOut(); // Revoga a sessão
         return NextResponse.json(
-          { 
-            success: false, 
+          {
+            success: false,
             type: "OAB_ERROR",
-            message: "Sua verificação de OAB apresentou inconsistências ou o prazo de envio expirou, e seu acesso foi restrito." 
+            message:
+              "Sua verificação de OAB apresentou inconsistências ou o prazo de envio expirou, e seu acesso foi restrito.",
           },
           { status: 403 },
         );

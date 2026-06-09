@@ -1,289 +1,778 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import {
+  Suspense,
+  useEffect,
+  useState,
+} from "react";
 import Link from "next/link";
-import { ArrowLeft, Scale, Loader2, AlertCircle } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  BadgeCheck,
+  Building2,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
+  LockKeyhole,
+  Mail,
+  Scale,
+  ShieldCheck,
+  X,
+} from "lucide-react";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+
+import { resendConfirmationAction } from "@/app/actions/authActions";
+
 import styles from "./Login.module.css";
-import { useRouter, useSearchParams } from "next/navigation";
+
+const initialForm = {
+  email: "",
+  senha: "",
+};
+
+function getSafeRedirect(value) {
+  if (
+    typeof value !== "string" ||
+    !value.startsWith("/") ||
+    value.startsWith("//")
+  ) {
+    return "/dashboard/cliente";
+  }
+
+  return value;
+}
 
 function LoginContent() {
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const sessionExpired = searchParams.get("expired") === "true";
-  const trackId = searchParams.get("trackId");
-  const redirectTo = searchParams.get("redirectTo");
-  const [oabError, setOabError] = useState(false);
-  const [activeTab, setActiveTab] = useState("individual"); // "individual" ou "escritorios"
-  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
+
+  const sessionExpired =
+    searchParams.get("expired") === "true";
+
+  const trackId =
+    searchParams.get("trackId");
+
+  const redirectTo = getSafeRedirect(
+    searchParams.get("redirectTo"),
+  );
+
+  const [formData, setFormData] =
+    useState(initialForm);
+
+  const [activeTab, setActiveTab] =
+    useState("individual");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [resending, setResending] =
+    useState(false);
+
+  const [showPassword, setShowPassword] =
+    useState(false);
+
+  const [errorMsg, setErrorMsg] =
+    useState("");
+
+  const [successMsg, setSuccessMsg] =
+    useState("");
+
+  const [resendMessage, setResendMessage] =
+    useState("");
+
+  const [canResendConfirmation, setCanResendConfirmation] =
+    useState(false);
+
+  const [oabError, setOabError] =
+    useState(false);
+
+  const [
+    showEnterpriseModal,
+    setShowEnterpriseModal,
+  ] = useState(false);
 
   useEffect(() => {
-    // Limpar o flag do popup de Advogado do Mês ao carregar a tela de login
-    // Isso garante que ele apareça novamente após o login ser efetuado.
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("advogadoMesShown");
-    }
+    sessionStorage.removeItem(
+      "advogadoMesShown",
+    );
   }, []);
 
   useEffect(() => {
-    if (searchParams.get("oab_error") === "true") {
+    if (
+      searchParams.get("oab_error") ===
+      "true"
+    ) {
       setOabError(true);
     }
   }, [searchParams]);
 
-  const [formData, setFormData] = useState({
-    email: "",
-    senha: "",
-  });
+  useEffect(() => {
+    const modalOpen =
+      oabError || showEnterpriseModal;
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+    if (!modalOpen) {
+      return undefined;
+    }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setOabError(false);
+        setShowEnterpriseModal(false);
+      }
+    }
+
+    window.addEventListener(
+      "keydown",
+      handleEscape,
+    );
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+
+      window.removeEventListener(
+        "keydown",
+        handleEscape,
+      );
+    };
+  }, [oabError, showEnterpriseModal]);
+
+  function updateField(name, value) {
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  function handleChange(event) {
+    const { name, value } =
+      event.target;
+
+    updateField(name, value);
+
     setErrorMsg("");
     setSuccessMsg("");
+    setResendMessage("");
+    setCanResendConfirmation(false);
+  }
+
+  function changeTab(tab) {
+    setActiveTab(tab);
+    setErrorMsg("");
+    setSuccessMsg("");
+    setResendMessage("");
+    setCanResendConfirmation(false);
+  }
+
+  function validateForm() {
+    const normalizedEmail =
+      formData.email.trim();
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+        normalizedEmail,
+      )
+    ) {
+      return "Informe um endereço de e-mail válido.";
+    }
+
+    if (!formData.senha) {
+      return "Informe sua senha.";
+    }
+
+    return null;
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    if (loading) {
+      return;
+    }
+
+    setErrorMsg("");
+    setSuccessMsg("");
+    setResendMessage("");
+    setCanResendConfirmation(false);
+
+    const validationError =
+      validateForm();
+
+    if (validationError) {
+      setErrorMsg(validationError);
+      return;
+    }
+
     setLoading(true);
 
-    const endpoint = activeTab === "escritorios" ? "/api/auth/login-escritorio" : "/api/auth/login";
+    const endpoint =
+      activeTab === "escritorios"
+        ? "/api/auth/login-escritorio"
+        : "/api/auth/login";
 
     try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email, password: formData.senha }),
-      });
-      const response = await res.json();
+      const response = await fetch(
+        endpoint,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            email: formData.email
+              .trim()
+              .toLowerCase(),
+            password: formData.senha,
+          }),
+        },
+      );
 
-      if (response.success) {
-        setSuccessMsg("Login realizado com sucesso! Redirecionando...");
+      const data = await response
+        .json()
+        .catch(() => null);
 
-        setTimeout(() => {
-          const role = response.user?.role || "CLIENT";
-          const cargo = response.user?.cargo || null;
-          const needsUpdate = response.user?.needsPasswordUpdate === true;
-
-          if (needsUpdate) {
-            router.push("/atualizar-senha");
-          } else {
-            if (activeTab === "escritorios") {
-              if (cargo === "advogado") {
-                router.push("/dashboard/advogado");
-              } else {
-                router.push("/dashboard/escritorio");
-              }
-            } else {
-              if (role === "ADMIN") router.push("/dashboard/admin");
-              else if (cargo === "secretaria") router.push("/dashboard/escritorio");
-              else if (role === "LAWYER") router.push("/dashboard/advogado");
-              else {
-                let redirectTarget = redirectTo || "/dashboard/cliente";
-                if (trackId) {
-                  redirectTarget += (redirectTarget.includes("?") ? "&" : "?") + `trackId=${trackId}`;
-                }
-                router.push(redirectTarget);
-              }
-            }
-          }
-        }, 1500);
-      } else {
-        if (response.type === "OAB_ERROR") {
+      if (!response.ok || !data?.success) {
+        if (
+          data?.type === "OAB_ERROR"
+        ) {
           setOabError(true);
-        } else {
-          setErrorMsg(
-            response.message ||
-              "Erro ao realizar login. Verifique suas credenciais.",
-          );
+          return;
         }
-        setLoading(false);
+
+        if (
+          data?.code ===
+          "EMAIL_NOT_CONFIRMED"
+        ) {
+          setCanResendConfirmation(true);
+        }
+
+        setErrorMsg(
+          data?.message ||
+            "Não foi possível realizar o login. Verifique suas credenciais.",
+        );
+
+        return;
       }
-    } catch (err) {
-      console.error("Erro ao autenticar:", err);
-      setErrorMsg("Erro de rede ao autenticar. Tente novamente.");
+
+      setSuccessMsg(
+        "Login realizado. Redirecionando...",
+      );
+
+      const userRole =
+        data.user?.role || "CLIENT";
+
+      const cargo =
+        data.user?.cargo || null;
+
+      const needsPasswordUpdate =
+        data.user
+          ?.needsPasswordUpdate === true;
+
+      window.setTimeout(() => {
+        if (needsPasswordUpdate) {
+          router.push(
+            "/atualizar-senha",
+          );
+
+          return;
+        }
+
+        if (
+          activeTab === "escritorios"
+        ) {
+          if (cargo === "advogado") {
+            router.push(
+              "/dashboard/advogado",
+            );
+          } else {
+            router.push(
+              "/dashboard/escritorio",
+            );
+          }
+
+          return;
+        }
+
+        if (userRole === "ADMIN") {
+          router.push(
+            "/dashboard/admin",
+          );
+
+          return;
+        }
+
+        if (cargo === "secretaria") {
+          router.push(
+            "/dashboard/escritorio",
+          );
+
+          return;
+        }
+
+        if (userRole === "LAWYER") {
+          router.push(
+            "/dashboard/advogado",
+          );
+
+          return;
+        }
+
+        let target = redirectTo;
+
+        if (trackId) {
+          const separator =
+            target.includes("?")
+              ? "&"
+              : "?";
+
+          target += `${separator}trackId=${encodeURIComponent(
+            trackId,
+          )}`;
+        }
+
+        router.push(target);
+      }, 900);
+    } catch (error) {
+      console.error(
+        "[Login] Erro ao autenticar:",
+        error,
+      );
+
+      setErrorMsg(
+        "Não foi possível conectar ao servidor. Tente novamente.",
+      );
+    } finally {
       setLoading(false);
     }
-  };
+  }
+
+  async function handleResendConfirmation() {
+    if (
+      resending ||
+      !formData.email.trim()
+    ) {
+      return;
+    }
+
+    setResending(true);
+    setResendMessage("");
+    setErrorMsg("");
+
+    try {
+      const response =
+        await resendConfirmationAction(
+          formData.email,
+        );
+
+      if (!response.success) {
+        setErrorMsg(response.message);
+        return;
+      }
+
+      setResendMessage(
+        response.message,
+      );
+    } catch (error) {
+      console.error(
+        "[Login] Erro ao reenviar:",
+        error,
+      );
+
+      setErrorMsg(
+        "Não foi possível reenviar o e-mail agora.",
+      );
+    } finally {
+      setResending(false);
+    }
+  }
 
   return (
-    <div className={styles.pageWrapper}>
-      {/* LADO ESQUERDO: Branding (Mesmo do Cadastro) */}
-      <div className={styles.leftSide}>
-        <div className={styles.leftPattern}></div>
+    <main className={styles.pageWrapper}>
+      <section className={styles.leftSide}>
+        <div
+          className={styles.leftPattern}
+          aria-hidden="true"
+        />
 
-        <Link prefetch={false} href="/" className={styles.backButton}>
-          <ArrowLeft size={20} />
-          Voltar a Home
+        <Link
+          prefetch={false}
+          href="/"
+          className={styles.backButton}
+        >
+          <ArrowLeft
+            size={19}
+            aria-hidden="true"
+          />
+
+          Voltar para a Home
         </Link>
 
         <div className={styles.leftContent}>
+          <span className={styles.eyebrow}>
+            Área de acesso
+          </span>
+
           <h1 className={styles.leftTitle}>
-            Bem-vindo de volta ao <br />
-            <span style={{ color: "var(--color-gold)" }}>SocialJurídico</span>
+            Continue sua jornada no
+            <span className={styles.highlight}>
+              {" "}
+              Social Jurídico.
+            </span>
           </h1>
+
           <p className={styles.leftDesc}>
-            Acesse sua conta para continuar gerenciando seus casos, conversando
-            com advogados ou acompanhando seus clientes.
+            Acesse sua conta para acompanhar
+            casos, conversas, clientes,
+            oportunidades e ferramentas
+            profissionais.
           </p>
 
-          <div className={styles.usersProof}>
-            <div className={styles.avatars}>
-              <div className={styles.avatar}>RC</div>
-              <div className={styles.avatar}>JS</div>
-              <div className={styles.avatar}>AL</div>
+          <div className={styles.trustList}>
+            <div>
+              <ShieldCheck
+                size={20}
+                aria-hidden="true"
+              />
+
+              <span>
+                Autenticação e controle de
+                sessão
+              </span>
             </div>
-            <span className={styles.proofText}>Junte-se a +1.000 usuários</span>
+
+            <div>
+              <LockKeyhole
+                size={20}
+                aria-hidden="true"
+              />
+
+              <span>
+                Acesso direcionado conforme o
+                perfil
+              </span>
+            </div>
+
+            <div>
+              <BadgeCheck
+                size={20}
+                aria-hidden="true"
+              />
+
+              <span>
+                Validação manual de perfis
+                profissionais
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* LADO DIREITO: Formulario de Login */}
-      <div className={`${styles.rightSide} ${activeTab === "escritorios" ? styles.escritorioBg : ""}`}>
+      <section
+        className={styles.rightSide}
+      >
         <div className={styles.formContainer}>
-          <Link prefetch={false} href="/" className={styles.logoMobileOnly}>
-            <Scale size={28} />
-            SocialJurídico
+          <Link
+            prefetch={false}
+            href="/"
+            className={styles.logoMobileOnly}
+          >
+            <Scale
+              size={28}
+              aria-hidden="true"
+            />
+
+            Social Jurídico
           </Link>
 
-          {/* Abas de Login */}
-          <div className={styles.tabContainer}>
+          <div
+            className={styles.tabContainer}
+            role="tablist"
+            aria-label="Tipo de acesso"
+          >
             <button
               type="button"
-              className={`${styles.tab} ${activeTab === "individual" ? styles.activeTab : ""}`}
-              onClick={() => {
-                setActiveTab("individual");
-                setErrorMsg("");
-              }}
+              role="tab"
+              aria-selected={
+                activeTab === "individual"
+              }
+              className={`${styles.tab} ${
+                activeTab === "individual"
+                  ? styles.activeTab
+                  : ""
+              }`}
+              onClick={() =>
+                changeTab("individual")
+              }
             >
-              Profissional / Individual
+              Acesso individual
             </button>
+
             <button
               type="button"
-              className={`${styles.tab} ${activeTab === "escritorios" ? styles.activeTabEscritorio : ""}`}
-              onClick={() => {
-                setActiveTab("escritorios");
-                setErrorMsg("");
-              }}
+              role="tab"
+              aria-selected={
+                activeTab === "escritorios"
+              }
+              className={`${styles.tab} ${
+                activeTab === "escritorios"
+                  ? styles.activeTab
+                  : ""
+              }`}
+              onClick={() =>
+                changeTab("escritorios")
+              }
             >
-              Escritórios (Enterprise)
+              Escritório Enterprise
             </button>
           </div>
 
-          <div className={styles.formHeader}>
-            <h2 className={styles.formTitle}>Acesse sua conta</h2>
+          <header className={styles.formHeader}>
+            <span className={styles.eyebrow}>
+              {activeTab === "escritorios"
+                ? "Gestão de escritório"
+                : "Bem-vindo de volta"}
+            </span>
+
+            <h1 className={styles.formTitle}>
+              Acesse sua conta
+            </h1>
+
             <p className={styles.formSubtitle}>
-              {activeTab === "escritorios" 
-                ? "Painel de Gestão do seu Escritório Enterprise." 
-                : "Digite seu email e senha para entrar."}
+              {activeTab === "escritorios"
+                ? "Entre com os dados vinculados ao seu escritório."
+                : "Informe seu e-mail e sua senha para continuar."}
             </p>
-          </div>
-          {/* Banner de sessão expirada */}
+          </header>
+
           {sessionExpired && (
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                background: "rgba(234, 179, 8, 0.08)",
-                border: "1px solid rgba(234, 179, 8, 0.3)",
-                borderRadius: "12px",
-                padding: "14px 18px",
-                marginBottom: "8px",
-                color: "#eab308",
-                fontSize: "0.88rem",
-                fontWeight: 600,
-              }}
+              className={styles.warningMessage}
+              role="status"
             >
-              <AlertCircle size={18} style={{ flexShrink: 0 }} />
-              Sua sessão expirou após 4 horas de inatividade. Por segurança,
-              faça login novamente.
+              <AlertCircle
+                size={18}
+                aria-hidden="true"
+              />
+
+              <span>
+                Sua sessão expirou por
+                inatividade. Faça login
+                novamente.
+              </span>
             </div>
           )}
 
-          {/* Mensagem de erro */}
           {errorMsg && (
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                background: "rgba(239, 68, 68, 0.08)",
-                border: "1px solid rgba(239, 68, 68, 0.3)",
-                borderRadius: "12px",
-                padding: "14px 18px",
-                marginBottom: "8px",
-                color: "#ef4444",
-                fontSize: "0.88rem",
-                fontWeight: 600,
-              }}
+              className={styles.errorMessage}
+              role="alert"
             >
-              <AlertCircle size={18} style={{ flexShrink: 0 }} />
-              {errorMsg}
+              <AlertCircle
+                size={18}
+                aria-hidden="true"
+              />
+
+              <span>{errorMsg}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          {successMsg && (
+            <div
+              className={styles.successMessage}
+              role="status"
+            >
+              <CheckCircle2
+                size={18}
+                aria-hidden="true"
+              />
+
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {resendMessage && (
+            <div
+              className={styles.successMessage}
+              role="status"
+            >
+              <Mail
+                size={18}
+                aria-hidden="true"
+              />
+
+              <span>{resendMessage}</span>
+            </div>
+          )}
+
+          {canResendConfirmation && (
+            <div
+              className={
+                styles.resendConfirmationBox
+              }
+            >
+              <div>
+                <strong>
+                  Não recebeu o e-mail?
+                </strong>
+
+                <p>
+                  Verifique Spam, Promoções e
+                  Lixeira ou solicite um novo
+                  link.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className={styles.resendButton}
+                onClick={
+                  handleResendConfirmation
+                }
+                disabled={resending}
+              >
+                {resending ? (
+                  <>
+                    <Loader2
+                      size={17}
+                      className={styles.spinner}
+                      aria-hidden="true"
+                    />
+
+                    Reenviando...
+                  </>
+                ) : (
+                  "Reenviar confirmação"
+                )}
+              </button>
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSubmit}
+            className={styles.form}
+            noValidate
+          >
             <div className={styles.formGroup}>
-              <label className={styles.label}>Email</label>
+              <label
+                htmlFor="login-email"
+                className={styles.label}
+              >
+                E-mail
+              </label>
+
               <input
+                id="login-email"
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 className={styles.input}
                 placeholder="seu@email.com"
+                autoComplete="email"
+                inputMode="email"
+                maxLength={160}
                 required
+                disabled={loading}
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Senha</label>
-              <input
-                type="password"
-                name="senha"
-                value={formData.senha}
-                onChange={handleChange}
-                className={styles.input}
-                placeholder="********"
-                required
-              />
+              <label
+                htmlFor="login-senha"
+                className={styles.label}
+              >
+                Senha
+              </label>
+
+              <div
+                className={
+                  styles.passwordField
+                }
+              >
+                <input
+                  id="login-senha"
+                  type={
+                    showPassword
+                      ? "text"
+                      : "password"
+                  }
+                  name="senha"
+                  value={formData.senha}
+                  onChange={handleChange}
+                  className={styles.input}
+                  placeholder="Digite sua senha"
+                  autoComplete="current-password"
+                  required
+                  disabled={loading}
+                />
+
+                <button
+                  type="button"
+                  className={
+                    styles.passwordToggle
+                  }
+                  onClick={() =>
+                    setShowPassword(
+                      (current) => !current,
+                    )
+                  }
+                  aria-label={
+                    showPassword
+                      ? "Ocultar senha"
+                      : "Mostrar senha"
+                  }
+                >
+                  {showPassword ? (
+                    <EyeOff
+                      size={18}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Eye
+                      size={18}
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className={styles.optionsRow}>
-              <div className={styles.checkboxGroup}>
-                <input
-                  type="checkbox"
-                  className={styles.checkbox}
-                  id="remember"
+              <span
+                className={
+                  styles.securityNotice
+                }
+              >
+                <LockKeyhole
+                  size={14}
+                  aria-hidden="true"
                 />
-                <label htmlFor="remember" className={styles.checkboxLabel}>
-                  Lembrar-me
-                </label>
-              </div>
 
-              <Link prefetch={false} href="/login/esqueci-senha" className={styles.forgotPassword}>
+                Acesso protegido
+              </span>
+
+              <Link
+                prefetch={false}
+                href="/login/esqueci-senha"
+                className={
+                  styles.forgotPassword
+                }
+              >
                 Esqueceu sua senha?
               </Link>
             </div>
-
-            {/* SUCCESS MESSAGES */}
-            {successMsg && (
-              <div
-                style={{
-                  backgroundColor: "rgba(16, 185, 129, 0.1)",
-                  color: "#10B981",
-                  padding: "12px",
-                  borderRadius: "8px",
-                  marginBottom: "20px",
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                }}
-              >
-                ✅ {successMsg}
-              </div>
-            )}
 
             <button
               type="submit"
@@ -291,142 +780,235 @@ function LoginContent() {
               disabled={loading}
             >
               {loading ? (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "8px",
-                  }}
-                >
-                  <Loader2 className="animate-spin" size={20} />
+                <>
+                  <Loader2
+                    className={styles.spinner}
+                    size={19}
+                    aria-hidden="true"
+                  />
+
                   Entrando...
-                </div>
+                </>
               ) : (
                 "Entrar na plataforma"
               )}
             </button>
 
             <div className={styles.loginHint}>
-              Ainda não tem uma conta?{" "}
-              {activeTab === "escritorios" ? (
+              Ainda não possui uma conta?{" "}
+              {activeTab ===
+              "escritorios" ? (
                 <button
                   type="button"
-                  onClick={() => setShowEnterpriseModal(true)}
-                  className={styles.linkTag}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    padding: 0,
-                    font: "inherit",
-                    cursor: "pointer",
-                    color: "#00b4d8"
-                  }}
+                  onClick={() =>
+                    setShowEnterpriseModal(
+                      true,
+                    )
+                  }
+                  className={styles.linkButton}
                 >
-                  Traga seu escritório
+                  Conhecer o Enterprise
                 </button>
               ) : (
-                <Link prefetch={false} href="/cadastro" className={styles.linkTag}>
-                  Cadastre-se grátis
+                <Link
+                  prefetch={false}
+                  href="/cadastro"
+                  className={styles.linkTag}
+                >
+                  Criar conta gratuitamente
                 </Link>
               )}
             </div>
           </form>
         </div>
-      </div>
+      </section>
 
-      {/* OAB ERROR MODAL */}
       {oabError && (
-        <div className={styles.oabModalOverlay}>
-          <div className={styles.oabModalCard}>
-            <AlertCircle size={48} color="#ef4444" />
-            <h3>Acesso Restrito</h3>
-            <p>
-              Sua verificação de OAB apresentou inconsistências. Para sua segurança e conformidade da plataforma, seu acesso foi temporariamente suspenso.
-            </p>
-            <p className={styles.oabModalSub}>
-              Clique no botão abaixo para falar com nosso suporte e regularizar sua situação.
-            </p>
-            
-            <a 
-              href="https://wa.me/5515981657317?text=Olá, tive um problema com a verificação da minha OAB no SocialJurídico e gostaria de regularizar." 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={styles.supportBtn}
+        <div
+          className={styles.modalOverlay}
+          role="presentation"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              setOabError(false);
+            }
+          }}
+        >
+          <section
+            className={styles.modalCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="oab-modal-title"
+          >
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() =>
+                setOabError(false)
+              }
+              aria-label="Fechar"
             >
-              Falar com Suporte no WhatsApp
+              <X
+                size={20}
+                aria-hidden="true"
+              />
+            </button>
+
+            <div
+              className={
+                styles.modalIconError
+              }
+              aria-hidden="true"
+            >
+              <AlertCircle size={30} />
+            </div>
+
+            <h2 id="oab-modal-title">
+              Acesso temporariamente restrito
+            </h2>
+
+            <p>
+              A validação da sua OAB apresentou
+              uma inconsistência ou não foi
+              concluída dentro do prazo.
+            </p>
+
+            <p className={styles.modalSubtext}>
+              Entre em contato com a equipe do
+              Social Jurídico para verificar sua
+              situação cadastral.
+            </p>
+
+            <a
+              href="https://wa.me/5515981657317?text=Ol%C3%A1%2C%20tive%20um%20problema%20com%20a%20valida%C3%A7%C3%A3o%20da%20minha%20OAB%20no%20Social%20Jur%C3%ADdico%20e%20gostaria%20de%20regularizar."
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.primaryModalAction}
+            >
+              Falar pelo WhatsApp
             </a>
-            
-            <button onClick={() => setOabError(false)} className={styles.closeBtn}>
+
+            <button
+              type="button"
+              onClick={() =>
+                setOabError(false)
+              }
+              className={
+                styles.secondaryModalAction
+              }
+            >
               Fechar
             </button>
-          </div>
+          </section>
         </div>
       )}
 
-      {/* ENTERPRISE CONTACT SUPPORT MODAL */}
       {showEnterpriseModal && (
-        <div className={styles.oabModalOverlay}>
-          <div className={styles.oabModalCard} style={{ borderColor: "rgba(0, 180, 216, 0.4)" }}>
-            <div style={{
-              width: "60px",
-              height: "60px",
-              borderRadius: "50%",
-              backgroundColor: "rgba(0, 180, 216, 0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: "20px"
-            }}>
-              <Scale size={32} color="#00b4d8" />
-            </div>
-            <h3 style={{ color: "#fff", fontWeight: 800 }}>SocialJurídico Enterprise</h3>
-            <p>
-              Para implantar e configurar a infraestrutura de gerenciamento corporativo no seu escritório, entre em contato com nosso atendimento especializado.
-            </p>
-            <p className={styles.oabModalSub}>
-              Um consultor irá desenhar a topologia de limites e migração ideal para a sua equipe.
-            </p>
-            
-            <a 
-              href="https://wa.me/5515981657317?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20a%20implantação%20do%20plano%20Enterprise%20do%20SocialJurídico%20para%20o%20meu%20escritório." 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className={styles.supportBtn}
-              style={{
-                background: "linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)",
-                boxShadow: "0 4px 15px rgba(0, 180, 216, 0.3)"
-              }}
+        <div
+          className={styles.modalOverlay}
+          role="presentation"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              setShowEnterpriseModal(false);
+            }
+          }}
+        >
+          <section
+            className={styles.modalCard}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="enterprise-modal-title"
+          >
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() =>
+                setShowEnterpriseModal(false)
+              }
+              aria-label="Fechar"
             >
-              Falar com um Especialista
-            </a>
-            
-            <button onClick={() => setShowEnterpriseModal(false)} className={styles.closeBtn}>
-              Voltar
+              <X
+                size={20}
+                aria-hidden="true"
+              />
             </button>
-          </div>
+
+            <div
+              className={
+                styles.modalIconEnterprise
+              }
+              aria-hidden="true"
+            >
+              <Building2 size={30} />
+            </div>
+
+            <h2 id="enterprise-modal-title">
+              Social Jurídico Enterprise
+            </h2>
+
+            <p>
+              Estruture a operação do seu
+              escritório com gestão centralizada,
+              usuários, cotas e ferramentas
+              profissionais.
+            </p>
+
+            <div
+              className={
+                styles.enterpriseContacts
+              }
+            >
+              <a
+                href="https://wa.me/5515981657317?text=Ol%C3%A1%2C%20gostaria%20de%20conhecer%20o%20Social%20Jur%C3%ADdico%20Enterprise."
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp: (15) 98165-7317
+              </a>
+
+              <a
+                href="https://wa.me/5515992653066?text=Ol%C3%A1%2C%20gostaria%20de%20conhecer%20o%20Social%20Jur%C3%ADdico%20Enterprise."
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp: (15) 99265-3066
+              </a>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowEnterpriseModal(false)
+              }
+              className={
+                styles.secondaryModalAction
+              }
+            >
+              Fechar
+            </button>
+          </section>
         </div>
       )}
-    </div>
+    </main>
   );
 }
 
-export default function Login() {
+export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div
-          style={{
-            height: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#000",
-            color: "#D4AF37",
-          }}
-        >
-          <Loader2 className="animate-spin" size={48} />
-        </div>
+        <main className={styles.loadingPage}>
+          <Loader2
+            size={36}
+            className={styles.spinner}
+            aria-label="Carregando login"
+          />
+        </main>
       }
     >
       <LoginContent />

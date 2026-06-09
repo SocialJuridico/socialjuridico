@@ -106,3 +106,153 @@ export async function forgotPasswordAction(email) {
     };
   }
 }
+
+export async function getPasswordSessionStatus() {
+  try {
+    const { createClient } = await import(
+      "@/lib/supabaseServer"
+    );
+
+    const supabase = createClient();
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      return {
+        authenticated: false,
+        message:
+          "Sua sessão de recuperação expirou ou não é válida.",
+      };
+    }
+
+    return {
+      authenticated: true,
+      email: user.email || null,
+    };
+  } catch (error) {
+    console.error(
+      "[Senha] Erro ao verificar sessão:",
+      error,
+    );
+
+    return {
+      authenticated: false,
+      message:
+        "Não foi possível validar sua sessão de recuperação.",
+    };
+  }
+}
+
+export async function updatePasswordAction(newPassword) {
+  try {
+    if (
+      typeof newPassword !== "string" ||
+      newPassword.length < 8 ||
+      newPassword.length > 128
+    ) {
+      return {
+        success: false,
+        message:
+          "A nova senha deve possuir entre 8 e 128 caracteres.",
+      };
+    }
+
+    const { createClient } = await import(
+      "@/lib/supabaseServer"
+    );
+
+    const supabase = createClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return {
+        success: false,
+        code: "INVALID_SESSION",
+        message:
+          "Sua sessão expirou. Solicite um novo link de recuperação.",
+      };
+    }
+
+    const { error: updateError } =
+      await supabase.auth.updateUser({
+        password: newPassword,
+        data: {
+          ...user.user_metadata,
+          needs_password_update: false,
+        },
+      });
+
+    if (updateError) {
+      const errorMessage =
+        updateError.message?.toLowerCase() || "";
+
+      if (
+        errorMessage.includes(
+          "new password should be different",
+        ) ||
+        errorMessage.includes(
+          "password should be different",
+        )
+      ) {
+        return {
+          success: false,
+          code: "SAME_PASSWORD",
+          message:
+            "A nova senha precisa ser diferente da senha atual.",
+        };
+      }
+
+      if (
+        errorMessage.includes("weak") ||
+        errorMessage.includes(
+          "password should be at least",
+        )
+      ) {
+        return {
+          success: false,
+          code: "WEAK_PASSWORD",
+          message:
+            "Escolha uma senha mais segura, com letras e números.",
+        };
+      }
+
+      console.error(
+        "[Senha] Erro ao atualizar:",
+        updateError,
+      );
+
+      return {
+        success: false,
+        message:
+          "Não foi possível atualizar sua senha.",
+      };
+    }
+
+    // Encerra a sessão de recuperação para exigir um novo login.
+    await supabase.auth.signOut();
+
+    return {
+      success: true,
+      message:
+        "Sua senha foi atualizada com sucesso.",
+    };
+  } catch (error) {
+    console.error(
+      "[Senha] Erro inesperado:",
+      error,
+    );
+
+    return {
+      success: false,
+      message:
+        "Não foi possível atualizar sua senha agora.",
+    };
+  }
+}

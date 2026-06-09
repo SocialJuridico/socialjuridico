@@ -11,6 +11,8 @@ function ConfirmarEmailContent() {
   const router = useRouter();
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") || "signup";
+  const statusParam = searchParams.get("status");
+  const messageParam = searchParams.get("message");
 
   const [status, setStatus] = useState("loading"); // Começa em loading para confirmação automática
   const [message, setMessage] = useState("");
@@ -42,6 +44,24 @@ function ConfirmarEmailContent() {
   };
 
   useEffect(() => {
+    if (statusParam === "success") {
+      setStatus("success");
+      setMessage(messageParam || "Sua conta foi ativada com sucesso!");
+      const timer = setTimeout(() => {
+        router.push("/login");
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+
+    if (statusParam === "error") {
+      setStatus("error");
+      setMessage(
+        messageParam ||
+          "Erro ao confirmar e-mail. O link pode ter expirado ou ja ter sido validado.",
+      );
+      return;
+    }
+
     if (!token_hash) {
       setStatus("error");
       setMessage("Link de confirmação inválido ou incompleto.");
@@ -56,7 +76,7 @@ function ConfirmarEmailContent() {
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token_hash]);
+  }, [token_hash, statusParam, messageParam]);
   
   return (
     <div className={styles.container}>

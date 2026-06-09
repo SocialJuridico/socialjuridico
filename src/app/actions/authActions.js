@@ -169,7 +169,7 @@ export async function signUpAction(formData) {
       });
 
       if (!linkError && linkData?.properties?.hashed_token) {
-        const verifyLink = `https://socialjuridico.com.br/confirmar-email?token_hash=${linkData.properties.hashed_token}&type=signup`;
+        const verifyLink = `https://socialjuridico.com.br/api/auth/confirm-email?token_hash=${linkData.properties.hashed_token}&type=signup`;
         
         // --- Enviar Email via Resend com HTML Estilizado ---
         await resend.emails.send({
@@ -607,4 +607,3 @@ export async function confirmEmailAction({ token_hash, type }) {
     };
   }
 }
-

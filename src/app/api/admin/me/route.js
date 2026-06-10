@@ -1,43 +1,33 @@
-import { createClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
-// GET /api/admin/me -> valida se usuario atual esta em admins com role ADMIN
+import { getAuthenticatedAdmin } from "@/lib/adminAuth";
+
 export async function GET() {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const auth = await getAuthenticatedAdmin();
 
-    if (authError || !user) {
+    if (!auth.ok) {
       return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 },
+        {
+          success: false,
+          message: auth.message,
+        },
+        { status: auth.status },
       );
     }
 
-    const db = supabaseAdmin || supabase;
-    const { data: admin, error } = await db
-      .from("admins")
-      .select("id, name, email, role, created_at, google_sync_enabled")
-      .eq("id", user.id)
-      .eq("role", "ADMIN")
-      .single();
-
-    if (error || !admin) {
-      return NextResponse.json(
-        { success: false, message: "Acesso restrito a administradores" },
-        { status: 403 },
-      );
-    }
-
-    return NextResponse.json({ success: true, data: admin });
+    return NextResponse.json({
+      success: true,
+      data: auth.admin,
+    });
   } catch (error) {
-    console.error("Erro na API GET /api/admin/me:", error);
+    console.error("[Admin/Me] Erro inesperado:", error);
+
     return NextResponse.json(
-      { success: false, message: "Erro interno no servidor" },
+      {
+        success: false,
+        message: "Erro interno no servidor",
+      },
       { status: 500 },
     );
   }

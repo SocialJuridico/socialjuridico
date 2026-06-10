@@ -1,19 +1,37 @@
-import { createClient } from '@/lib/supabaseServer';
-import { NextResponse } from 'next/server';
+import { createClient } from "@/lib/supabaseServer";
+import { NextResponse } from "next/server";
 
-export async function POST(request) {
+export async function POST() {
   try {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      throw error;
+    }
 
     const response = NextResponse.json({ success: true });
 
-    // Limpar cookie de controle de sessão
-    response.cookies.delete('sj_login_time');
+    response.cookies.set("sj_login_time", "", {
+      expires: new Date(0),
+      path: "/",
+    });
+
+    response.cookies.set("sj_last_login_logged", "", {
+      expires: new Date(0),
+      path: "/",
+    });
 
     return response;
   } catch (error) {
-    console.error('Erro no logout:', error);
-    return NextResponse.json({ success: false, message: 'Erro ao efetuar logout.' }, { status: 500 });
+    console.error("[Logout] Erro:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Erro ao efetuar logout.",
+      },
+      { status: 500 },
+    );
   }
 }

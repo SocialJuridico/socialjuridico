@@ -11,37 +11,46 @@ export async function getAdminLawyers() {
 
     const { db } = access;
 
-    const [lawyersResult, crmResult, authUsers] = await Promise.all([
+    const [lawyersResult, authUsers] = await Promise.all([
       db
         .from("advogados")
-        .select(
-          "id, name, email, phone, oab, estado, is_premium, premium_expires_at, balance, created_at, oab_verification_status, plan_type, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb",
-        )
+        .select("*")
         .order("created_at", { ascending: false }),
-      db.from("crm_clients").select("advogado_id"),
       listAllAuthUsers(),
     ]);
 
     if (lawyersResult.error) {
-      throw new Error(`Falha ao consultar advogados: ${lawyersResult.error.message}`);
-    }
-
-    if (crmResult.error) {
-      throw new Error(`Falha ao consultar CRM: ${crmResult.error.message}`);
+      throw new Error(
+        `Falha ao consultar advogados: ${lawyersResult.error.message}`,
+      );
     }
 
     const lawyers = lawyersResult.data || [];
     const lawyerIds = lawyers.map((lawyer) => lawyer.id);
     const crmCountMap = new Map();
-    const authUsersById = new Map(authUsers.map((user) => [user.id, user]));
+    const authUsersById = new Map(
+      authUsers.map((user) => [user.id, user]),
+    );
     const latestLogMap = new Map();
 
-    for (const client of crmResult.data || []) {
-      if (!client.advogado_id) continue;
-      crmCountMap.set(
-        client.advogado_id,
-        (crmCountMap.get(client.advogado_id) || 0) + 1,
+    const crmResult = await db
+      .from("crm_clients")
+      .select("advogado_id");
+
+    if (crmResult.error) {
+      console.warn(
+        "[Admin/Advogados][GET] CRM indisponível; usando contagem zero:",
+        crmResult.error.message,
       );
+    } else {
+      for (const client of crmResult.data || []) {
+        if (!client.advogado_id) continue;
+
+        crmCountMap.set(
+          client.advogado_id,
+          (crmCountMap.get(client.advogado_id) || 0) + 1,
+        );
+      }
     }
 
     if (lawyerIds.length > 0) {
@@ -52,18 +61,22 @@ export async function getAdminLawyers() {
         .order("created_at", { ascending: false });
 
       if (logsError) {
-        throw new Error(`Falha ao consultar acessos: ${logsError.message}`);
-      }
-
-      for (const log of latestLogs || []) {
-        if (!latestLogMap.has(log.user_id)) {
-          latestLogMap.set(log.user_id, log.created_at);
+        console.warn(
+          "[Admin/Advogados][GET] Logs de acesso indisponíveis; usando apenas Auth:",
+          logsError.message,
+        );
+      } else {
+        for (const log of latestLogs || []) {
+          if (!latestLogMap.has(log.user_id)) {
+            latestLogMap.set(log.user_id, log.created_at);
+          }
         }
       }
     }
 
     const formattedData = lawyers.map((lawyer) => {
-      const authLogin = authUsersById.get(lawyer.id)?.last_sign_in_at || null;
+      const authLogin =
+        authUsersById.get(lawyer.id)?.last_sign_in_at || null;
       const activityLog = latestLogMap.get(lawyer.id) || null;
       let lastSignIn = authLogin;
 
@@ -96,8 +109,12 @@ export async function getAdminLawyers() {
     return json({ success: true, data: formattedData });
   } catch (error) {
     console.error("[Admin/Advogados][GET] Erro:", error);
+
     return json(
-      { success: false, message: "Não foi possível carregar os advogados." },
+      {
+        success: false,
+        message: "Não foi possível carregar os advogados.",
+      },
       500,
     );
   }

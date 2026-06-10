@@ -1,0 +1,95 @@
+import { NextResponse } from "next/server";
+
+import { getAuthenticatedAdmin } from "@/lib/adminAuth";
+
+async function countRows(query, resourceName) {
+  const result = await query;
+
+  if (result.error) {
+    throw new Error(`${resourceName}: ${result.error.message}`);
+  }
+
+  return result.count || 0;
+}
+
+export async function GET() {
+  try {
+    const auth = await getAuthenticatedAdmin();
+
+    if (!auth.ok) {
+      return NextResponse.json(
+        { success: false, message: auth.message },
+        {
+          status: auth.status,
+          headers: { "Cache-Control": "no-store" },
+        },
+      );
+    }
+
+    const { db, admin } = auth;
+
+    const [
+      totalClientes,
+      totalAdvogados,
+      totalCasos,
+      totalNotificacoes,
+      totalRadarPendente,
+    ] = await Promise.all([
+      countRows(
+        db.from("clientes").select("id", { count: "exact", head: true }),
+        "clientes",
+      ),
+      countRows(
+        db.from("advogados").select("id", { count: "exact", head: true }),
+        "advogados",
+      ),
+      countRows(
+        db.from("casos").select("id", { count: "exact", head: true }),
+        "casos",
+      ),
+      countRows(
+        db.from("notificacoes").select("id", { count: "exact", head: true }),
+        "notificacoes",
+      ),
+      countRows(
+        db
+          .from("radar_oportunidades")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pendente"),
+        "radar_oportunidades",
+      ),
+    ]);
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          admin,
+          stats: {
+            totalClientes,
+            totalAdvogados,
+            totalCasos,
+            totalNotificacoes,
+            totalRadarPendente,
+          },
+        },
+      },
+      {
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
+  } catch (error) {
+    console.error("[Admin/Dashboard] Erro:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Não foi possível carregar o dashboard administrativo.",
+      },
+      {
+        status: 500,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
+  }
+}

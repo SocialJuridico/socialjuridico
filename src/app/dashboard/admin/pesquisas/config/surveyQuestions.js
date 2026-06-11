@@ -1,0 +1,34 @@
+export const SURVEY_TABS = {
+  LAWYERS: "advogados",
+  CLIENTS: "clientes",
+};
+
+export const LAWYER_QUESTIONS = [
+  { key: "q1_velocidade", label: "Velocidade/Estabilidade" },
+  { key: "q2_marketplace", label: "Marketplace de Casos" },
+  { key: "q3_ia_redator", label: "Redator IA" },
+  { key: "q4_ia_personalidade", label: "Personalidade IA" },
+  { key: "q5_seguranca", label: "Segurança de Dados" },
+  { key: "q6_prazos", label: "Controle de Prazos" },
+  { key: "q7_crm", label: "CRM de Clientes" },
+  { key: "q8_smartdocs", label: "Organização de Docs" },
+  { key: "q9_suporte", label: "Suporte da Plataforma" },
+  { key: "q10_roi", label: "Retorno sobre Investimento" },
+];
+
+export const CLIENT_QUESTIONS = [
+  { key: "q1_cadastro", label: "Facilidade de Cadastro" },
+  { key: "q2_clareza", label: "Clareza das Informações" },
+  { key: "q3_velocidade", label: "Velocidade de Resposta" },
+  { key: "q4_confianca", label: "Confiança nos Profissionais" },
+  { key: "q5_qualidade", label: "Qualidade do Atendimento" },
+  { key: "q6_chat", label: "Uso do Chat Integrado" },
+  { key: "q7_transparencia", label: "Transparência de Custos" },
+  { key: "q8_seguranca", label: "Segurança de Dados" },
+  { key: "q9_pwa", label: "Acesso via Celular" },
+  { key: "q10_recomendacao", label: "Recomendaria a um amigo?" },
+];
+
+export function getQuestionsByTab(tab) {
+  return tab === SURVEY_TABS.LAWYERS ? LAWYER_QUESTIONS : CLIENT_QUESTIONS;
+}

@@ -1,10 +1,110 @@
-import { createClient } from "@/lib/supabaseServer";
+import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 
-// POST /api/avaliacoes — Cliente avalia um advogado após negociação
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function isValidUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || ""),
+  );
+}
+
+function normalizeRating(value) {
+  const rating = Number(value);
+  return Number.isInteger(rating) && rating >= 0 && rating <= 5
+    ? rating
+    : null;
+}
+
+function normalizeComment(value) {
+  const comment = String(value || "").trim();
+  if (!comment) return null;
+  return comment.slice(0, 3000);
+}
+
+async function requireDatabase() {
+  if (!supabaseAdmin) {
+    return {
+      ok: false,
+      response: json(
+        {
+          success: false,
+          message: "Serviço de avaliações indisponível no servidor.",
+        },
+        503,
+      ),
+    };
+  }
+
+  return { ok: true, db: supabaseAdmin };
+}
+
+async function lawyerParticipatedInCase(db, caseId, lawyerId, assignedLawyerId) {
+  if (assignedLawyerId === lawyerId) return true;
+
+  const { data, error } = await db
+    .from("case_interests")
+    .select("id")
+    .eq("case_id", caseId)
+    .eq("lawyer_id", lawyerId)
+    .in("status", ["NEGOTIATING", "HIRED", "DECLINED"])
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Falha ao validar participação do advogado: ${error.message}`);
+  }
+
+  return Boolean(data);
+}
+
+async function updateLawyerRatingAggregates(db, lawyerId) {
+  const { data: ratings, error: ratingsError } = await db
+    .from("avaliacoes_advogado")
+    .select("nota")
+    .eq("advogado_id", lawyerId);
+
+  if (ratingsError) {
+    throw new Error(`Falha ao recalcular avaliações: ${ratingsError.message}`);
+  }
+
+  const total = ratings?.length || 0;
+  const average = total
+    ? Number(
+        (
+          ratings.reduce(
+            (sum, current) => sum + Number(current.nota || 0),
+            0,
+          ) / total
+        ).toFixed(2),
+      )
+    : 0;
+
+  const { error: updateError } = await db
+    .from("advogados")
+    .update({ avg_rating: average, total_ratings: total })
+    .eq("id", lawyerId);
+
+  if (updateError) {
+    throw new Error(`Falha ao atualizar média do advogado: ${updateError.message}`);
+  }
+}
+
+// Cliente avalia um advogado que participou do caso.
 export async function POST(request) {
   try {
+    const database = await requireDatabase();
+    if (!database.ok) return database.response;
+
     const supabase = createClient();
     const {
       data: { user },
@@ -12,226 +112,243 @@ export async function POST(request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 }
+      return json({ success: false, message: "Não autorizado." }, 401);
+    }
+
+    const body = await request.json().catch(() => null);
+    const lawyerId = body?.advogado_id;
+    const caseId = body?.caso_id;
+    const rating = normalizeRating(body?.nota);
+    const comment = normalizeComment(body?.justificativa);
+
+    if (!isValidUuid(lawyerId) || !isValidUuid(caseId) || rating === null) {
+      return json(
+        {
+          success: false,
+          message: "Advogado, caso ou nota inválidos.",
+        },
+        400,
       );
     }
 
-    const { advogado_id, caso_id, nota, justificativa } = await request.json();
-
-    if (!advogado_id || !caso_id || nota === undefined || nota === null) {
-      return NextResponse.json(
-        { success: false, message: "Dados obrigatórios ausentes: advogado_id, caso_id, nota" },
-        { status: 400 }
-      );
-    }
-
-    if (nota < 0 || nota > 5 || !Number.isInteger(Number(nota))) {
-      return NextResponse.json(
-        { success: false, message: "Nota deve ser um número inteiro entre 0 e 5" },
-        { status: 400 }
-      );
-    }
-
-    const db = supabaseAdmin;
-
-    // Verificar que o usuário é cliente dono do caso
-    const { data: caso, error: caseError } = await db
+    const { db } = database;
+    const { data: legalCase, error: caseError } = await db
       .from("casos")
       .select("id, cliente_id, advogado_id, status")
-      .eq("id", caso_id)
-      .single();
+      .eq("id", caseId)
+      .maybeSingle();
 
-    if (caseError || !caso) {
-      return NextResponse.json(
-        { success: false, message: "Caso não encontrado" },
-        { status: 404 }
+    if (caseError) {
+      throw new Error(`Falha ao consultar o caso: ${caseError.message}`);
+    }
+
+    if (!legalCase) {
+      return json({ success: false, message: "Caso não encontrado." }, 404);
+    }
+
+    if (legalCase.cliente_id !== user.id) {
+      return json(
+        {
+          success: false,
+          message: "Você não tem permissão para avaliar este caso.",
+        },
+        403,
       );
     }
 
-    if (caso.cliente_id !== user.id) {
-      return NextResponse.json(
-        { success: false, message: "Você não tem permissão para avaliar este caso" },
-        { status: 403 }
+    const participated = await lawyerParticipatedInCase(
+      db,
+      caseId,
+      lawyerId,
+      legalCase.advogado_id,
+    );
+
+    if (!participated) {
+      return json(
+        {
+          success: false,
+          message: "Este advogado não participou da negociação deste caso.",
+        },
+        400,
       );
     }
 
-    // Verificar que o advogado_id bate com o caso (ou é alguém que negociou)
-    if (caso.advogado_id && caso.advogado_id !== advogado_id) {
-      // Aceitar avaliação de qualquer advogado que negociou
-      const { data: interest } = await db
-        .from("case_interests")
-        .select("id")
-        .eq("case_id", caso_id)
-        .eq("lawyer_id", advogado_id)
-        .in("status", ["NEGOTIATING", "HIRED", "DECLINED"])
-        .maybeSingle();
-
-      if (!interest) {
-        return NextResponse.json(
-          { success: false, message: "Este advogado não negociou neste caso" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Verificar que o cliente ainda não avaliou este advogado para este caso (1 avaliação por par)
-    const { data: existente } = await db
+    const { data: existing, error: existingError } = await db
       .from("avaliacoes_advogado")
       .select("id")
       .eq("cliente_id", user.id)
-      .eq("advogado_id", advogado_id)
-      .eq("caso_id", caso_id)
+      .eq("advogado_id", lawyerId)
+      .eq("caso_id", caseId)
       .maybeSingle();
 
-    if (existente) {
-      return NextResponse.json(
-        { success: false, message: "Você já avaliou este advogado para este caso" },
-        { status: 409 }
+    if (existingError) {
+      throw new Error(
+        `Falha ao verificar avaliação existente: ${existingError.message}`,
       );
     }
 
-    // Inserir avaliação
-    const { data: avaliacao, error: insertError } = await db
+    if (existing) {
+      return json(
+        {
+          success: false,
+          message: "Você já avaliou este advogado para este caso.",
+        },
+        409,
+      );
+    }
+
+    const { data: review, error: insertError } = await db
       .from("avaliacoes_advogado")
       .insert([
         {
           cliente_id: user.id,
-          advogado_id,
-          caso_id,
-          nota: Number(nota),
-          justificativa: justificativa?.trim() || null,
+          advogado_id: lawyerId,
+          caso_id: caseId,
+          nota: rating,
+          justificativa: comment,
           created_at: new Date().toISOString(),
         },
       ])
       .select("id")
       .single();
 
-    if (insertError) throw insertError;
-
-    // 💡 ATUALIZAR MÉDIAS NO PERFIL DO ADVOGADO (Denormalização para performance)
-    try {
-      const { data: allRatings } = await db
-        .from("avaliacoes_advogado")
-        .select("nota")
-        .eq("advogado_id", advogado_id);
-
-      if (allRatings && allRatings.length > 0) {
-        const total = allRatings.length;
-        const sum = allRatings.reduce((acc, curr) => acc + curr.nota, 0);
-        const avg = Number((sum / total).toFixed(2));
-
-        await db
-          .from("advogados")
-          .update({
-            avg_rating: avg,
-            total_ratings: total
-          })
-          .eq("id", advogado_id);
+    if (insertError) {
+      if (insertError.code === "23505") {
+        return json(
+          {
+            success: false,
+            message: "Você já avaliou este advogado para este caso.",
+          },
+          409,
+        );
       }
-    } catch (updateErr) {
-      console.warn("Erro ao atualizar agregados do advogado:", updateErr);
-      // Não falha a resposta principal se der erro aqui
+
+      throw new Error(`Falha ao registrar avaliação: ${insertError.message}`);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Avaliação registrada com sucesso!",
-      id: avaliacao.id,
-    });
+    try {
+      await updateLawyerRatingAggregates(db, lawyerId);
+    } catch (aggregateError) {
+      console.error(
+        "[Avaliações] Avaliação salva, mas os agregados não foram atualizados:",
+        aggregateError,
+      );
+    }
+
+    return json(
+      {
+        success: true,
+        message: "Avaliação registrada com sucesso.",
+        id: review.id,
+      },
+      201,
+    );
   } catch (error) {
-    console.error("Erro ao salvar avaliação:", error);
-    return NextResponse.json(
-      { success: false, message: "Erro interno ao salvar avaliação" },
-      { status: 500 }
+    console.error("[Avaliações][POST] Erro:", error);
+    return json(
+      {
+        success: false,
+        message: "Não foi possível registrar a avaliação.",
+      },
+      500,
     );
   }
 }
 
-// GET /api/avaliacoes — Admin: lista todas as avaliações com detalhes
+// Administradores listam as avaliações com os dados relacionados.
 export async function GET(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const auth = await getAuthenticatedAdmin();
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 }
-      );
+    if (!auth.ok) {
+      return json({ success: false, message: auth.message }, auth.status);
     }
 
-    const db = supabaseAdmin;
-
-    // Verificar se é admin
-    const { data: admin } = await db
-      .from("admins")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (!admin) {
-      return NextResponse.json(
-        { success: false, message: "Acesso restrito a administradores" },
-        { status: 403 }
-      );
-    }
+    const database = await requireDatabase();
+    if (!database.ok) return database.response;
 
     const { searchParams } = new URL(request.url);
-    const advogadoId = searchParams.get("advogado_id");
+    const lawyerId = searchParams.get("advogado_id");
 
-    let query = db
-      .from("avaliacoes_advogado")
-      .select(`
-        id,
-        nota,
-        justificativa,
-        created_at,
-        cliente_id,
-        advogado_id,
-        caso_id
-      `)
-      .order("created_at", { ascending: false });
-
-    if (advogadoId) {
-      query = query.eq("advogado_id", advogadoId);
+    if (lawyerId && !isValidUuid(lawyerId)) {
+      return json(
+        { success: false, message: "ID do advogado inválido." },
+        400,
+      );
     }
 
-    const { data: avaliacoes, error } = await query;
-    if (error) throw error;
+    let query = database.db
+      .from("avaliacoes_advogado")
+      .select(
+        "id, nota, justificativa, created_at, cliente_id, advogado_id, caso_id",
+      )
+      .order("created_at", { ascending: false });
 
-    // Enriquecer com nomes de advogados e clientes
-    const advIds = [...new Set(avaliacoes.map((a) => a.advogado_id))];
-    const cliIds = [...new Set(avaliacoes.map((a) => a.cliente_id))];
-    const caseIds = [...new Set(avaliacoes.map((a) => a.caso_id))];
+    if (lawyerId) query = query.eq("advogado_id", lawyerId);
 
-    const [{ data: advogados }, { data: clientes }, { data: casos }] = await Promise.all([
-      db.from("advogados").select("id, name").in("id", advIds),
-      db.from("clientes").select("id, name").in("id", cliIds),
-      db.from("casos").select("id, titulo").in("id", caseIds),
+    const { data: reviews, error: reviewsError } = await query;
+
+    if (reviewsError) {
+      throw new Error(`Falha ao consultar avaliações: ${reviewsError.message}`);
+    }
+
+    const items = reviews || [];
+    const lawyerIds = [...new Set(items.map((item) => item.advogado_id).filter(Boolean))];
+    const clientIds = [...new Set(items.map((item) => item.cliente_id).filter(Boolean))];
+    const caseIds = [...new Set(items.map((item) => item.caso_id).filter(Boolean))];
+
+    const [lawyersResult, clientsResult, casesResult] = await Promise.all([
+      lawyerIds.length
+        ? database.db.from("advogados").select("id, name").in("id", lawyerIds)
+        : Promise.resolve({ data: [], error: null }),
+      clientIds.length
+        ? database.db.from("clientes").select("id, name").in("id", clientIds)
+        : Promise.resolve({ data: [], error: null }),
+      caseIds.length
+        ? database.db.from("casos").select("id, titulo").in("id", caseIds)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
-    const advMap = Object.fromEntries((advogados || []).map((a) => [a.id, a.name]));
-    const cliMap = Object.fromEntries((clientes || []).map((c) => [c.id, c.name]));
-    const caseMap = Object.fromEntries((casos || []).map((c) => [c.id, c.titulo]));
+    if (lawyersResult.error) {
+      throw new Error(
+        `Falha ao consultar advogados: ${lawyersResult.error.message}`,
+      );
+    }
+    if (clientsResult.error) {
+      throw new Error(
+        `Falha ao consultar clientes: ${clientsResult.error.message}`,
+      );
+    }
+    if (casesResult.error) {
+      throw new Error(`Falha ao consultar casos: ${casesResult.error.message}`);
+    }
 
-    const enriched = avaliacoes.map((a) => ({
-      ...a,
-      advogado_nome: advMap[a.advogado_id] || "Advogado",
-      cliente_nome: cliMap[a.cliente_id] || "Cliente",
-      caso_titulo: caseMap[a.caso_id] || "Caso",
+    const lawyerMap = new Map(
+      (lawyersResult.data || []).map((lawyer) => [lawyer.id, lawyer.name]),
+    );
+    const clientMap = new Map(
+      (clientsResult.data || []).map((client) => [client.id, client.name]),
+    );
+    const caseMap = new Map(
+      (casesResult.data || []).map((legalCase) => [legalCase.id, legalCase.titulo]),
+    );
+
+    const enriched = items.map((review) => ({
+      ...review,
+      advogado_nome: lawyerMap.get(review.advogado_id) || "Advogado removido",
+      cliente_nome: clientMap.get(review.cliente_id) || "Cliente removido",
+      caso_titulo: caseMap.get(review.caso_id) || "Caso removido",
     }));
 
-    return NextResponse.json({ success: true, data: enriched });
+    return json({ success: true, data: enriched });
   } catch (error) {
-    console.error("Erro ao buscar avaliações:", error);
-    return NextResponse.json(
-      { success: false, message: "Erro interno" },
-      { status: 500 }
+    console.error("[Avaliações][GET] Erro:", error);
+    return json(
+      {
+        success: false,
+        message: "Não foi possível carregar as avaliações.",
+      },
+      500,
     );
   }
 }

@@ -1,73 +1,64 @@
-/**
- * O Radar Jurídico coleta apenas referências a conteúdos públicos e links originais,
- * sem coleta de dados pessoais privados. As oportunidades são salvas como pendentes
- * para curadoria administrativa antes da exibição aos advogados.
- */
-
-import { createClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabase";
+import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 import { runRadarFetch } from "@/lib/radar/runRadarFetch";
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// POST /api/admin/radar/executar-busca
-// Dispara manualmente a busca e classificação de oportunidades externas a partir do painel administrativo
-export async function POST(request) {
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+export async function POST() {
   try {
-    const supabase = createClient();
+    const auth = await getAuthenticatedAdmin();
 
-    // 1. Verificar autenticação e sessão do usuário
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 }
-      );
+    if (!auth.ok) {
+      return json({ success: false, message: auth.message }, auth.status);
     }
 
-    // 2. Verificar se o usuário possui a role de ADMIN na tabela de administradores
-    const { data: admin, error: adminError } = await supabaseAdmin
-      .from("admins")
-      .select("id, role")
-      .eq("id", user.id)
-      .eq("role", "ADMIN")
-      .maybeSingle();
+    console.log(
+      `[Radar Admin API] Execução manual iniciada por: ${auth.user.email}`,
+    );
 
-    if (adminError || !admin) {
-      return NextResponse.json(
-        { success: false, message: "Acesso restrito a administradores" },
-        { status: 403 }
-      );
-    }
-
-    // 3. Executar o robô de busca
-    console.log(`[Radar Admin API] Execução manual iniciada por admin: ${user.email}`);
     const result = await runRadarFetch();
-    
-    return NextResponse.json(result);
 
+    if (!result.success) {
+      return json(
+        {
+          success: false,
+          message:
+            "A busca automática não pôde ser concluída. Verifique os logs do Radar.",
+          stats: result.stats,
+          timestamp: result.timestamp,
+        },
+        502,
+      );
+    }
+
+    return json(result);
   } catch (error) {
     console.error("[Radar Admin API] Erro na execução manual:", error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: "Erro interno no servidor ao rodar busca",
-        error: error.message 
+
+    return json(
+      {
+        success: false,
+        message: "Erro interno ao executar a busca automática.",
       },
-      { status: 500 }
+      500,
     );
   }
 }
 
-// Retorna erro para qualquer outro método HTTP
 export async function GET() {
-  return NextResponse.json(
-    { success: false, message: "Método não permitido. Utilize o método POST." },
-    { status: 405 }
+  return json(
+    {
+      success: false,
+      message: "Método não permitido. Utilize POST.",
+    },
+    405,
   );
 }

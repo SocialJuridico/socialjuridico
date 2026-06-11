@@ -1,183 +1,198 @@
-import { createClient } from "@/lib/supabaseServer";
+import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Auxiliar para verificar se o usuário atual é admin
-async function checkAdmin(supabase) {
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+const ALLOWED_STATUS = new Set([
+  "pendente",
+  "aprovado",
+  "rejeitado",
+  "arquivado",
+]);
+const ALLOWED_URGENCY = new Set(["baixa", "media", "alta"]);
 
-  if (authError || !user) {
-    return { errorStatus: 401, message: "Não autorizado" };
-  }
-
-  const { data: admin, error: adminError } = await supabaseAdmin
-    .from("admins")
-    .select("id, role")
-    .eq("id", user.id)
-    .eq("role", "ADMIN")
-    .maybeSingle();
-
-  if (adminError || !admin) {
-    return { errorStatus: 403, message: "Acesso restrito a administradores" };
-  }
-
-  return { user, admin };
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
-// PATCH /api/admin/radar/:id
-// Permite editar campos de uma oportunidade pública pelo ID.
+function isValidUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || ""),
+  );
+}
+
+function normalizeUrl(value) {
+  try {
+    const url = new URL(String(value || "").trim());
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function getSourceType(source, originalUrl) {
+  const value = `${source || ""} ${originalUrl || ""}`.toLowerCase();
+  if (value.includes("facebook")) return "Facebook";
+  if (value.includes("instagram")) return "Instagram";
+  if (value.includes("reddit")) return "Reddit";
+  if (value.includes("twitter") || value.includes("x.com")) return "X";
+  if (value.includes("jusbrasil")) return "JusBrasil";
+  return "Outros";
+}
+
 export async function PATCH(request, { params }) {
   try {
-    const { id } = await params;
-    if (!id) {
-      return NextResponse.json({ success: false, message: "ID é obrigatório" }, { status: 400 });
+    const auth = await getAuthenticatedAdmin();
+    if (!auth.ok) {
+      return json({ success: false, message: auth.message }, auth.status);
     }
 
-    const supabase = createClient();
-    const adminCheck = await checkAdmin(supabase);
-    if (adminCheck.errorStatus) {
-      return NextResponse.json(
-        { success: false, message: adminCheck.message },
-        { status: adminCheck.errorStatus }
+    if (!supabaseAdmin) {
+      return json(
+        { success: false, message: "Serviço administrativo indisponível." },
+        503,
       );
     }
 
-    const body = await request.json();
-    const updateData = {};
-
-    // Campos permitidos para atualização
-    const allowedFields = [
-      "titulo",
-      "categoria",
-      "fonte",
-      "url_original",
-      "trecho_publico",
-      "cidade",
-      "estado",
-      "score_intencao",
-      "urgencia",
-      "resumo_ia",
-      "status",
-      "aprovado_por",
-      "rejeitado_motivo",
-      "reportado"
-    ];
-
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        updateData[field] = body[field];
-      }
+    const { id } = await params;
+    if (!isValidUuid(id)) {
+      return json({ success: false, message: "ID inválido." }, 400);
     }
 
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ success: false, message: "Nenhum campo para atualizar informado" }, { status: 400 });
+    const body = await request.json().catch(() => null);
+    if (!body || typeof body !== "object") {
+      return json({ success: false, message: "Dados inválidos." }, 400);
     }
 
-    // Validações
-    if (updateData.url_original !== undefined) {
-      try {
-        new URL(updateData.url_original);
-      } catch {
-        return NextResponse.json({ success: false, message: "A URL original é inválida" }, { status: 400 });
-      }
+    const updates = {};
+
+    if (body.titulo !== undefined) {
+      const title = String(body.titulo || "").trim();
+      if (!title) return json({ success: false, message: "Título obrigatório." }, 400);
+      updates.titulo = title.slice(0, 240);
     }
 
-    if (updateData.trecho_publico !== undefined && updateData.trecho_publico !== null) {
-      if (updateData.trecho_publico.length > 500) {
-        return NextResponse.json(
-          { success: false, message: "O trecho público não pode exceder 500 caracteres" },
-          { status: 400 }
-        );
-      }
+    if (body.categoria !== undefined) {
+      const category = String(body.categoria || "").trim();
+      if (!category) return json({ success: false, message: "Categoria obrigatória." }, 400);
+      updates.categoria = category.slice(0, 100);
     }
 
-    if (updateData.score_intencao !== undefined) {
-      const parsedScore = parseInt(updateData.score_intencao);
-      if (isNaN(parsedScore) || parsedScore < 0 || parsedScore > 100) {
-        return NextResponse.json({ success: false, message: "O score de intenção deve ser entre 0 e 100" }, { status: 400 });
-      }
-      updateData.score_intencao = parsedScore;
+    if (body.fonte !== undefined) {
+      const source = String(body.fonte || "").trim();
+      if (!source) return json({ success: false, message: "Fonte obrigatória." }, 400);
+      updates.fonte = source.slice(0, 100);
     }
 
-    if (updateData.urgencia !== undefined) {
-      const urgency = String(updateData.urgencia).toLowerCase();
-      if (!["baixa", "media", "alta"].includes(urgency)) {
-        return NextResponse.json({ success: false, message: "A urgência deve ser 'baixa', 'media' ou 'alta'" }, { status: 400 });
-      }
-      updateData.urgencia = urgency;
+    if (body.url_original !== undefined) {
+      const url = normalizeUrl(body.url_original);
+      if (!url) return json({ success: false, message: "URL original inválida." }, 400);
+      updates.url_original = url;
     }
 
-    if (updateData.status !== undefined) {
-      const status = String(updateData.status).toLowerCase();
-      if (!["pendente", "aprovado", "rejeitado", "arquivado"].includes(status)) {
-        return NextResponse.json({ success: false, message: "Status inválido" }, { status: 400 });
+    if (body.trecho_publico !== undefined) {
+      const excerpt = String(body.trecho_publico || "").trim();
+      if (excerpt.length > 500) {
+        return json({ success: false, message: "Trecho público excede 500 caracteres." }, 400);
       }
-      updateData.status = status;
-      
-      // Se status mudou para aprovado, define publicado_em
+      updates.trecho_publico = excerpt || null;
+    }
+
+    if (body.cidade !== undefined) {
+      const city = String(body.cidade || "").trim();
+      updates.cidade = city ? city.slice(0, 120) : null;
+    }
+
+    if (body.estado !== undefined) {
+      const state = String(body.estado || "").trim().toUpperCase();
+      updates.estado = state ? state.slice(0, 2) : null;
+    }
+
+    if (body.score_intencao !== undefined) {
+      const score = Number(body.score_intencao);
+      if (!Number.isInteger(score) || score < 0 || score > 100) {
+        return json({ success: false, message: "Score deve estar entre 0 e 100." }, 400);
+      }
+      updates.score_intencao = score;
+    }
+
+    if (body.urgencia !== undefined) {
+      const urgency = String(body.urgencia || "").toLowerCase();
+      if (!ALLOWED_URGENCY.has(urgency)) {
+        return json({ success: false, message: "Urgência inválida." }, 400);
+      }
+      updates.urgencia = urgency;
+    }
+
+    if (body.resumo_ia !== undefined) {
+      const summary = String(body.resumo_ia || "").trim();
+      updates.resumo_ia = summary ? summary.slice(0, 2000) : null;
+    }
+
+    if (body.status !== undefined) {
+      const status = String(body.status || "").toLowerCase();
+      if (!ALLOWED_STATUS.has(status)) {
+        return json({ success: false, message: "Status inválido." }, 400);
+      }
+      updates.status = status;
       if (status === "aprovado") {
-        updateData.publicado_em = new Date().toISOString();
-        updateData.aprovado_por = adminCheck.user.id;
+        updates.publicado_em = new Date().toISOString();
+        updates.aprovado_por = auth.user.id;
       }
     }
 
-    if (updateData.url_original) {
-      let fType = "Outros";
-      const urlLower = updateData.url_original.toLowerCase();
-      if (urlLower.includes("facebook.com")) fType = "Facebook";
-      else if (urlLower.includes("instagram.com")) fType = "Instagram";
-      else if (urlLower.includes("x.com") || urlLower.includes("twitter.com")) fType = "X";
-      else if (urlLower.includes("reddit.com")) fType = "Reddit";
-      else if (urlLower.includes("jusbrasil.com")) fType = "JusBrasil";
-      else if (updateData.fonte) fType = mapearFonteTipo(updateData.fonte);
-      updateData.fonte_tipo = fType;
-    } else if (updateData.fonte) {
-      updateData.fonte_tipo = mapearFonteTipo(updateData.fonte);
+    if (!Object.keys(updates).length) {
+      return json({ success: false, message: "Nenhum campo válido para atualizar." }, 400);
+    }
+
+    if (updates.fonte !== undefined || updates.url_original !== undefined) {
+      updates.fonte_tipo = getSourceType(
+        updates.fonte ?? body.fonte,
+        updates.url_original ?? body.url_original,
+      );
     }
 
     const { data, error } = await supabaseAdmin
       .from("radar_oportunidades")
-      .update(updateData)
+      .update(updates)
       .eq("id", id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === "23505") { // Unique constraint violation
-        return NextResponse.json(
-          { success: false, message: "Esta URL original já está cadastrada.", isDuplicate: true },
-          { status: 409 }
+      if (error.code === "23505") {
+        return json(
+          {
+            success: false,
+            message: "Esta URL já está cadastrada no Radar.",
+            isDuplicate: true,
+          },
+          409,
         );
       }
-      console.error(`Erro admin radar PATCH id=${id}:`, error.message);
-      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      throw new Error(`Falha ao atualizar oportunidade: ${error.message}`);
     }
 
-    console.log(`[Radar Admin] Oportunidade editada: ${id}`);
+    if (!data) {
+      return json({ success: false, message: "Oportunidade não encontrada." }, 404);
+    }
 
-    return NextResponse.json({ success: true, data });
+    return json({
+      success: true,
+      data,
+      message: "Oportunidade atualizada com sucesso.",
+    });
   } catch (error) {
-    console.error("Erro geral na API PATCH /api/admin/radar/:id:", error);
-    return NextResponse.json(
-      { success: false, message: "Erro interno no servidor" },
-      { status: 500 }
+    console.error("[Admin/Radar/:id][PATCH] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível atualizar a oportunidade." },
+      500,
     );
   }
-}
-
-function mapearFonteTipo(fonte) {
-  if (!fonte) return "Outros";
-  const f = fonte.toLowerCase().trim();
-  if (f.includes("facebook")) return "Facebook";
-  if (f.includes("google")) return "Google";
-  if (f.includes("reddit")) return "Reddit";
-  if (f.includes("twitter") || f === "x") return "X";
-  if (f.includes("instagram")) return "Instagram";
-  if (f.includes("jusbrasil")) return "JusBrasil";
-  return "Outros";
 }

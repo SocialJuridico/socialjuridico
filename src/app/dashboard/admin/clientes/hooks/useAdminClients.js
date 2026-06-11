@@ -138,7 +138,7 @@ export function useAdminClients() {
       }
 
       setClients((current) => current.filter((item) => item.id !== client.id));
-      toast.success("Cliente excluído com sucesso.");
+      toast.success(data.message || "Cliente excluído com sucesso.");
       closeAction();
     } catch (error) {
       console.error("[Admin/Clientes] Erro ao excluir:", error);
@@ -161,14 +161,23 @@ export function useAdminClients() {
       const data = await response.json().catch(() => null);
 
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || "Falha ao resetar senha.");
+        throw new Error(
+          data?.message || "Falha ao enviar o link de redefinição.",
+        );
       }
 
-      toast.success("Senha temporária definida com sucesso.");
+      toast.success(
+        data.message || "Link de redefinição enviado ao cliente.",
+      );
       closeAction();
     } catch (error) {
-      console.error("[Admin/Clientes] Erro ao resetar senha:", error);
-      toast.error(error.message || "Erro ao resetar senha.");
+      console.error(
+        "[Admin/Clientes] Erro ao enviar redefinição:",
+        error,
+      );
+      toast.error(
+        error.message || "Erro ao enviar o link de redefinição.",
+      );
     } finally {
       setActionState((current) => ({ ...current, resettingId: null }));
     }

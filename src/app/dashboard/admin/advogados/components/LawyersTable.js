@@ -1,7 +1,7 @@
 import {
   Mail,
   Phone,
-  RotateCcw,
+  Send,
   Settings,
   Trash2,
   UserRound,
@@ -45,8 +45,8 @@ function LawyerActions({ lawyer, busyId, onOpen }) {
         onClick={() => onOpen("reset", lawyer)}
         disabled={busy}
       >
-        <RotateCcw size={14} aria-hidden="true" />
-        Resetar
+        <Send size={14} aria-hidden="true" />
+        Enviar redefinição
       </button>
 
       <button

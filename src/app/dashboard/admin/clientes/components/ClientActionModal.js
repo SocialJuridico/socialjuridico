@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, RotateCcw, Trash2, X } from "lucide-react";
+import { AlertTriangle, Send, Trash2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import styles from "../ClientesAdmin.module.css";
@@ -66,14 +66,14 @@ export default function ClientActionModal({
             {isDelete ? (
               <Trash2 size={20} aria-hidden="true" />
             ) : (
-              <RotateCcw size={20} aria-hidden="true" />
+              <Send size={20} aria-hidden="true" />
             )}
           </span>
 
           <div>
             <span className={styles.modalEyebrow}>Ação administrativa</span>
             <h2 id="client-action-title">
-              {isDelete ? "Excluir cliente" : "Resetar senha"}
+              {isDelete ? "Excluir cliente" : "Enviar redefinição de senha"}
             </h2>
           </div>
 
@@ -97,8 +97,8 @@ export default function ClientActionModal({
               </>
             ) : (
               <>
-                Confirma o reset de senha de <strong>{action.client.name || "cliente"}</strong>?
-                A senha temporária atual será aplicada pela API administrativa.
+                Confirma o envio de um link seguro de redefinição para{" "}
+                <strong>{action.client.email || "o e-mail do cliente"}</strong>?
               </>
             )}
           </p>
@@ -108,7 +108,7 @@ export default function ClientActionModal({
             <span>
               {isDelete
                 ? "Revise cuidadosamente antes de excluir esta conta."
-                : "Oriente o cliente a alterar a senha no próximo acesso."}
+                : "Nenhuma senha será definida pelo administrador. O cliente criará a nova senha pelo link recebido."}
             </span>
           </div>
         </div>
@@ -134,8 +134,8 @@ export default function ClientActionModal({
                 ? "Excluindo..."
                 : "Confirmar exclusão"
               : resetting
-                ? "Resetando..."
-                : "Confirmar reset"}
+                ? "Enviando..."
+                : "Enviar link seguro"}
           </button>
         </footer>
       </section>

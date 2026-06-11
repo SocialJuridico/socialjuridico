@@ -1,7 +1,7 @@
 import {
   Mail,
   Phone,
-  RotateCcw,
+  Send,
   Trash2,
   UserRound,
 } from "lucide-react";
@@ -25,8 +25,8 @@ function ClientActions({ client, deletingId, resettingId, onAction }) {
         onClick={() => onAction("reset", client)}
         disabled={deleting || resetting}
       >
-        <RotateCcw size={14} aria-hidden="true" />
-        {resetting ? "Resetando..." : "Resetar senha"}
+        <Send size={14} aria-hidden="true" />
+        {resetting ? "Enviando..." : "Enviar redefinição"}
       </button>
 
       <button

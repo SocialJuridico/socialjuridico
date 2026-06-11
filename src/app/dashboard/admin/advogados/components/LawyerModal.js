@@ -5,7 +5,7 @@ import {
   BarChart3,
   CalendarClock,
   CheckCircle2,
-  RotateCcw,
+  Send,
   Settings,
   ShieldAlert,
   Trash2,
@@ -381,13 +381,13 @@ export default function LawyerModal({
   const titles = {
     manage: "Gerenciar advogado",
     usage: "Uso de ferramentas premium",
-    reset: "Resetar senha",
+    reset: "Enviar redefinição de senha",
     delete: "Excluir advogado",
   };
   const icons = {
     manage: Settings,
     usage: BarChart3,
-    reset: RotateCcw,
+    reset: Send,
     delete: Trash2,
   };
   const Icon = icons[modal.type] || Settings;
@@ -452,8 +452,11 @@ export default function LawyerModal({
                   </>
                 ) : (
                   <>
-                    Confirma o reset de senha de{" "}
-                    <strong>{modal.lawyer.name || "advogado"}</strong>?
+                    Confirma o envio de um link seguro de redefinição para{" "}
+                    <strong>
+                      {modal.lawyer.email || "o e-mail do advogado"}
+                    </strong>
+                    ?
                   </>
                 )}
               </p>
@@ -462,7 +465,7 @@ export default function LawyerModal({
                 <span>
                   {modal.type === "delete"
                     ? "Revise cuidadosamente antes de excluir esta conta."
-                    : "A API atual ainda utiliza uma senha temporária padrão e será revisada na etapa técnica."}
+                    : "Nenhuma senha será definida pelo administrador. O advogado criará a nova senha pelo link recebido."}
                 </span>
               </div>
             </>
@@ -499,7 +502,7 @@ export default function LawyerModal({
               onClick={onReset}
               disabled={busy}
             >
-              {busy ? "Resetando..." : "Confirmar reset"}
+              {busy ? "Enviando..." : "Enviar link seguro"}
             </button>
           )}
         </footer>

@@ -1,4 +1,4 @@
-import { Sparkles, X } from "lucide-react";
+import { AlertTriangle, Sparkles, X } from "lucide-react";
 
 import styles from "../page.module.css";
 
@@ -7,7 +7,7 @@ export default function RadarSearchReport({ result, onClose }) {
 
   const sources = [
     { key: "brave", label: "Brave Search" },
-    { key: "reddit", label: "Reddit RSS" },
+    { key: "reddit", label: "Reddit" },
   ];
 
   return (
@@ -17,12 +17,18 @@ export default function RadarSearchReport({ result, onClose }) {
           <Sparkles size={17} aria-hidden="true" />
           <strong>Relatório da última busca automática</strong>
         </div>
-        <button type="button" className={styles.iconButton} onClick={onClose} aria-label="Fechar relatório">
+        <button
+          type="button"
+          className={styles.iconButton}
+          onClick={onClose}
+          aria-label="Fechar relatório"
+        >
           <X size={16} aria-hidden="true" />
         </button>
       </header>
 
       <div className={styles.reportTotals}>
+        <span>Score mínimo <strong>{result.score_minimo ?? 30}</strong></span>
         <span>Encontrados <strong>{result.total_encontrado || 0}</strong></span>
         <span>Duplicados <strong>{result.total_duplicados || 0}</strong></span>
         <span>Classificados <strong>{result.total_classificados || 0}</strong></span>
@@ -35,9 +41,16 @@ export default function RadarSearchReport({ result, onClose }) {
         {sources.map(({ key, label }) => {
           const stats = result[key];
           if (!stats) return null;
+
           return (
             <article key={key}>
               <strong>{label}</strong>
+              {stats.indisponivel && (
+                <span>
+                  <AlertTriangle size={13} aria-hidden="true" />
+                  Fonte indisponível para o IP do servidor
+                </span>
+              )}
               <span>Encontrados: {stats.encontrados || 0}</span>
               <span>Classificados: {stats.classificados || 0}</span>
               <span>Inseridos: {stats.inseridos || 0}</span>

@@ -1,55 +1,116 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ExternalLink, X } from "lucide-react";
+
 import styles from "./AdvogadoMesPopup.module.css";
 
 export default function AdvogadoMesPopup() {
-  const [show, setShow] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
-  const [linkUrl, setLinkUrl] = useState("");
+  const [banner, setBanner] = useState(null);
+  const closeRef = useRef(null);
+
+  const handleClose = useCallback(() => {
+    setBanner(null);
+  }, []);
 
   useEffect(() => {
-    // Verificar se já foi exibido nesta sessão
-    const hasShown = sessionStorage.getItem("advogadoMesShown");
-    if (hasShown) return;
+    const controller = new AbortController();
 
-    const fetchBanner = async () => {
+    const loadBanner = async () => {
       try {
-        // Usamos o endpoint público ou genérico de banners. 
-        // Como o endpoint /api/admin/banners exige admin, criaremos um novo endpoint público para pegar este banner específico.
-        const res = await fetch("/api/advogado-mes");
-        const data = await res.json();
-        
-        if (data.success && data.banner && data.banner.link_url === "ACTIVE") {
-          setImageUrl(data.banner.image_url);
-          // Opcional: usar o link extra se precisarmos clicar e ir para uma URL
-          // setLinkUrl(data.banner.name); // se guardarmos link lá
-          setShow(true);
-        }
+        const response = await fetch("/api/advogado-mes", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data?.success || !data.banner?.image_url) return;
+
+        const version = String(data.banner.version || data.banner.id || "current");
+        const sessionKey = `advogadoMesShown:${data.banner.id}:${version}`;
+        if (sessionStorage.getItem(sessionKey)) return;
+
+        sessionStorage.setItem(sessionKey, "true");
+        setBanner(data.banner);
       } catch (error) {
-        console.error("Erro ao carregar banner de advogado do mês:", error);
+        if (error?.name !== "AbortError") {
+          console.error("[AdvogadoMesPopup] Falha ao carregar destaque:", error);
+        }
       }
     };
 
-    fetchBanner();
+    void loadBanner();
+    return () => controller.abort();
   }, []);
 
-  const handleClose = () => {
-    sessionStorage.setItem("advogadoMesShown", "true");
-    setShow(false);
-  };
+  useEffect(() => {
+    if (!banner) return undefined;
 
-  if (!show || !imageUrl) return null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") handleClose();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [banner, handleClose]);
+
+  if (!banner) return null;
+
+  const image = (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={banner.image_url}
+      alt={banner.alt_text || "Destaque Advogado do Mês"}
+      className={styles.image}
+      onError={handleClose}
+    />
+  );
 
   return (
-    <div className={styles.overlay} onClick={handleClose}>
-      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        <button className={styles.closeBtn} onClick={handleClose}>
-          <X size={24} />
+    <div className={styles.overlay} onMouseDown={handleClose}>
+      <div
+        className={styles.modal}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Destaque Advogado do Mês"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          ref={closeRef}
+          type="button"
+          className={styles.closeBtn}
+          onClick={handleClose}
+          aria-label="Fechar destaque"
+        >
+          <X size={20} aria-hidden="true" />
         </button>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={imageUrl} alt="Advogado do Mês" className={styles.image} />
+
+        {banner.link_url ? (
+          <a
+            href={banner.link_url}
+            target={banner.link_url.startsWith("/") ? undefined : "_blank"}
+            rel={
+              banner.link_url.startsWith("/") ? undefined : "noopener noreferrer"
+            }
+            className={styles.imageLink}
+            aria-label={`${banner.alt_text || "Abrir destaque"}. Abrir destino.`}
+          >
+            {image}
+            <span className={styles.linkHint}>
+              <ExternalLink size={13} aria-hidden="true" />
+              Abrir destaque
+            </span>
+          </a>
+        ) : (
+          image
+        )}
       </div>
     </div>
   );

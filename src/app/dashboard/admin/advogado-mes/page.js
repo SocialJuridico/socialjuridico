@@ -1,207 +1,106 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, Star, Image as ImageIcon, Save, UploadCloud } from "lucide-react";
-import toast from "react-hot-toast";
-import styles from "./page.module.css";
-import { supabase } from "@/lib/supabase";
+import { AlertTriangle, RefreshCw, ShieldCheck } from "lucide-react";
+
+import AdvogadoMesAudit from "./components/AdvogadoMesAudit";
+import AdvogadoMesForm from "./components/AdvogadoMesForm";
+import AdvogadoMesHeader from "./components/AdvogadoMesHeader";
+import AdvogadoMesPreview from "./components/AdvogadoMesPreview";
+import AdvogadoMesSummary from "./components/AdvogadoMesSummary";
+import { useAdvogadoMesAdmin } from "./useAdvogadoMesAdmin";
+import styles from "./AdvogadoMesAdmin.module.css";
 
 export default function AdvogadoMesAdminPage() {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  
-  // O banner especial terá o nome fixo "ADVOGADO_MES"
-  const [bannerId, setBannerId] = useState(null);
-  const [imageUrl, setImageUrl] = useState("");
-  const [status, setStatus] = useState("INACTIVE"); // guardado em link_url
+  const state = useAdvogadoMesAdmin();
 
-  useEffect(() => {
-    const fetchBanner = async () => {
-      try {
-        const res = await fetch("/api/admin/banners");
-        const data = await res.json();
-        if (data.success && data.data) {
-          const banner = data.data.find(b => b.name === "ADVOGADO_MES");
-          if (banner) {
-            setBannerId(banner.id);
-            setImageUrl(banner.image_url);
-            setStatus(banner.link_url === "ACTIVE" ? "ACTIVE" : "INACTIVE");
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao buscar banner:", error);
-        toast.error("Erro ao carregar dados atuais.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBanner();
-  }, []);
+  if (state.loading) {
+    return (
+      <main className={styles.loadingPage}>
+        <span className={styles.spinner} aria-hidden="true" />
+        <h1>Carregando Advogado do Mês</h1>
+        <p>Validando publicação, agenda, Storage e auditoria.</p>
+      </main>
+    );
+  }
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("A imagem deve ter no máximo 5MB.");
-      return;
-    }
-
-    setSaving(true);
-    const toastId = toast.loading("Enviando imagem...");
-    
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/admin/advogado-mes/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Falha no upload");
-      }
-
-      setImageUrl(data.publicUrl);
-      toast.success("Upload concluído! Clique em Salvar Configuração.", { id: toastId });
-    } catch (err) {
-      console.error(err);
-      toast.error(`Erro ao fazer upload: ${err.message}`, { id: toastId });
-    } finally {
-      setSaving(false);
-      // Limpar o input para permitir selecionar a mesma imagem novamente
-      e.target.value = null;
-    }
-  };
-
-  const handleSave = async () => {
-    if (!imageUrl.trim()) {
-      toast.error("A URL da imagem é obrigatória.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const payload = {
-        name: "ADVOGADO_MES",
-        image_url: imageUrl.trim(),
-        link_url: status
-      };
-
-      let url = "/api/admin/banners";
-      let method = "POST";
-
-      if (bannerId) {
-        url = `/api/admin/banners?id=${bannerId}`;
-        method = "PUT";
-      }
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        toast.success("Configuração salva com sucesso!");
-        if (!bannerId && data.data) {
-          setBannerId(data.data.id);
-        }
-      } else {
-        toast.error(data.message || "Falha ao salvar.");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao salvar configuração.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return <div style={{ color: "#fff", padding: "40px" }}>Carregando...</div>;
+  if (state.loadError && !state.original.id) {
+    return (
+      <main className={styles.loadingPage}>
+        <span className={styles.errorIcon}>
+          <AlertTriangle size={28} aria-hidden="true" />
+        </span>
+        <h1>Não foi possível carregar o módulo</h1>
+        <p>{state.loadError}</p>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => state.loadConfig()}
+        >
+          <RefreshCw size={16} aria-hidden="true" />
+          Tentar novamente
+        </button>
+      </main>
+    );
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/dashboard/admin" className={styles.backLink}>
-          <ArrowLeft size={16} /> Voltar ao painel admin
-        </Link>
-        <h1>
-          <Star size={18} color="var(--color-gold)" /> Popup: Advogado do Mês
-        </h1>
-      </header>
+    <main className={styles.page}>
+      <AdvogadoMesHeader state={state} />
 
-      <div className={styles.container}>
-        <p className={styles.description}>
-          Configure a imagem que aparecerá no Pop-up "Advogado do Mês" para todos os clientes e advogados quando eles fizerem login na plataforma.
-        </p>
-
-        <div className={styles.card}>
-          <div className={styles.formGroup}>
-            <label>Upload ou URL da Imagem (Card)</label>
-            <div className={styles.inputWrap}>
-              <ImageIcon size={18} className={styles.inputIcon} />
-              <input
-                type="text"
-                placeholder="https://sua-imagem.com/advogado.png"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                className={styles.input}
-              />
-            </div>
-            <div className={styles.uploadWrap}>
-              <label className={styles.uploadBtn}>
-                <UploadCloud size={16} /> Fazer Upload do PC
-                <input 
-                  type="file" 
-                  accept="image/png, image/jpeg, image/webp" 
-                  style={{ display: "none" }} 
-                  onChange={handleFileUpload}
-                  disabled={saving}
-                />
-              </label>
-              <span className={styles.uploadHint}>Máx 5MB (PNG, JPG, WEBP)</span>
-            </div>
+      {state.loadError && (
+        <div className={styles.warningBanner} role="alert">
+          <AlertTriangle size={18} aria-hidden="true" />
+          <div>
+            <strong>Os dados podem estar desatualizados</strong>
+            <p>{state.loadError}</p>
           </div>
-
-          <div className={styles.formGroup}>
-            <label>Status do Popup</label>
-            <select 
-              value={status} 
-              onChange={(e) => setStatus(e.target.value)}
-              className={styles.select}
-            >
-              <option value="INACTIVE">🔴 Desativado (Não vai aparecer)</option>
-              <option value="ACTIVE">🟢 Ativo (Vai aparecer nos logins)</option>
-            </select>
-          </div>
-
-          <div className={styles.previewContainer}>
-            <p>Pré-visualização da Imagem:</p>
-            {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt="Preview" className={styles.previewImage} />
-            ) : (
-              <div className={styles.emptyPreview}>Nenhuma imagem informada</div>
-            )}
-          </div>
-
-          <button 
-            className={styles.saveBtn} 
-            onClick={handleSave} 
-            disabled={saving}
-          >
-            {saving ? "Salvando..." : <><Save size={16} /> Salvar Configuração</>}
+          <button type="button" onClick={() => state.loadConfig()}>
+            Atualizar
           </button>
         </div>
-      </div>
-    </div>
+      )}
+
+      {!state.auditAvailable && (
+        <div className={styles.migrationBanner} role="status">
+          <ShieldCheck size={18} aria-hidden="true" />
+          <div>
+            <strong>Auditoria administrativa ainda não habilitada</strong>
+            <p>
+              Execute primeiro a migração de governança dos banners para registrar
+              todas as alterações deste módulo.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {state.dirty && (
+        <div className={styles.unsavedBanner} role="status">
+          <span />
+          <div>
+            <strong>Existem alterações não salvas</strong>
+            <p>
+              A prévia já reflete o formulário, mas o popup público ainda mantém a
+              última versão salva.
+            </p>
+          </div>
+        </div>
+      )}
+
+      <AdvogadoMesSummary
+        config={state.original}
+        auditCount={state.recentAudit.length}
+      />
+
+      <section className={styles.contentGrid}>
+        <AdvogadoMesForm state={state} />
+        <AdvogadoMesPreview config={state.config} />
+      </section>
+
+      <AdvogadoMesAudit
+        items={state.recentAudit}
+        available={state.auditAvailable}
+        governance={state.governance}
+      />
+    </main>
   );
 }

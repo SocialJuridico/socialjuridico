@@ -171,9 +171,10 @@ export function createAdminSections(stats) {
       cards: [
         {
           title: "Banners do App",
-          value: "Gerenciar",
+          value: "Publicação, agenda e rotação",
           href: "/dashboard/admin/banners",
           icon: ImageIcon,
+          tone: ADMIN_CARD_TONES.gold,
         },
         {
           title: "Advogado do mês",

@@ -43,6 +43,7 @@ const PROVIDER_LABELS = {
   STRIPE_CHECKOUT: "Stripe Checkout",
   STRIPE_PAYMENT_INTENT: "Stripe PaymentIntent",
   STRIPE_SETUP_INTENT: "Stripe SetupIntent",
+  INFINITEPAY: "InfinitePay",
   MANUAL: "Operação manual",
   UNKNOWN: "Origem não identificada",
 };
@@ -59,6 +60,7 @@ const EMPTY_SUMMARY = {
   uniqueCustomers: 0,
   averageTicket: 0,
   byProduct: {},
+  byProvider: {},
 };
 
 function formatCurrency(value, currency = "BRL") {
@@ -100,6 +102,8 @@ function calculateSummary(items) {
 
       current.byProduct[transaction.product] =
         (current.byProduct[transaction.product] || 0) + 1;
+      current.byProvider[transaction.provider] =
+        (current.byProvider[transaction.provider] || 0) + 1;
 
       return current;
     },
@@ -108,6 +112,7 @@ function calculateSummary(items) {
       positiveConfirmedCount: 0,
       customerIds: new Set(),
       byProduct: {},
+      byProvider: {},
     },
   );
 
@@ -129,6 +134,7 @@ function calculateSummary(items) {
         )
       : 0,
     byProduct: summary.byProduct,
+    byProvider: summary.byProvider,
   };
 }
 
@@ -232,6 +238,7 @@ export default function AdminTransacoesPage() {
         transaction.couponCode,
         PRODUCT_LABELS[transaction.product],
         STATUS_LABELS[transaction.financialStatus],
+        PROVIDER_LABELS[transaction.provider],
       ].some((value) =>
         String(value || "").toLowerCase().includes(term),
       );
@@ -311,7 +318,7 @@ export default function AdminTransacoesPage() {
       31,
     );
     document.text(
-      "Relatório administrativo. E-mails e referências do provedor permanecem mascarados.",
+      "Relatório administrativo. E-mails e referências dos provedores permanecem mascarados.",
       14,
       37,
     );
@@ -323,7 +330,7 @@ export default function AdminTransacoesPage() {
           "Data",
           "Comprador",
           "Produto",
-          "Origem",
+          "Operadora",
           "Valor",
           "Status",
           "Cupom",
@@ -399,7 +406,7 @@ export default function AdminTransacoesPage() {
               </h1>
               <p>
                 Receita confirmada, créditos manuais, falhas de processamento e
-                divergências com o provedor em um único painel.
+                operações registradas por Stripe e InfinitePay em um único painel.
               </p>
             </div>
 
@@ -421,6 +428,7 @@ export default function AdminTransacoesPage() {
                 className={styles.syncButton}
                 onClick={syncStripe}
                 disabled={syncing || refreshing}
+                title="A conciliação por API está disponível para o Stripe. O InfinitePay é atualizado pelo webhook."
               >
                 <RefreshCw
                   size={16}
@@ -532,7 +540,7 @@ export default function AdminTransacoesPage() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar comprador, cupom ou referência mascarada"
+              placeholder="Buscar comprador, cupom, operadora ou referência"
             />
           </div>
 
@@ -573,13 +581,14 @@ export default function AdminTransacoesPage() {
             <select
               value={providerFilter}
               onChange={(event) => setProviderFilter(event.target.value)}
-              aria-label="Filtrar por origem"
+              aria-label="Filtrar por operadora"
             >
-              <option value="ALL">Todas as origens</option>
+              <option value="ALL">Todas as operadoras</option>
+              <option value="INFINITEPAY">InfinitePay</option>
               <option value="STRIPE_CHECKOUT">Stripe Checkout</option>
-              <option value="STRIPE_PAYMENT_INTENT">PaymentIntent</option>
-              <option value="STRIPE_SETUP_INTENT">SetupIntent</option>
-              <option value="MANUAL">Manual</option>
+              <option value="STRIPE_PAYMENT_INTENT">Stripe PaymentIntent</option>
+              <option value="STRIPE_SETUP_INTENT">Stripe SetupIntent</option>
+              <option value="MANUAL">Operação manual</option>
               <option value="UNKNOWN">Não identificada</option>
             </select>
           </label>
@@ -614,9 +623,11 @@ export default function AdminTransacoesPage() {
             {filteredTransactions.length} de {transactions.length} registros
           </span>
           <span>
-            START: {visibleSummary.byProduct.START || 0} · PRO:{" "}
-            {visibleSummary.byProduct.PRO || 0} · Juris:{" "}
-            {visibleSummary.byProduct.JURIS || 0}
+            Stripe:{" "}
+            {(visibleSummary.byProvider.STRIPE_CHECKOUT || 0) +
+              (visibleSummary.byProvider.STRIPE_PAYMENT_INTENT || 0)}{" "}
+            · InfinitePay: {visibleSummary.byProvider.INFINITEPAY || 0} · Manual:{" "}
+            {visibleSummary.byProvider.MANUAL || 0}
           </span>
         </div>
 
@@ -628,7 +639,7 @@ export default function AdminTransacoesPage() {
                   <th>Data</th>
                   <th>Comprador</th>
                   <th>Produto</th>
-                  <th>Origem</th>
+                  <th>Operadora</th>
                   <th>Valor</th>
                   <th>Status</th>
                   <th>Cupom</th>

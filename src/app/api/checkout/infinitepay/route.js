@@ -1,126 +1,226 @@
-import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
+import { NextResponse } from "next/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function validateOrigin(request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+
+  try {
+    if (!host || new URL(origin).host !== host) {
+      return json(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
+    }
+  } catch {
+    return json(
+      { success: false, message: "Origem da requisição inválida." },
+      403,
+    );
+  }
+
+  return null;
+}
+
+function normalizePhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+
+  const withCountryCode = digits.startsWith("55") ? digits : `55${digits}`;
+  return `+${withCountryCode.slice(0, 15)}`;
+}
+
+function resolveProduct({ planType, jurisAmount, isPromoEligible }) {
+  const normalizedPlan = String(planType || "").toUpperCase();
+  const normalizedJuris = Number(jurisAmount || 0);
+
+  if ([10, 20, 50].includes(normalizedJuris)) {
+    const prices = { 10: 990, 20: 1690, 50: 3990 };
+
+    return {
+      priceInCents: prices[normalizedJuris],
+      description: `Pacote ${normalizedJuris} Juris`,
+    };
+  }
+
+  if (["START", "PRO"].includes(normalizedPlan)) {
+    const isPro = normalizedPlan === "PRO";
+
+    if (Boolean(isPromoEligible)) {
+      return {
+        priceInCents: 1099,
+        description: isPro
+          ? "Plano Pro Promocional 30 dias"
+          : "Plano Start Promocional 30 dias",
+      };
+    }
+
+    return {
+      priceInCents: isPro ? 8790 : 4099,
+      description: isPro ? "Plano Pro Mensal" : "Plano Start Mensal",
+    };
+  }
+
+  return null;
+}
 
 export async function POST(request) {
   try {
+    const originResponse = validateOrigin(request);
+    if (originResponse) return originResponse;
+
     const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+      return json({ success: false, message: "Não autorizado." }, 401);
     }
 
-    const db = supabaseAdmin || supabase;
-    const { data: profile } = await db
-      .from("advogados")
-      .select("oab_verification_status")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    if (profile?.oab_verification_status === "ERROR") {
-      return NextResponse.json(
-        { success: false, message: "Acesso restrito devido a pendências na OAB." },
-        { status: 403 }
+    if (!supabaseAdmin) {
+      return json(
+        { success: false, message: "Serviço de pagamento indisponível." },
+        503,
       );
     }
 
-    const { planType, jurisAmount, customer, isPromoEligible } = await request.json();
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("advogados")
+      .select(
+        "id, name, email, phone, oab_verification_status, promo_start_used, promo_pro_used",
+      )
+      .eq("id", user.id)
+      .maybeSingle();
 
-    console.log("🚀 [Checkout InfinitePay] Iniciando geração de link para:", customer.email);
-
-    // 1. Determinar o valor e descrição
-    let priceInCents = 0;
-    let description = "";
-
-    // Se for Juris (Verifica se é uma das quantidades válidas: 10, 20 ou 50)
-    if (jurisAmount && (jurisAmount === 10 || jurisAmount === 20 || jurisAmount === 50)) {
-      if (jurisAmount === 10) { priceInCents = 990; description = "Pacote 10 Juris"; }
-      else if (jurisAmount === 20) { priceInCents = 1690; description = "Pacote 20 Juris"; }
-      else if (jurisAmount === 50) { priceInCents = 3990; description = "Pacote 50 Juris"; }
-    } 
-    // Se for Plano
-    else if (planType) {
-      const isPro = planType === "PRO";
-      
-      if (isPromoEligible) {
-        priceInCents = 1099; // R$ 10,99 para a promoção
-        description = isPro ? "Plano Pro Promocional 30 dias" : "Plano Start Promocional 30 dias";
-      } else {
-        priceInCents = isPro ? 8790 : 4099; // Valores normais
-        description = isPro ? "Plano Pro Mensal" : "Plano Start Mensal";
-      }
+    if (profileError || !profile) {
+      return json(
+        { success: false, message: "Perfil do advogado não localizado." },
+        404,
+      );
     }
 
-    // Validar se conseguimos determinar o valor
-    if (priceInCents === 0) {
-      console.error("❌ [Checkout InfinitePay] Não foi possível determinar o valor. planType:", planType, "jurisAmount:", jurisAmount);
-      return NextResponse.json({ success: false, message: "Não foi possível determinar o valor do produto" }, { status: 400 });
+    if (profile.oab_verification_status === "ERROR") {
+      return json(
+        {
+          success: false,
+          message: "Acesso restrito devido a pendências na OAB.",
+        },
+        403,
+      );
     }
 
-    // 2. Montar o payload para a InfinitePay
+    const body = await request.json().catch(() => null);
+    const planType = String(body?.planType || "").toUpperCase();
+    const jurisAmount = Number(body?.jurisAmount || 0);
+    const requestedPromo = Boolean(body?.isPromoEligible);
+    const promoAlreadyUsed =
+      planType === "PRO"
+        ? Boolean(profile.promo_pro_used)
+        : Boolean(profile.promo_start_used);
+    const product = resolveProduct({
+      planType,
+      jurisAmount,
+      isPromoEligible: requestedPromo && !promoAlreadyUsed,
+    });
+
+    if (!product) {
+      return json(
+        {
+          success: false,
+          message: "Não foi possível determinar o produto solicitado.",
+        },
+        400,
+      );
+    }
+
+    const checkoutHandle =
+      process.env.INFINITEPAY_HANDLE || "carlos-henrique-1o7";
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || "https://socialjuridico.com.br";
+    const orderReference = `sj_${user.id}_${Date.now()}`;
+
     const payload = {
-      handle: "carlos-henrique-1o7",
+      handle: checkoutHandle,
       items: [
         {
           quantity: 1,
-          price: priceInCents,
-          description: description
-        }
+          price: product.priceInCents,
+          description: product.description,
+        },
       ],
-      redirect_url: "https://socialjuridico.com.br/dashboard/advogado?payment_status=success",
-      webhook_url: "https://socialjuridico.com.br/api/webhook/infinitepay",
-      order_nsu: `sj_${customer.email}_${Date.now()}`,
+      redirect_url: `${siteUrl}/dashboard/advogado?payment_status=success`,
+      webhook_url: `${siteUrl}/api/webhook/infinitepay`,
+      order_nsu: orderReference,
       customer: {
-        name: customer.name || "Cliente Social Jurídico",
-        email: customer.email,
-        phone_number: (() => {
-          let p = customer.phone || "";
-          // Remove caracteres não numéricos
-          p = p.replace(/\D/g, "");
-          // Se não tiver o DDI (55), adiciona
-          if (p.length > 0 && !p.startsWith("55")) {
-            p = "55" + p;
-          }
-          // Adiciona o +
-          if (p.length > 0) {
-            p = "+" + p;
-          }
-          return p;
-        })()
-      }
+        name: profile.name || "Cliente Social Jurídico",
+        email: profile.email || user.email,
+        phone_number: normalizePhone(profile.phone),
+      },
     };
 
-    console.log("📦 [Checkout InfinitePay] Enviando payload:", JSON.stringify(payload, null, 2));
-
-    // 3. Chamar a API da InfinitePay
     const response = await fetch("https://api.checkout.infinitepay.io/links", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
 
     const responseText = await response.text();
-    console.log("📥 [Checkout InfinitePay] Resposta bruta:", responseText);
-
     let data = {};
+
     try {
       data = JSON.parse(responseText);
-    } catch (e) {
-      console.error("❌ [Checkout InfinitePay] Erro ao parsear JSON:", e);
+    } catch {
+      data = {};
     }
 
-    if (data.url) {
-      return NextResponse.json({ success: true, url: data.url });
-    } else {
-      console.error("❌ [Checkout InfinitePay] Erro ao gerar link:", data);
-      return NextResponse.json({ success: false, message: "Erro ao gerar link de pagamento" }, { status: 500 });
+    if (!response.ok || !data.url) {
+      console.error("[Checkout InfinitePay] Falha ao gerar link:", {
+        status: response.status,
+        hasResponseBody: Boolean(responseText),
+      });
+
+      return json(
+        {
+          success: false,
+          message: "Não foi possível gerar o link de pagamento.",
+        },
+        502,
+      );
     }
 
+    return json({
+      success: true,
+      url: data.url,
+      provider: "INFINITEPAY",
+    });
   } catch (error) {
-    console.error("💥 [Checkout InfinitePay] Erro crítico:", error);
-    return NextResponse.json({ success: false, message: "Erro interno no servidor" }, { status: 500 });
+    console.error("[Checkout InfinitePay][POST] Erro:", error);
+    return json(
+      {
+        success: false,
+        message: "Não foi possível iniciar o pagamento pela InfinitePay.",
+      },
+      500,
+    );
   }
 }

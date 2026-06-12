@@ -46,22 +46,42 @@ function maskEmail(value) {
   )}${suffix}`;
 }
 
-function maskProviderReference(value) {
-  const reference = String(value || "").trim();
-  if (!reference) return "Não informada";
-  if (reference.length <= 12) return `${reference.slice(0, 4)}••••`;
-
-  return `${reference.slice(0, 7)}••••${reference.slice(-4)}`;
-}
-
 function inferProvider(reference) {
-  const value = String(reference || "").toLowerCase();
+  const value = String(reference || "").trim().toLowerCase();
 
   if (value.startsWith("manual_")) return "MANUAL";
   if (value.startsWith("cs_")) return "STRIPE_CHECKOUT";
   if (value.startsWith("pi_")) return "STRIPE_PAYMENT_INTENT";
   if (value.startsWith("seti_")) return "STRIPE_SETUP_INTENT";
+  if (
+    value.startsWith("sj_") ||
+    value.startsWith("inf_") ||
+    value.startsWith("ip_") ||
+    value.startsWith("infinitepay_")
+  ) {
+    return "INFINITEPAY";
+  }
+
   return "UNKNOWN";
+}
+
+function maskProviderReference(value, provider) {
+  const reference = String(value || "").trim();
+  if (!reference) return "Não informada";
+
+  const suffix = reference.slice(-4).replace(/[^a-z0-9]/gi, "•");
+
+  if (provider === "INFINITEPAY") {
+    return `InfinitePay ••••${suffix || "••••"}`;
+  }
+
+  if (provider === "MANUAL") {
+    return `Manual ••••${suffix || "••••"}`;
+  }
+
+  if (reference.length <= 12) return `${reference.slice(0, 4)}••••`;
+
+  return `${reference.slice(0, 7)}••••${suffix}`;
 }
 
 function inferProduct(transaction) {
@@ -166,6 +186,8 @@ function summarize(transactions) {
 
       current.byProduct[transaction.product] =
         (current.byProduct[transaction.product] || 0) + 1;
+      current.byProvider[transaction.provider] =
+        (current.byProvider[transaction.provider] || 0) + 1;
 
       return current;
     },
@@ -181,6 +203,7 @@ function summarize(transactions) {
       alertCount: 0,
       customerIds: new Set(),
       byProduct: {},
+      byProvider: {},
     },
   );
 
@@ -202,6 +225,7 @@ function summarize(transactions) {
         )
       : 0,
     byProduct: summary.byProduct,
+    byProvider: summary.byProvider,
   };
 }
 
@@ -268,6 +292,7 @@ export async function GET() {
         provider,
         providerReference: maskProviderReference(
           transaction.stripe_session_id,
+          provider,
         ),
         couponCode: transaction.cupom?.codigo || null,
         createdAt: transaction.created_at,
@@ -287,6 +312,7 @@ export async function GET() {
         privacy: {
           customerEmailMasked: true,
           providerReferenceMasked: true,
+          infinitePayOrderReferenceFullyProtected: true,
           cardDataStored: false,
         },
       },

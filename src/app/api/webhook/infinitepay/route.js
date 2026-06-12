@@ -1,229 +1,465 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import {
+  boasVindasPlanoTemplate,
+  jurisCreditadoTemplate,
+} from "@/lib/emailTemplates";
 import { resend } from "@/lib/resend";
-import { jurisCreditadoTemplate, boasVindasPlanoTemplate } from "@/lib/emailTemplates";
+import { supabaseAdmin } from "@/lib/supabase";
+import { NextResponse } from "next/server";
 
-// Usando a chave service_role para contornar RLS no webhook
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function isValidUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || ""),
+  );
+}
+
+function normalizeAmountInCents(value) {
+  const raw = String(value ?? "").trim();
+  const numeric = Number(raw.replace(",", "."));
+
+  if (!Number.isFinite(numeric) || numeric <= 0) return 0;
+  return raw.includes(".") || raw.includes(",")
+    ? Math.round(numeric * 100)
+    : Math.round(numeric);
+}
+
+function resolveReference(payload) {
+  return String(
+    payload?.order_nsu ||
+      payload?.transaction_nsu ||
+      payload?.nsu ||
+      payload?.id ||
+      "",
+  ).trim();
+}
+
+function resolveIdentity(payload, reference) {
+  const email = String(
+    payload?.customer?.email ||
+      payload?.customer_email ||
+      payload?.metadata?.email ||
+      "",
+  )
+    .trim()
+    .toLowerCase();
+
+  const userMatch = reference.match(
+    /^sj_([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})_/i,
+  );
+
+  if (userMatch && isValidUuid(userMatch[1])) {
+    return { userId: userMatch[1], email };
+  }
+
+  if (!email && reference.startsWith("sj_")) {
+    const parts = reference.split("_");
+    const legacyEmail = parts.slice(1, -1).join("_").trim().toLowerCase();
+    return { userId: null, email: legacyEmail };
+  }
+
+  return { userId: null, email };
+}
+
+function resolveProduct(amountInCents, items) {
+  const description = String(items?.[0]?.description || "").toLowerCase();
+
+  if (amountInCents === 1099) {
+    const planType = description.includes("pro") ? "PRO" : "START";
+
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType,
+      billingCycle: "MONTHLY",
+      jurisAmount: planType === "PRO" ? 20 : 7,
+      promo: true,
+      expirationDays: 30,
+    };
+  }
+
+  if (amountInCents === 4099) {
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType: "START",
+      billingCycle: "MONTHLY",
+      jurisAmount: 7,
+      promo: false,
+      expirationDays: 30,
+    };
+  }
+
+  if (amountInCents === 8790) {
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType: "PRO",
+      billingCycle: "MONTHLY",
+      jurisAmount: 20,
+      promo: false,
+      expirationDays: 30,
+    };
+  }
+
+  if (amountInCents === 43188) {
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType: "START",
+      billingCycle: "ANNUAL",
+      jurisAmount: 7,
+      promo: false,
+      expirationDays: 365,
+    };
+  }
+
+  if (amountInCents === 91188) {
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType: "PRO",
+      billingCycle: "ANNUAL",
+      jurisAmount: 20,
+      promo: false,
+      expirationDays: 365,
+    };
+  }
+
+  const jurisPackages = {
+    990: 10,
+    1690: 20,
+    3990: 50,
+  };
+
+  if (jurisPackages[amountInCents]) {
+    return {
+      type: "JURIS_PURCHASE",
+      planType: null,
+      billingCycle: null,
+      jurisAmount: jurisPackages[amountInCents],
+      promo: false,
+      expirationDays: 0,
+    };
+  }
+
+  return null;
+}
+
+async function findLawyer(identity) {
+  let query = supabaseAdmin
+    .from("advogados")
+    .select(
+      "id, name, email, balance, promo_start_used, promo_pro_used",
+    );
+
+  if (identity.userId) {
+    query = query.eq("id", identity.userId);
+  } else if (identity.email) {
+    query = query.ilike("email", identity.email);
+  } else {
+    return null;
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    throw new Error("Falha ao identificar o comprador da InfinitePay.");
+  }
+
+  return data || null;
+}
+
+async function findTransaction(reference) {
+  const { data, error } = await supabaseAdmin
+    .from("transacoes")
+    .select("id, status")
+    .eq("stripe_session_id", reference)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Falha ao consultar idempotência financeira.");
+  }
+
+  return data || null;
+}
+
+async function reserveTransaction({
+  reference,
+  lawyerId,
+  product,
+  amountInCents,
+}) {
+  const existing = await findTransaction(reference);
+
+  if (existing?.status === "succeeded" || existing?.status === "processing") {
+    return { duplicate: true, transactionId: existing.id };
+  }
+
+  const payload = {
+    advogado_id: lawyerId,
+    tipo: product?.type || "UNKNOWN_PURCHASE",
+    valor: amountInCents / 100,
+    moeda: "BRL",
+    status: product ? "processing" : "pending_manual_review",
+    juris_amount: product?.jurisAmount || 0,
+    stripe_session_id: reference,
+    created_at: new Date().toISOString(),
+  };
+
+  if (existing) {
+    const { error } = await supabaseAdmin
+      .from("transacoes")
+      .update(payload)
+      .eq("id", existing.id);
+
+    if (error) {
+      throw new Error("Falha ao reabrir o processamento InfinitePay.");
+    }
+
+    return { duplicate: false, transactionId: existing.id };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("transacoes")
+    .insert([payload])
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return { duplicate: true, transactionId: null };
+    }
+    throw new Error("Falha ao reservar o lançamento InfinitePay.");
+  }
+
+  return { duplicate: false, transactionId: data.id };
+}
+
+async function updateTransactionStatus(transactionId, status) {
+  if (!transactionId) return;
+
+  const { error } = await supabaseAdmin
+    .from("transacoes")
+    .update({ status })
+    .eq("id", transactionId);
+
+  if (error) {
+    console.error("[InfinitePay] Falha ao atualizar transação:", error);
+  }
+}
+
+async function incrementBalance(lawyerId, amount) {
+  const rpcResult = await supabaseAdmin.rpc("increment_lawyer_balance", {
+    p_lawyer_id: lawyerId,
+    p_amount: amount,
+  });
+
+  if (!rpcResult.error) {
+    return Number(rpcResult.data || 0);
+  }
+
+  const missingFunction =
+    rpcResult.error.code === "PGRST202" ||
+    String(rpcResult.error.message || "")
+      .toLowerCase()
+      .includes("increment_lawyer_balance");
+
+  if (!missingFunction) {
+    throw new Error("Falha ao atualizar o saldo do advogado.");
+  }
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("advogados")
+    .select("balance")
+    .eq("id", lawyerId)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    throw new Error("Perfil do advogado não localizado.");
+  }
+
+  const newBalance = Number(profile.balance || 0) + amount;
+  const { error } = await supabaseAdmin
+    .from("advogados")
+    .update({ balance: newBalance })
+    .eq("id", lawyerId);
+
+  if (error) {
+    throw new Error("Falha ao atualizar o saldo do advogado.");
+  }
+
+  return newBalance;
+}
+
+async function applyProduct(lawyer, product) {
+  if (product.type === "JURIS_PURCHASE") {
+    const newBalance = await incrementBalance(
+      lawyer.id,
+      product.jurisAmount,
+    );
+
+    return { newBalance };
+  }
+
+  const newBalance = Number(lawyer.balance || 0) + product.jurisAmount;
+  const updateData = {
+    plan_type: product.planType,
+    plan_billing_cycle: product.billingCycle,
+    is_premium: true,
+    premium_expires_at: new Date(
+      Date.now() + product.expirationDays * 24 * 60 * 60 * 1000,
+    ).toISOString(),
+    balance: newBalance,
+  };
+
+  if (product.promo) {
+    updateData[
+      product.planType === "PRO" ? "promo_pro_used" : "promo_start_used"
+    ] = true;
+  }
+
+  const { error } = await supabaseAdmin
+    .from("advogados")
+    .update(updateData)
+    .eq("id", lawyer.id);
+
+  if (error) {
+    throw new Error("Falha ao ativar o plano contratado.");
+  }
+
+  return { newBalance };
+}
+
+async function sendConfirmationEmail(lawyer, product, newBalance) {
+  if (!process.env.RESEND_API_KEY || !lawyer.email) return;
+
+  try {
+    if (product.type === "JURIS_PURCHASE") {
+      await resend.emails.send({
+        from: "Social Jurídico <contato@socialjuridico.com.br>",
+        to: [lawyer.email],
+        subject: "Seus Juris foram creditados",
+        html: jurisCreditadoTemplate({
+          lawyerName: lawyer.name || "Advogado",
+          amount: product.jurisAmount,
+          balance: newBalance,
+        }),
+      });
+      return;
+    }
+
+    await resend.emails.send({
+      from: "Social Jurídico <contato@socialjuridico.com.br>",
+      to: [lawyer.email],
+      subject: `Bem-vindo ao Plano ${product.planType}`,
+      html: boasVindasPlanoTemplate({
+        lawyerName: lawyer.name || "Advogado",
+        planType: product.planType,
+        jurisBonus: product.jurisAmount,
+      }),
+    });
+  } catch (error) {
+    console.error("[InfinitePay] Falha não fatal no e-mail:", error);
+  }
+}
 
 export async function POST(request) {
+  let transactionId = null;
+
   try {
-    const payload = await request.json();
-    console.log("📥 [Webhook InfinitePay] Payload recebido:", JSON.stringify(payload, null, 2));
-
-    const { amount, customer, items, order_nsu } = payload;
-    
-    // O email do cliente é crucial para identificarmos quem comprou
-    let email = customer?.email || payload.customer_email || payload.metadata?.email;
-    
-    // Failsafe: se o email não estiver no local padrão, mas vier no order_nsu codificado como sj_email_timestamp
-    if (!email && order_nsu && order_nsu.startsWith("sj_")) {
-      const parts = order_nsu.split("_");
-      // O formato é sj_email_timestamp. Remove o 'sj' e o timestamp
-      email = parts.slice(1, -1).join("_");
-      console.log("ℹ️ [Webhook InfinitePay] Email recuperado via order_nsu:", email);
-    }
-    
-    if (!email) {
-      console.error("❌ [Webhook InfinitePay] Email do cliente não encontrado no payload.");
-      return NextResponse.json({ success: false, message: "Email não encontrado" }, { status: 400 });
+    if (!supabaseAdmin) {
+      return json(
+        { success: false, message: "Serviço financeiro indisponível." },
+        503,
+      );
     }
 
-    // Buscar usuário no Supabase pelo email
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from("advogados")
-      .select("id, name, plan_type, promo_used, balance")
-      .eq("email", email)
-      .single();
+    const payload = await request.json().catch(() => null);
+    const reference = resolveReference(payload);
+    const amountInCents = normalizeAmountInCents(payload?.amount);
 
-    if (userError || !userData) {
-      console.error("❌ [Webhook InfinitePay] Usuário não encontrado no Supabase:", email);
-      return NextResponse.json({ success: false, message: "Usuário não encontrado" }, { status: 404 });
-    }
-
-    // Mapeamento de valores (em centavos ou valor real dependendo de como a InfinitePay envia)
-    // Se vier com ponto (ex: 16.90), multiplicamos por 100 para converter em centavos.
-    // Se vier inteiro (ex: 1690), usamos direto.
-    const amountInCents = amount.toString().includes('.') 
-      ? Math.round(Number(amount) * 100) 
-      : Number(amount);
-
-    console.log(`💰 [Webhook InfinitePay] Valor processado: ${amountInCents} centavos para ${email} (Original: ${amount})`);
-
-    let updateData = {};
-    let message = "";
-    let bonusJuris = 0;
-
-    // 1. Planos Promocionais (R$ 10,99)
-    if (amountInCents === 1099) {
-      const itemDesc = items?.[0]?.description?.toLowerCase() || "";
-      let planType = "START";
-      
-      if (itemDesc.includes("pro")) {
-        planType = "PRO";
-      }
-
-      bonusJuris = planType === "PRO" ? 20 : 7;
-
-      updateData = {
-        plan_type: planType,
-        is_premium: true,
-        premium_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        balance: (userData.balance || 0) + bonusJuris,
-        [planType === "PRO" ? "promo_pro_used" : "promo_start_used"]: true
-      };
-      message = `Plano Promocional ${planType} ativado! Adicionados ${bonusJuris} Juris de bônus.`;
-    }
-    // 2. Plano Start Normal (R$ 40,99)
-    else if (amountInCents === 4099) {
-      bonusJuris = 7;
-      updateData = {
-        plan_type: "START",
-        is_premium: true,
-        premium_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        balance: (userData.balance || 0) + bonusJuris
-      };
-      message = "Plano Start ativado! Adicionados 7 Juris de bônus.";
-    }
-    // 3. Plano Pro Normal (R$ 87,90)
-    else if (amountInCents === 8790) {
-      bonusJuris = 20;
-      updateData = {
-        plan_type: "PRO",
-        is_premium: true,
-        premium_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        balance: (userData.balance || 0) + bonusJuris
-      };
-      message = "Plano Pro ativado! Adicionados 20 Juris de bônus.";
-    }
-    // 4. Pacotes de Juris
-    else if (amountInCents === 990) {
-      bonusJuris = 10;
-      updateData = { balance: (userData.balance || 0) + bonusJuris };
-      message = "Adicionados 10 Juris!";
-    }
-    else if (amountInCents === 1690) {
-      bonusJuris = 20;
-      updateData = { balance: (userData.balance || 0) + bonusJuris };
-      message = "Adicionados 20 Juris!";
-    }
-    else if (amountInCents === 3990) {
-      bonusJuris = 50;
-      updateData = { balance: (userData.balance || 0) + bonusJuris };
-      message = "Adicionados 50 Juris!";
-    }
-    // Planos Anuais (Fallback caso usem)
-    else if (amountInCents === 43188) {
-      bonusJuris = 7;
-      updateData = { 
-        plan_type: "START", 
-        is_premium: true, 
-        premium_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        balance: (userData.balance || 0) + bonusJuris 
-      };
-      message = "Plano Start Anual ativado! Adicionados 7 Juris de bônus.";
-    }
-    else if (amountInCents === 91188) {
-      bonusJuris = 20;
-      updateData = { 
-        plan_type: "PRO", 
-        is_premium: true, 
-        premium_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        balance: (userData.balance || 0) + bonusJuris 
-      };
-      message = "Plano Pro Anual ativado! Adicionados 20 Juris de bônus.";
-    }
-    else {
-      console.warn("⚠️ [Webhook InfinitePay] Valor não mapeado:", amountInCents);
-      return NextResponse.json({ success: true, message: "Valor não mapeado, ignorando" });
+    if (!reference || amountInCents <= 0) {
+      return json(
+        {
+          success: false,
+          message: "Payload financeiro incompleto.",
+        },
+        400,
+      );
     }
 
-    // Atualizar no banco
-    const { error: updateError } = await supabaseAdmin
-      .from("advogados")
-      .update(updateData)
-      .eq("id", userData.id);
+    const identity = resolveIdentity(payload, reference);
+    const lawyer = await findLawyer(identity);
 
-    if (updateError) {
-      console.error("❌ [Webhook InfinitePay] Erro ao atualizar banco:", updateError);
-      return NextResponse.json({ success: false, message: "Erro ao atualizar dados" }, { status: 500 });
+    if (!lawyer) {
+      console.error("[InfinitePay] Comprador não localizado:", {
+        referenceSuffix: reference.slice(-6),
+      });
+      return json(
+        { success: false, message: "Comprador não localizado." },
+        404,
+      );
     }
 
-    // Inserir registro na tabela de transações para o admin ver!
-    const { error: txError } = await supabaseAdmin
-      .from('transacoes')
-      .upsert({
-        advogado_id: userData.id,
-        tipo: amountInCents === 990 || amountInCents === 1690 || amountInCents === 3990 ? 'JURIS_PURCHASE' : 'PRO_SUBSCRIPTION',
-        valor: amountInCents / 100,
-        moeda: 'BRL',
-        status: 'succeeded',
-        juris_amount: bonusJuris,
-        stripe_session_id: order_nsu || `inf_${Date.now()}`, // Usando NSU ou fallback
-        created_at: new Date().toISOString()
-      }, { 
-        onConflict: 'stripe_session_id',
-        ignoreDuplicates: false 
+    const product = resolveProduct(amountInCents, payload?.items);
+    const reservation = await reserveTransaction({
+      reference,
+      lawyerId: lawyer.id,
+      product,
+      amountInCents,
+    });
+
+    if (reservation.duplicate) {
+      return json({
+        success: true,
+        message: "Evento já processado anteriormente.",
+        duplicate: true,
+      });
+    }
+
+    transactionId = reservation.transactionId;
+
+    if (!product) {
+      console.warn("[InfinitePay] Valor enviado para revisão manual:", {
+        referenceSuffix: reference.slice(-6),
+        amountInCents,
       });
 
-    if (txError) {
-      console.error("⚠️ [Webhook InfinitePay] Erro ao criar registro de transação:", txError);
-    } else {
-      console.log("✅ [Webhook InfinitePay] Registro de transação criado para o admin.");
+      return json({
+        success: true,
+        message: "Pagamento registrado para revisão manual.",
+        reviewRequired: true,
+      });
     }
 
-    // 📧 ENVIAR EMAIL PARA O ADVOGADO
-    try {
-      const isJuris = amountInCents === 990 || amountInCents === 1690 || amountInCents === 3990;
-      const lawyerName = userData.name || 'Advogado';
-      
-      if (isJuris) {
-        const newBalance = (userData.balance || 0) + bonusJuris;
-        await resend.emails.send({
-          from: 'Social Jurídico <contato@socialjuridico.com.br>',
-          to: [email],
-          subject: '💰 Seus Juris foram creditados!',
-          html: jurisCreditadoTemplate({
-            lawyerName,
-            amount: bonusJuris,
-            balance: newBalance
-          })
-        });
-        console.log(`📧 Email de crédito de Juris enviado para ${email}`);
-      } else {
-        // É plano
-        let planType = "START";
-        if (amountInCents === 1099) {
-          const itemDesc = items?.[0]?.description?.toLowerCase() || "";
-          if (itemDesc.includes("pro")) planType = "PRO";
-        } else if (amountInCents === 8790 || amountInCents === 91188) {
-          planType = "PRO";
-        }
-        
-        await resend.emails.send({
-          from: 'Social Jurídico <contato@socialjuridico.com.br>',
-          to: [email],
-          subject: `👑 Bem-vindo ao Plano ${planType}!`,
-          html: boasVindasPlanoTemplate({
-            lawyerName,
-            planType,
-            jurisBonus: bonusJuris
-          })
-        });
-        console.log(`📧 Email de boas-vindas do plano ${planType} enviado para ${email}`);
-      }
-    } catch (emailErr) {
-      console.error("⚠️ Erro ao enviar email para o advogado (não-fatal):", emailErr.message);
-    }
+    const { newBalance } = await applyProduct(lawyer, product);
+    await updateTransactionStatus(transactionId, "succeeded");
+    await sendConfirmationEmail(lawyer, product, newBalance);
 
-    console.log(`✅ [Webhook InfinitePay] \${message} para \${email}`);
-    return NextResponse.json({ success: true, message });
-
+    return json({
+      success: true,
+      message:
+        product.type === "JURIS_PURCHASE"
+          ? `${product.jurisAmount} Juris creditados.`
+          : `Plano ${product.planType} ativado.`,
+      provider: "INFINITEPAY",
+    });
   } catch (error) {
-    console.error("💥 [Webhook InfinitePay] Erro crítico:", error);
-    return NextResponse.json({ success: false, message: "Erro interno no servidor" }, { status: 500 });
+    if (transactionId) {
+      await updateTransactionStatus(transactionId, "error_updating_balance");
+    }
+
+    console.error("[InfinitePay][Webhook] Erro:", error);
+    return json(
+      {
+        success: false,
+        message: "Falha temporária no processamento do pagamento.",
+      },
+      500,
+    );
   }
 }

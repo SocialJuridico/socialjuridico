@@ -17,6 +17,9 @@ import TrackedLink from "../TrackedLink";
 async function getStats() {
   try {
     const client = supabaseAdmin || supabase;
+    const approvedCutoff = new Date(
+      Date.now() - 5 * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     const [clientesRes, advogadosRes, casosRes, radarRes] = await Promise.all([
       client.from("clientes").select("id", { count: "exact", head: true }),
@@ -32,6 +35,7 @@ async function getStats() {
         .from("radar_oportunidades")
         .select("id", { count: "exact", head: true })
         .eq("status", "aprovado")
+        .gt("publicado_em", approvedCutoff)
         .lt("cliques_count", 5),
     ]);
 

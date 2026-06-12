@@ -28,7 +28,9 @@ export default function AdminRadarPage() {
   if (radar.loadError && !radar.admin) {
     return (
       <main className={styles.loadingPage}>
-        <span className={styles.errorIcon}><AlertTriangle size={28} /></span>
+        <span className={styles.errorIcon}>
+          <AlertTriangle size={28} />
+        </span>
         <h1>Não foi possível abrir o Radar</h1>
         <p>{radar.loadError}</p>
       </main>
@@ -89,9 +91,18 @@ export default function AdminRadarPage() {
         statusFilter={radar.statusFilter}
         sourceTypeFilter={radar.sourceTypeFilter}
         reportedOnly={radar.reportedOnly}
-        onStatus={(value) => { radar.setStatusFilter(value); radar.setPage(1); }}
-        onSource={(value) => { radar.setSourceTypeFilter(value); radar.setPage(1); }}
-        onReported={(value) => { radar.setReportedOnly(value); radar.setPage(1); }}
+        onStatus={(value) => {
+          radar.setStatusFilter(value);
+          radar.setPage(1);
+        }}
+        onSource={(value) => {
+          radar.setSourceTypeFilter(value);
+          radar.setPage(1);
+        }}
+        onReported={(value) => {
+          radar.setReportedOnly(value);
+          radar.setPage(1);
+        }}
       />
 
       <RadarList
@@ -100,8 +111,12 @@ export default function AdminRadarPage() {
         busy={radar.busy}
         onEdit={radar.setEditingItem}
         onApprove={radar.approve}
-        onReject={(id) => { radar.setRejectingId(id); radar.setRejectReason(""); }}
+        onReject={(id) => {
+          radar.setRejectingId(id);
+          radar.setRejectReason("");
+        }}
         onArchive={radar.archive}
+        onDelete={radar.openDelete}
       />
 
       {radar.pagination.pages > 1 && (
@@ -110,16 +125,24 @@ export default function AdminRadarPage() {
             type="button"
             className={styles.secondaryButton}
             disabled={radar.page <= 1}
-            onClick={() => radar.setPage((current) => Math.max(1, current - 1))}
+            onClick={() =>
+              radar.setPage((current) => Math.max(1, current - 1))
+            }
           >
             Anterior
           </button>
-          <span>Página {radar.page} de {radar.pagination.pages}</span>
+          <span>
+            Página {radar.page} de {radar.pagination.pages}
+          </span>
           <button
             type="button"
             className={styles.secondaryButton}
             disabled={radar.page >= radar.pagination.pages}
-            onClick={() => radar.setPage((current) => Math.min(radar.pagination.pages, current + 1))}
+            onClick={() =>
+              radar.setPage((current) =>
+                Math.min(radar.pagination.pages, current + 1),
+              )
+            }
           >
             Próxima
           </button>
@@ -133,8 +156,13 @@ export default function AdminRadarPage() {
         setRejectingId={radar.setRejectingId}
         rejectReason={radar.rejectReason}
         setRejectReason={radar.setRejectReason}
+        deletingItem={radar.deletingItem}
+        setDeletingItem={radar.setDeletingItem}
+        deleteReason={radar.deleteReason}
+        setDeleteReason={radar.setDeleteReason}
         busy={radar.busy}
         onReject={radar.reject}
+        onDelete={radar.deleteApproved}
         onSaveEdit={radar.saveEdit}
       />
     </main>

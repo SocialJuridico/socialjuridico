@@ -26,10 +26,36 @@ function isValidUuid(value) {
   );
 }
 
+function validateMutationOrigin(request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+
+  try {
+    if (!host || new URL(origin).host !== host) {
+      return json(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
+    }
+  } catch {
+    return json(
+      { success: false, message: "Origem da requisição inválida." },
+      403,
+    );
+  }
+
+  return null;
+}
+
 function normalizeUrl(value) {
   try {
     const url = new URL(String(value || "").trim());
-    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    if (!["http:", "https:"].includes(url.protocol)) return null;
     return url.toString();
   } catch {
     return null;
@@ -44,6 +70,16 @@ function getSourceType(source, originalUrl) {
   if (value.includes("twitter") || value.includes("x.com")) return "X";
   if (value.includes("jusbrasil")) return "JusBrasil";
   return "Outros";
+}
+
+function isRetentionMigrationMissing(error) {
+  const message = String(error?.message || "").toLowerCase();
+
+  return (
+    error?.code === "42883" ||
+    error?.code === "PGRST202" ||
+    message.includes("delete_radar_opportunity")
+  );
 }
 
 export async function PATCH(request, { params }) {
@@ -74,32 +110,43 @@ export async function PATCH(request, { params }) {
 
     if (body.titulo !== undefined) {
       const title = String(body.titulo || "").trim();
-      if (!title) return json({ success: false, message: "Título obrigatório." }, 400);
+      if (!title) {
+        return json({ success: false, message: "Título obrigatório." }, 400);
+      }
       updates.titulo = title.slice(0, 240);
     }
 
     if (body.categoria !== undefined) {
       const category = String(body.categoria || "").trim();
-      if (!category) return json({ success: false, message: "Categoria obrigatória." }, 400);
+      if (!category) {
+        return json({ success: false, message: "Categoria obrigatória." }, 400);
+      }
       updates.categoria = category.slice(0, 100);
     }
 
     if (body.fonte !== undefined) {
       const source = String(body.fonte || "").trim();
-      if (!source) return json({ success: false, message: "Fonte obrigatória." }, 400);
+      if (!source) {
+        return json({ success: false, message: "Fonte obrigatória." }, 400);
+      }
       updates.fonte = source.slice(0, 100);
     }
 
     if (body.url_original !== undefined) {
       const url = normalizeUrl(body.url_original);
-      if (!url) return json({ success: false, message: "URL original inválida." }, 400);
+      if (!url) {
+        return json({ success: false, message: "URL original inválida." }, 400);
+      }
       updates.url_original = url;
     }
 
     if (body.trecho_publico !== undefined) {
       const excerpt = String(body.trecho_publico || "").trim();
       if (excerpt.length > 500) {
-        return json({ success: false, message: "Trecho público excede 500 caracteres." }, 400);
+        return json(
+          { success: false, message: "Trecho público excede 500 caracteres." },
+          400,
+        );
       }
       updates.trecho_publico = excerpt || null;
     }
@@ -117,7 +164,10 @@ export async function PATCH(request, { params }) {
     if (body.score_intencao !== undefined) {
       const score = Number(body.score_intencao);
       if (!Number.isInteger(score) || score < 0 || score > 100) {
-        return json({ success: false, message: "Score deve estar entre 0 e 100." }, 400);
+        return json(
+          { success: false, message: "Score deve estar entre 0 e 100." },
+          400,
+        );
       }
       updates.score_intencao = score;
     }
@@ -148,7 +198,10 @@ export async function PATCH(request, { params }) {
     }
 
     if (!Object.keys(updates).length) {
-      return json({ success: false, message: "Nenhum campo válido para atualizar." }, 400);
+      return json(
+        { success: false, message: "Nenhum campo válido para atualizar." },
+        400,
+      );
     }
 
     if (updates.fonte !== undefined || updates.url_original !== undefined) {
@@ -180,7 +233,10 @@ export async function PATCH(request, { params }) {
     }
 
     if (!data) {
-      return json({ success: false, message: "Oportunidade não encontrada." }, 404);
+      return json(
+        { success: false, message: "Oportunidade não encontrada." },
+        404,
+      );
     }
 
     return json({
@@ -192,6 +248,99 @@ export async function PATCH(request, { params }) {
     console.error("[Admin/Radar/:id][PATCH] Erro:", error);
     return json(
       { success: false, message: "Não foi possível atualizar a oportunidade." },
+      500,
+    );
+  }
+}
+
+export async function DELETE(request, { params }) {
+  try {
+    const originResponse = validateMutationOrigin(request);
+    if (originResponse) return originResponse;
+
+    const auth = await getAuthenticatedAdmin();
+    if (!auth.ok) {
+      return json({ success: false, message: auth.message }, auth.status);
+    }
+
+    if (!supabaseAdmin) {
+      return json(
+        { success: false, message: "Serviço administrativo indisponível." },
+        503,
+      );
+    }
+
+    const { id } = await params;
+    if (!isValidUuid(id)) {
+      return json({ success: false, message: "ID inválido." }, 400);
+    }
+
+    const body = await request.json().catch(() => null);
+    const reason = String(body?.reason || "").trim().slice(0, 1000);
+
+    if (reason.length < 10) {
+      return json(
+        {
+          success: false,
+          message: "Informe uma justificativa com pelo menos 10 caracteres.",
+        },
+        400,
+      );
+    }
+
+    const { data, error } = await supabaseAdmin.rpc(
+      "delete_radar_opportunity",
+      {
+        p_opportunity_id: id,
+        p_admin_id: auth.admin.id,
+        p_mode: "MANUAL",
+        p_reason: reason,
+      },
+    );
+
+    if (error) {
+      if (isRetentionMigrationMissing(error)) {
+        return json(
+          {
+            success: false,
+            code: "RADAR_RETENTION_MIGRATION_REQUIRED",
+            message:
+              "Execute a migração de retenção do Radar antes de excluir oportunidades.",
+          },
+          503,
+        );
+      }
+
+      const message = String(error.message || "").toLowerCase();
+      if (message.includes("only approved opportunities")) {
+        return json(
+          {
+            success: false,
+            message: "Somente oportunidades aprovadas podem ser apagadas.",
+          },
+          409,
+        );
+      }
+
+      throw new Error(`Falha ao apagar oportunidade: ${error.message}`);
+    }
+
+    if (!data?.deleted) {
+      return json(
+        { success: false, message: "Oportunidade não encontrada." },
+        404,
+      );
+    }
+
+    return json({
+      success: true,
+      message: "Oportunidade aprovada apagada com sucesso.",
+      data,
+    });
+  } catch (error) {
+    console.error("[Admin/Radar/:id][DELETE] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível apagar a oportunidade." },
       500,
     );
   }

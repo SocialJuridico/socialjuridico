@@ -30,7 +30,11 @@ export function useAdminRadar() {
   const [sourceTypeFilter, setSourceTypeFilter] = useState("");
   const [reportedOnly, setReportedOnly] = useState(false);
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ total: 0, pages: 1, limit: 10 });
+  const [pagination, setPagination] = useState({
+    total: 0,
+    pages: 1,
+    limit: 10,
+  });
   const [panel, setPanel] = useState(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [jsonText, setJsonText] = useState("");
@@ -40,6 +44,8 @@ export function useAdminRadar() {
   const [editingItem, setEditingItem] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [deletingItem, setDeletingItem] = useState(null);
+  const [deleteReason, setDeleteReason] = useState("");
   const [pendingEmails, setPendingEmails] = useState(0);
   const [busy, setBusy] = useState(null);
 
@@ -65,7 +71,9 @@ export function useAdminRadar() {
 
   const loadPendingEmails = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/radar/enviar-emails", { cache: "no-store" });
+      const response = await fetch("/api/admin/radar/enviar-emails", {
+        cache: "no-store",
+      });
       const data = await readJson(response);
       if (response.ok && data?.success) setPendingEmails(data.count || 0);
     } catch (error) {
@@ -84,7 +92,9 @@ export function useAdminRadar() {
       if (sourceTypeFilter) params.set("fonte_tipo", sourceTypeFilter);
       if (reportedOnly) params.set("reportado", "true");
 
-      const response = await fetch(`/api/admin/radar?${params}`, { cache: "no-store" });
+      const response = await fetch(`/api/admin/radar?${params}`, {
+        cache: "no-store",
+      });
       const data = await readJson(response);
 
       if (!response.ok || !data?.success) {
@@ -92,7 +102,9 @@ export function useAdminRadar() {
       }
 
       setItems(data.data || []);
-      setPagination(data.pagination || { total: 0, pages: 1, limit: 10 });
+      setPagination(
+        data.pagination || { total: 0, pages: 1, limit: 10 },
+      );
     } catch (error) {
       console.error("[Admin/Radar] Falha ao carregar:", error);
       setLoadError(error.message || "Erro ao carregar oportunidades.");
@@ -101,48 +113,72 @@ export function useAdminRadar() {
     }
   }, [admin, page, statusFilter, sourceTypeFilter, reportedOnly]);
 
-  useEffect(() => { ensureAdmin(); }, [ensureAdmin]);
-  useEffect(() => { loadItems(); }, [loadItems]);
-  useEffect(() => { if (admin) loadPendingEmails(); }, [admin, loadPendingEmails]);
+  useEffect(() => {
+    ensureAdmin();
+  }, [ensureAdmin]);
 
-  const summary = useMemo(() => ({
-    total: pagination.total || 0,
-    visible: items.length,
-    reported: items.filter((item) => item.reportado).length,
-    automatic: items.filter((item) => item.origem_automatica).length,
-  }), [items, pagination.total]);
+  useEffect(() => {
+    loadItems();
+  }, [loadItems]);
+
+  useEffect(() => {
+    if (admin) loadPendingEmails();
+  }, [admin, loadPendingEmails]);
+
+  const summary = useMemo(
+    () => ({
+      total: pagination.total || 0,
+      visible: items.length,
+      reported: items.filter((item) => item.reportado).length,
+      automatic: items.filter((item) => item.origem_automatica).length,
+    }),
+    [items, pagination.total],
+  );
 
   const openPanel = useCallback((name) => {
     setPanel((current) => (current === name ? null : name));
     setCapturePreview(null);
   }, []);
 
-  const createItem = useCallback(async (event) => {
-    event.preventDefault();
-    setBusy("create");
-    try {
-      const response = await fetch("/api/admin/radar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro ao cadastrar.");
-      toast.success(data.message || "Oportunidade criada.");
-      setForm({ ...EMPTY_FORM });
-      setPanel(null);
-      await Promise.all([loadItems(), loadPendingEmails()]);
-    } catch (error) {
-      toast.error(error.message || "Erro ao cadastrar oportunidade.");
-    } finally {
-      setBusy(null);
-    }
-  }, [form, loadItems, loadPendingEmails]);
+  const createItem = useCallback(
+    async (event) => {
+      event.preventDefault();
+      setBusy("create");
+      try {
+        const response = await fetch("/api/admin/radar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const data = await readJson(response);
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || "Erro ao cadastrar.");
+        }
+        toast.success(data.message || "Oportunidade criada.");
+        setForm({ ...EMPTY_FORM });
+        setPanel(null);
+        await Promise.all([loadItems(), loadPendingEmails()]);
+      } catch (error) {
+        toast.error(error.message || "Erro ao cadastrar oportunidade.");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [form, loadItems, loadPendingEmails],
+  );
 
   const importItems = useCallback(async () => {
-    if (!jsonText.trim()) return toast.error("Cole um JSON válido para importação.");
+    if (!jsonText.trim()) {
+      return toast.error("Cole um JSON válido para importação.");
+    }
+
     let payload;
-    try { payload = JSON.parse(jsonText); } catch { return toast.error("JSON inválido."); }
+    try {
+      payload = JSON.parse(jsonText);
+    } catch {
+      return toast.error("JSON inválido.");
+    }
+
     setBusy("import");
     try {
       const response = await fetch("/api/admin/radar/importar", {
@@ -151,24 +187,37 @@ export function useAdminRadar() {
         body: JSON.stringify(payload),
       });
       const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro na importação.");
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Erro na importação.");
+      }
       const stats = data.stats || {};
-      toast.success(`${stats.importadas || 0} criadas e ${stats.ignoradas || 0} duplicadas ignoradas.`);
+      toast.success(
+        `${stats.importadas || 0} criadas e ${stats.ignoradas || 0} duplicadas ignoradas.`,
+      );
       setJsonText("");
       setPanel(null);
       await loadItems();
     } catch (error) {
       toast.error(error.message || "Erro na importação.");
-    } finally { setBusy(null); }
+    } finally {
+      setBusy(null);
+    }
   }, [jsonText, loadItems]);
 
   const analyzeCapture = useCallback(async () => {
-    if (!captureForm.url.trim() || !captureForm.texto.trim()) return toast.error("Informe a URL e o texto público.");
+    if (!captureForm.url.trim() || !captureForm.texto.trim()) {
+      return toast.error("Informe a URL e o texto público.");
+    }
+
     const sanitized = captureForm.texto
-      .replace(/(\+55[\s-]?)?\(?\d{2}\)?[\s-]?\d{4,5}[\s-]?\d{4}/g, "[telefone omitido]")
+      .replace(
+        /(\+55[\s-]?)?\(?\d{2}\)?[\s-]?\d{4,5}[\s-]?\d{4}/g,
+        "[telefone omitido]",
+      )
       .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "[email omitido]")
       .replace(/\d{3}\.\d{3}\.\d{3}-\d{2}/g, "[CPF omitido]")
       .slice(0, 2000);
+
     setBusy("capture-analyze");
     try {
       const response = await fetch("/api/admin/radar/capturar", {
@@ -177,10 +226,15 @@ export function useAdminRadar() {
         body: JSON.stringify({ ...captureForm, texto: sanitized }),
       });
       const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro ao analisar.");
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Erro ao analisar.");
+      }
       setCapturePreview(data.preview);
-    } catch (error) { toast.error(error.message || "Erro ao analisar publicação."); }
-    finally { setBusy(null); }
+    } catch (error) {
+      toast.error(error.message || "Erro ao analisar publicação.");
+    } finally {
+      setBusy(null);
+    }
   }, [captureForm]);
 
   const saveCapture = useCallback(async () => {
@@ -193,73 +247,123 @@ export function useAdminRadar() {
         body: JSON.stringify(capturePreview),
       });
       const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro ao salvar.");
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Erro ao salvar.");
+      }
       toast.success("Oportunidade salva como pendente.");
       setCaptureForm({ ...EMPTY_CAPTURE });
       setCapturePreview(null);
       setPanel(null);
       await loadItems();
-    } catch (error) { toast.error(error.message || "Erro ao salvar oportunidade."); }
-    finally { setBusy(null); }
+    } catch (error) {
+      toast.error(error.message || "Erro ao salvar oportunidade.");
+    } finally {
+      setBusy(null);
+    }
   }, [capturePreview, loadItems]);
 
   const executeSearch = useCallback(async () => {
     setBusy("search");
     setSearchResult(null);
     try {
-      const response = await fetch("/api/admin/radar/executar-busca", { method: "POST" });
+      const response = await fetch("/api/admin/radar/executar-busca", {
+        method: "POST",
+      });
       const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro na busca automática.");
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Erro na busca automática.");
+      }
       setSearchResult(data.stats);
       toast.success("Busca automática concluída.");
       await loadItems();
-    } catch (error) { toast.error(error.message || "Erro na busca automática."); }
-    finally { setBusy(null); }
+    } catch (error) {
+      toast.error(error.message || "Erro na busca automática.");
+    } finally {
+      setBusy(null);
+    }
   }, [loadItems]);
 
   const sendEmails = useCallback(async () => {
-    if (!pendingEmails || !window.confirm(`Enviar ${pendingEmails} oportunidade(s) aos advogados?`)) return;
+    if (
+      !pendingEmails ||
+      !window.confirm(`Enviar ${pendingEmails} oportunidade(s) aos advogados?`)
+    ) {
+      return;
+    }
+
     setBusy("emails");
     try {
-      const response = await fetch("/api/admin/radar/enviar-emails", { method: "POST" });
-      const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro no envio.");
-      toast.success(`Envio concluído para ${data.totalAdvogados || 0} advogados.`);
-      setPendingEmails(0);
-    } catch (error) { toast.error(error.message || "Erro ao enviar e-mails."); }
-    finally { setBusy(null); }
-  }, [pendingEmails]);
-
-  const approve = useCallback(async (id) => {
-    setBusy(id);
-    try {
-      const response = await fetch(`/api/admin/radar/${id}/aprovar`, { method: "POST" });
-      const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro ao aprovar.");
-      toast.success("Oportunidade aprovada.");
-      await Promise.all([loadItems(), loadPendingEmails()]);
-    } catch (error) { toast.error(error.message || "Erro ao aprovar."); }
-    finally { setBusy(null); }
-  }, [loadItems, loadPendingEmails]);
-
-  const archive = useCallback(async (id) => {
-    setBusy(id);
-    try {
-      const response = await fetch(`/api/admin/radar/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "arquivado" }),
+      const response = await fetch("/api/admin/radar/enviar-emails", {
+        method: "POST",
       });
       const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro ao arquivar.");
-      toast.success("Oportunidade arquivada.");
-      await loadItems();
-    } catch (error) { toast.error(error.message || "Erro ao arquivar."); }
-    finally { setBusy(null); }
-  }, [loadItems]);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Erro no envio.");
+      }
+      toast.success(
+        `Envio concluído para ${data.totalAdvogados || 0} advogados.`,
+      );
+      setPendingEmails(0);
+    } catch (error) {
+      toast.error(error.message || "Erro ao enviar e-mails.");
+    } finally {
+      setBusy(null);
+    }
+  }, [pendingEmails]);
+
+  const approve = useCallback(
+    async (id) => {
+      setBusy(id);
+      try {
+        const response = await fetch(`/api/admin/radar/${id}/aprovar`, {
+          method: "POST",
+        });
+        const data = await readJson(response);
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || "Erro ao aprovar.");
+        }
+        toast.success(
+          "Oportunidade aprovada. A exclusão automática ocorrerá em cinco dias.",
+        );
+        await Promise.all([loadItems(), loadPendingEmails()]);
+      } catch (error) {
+        toast.error(error.message || "Erro ao aprovar.");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [loadItems, loadPendingEmails],
+  );
+
+  const archive = useCallback(
+    async (id) => {
+      setBusy(id);
+      try {
+        const response = await fetch(`/api/admin/radar/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "arquivado" }),
+        });
+        const data = await readJson(response);
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || "Erro ao arquivar.");
+        }
+        toast.success("Oportunidade arquivada.");
+        await loadItems();
+      } catch (error) {
+        toast.error(error.message || "Erro ao arquivar.");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [loadItems],
+  );
 
   const reject = useCallback(async () => {
-    if (!rejectingId || !rejectReason.trim()) return toast.error("Informe o motivo da rejeição.");
+    if (!rejectingId || !rejectReason.trim()) {
+      return toast.error("Informe o motivo da rejeição.");
+    }
+
     setBusy(rejectingId);
     try {
       const response = await fetch(`/api/admin/radar/${rejectingId}/rejeitar`, {
@@ -268,41 +372,149 @@ export function useAdminRadar() {
         body: JSON.stringify({ motivo: rejectReason.trim() }),
       });
       const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro ao rejeitar.");
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Erro ao rejeitar.");
+      }
       toast.success("Oportunidade rejeitada.");
       setRejectingId(null);
       setRejectReason("");
       await loadItems();
-    } catch (error) { toast.error(error.message || "Erro ao rejeitar."); }
-    finally { setBusy(null); }
+    } catch (error) {
+      toast.error(error.message || "Erro ao rejeitar.");
+    } finally {
+      setBusy(null);
+    }
   }, [rejectingId, rejectReason, loadItems]);
 
-  const saveEdit = useCallback(async (event) => {
-    event.preventDefault();
-    if (!editingItem) return;
-    setBusy(editingItem.id);
+  const openDelete = useCallback((item) => {
+    setDeletingItem(item);
+    setDeleteReason("");
+  }, []);
+
+  const deleteApproved = useCallback(async () => {
+    if (!deletingItem) return;
+
+    const reason = deleteReason.trim();
+    if (reason.length < 10) {
+      toast.error("Informe uma justificativa com pelo menos 10 caracteres.");
+      return;
+    }
+
+    setBusy(deletingItem.id);
     try {
-      const response = await fetch(`/api/admin/radar/${editingItem.id}`, {
-        method: "PATCH",
+      const response = await fetch(`/api/admin/radar/${deletingItem.id}`, {
+        method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editingItem),
+        body: JSON.stringify({ reason }),
       });
       const data = await readJson(response);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Erro ao atualizar.");
-      toast.success("Oportunidade atualizada.");
-      setEditingItem(null);
-      await loadItems();
-    } catch (error) { toast.error(error.message || "Erro ao atualizar."); }
-    finally { setBusy(null); }
-  }, [editingItem, loadItems]);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Erro ao apagar oportunidade.");
+      }
+
+      toast.success(data.message || "Oportunidade apagada.");
+      setDeletingItem(null);
+      setDeleteReason("");
+
+      if (items.length === 1 && page > 1) {
+        setPage((current) => Math.max(1, current - 1));
+      } else {
+        await loadItems();
+      }
+      await loadPendingEmails();
+    } catch (error) {
+      toast.error(error.message || "Erro ao apagar oportunidade.");
+    } finally {
+      setBusy(null);
+    }
+  }, [
+    deletingItem,
+    deleteReason,
+    items.length,
+    page,
+    loadItems,
+    loadPendingEmails,
+  ]);
+
+  const saveEdit = useCallback(
+    async (event) => {
+      event.preventDefault();
+      if (!editingItem) return;
+      setBusy(editingItem.id);
+      try {
+        const response = await fetch(`/api/admin/radar/${editingItem.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editingItem),
+        });
+        const data = await readJson(response);
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || "Erro ao atualizar.");
+        }
+        toast.success("Oportunidade atualizada.");
+        setEditingItem(null);
+        await loadItems();
+      } catch (error) {
+        toast.error(error.message || "Erro ao atualizar.");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [editingItem, loadItems],
+  );
 
   return {
-    admin, items, loading, loadError, statusFilter, sourceTypeFilter, reportedOnly,
-    page, pagination, panel, form, jsonText, captureForm, capturePreview, searchResult,
-    editingItem, rejectingId, rejectReason, pendingEmails, busy, summary,
-    setStatusFilter, setSourceTypeFilter, setReportedOnly, setPage, setPanel, setForm,
-    setJsonText, setCaptureForm, setCapturePreview, setSearchResult, setEditingItem,
-    setRejectingId, setRejectReason, openPanel, loadItems, createItem, importItems,
-    analyzeCapture, saveCapture, executeSearch, sendEmails, approve, archive, reject, saveEdit,
+    admin,
+    items,
+    loading,
+    loadError,
+    statusFilter,
+    sourceTypeFilter,
+    reportedOnly,
+    page,
+    pagination,
+    panel,
+    form,
+    jsonText,
+    captureForm,
+    capturePreview,
+    searchResult,
+    editingItem,
+    rejectingId,
+    rejectReason,
+    deletingItem,
+    deleteReason,
+    pendingEmails,
+    busy,
+    summary,
+    setStatusFilter,
+    setSourceTypeFilter,
+    setReportedOnly,
+    setPage,
+    setPanel,
+    setForm,
+    setJsonText,
+    setCaptureForm,
+    setCapturePreview,
+    setSearchResult,
+    setEditingItem,
+    setRejectingId,
+    setRejectReason,
+    setDeletingItem,
+    setDeleteReason,
+    openPanel,
+    openDelete,
+    loadItems,
+    createItem,
+    importItems,
+    analyzeCapture,
+    saveCapture,
+    executeSearch,
+    sendEmails,
+    approve,
+    archive,
+    reject,
+    deleteApproved,
+    saveEdit,
   };
 }

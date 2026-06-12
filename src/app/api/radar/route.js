@@ -17,11 +17,10 @@ export async function GET(request) {
     if (authError || !user) {
       return NextResponse.json(
         { success: false, message: "Não autorizado" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
-    // Validação de elegibilidade (START, PRO ou is_premium = true, ativo)
     const { data: lawyer, error: lawyerError } = await supabaseAdmin
       .from("advogados")
       .select("id, role, plan_type, is_premium, subscription_status")
@@ -30,39 +29,51 @@ export async function GET(request) {
 
     if (lawyerError || !lawyer) {
       return NextResponse.json(
-        { success: false, message: "Apenas advogados têm acesso ao Radar Jurídico" },
-        { status: 403 }
+        {
+          success: false,
+          message: "Apenas advogados têm acesso ao Radar Jurídico",
+        },
+        { status: 403 },
       );
     }
 
-    // Leitura dos parâmetros de busca e filtros
     const { searchParams } = new URL(request.url);
     const countOnly = searchParams.get("count_only") === "true";
+    const approvedCutoff = new Date(
+      Date.now() - 5 * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
     if (countOnly) {
       const { count, error: countError } = await supabaseAdmin
         .from("radar_oportunidades")
         .select("id", { count: "exact", head: true })
         .eq("status", "aprovado")
+        .gt("publicado_em", approvedCutoff)
         .lt("cliques_count", 5);
 
       if (countError) {
-        console.error("Erro ao obter contagem de oportunidades:", countError.message);
+        console.error(
+          "Erro ao obter contagem de oportunidades:",
+          countError.message,
+        );
         return NextResponse.json(
           { success: false, message: "Erro ao obter contagem de oportunidades" },
-          { status: 500 }
+          { status: 500 },
         );
       }
 
       return NextResponse.json({
         success: true,
-        count: count || 0
+        count: count || 0,
       });
     }
 
-    const isStartOrPro = lawyer.plan_type === "START" || lawyer.plan_type === "PRO" || lawyer.is_premium === true;
+    const isStartOrPro =
+      lawyer.plan_type === "START" ||
+      lawyer.plan_type === "PRO" ||
+      lawyer.is_premium === true;
     const isBlocked = ["canceled", "cancelled", "unpaid", "blocked"].includes(
-      (lawyer.subscription_status || "").toLowerCase()
+      (lawyer.subscription_status || "").toLowerCase(),
     );
 
     const categoria = searchParams.get("categoria");
@@ -71,40 +82,26 @@ export async function GET(request) {
     const fonte = searchParams.get("fonte");
     const urgencia = searchParams.get("urgencia");
     const scoreMin = searchParams.get("score_min");
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
 
-    // Construção da query
-    // SEGURANÇA: Não selecionar aprovado_por nem rejeitado_motivo
     let query = supabaseAdmin
       .from("radar_oportunidades")
       .select(
         "id, titulo, categoria, fonte, url_original, trecho_publico, cidade, estado, score_intencao, urgencia, resumo_ia, status, criado_em, detectado_em, publicado_em, fonte_tipo, reportado",
-        { count: "exact" }
+        { count: "exact" },
       )
       .eq("status", "aprovado")
+      .gt("publicado_em", approvedCutoff)
       .lt("cliques_count", 5);
 
-    if (categoria) {
-      query = query.eq("categoria", categoria);
-    }
-    if (estado) {
-      query = query.eq("estado", estado.toUpperCase());
-    }
-    if (cidade) {
-      query = query.ilike("cidade", `%${cidade}%`);
-    }
-    if (fonte) {
-      query = query.eq("fonte", fonte);
-    }
-    if (urgencia) {
-      query = query.eq("urgencia", urgencia);
-    }
-    if (scoreMin) {
-      query = query.gte("score_intencao", parseInt(scoreMin));
-    }
+    if (categoria) query = query.eq("categoria", categoria);
+    if (estado) query = query.eq("estado", estado.toUpperCase());
+    if (cidade) query = query.ilike("cidade", `%${cidade}%`);
+    if (fonte) query = query.eq("fonte", fonte);
+    if (urgencia) query = query.eq("urgencia", urgencia);
+    if (scoreMin) query = query.gte("score_intencao", parseInt(scoreMin, 10));
 
-    // Ordenação e Paginação
     query = query.order("detectado_em", { ascending: false });
 
     const from = (page - 1) * limit;
@@ -117,7 +114,7 @@ export async function GET(request) {
       console.error("Erro ao buscar no radar_oportunidades:", error.message);
       return NextResponse.json(
         { success: false, message: "Erro ao buscar oportunidades públicas" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -133,9 +130,9 @@ export async function GET(request) {
         criado_em: item.criado_em,
         detectado_em: item.detectado_em,
         publicado_em: item.publicado_em,
-        // Ocultar dados confidenciais de contato
         url_original: "#",
-        trecho_publico: "Trecho ocultado. Assine o plano START ou PRO para ver os detalhes e links de contato deste caso.",
+        trecho_publico:
+          "Trecho ocultado. Assine o plano START ou PRO para ver os detalhes e links de contato deste caso.",
         resumo_ia: "Resumo da inteligência artificial ocultado.",
         fonte: "Ocultada",
         fonte_tipo: "Ocultada",
@@ -155,10 +152,9 @@ export async function GET(request) {
       });
     }
 
-    // Buscar cliques anteriores para identificar casos já desbloqueados pelo advogado
     let clickedIds = [];
     if (data && data.length > 0) {
-      const opportunityIds = data.map((op) => op.id);
+      const opportunityIds = data.map((opportunity) => opportunity.id);
       const { data: clicks, error: clicksError } = await supabaseAdmin
         .from("radar_cliques")
         .select("radar_oportunidade_id")
@@ -166,7 +162,7 @@ export async function GET(request) {
         .in("radar_oportunidade_id", opportunityIds);
 
       if (!clicksError && clicks) {
-        clickedIds = clicks.map((c) => c.radar_oportunidade_id);
+        clickedIds = clicks.map((click) => click.radar_oportunidade_id);
       }
     }
 
@@ -190,7 +186,7 @@ export async function GET(request) {
     console.error("Erro geral na API GET /api/radar:", error);
     return NextResponse.json(
       { success: false, message: "Erro interno no servidor" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

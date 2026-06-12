@@ -34,10 +34,14 @@ export default function RadarHeader({
             <Shield size={22} aria-hidden="true" />
           </span>
           <div>
-            <span className={styles.eyebrow}>Curadoria de oportunidades públicas</span>
+            <span className={styles.eyebrow}>
+              Curadoria de oportunidades públicas
+            </span>
             <h1>Radar Jurídico</h1>
             <p>
-              Brave Search, Reddit RSS e captura manual com revisão administrativa.
+              Brave Search, Reddit RSS e captura manual com revisão
+              administrativa. Oportunidades aprovadas permanecem publicadas por
+              cinco dias.
             </p>
             {admin?.email && <small>Administrador: {admin.email}</small>}
           </div>
@@ -45,23 +49,44 @@ export default function RadarHeader({
       </div>
 
       <div className={styles.headerActions}>
-        <button type="button" className={styles.secondaryButton} onClick={onReload}>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={onReload}
+        >
           <RefreshCw size={16} aria-hidden="true" />
           Atualizar
         </button>
-        <button type="button" className={styles.secondaryButton} onClick={() => onOpenPanel("import")}>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => onOpenPanel("import")}
+        >
           <Upload size={16} aria-hidden="true" />
           Importar JSON
         </button>
-        <button type="button" className={styles.secondaryButton} onClick={() => onOpenPanel("capture")}>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => onOpenPanel("capture")}
+        >
           <Search size={16} aria-hidden="true" />
           Capturador
         </button>
-        <button type="button" className={styles.goldButton} onClick={() => onOpenPanel("create")}>
+        <button
+          type="button"
+          className={styles.goldButton}
+          onClick={() => onOpenPanel("create")}
+        >
           <PlusCircle size={16} aria-hidden="true" />
           Criar manual
         </button>
-        <button type="button" className={styles.blueButton} onClick={onSearch} disabled={busy === "search"}>
+        <button
+          type="button"
+          className={styles.blueButton}
+          onClick={onSearch}
+          disabled={busy === "search"}
+        >
           <Sparkles size={16} aria-hidden="true" />
           {busy === "search" ? "Buscando..." : "Executar busca"}
         </button>
@@ -72,7 +97,9 @@ export default function RadarHeader({
           disabled={busy === "emails" || pendingEmails === 0}
         >
           <Mail size={16} aria-hidden="true" />
-          {busy === "emails" ? "Enviando..." : `Enviar e-mail (${pendingEmails})`}
+          {busy === "emails"
+            ? "Enviando..."
+            : `Enviar e-mail (${pendingEmails})`}
         </button>
       </div>
     </header>

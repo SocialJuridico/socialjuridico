@@ -1,202 +1,92 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowLeft, MessageSquare, ChevronRight, Trash2 } from "lucide-react";
-import toast from "react-hot-toast";
-import { useMemo } from "react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import ConversationsList from "./components/ConversationsList";
+import DeleteConversationDialog from "./components/DeleteConversationDialog";
+import MessagesHeader from "./components/MessagesHeader";
+import MessagesSummary from "./components/MessagesSummary";
+import MessagesToolbar from "./components/MessagesToolbar";
+import { useAdminMessages } from "./hooks/useAdminMessages";
 import styles from "./MensagensAdmin.module.css";
 
 export default function AdminMensagensPage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [conversas, setConversas] = useState([]);
-  const [partnerToDelete, setPartnerToDelete] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const state = useAdminMessages();
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch("/api/admin/mensagens", { cache: "no-store" });
-        const data = await res.json();
+  if (state.loading) {
+    return (
+      <main className={styles.loadingPage}>
+        <span className={styles.loadingSpinner} aria-hidden="true" />
+        <h1>Carregando mensagens</h1>
+        <p>Preparando as conversas administrativas.</p>
+      </main>
+    );
+  }
 
-        if (!res.ok || !data.success) {
-          toast.error(data.message || "Falha ao carregar mensagens");
-          if (res.status === 401 || res.status === 403) {
-            router.replace("/dashboard/cliente");
-          }
-          return;
-        }
-
-        setConversas(data.data || []);
-      } catch (error) {
-        console.error(error);
-        toast.error("Erro ao carregar mensagens");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    load();
-  }, [router]);
-
-  const executeDelete = async () => {
-    if (!partnerToDelete || isDeleting) return;
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/admin-chat?partnerId=${partnerToDelete}`, {
-        method: "DELETE",
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Conversa excluída com sucesso!");
-        setConversas(prev => prev.filter(c => c.userId !== partnerToDelete));
-        setShowDeleteModal(false);
-        setPartnerToDelete(null);
-      } else {
-        toast.error(data.message || "Erro ao excluir conversa");
-      }
-    } catch (err) {
-      console.error("Erro delete conv:", err);
-      toast.error("Erro de conexão ao excluir.");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const groupedConversas = useMemo(() => {
-    const groups = {};
-    conversas.forEach(conv => {
-       const dateObj = conv.lastDate ? new Date(conv.lastDate) : new Date();
-       const dateKey = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-       
-       if (!groups[dateKey]) {
-          groups[dateKey] = [];
-       }
-       groups[dateKey].push(conv);
-    });
-
-    // Ordenar as chaves (datas) de forma decrescente
-    return Object.entries(groups).sort((a, b) => {
-       const dateA = new Date(a[1][0].lastDate);
-       const dateB = new Date(b[1][0].lastDate);
-       return dateB - dateA;
-    });
-  }, [conversas]);
-
-  if (loading) {
-    return <div className={styles.loading}>Carregando mensagens...</div>;
+  if (state.loadError && state.conversations.length === 0) {
+    return (
+      <main className={styles.loadingPage}>
+        <span className={styles.errorIcon}>
+          <AlertTriangle size={28} aria-hidden="true" />
+        </span>
+        <h1>Não foi possível carregar as mensagens</h1>
+        <p>{state.loadError}</p>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={state.loadConversations}
+        >
+          <RefreshCw size={16} aria-hidden="true" />
+          Tentar novamente
+        </button>
+      </main>
+    );
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/dashboard/admin" className={styles.backLink}>
-          <ArrowLeft size={16} /> Voltar ao painel admin
-        </Link>
-        <h1>
-          <MessageSquare size={18} /> Mensagens Enviadas
-        </h1>
-      </header>
+    <main className={styles.page}>
+      <div className={styles.pageShell}>
+        <MessagesHeader
+          total={state.summary.conversations}
+          loading={state.loading}
+          onReload={state.loadConversations}
+        />
 
-      {conversas.length === 0 ? (
-        <div className={styles.emptyCard}>
-          Você ainda não enviou mensagens para advogados.
-        </div>
-      ) : (
-        <div className={styles.list}>
-          {groupedConversas.map(([dateTitle, items]) => (
-             <div key={dateTitle} className={styles.dateGroup}>
-                <div className={styles.dateSeparator}>
-                   <span>{dateTitle}</span>
-                </div>
-                {items.map((conv) => (
-                  <div
-                    key={conv.userId}
-                    className={styles.item}
-                    onClick={() => {
-                      window.location.href = `/chat/admin/${conv.userId}`;
-                    }}
-                  >
-                    <div className={styles.itemTop}>
-                      <div>
-                        <p className={styles.name}>
-                          {conv.lawyer?.name || "Advogado"}
-                        </p>
-                        <p className={styles.meta}>
-                          {conv.lawyer?.email || "sem email"}
-                          {conv.lawyer?.oab ? ` · OAB ${conv.lawyer.oab}` : ""}
-                        </p>
-                      </div>
-                      <span className={styles.date}>
-                        {conv.lastDate
-                          ? new Date(conv.lastDate).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })
-                          : ""}
-                      </span>
-                    </div>
-
-                    <p className={styles.previewTitle}>
-                      {conv.lastTitle || "Mensagem"}
-                    </p>
-                    <p className={styles.previewText}>
-                      {conv.lastMessage || "Sem conteúdo"}
-                    </p>
-
-                    <div className={styles.itemFooter}>
-                      <span>{conv.totalMessages} mensagem(ns)</span>
-                      <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-                         <button 
-                            className={styles.deleteBtnInline}
-                            onClick={(e) => {
-                               e.stopPropagation();
-                               setPartnerToDelete(conv.userId);
-                               setShowDeleteModal(true);
-                            }}
-                            title="Excluir conversa inteira"
-                         >
-                            <Trash2 size={16} />
-                         </button>
-                         <span className={styles.openChat}>
-                           Abrir chat <ChevronRight size={14} />
-                         </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-             </div>
-          ))}
-        </div>
-      )}
-
-      {showDeleteModal && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.confirmModal}>
-            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
-               <Trash2 size={28} />
+        {state.loadError && (
+          <div className={styles.warningBanner} role="alert">
+            <AlertTriangle size={18} aria-hidden="true" />
+            <div>
+              <strong>Não foi possível atualizar os dados</strong>
+              <p>{state.loadError}</p>
             </div>
-            <h3>Excluir Conversa?</h3>
-            <p>Deseja realmente apagar todas as mensagens enviadas e recebidas deste participante?</p>
-            <div className={styles.modalActions}>
-              <button 
-                onClick={() => setShowDeleteModal(false)}
-                className={styles.cancelBtn}
-                disabled={isDeleting}
-              >
-                Cancelar
-              </button>
-              <button 
-                onClick={executeDelete}
-                className={styles.deleteBtn}
-                disabled={isDeleting}
-              >
-                {isDeleting ? "Excluindo..." : "Confirmar Exclusão"}
-              </button>
-            </div>
+            <button type="button" onClick={state.loadConversations}>
+              Atualizar
+            </button>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        <MessagesSummary summary={state.summary} />
+
+        <MessagesToolbar
+          searchTerm={state.searchTerm}
+          activeFilter={state.activeFilter}
+          visibleCount={state.filteredConversations.length}
+          onSearchChange={state.setSearchTerm}
+          onFilterChange={state.setActiveFilter}
+        />
+
+        <ConversationsList
+          groups={state.groupedConversations}
+          onOpen={state.openConversation}
+          onDelete={state.requestDelete}
+        />
+      </div>
+
+      <DeleteConversationDialog
+        conversation={state.conversationToDelete}
+        deleting={state.deleting}
+        onClose={state.closeDeleteDialog}
+        onConfirm={state.confirmDelete}
+      />
+    </main>
   );
 }

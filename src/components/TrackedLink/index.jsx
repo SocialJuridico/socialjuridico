@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+
 import { trackEvent } from "@/lib/trackEvent";
 
 export default function TrackedLink({
@@ -8,10 +9,15 @@ export default function TrackedLink({
   event,
   properties,
   children,
+  onClick,
   ...props
 }) {
-  function handleClick() {
-    trackEvent(event, properties);
+  function handleClick(clickEvent) {
+    onClick?.(clickEvent);
+
+    if (clickEvent.defaultPrevented || !event) return;
+
+    void trackEvent(event, properties);
   }
 
   return (

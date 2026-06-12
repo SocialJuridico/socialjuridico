@@ -23,6 +23,21 @@ import {
 
 const RESEND_FROM = "Social Jurídico <contato@socialjuridico.com.br>";
 
+function isMissingAuthUser(error) {
+  const message = String(error?.message || "").toLowerCase();
+  const code = String(error?.code || "").toLowerCase();
+  const status = Number(error?.status || error?.statusCode || 0);
+
+  return (
+    status === 404 ||
+    code === "user_not_found" ||
+    code === "not_found" ||
+    message.includes("user not found") ||
+    message.includes("usuario nao encontrado") ||
+    message.includes("usuário não encontrado")
+  );
+}
+
 async function sendOabVerifiedEmail(lawyer) {
   if (!lawyer.email) return;
 
@@ -135,8 +150,19 @@ export async function deleteAdminLawyer(request) {
     const { error: authDeleteError } =
       await supabaseAdmin.auth.admin.deleteUser(lawyerId);
 
+    let authUserAlreadyMissing = false;
+
     if (authDeleteError) {
-      throw new Error(`Falha ao excluir usuário do Auth: ${authDeleteError.message}`);
+      if (isMissingAuthUser(authDeleteError)) {
+        authUserAlreadyMissing = true;
+        console.warn(
+          `[Admin/Advogados][DELETE] Usuário ${lawyerId} já não existia no Supabase Auth. Prosseguindo com a remoção do perfil e dados vinculados.`,
+        );
+      } else {
+        throw new Error(
+          `Falha ao excluir usuário do Auth: ${authDeleteError.message}`,
+        );
+      }
     }
 
     await executeDelete(
@@ -148,7 +174,13 @@ export async function deleteAdminLawyer(request) {
 
     return json({
       success: true,
-      message: "Advogado excluído com sucesso.",
+      message: authUserAlreadyMissing
+        ? "Perfil do advogado excluído. O usuário já não existia no Auth."
+        : "Advogado excluído com sucesso.",
+      data: {
+        lawyerId,
+        authUserAlreadyMissing,
+      },
     });
   } catch (error) {
     console.error("[Admin/Advogados][DELETE] Erro:", error);

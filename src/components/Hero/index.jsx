@@ -1,6 +1,5 @@
 import "server-only";
 
-import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
@@ -155,6 +154,11 @@ export default async function Hero() {
           <TrackedLink
             href="/cadastro"
             event="hero_client_cta_click"
+            properties={{
+              placement: "hero_primary",
+              destination: "/cadastro",
+              variant: "default",
+            }}
             className={styles.primaryButton}
           >
             Publicar meu caso gratuitamente
@@ -164,6 +168,11 @@ export default async function Hero() {
           <TrackedLink
             href="/sou-advogado"
             event="hero_lawyer_cta_click"
+            properties={{
+              placement: "hero_secondary",
+              destination: "/sou-advogado",
+              variant: "default",
+            }}
             className={styles.secondaryButton}
           >
             Sou advogado

@@ -4,6 +4,15 @@ import {
   requireAdmin,
 } from "./adminLawyersUtils";
 
+function isAnonymizedLawyer(lawyer) {
+  const email = String(lawyer?.email || "").toLowerCase();
+
+  return (
+    email.startsWith("deleted+") &&
+    email.endsWith("@socialjuridico.invalid")
+  );
+}
+
 export async function getAdminLawyers() {
   try {
     const access = await requireAdmin();
@@ -25,7 +34,9 @@ export async function getAdminLawyers() {
       );
     }
 
-    const lawyers = lawyersResult.data || [];
+    const lawyers = (lawyersResult.data || []).filter(
+      (lawyer) => !isAnonymizedLawyer(lawyer),
+    );
     const lawyerIds = lawyers.map((lawyer) => lawyer.id);
     const crmCountMap = new Map();
     const authUsersById = new Map(

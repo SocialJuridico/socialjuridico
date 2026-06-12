@@ -10,10 +10,8 @@ import {
 } from "lucide-react";
 
 import AdminDashboardSection from "./components/AdminDashboardSection";
-import ReportConfigModal from "./components/ReportConfigModal";
 import { createAdminSections } from "./config/adminSections";
 import { useAdminDashboard } from "./hooks/useAdminDashboard";
-import { useAdminReport } from "./hooks/useAdminReport";
 import styles from "./AdminDashboard.module.css";
 
 export default function AdminDashboardPage() {
@@ -26,15 +24,9 @@ export default function AdminDashboardPage() {
     logout,
   } = useAdminDashboard();
 
-  const report = useAdminReport(admin);
-
   const sections = useMemo(
-    () =>
-      createAdminSections(stats, {
-        generatingReport: report.generating,
-        openReportModal: report.openModal,
-      }),
-    [stats, report.generating, report.openModal],
+    () => createAdminSections(stats),
+    [stats],
   );
 
   if (loading) {
@@ -154,15 +146,6 @@ export default function AdminDashboardPage() {
           ))}
         </div>
       </main>
-
-      <ReportConfigModal
-        open={report.modalOpen}
-        generating={report.generating}
-        options={report.options}
-        onChange={report.updateOption}
-        onClose={report.closeModal}
-        onConfirm={report.generateReport}
-      />
     </div>
   );
 }

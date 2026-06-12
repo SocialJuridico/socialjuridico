@@ -27,13 +27,7 @@ export const ADMIN_CARD_TONES = {
   red: "red",
 };
 
-export function createAdminSections(
-  stats,
-  {
-    generatingReport = false,
-    openReportModal,
-  } = {},
-) {
+export function createAdminSections(stats) {
   const radarPending = stats.totalRadarPendente || 0;
 
   return [
@@ -155,12 +149,11 @@ export function createAdminSections(
       icon: FileText,
       cards: [
         {
-          title: "Relatório PDF de uso",
-          value: generatingReport ? "Gerando..." : "Gerar PDF",
+          title: "Relatórios de uso",
+          value: "Métricas, PDF e histórico",
+          href: "/dashboard/admin/relatorios",
           icon: FileText,
           tone: ADMIN_CARD_TONES.gold,
-          onClick: openReportModal,
-          disabled: generatingReport,
         },
         {
           title: "Funil de reengajamento",

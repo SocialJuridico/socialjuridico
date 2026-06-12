@@ -1,63 +1,129 @@
-import { cookies } from "next/headers";
+import { getActiveAdvertiserSession } from "@/lib/anuncianteSessionServer";
+import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
-import { supabaseAdmin } from "@/lib/supabase";
-import { parseAdvertiserSessionToken } from "@/lib/anuncianteAuth";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-async function getAnuncianteSession() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("sj_anunciante_session");
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
 
-  if (!session?.value) return null;
+function normalizeText(value, maxLength) {
+  return String(value || "").trim().slice(0, maxLength);
+}
 
-  return parseAdvertiserSessionToken(session.value);
+function isMissingSupportTable(error) {
+  const message = String(error?.message || "").toLowerCase();
+
+  return (
+    error?.code === "42P01" ||
+    error?.code === "PGRST205" ||
+    message.includes("mensagens_suporte_anunciante")
+  );
+}
+
+function supportMigrationResponse() {
+  return json(
+    {
+      success: false,
+      code: "ADVERTISER_SUPPORT_MIGRATION_REQUIRED",
+      message:
+        "O suporte aos anunciantes ainda não foi habilitado pela administração.",
+    },
+    409,
+  );
+}
+
+function validateOrigin(request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+
+  try {
+    if (!host || new URL(origin).host !== host) {
+      return json(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
+    }
+  } catch {
+    return json(
+      { success: false, message: "Origem da requisição inválida." },
+      403,
+    );
+  }
+
+  return null;
 }
 
 export async function GET() {
-  const session = await getAnuncianteSession();
+  try {
+    const session = await getActiveAdvertiserSession();
 
-  if (!session) {
-    return NextResponse.json(
-      { success: false, message: "Não autorizado" },
-      { status: 401 },
+    if (!session) {
+      return json(
+        {
+          success: false,
+          message: "Sessão inválida ou conta suspensa.",
+        },
+        401,
+      );
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("mensagens_suporte_anunciante")
+      .select("id, anunciante_id, sender_type, content, created_at")
+      .eq("anunciante_id", session.id)
+      .order("created_at", { ascending: true })
+      .limit(500);
+
+    if (error) {
+      if (isMissingSupportTable(error)) return supportMigrationResponse();
+      throw new Error("Falha ao carregar o histórico de suporte.");
+    }
+
+    return json({ success: true, data: data || [] });
+  } catch (error) {
+    console.error("[Anunciante/Suporte][GET] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível carregar o suporte." },
+      500,
     );
   }
-
-  const { data, error } = await supabaseAdmin
-    .from("mensagens_suporte_anunciante")
-    .select("*")
-    .eq("anunciante_id", session.id)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 },
-    );
-  }
-
-  return NextResponse.json({ success: true, data: data || [] });
 }
 
 export async function POST(request) {
-  const session = await getAnuncianteSession();
-
-  if (!session) {
-    return NextResponse.json(
-      { success: false, message: "Não autorizado" },
-      { status: 401 },
-    );
-  }
-
   try {
-    const { content } = await request.json();
-    const normalizedContent =
-      typeof content === "string" ? content.trim() : "";
+    const originResponse = validateOrigin(request);
+    if (originResponse) return originResponse;
 
-    if (!normalizedContent) {
-      return NextResponse.json(
-        { success: false, message: "Conteúdo é obrigatório" },
-        { status: 400 },
+    const session = await getActiveAdvertiserSession();
+
+    if (!session) {
+      return json(
+        {
+          success: false,
+          message: "Sessão inválida ou conta suspensa.",
+        },
+        401,
+      );
+    }
+
+    const body = await request.json().catch(() => null);
+    const content = normalizeText(body?.content, 2000);
+
+    if (!content) {
+      return json(
+        { success: false, message: "Informe uma mensagem." },
+        400,
       );
     }
 
@@ -67,24 +133,23 @@ export async function POST(request) {
         {
           anunciante_id: session.id,
           sender_type: "ANUNCIANTE",
-          content: normalizedContent,
+          content,
         },
       ])
-      .select()
+      .select("id, anunciante_id, sender_type, content, created_at")
       .single();
 
     if (error) {
-      return NextResponse.json(
-        { success: false, error: error.message },
-        { status: 500 },
-      );
+      if (isMissingSupportTable(error)) return supportMigrationResponse();
+      throw new Error("Falha ao enviar a mensagem.");
     }
 
-    return NextResponse.json({ success: true, data });
-  } catch {
-    return NextResponse.json(
-      { success: false, message: "Erro ao processar requisição" },
-      { status: 500 },
+    return json({ success: true, data });
+  } catch (error) {
+    console.error("[Anunciante/Suporte][POST] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível enviar a mensagem." },
+      500,
     );
   }
 }

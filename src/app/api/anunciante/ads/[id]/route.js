@@ -1,44 +1,101 @@
-import { cookies } from "next/headers";
+import { getActiveAdvertiserSession } from "@/lib/anuncianteSessionServer";
+import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
-import { supabaseAdmin } from "@/lib/supabase";
-import { parseAdvertiserSessionToken } from "@/lib/anuncianteAuth";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-async function getAnuncianteSession() {
-  const cookieStore = await cookies();
-  const session = cookieStore.get("sj_anunciante_session");
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
 
-  if (!session?.value) return null;
+function isValidUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || ""),
+  );
+}
 
-  return parseAdvertiserSessionToken(session.value);
+function validateOrigin(request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+
+  try {
+    if (!host || new URL(origin).host !== host) {
+      return json(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
+    }
+  } catch {
+    return json(
+      { success: false, message: "Origem da requisição inválida." },
+      403,
+    );
+  }
+
+  return null;
 }
 
 export async function DELETE(request, { params }) {
-  const { id } = await params;
-  const session = await getAnuncianteSession();
+  try {
+    const originResponse = validateOrigin(request);
+    if (originResponse) return originResponse;
 
-  if (!session) {
-    return NextResponse.json(
-      { success: false, message: "Não autorizado" },
-      { status: 401 },
+    const { id } = await params;
+
+    if (!isValidUuid(id)) {
+      return json({ success: false, message: "Anúncio inválido." }, 400);
+    }
+
+    const session = await getActiveAdvertiserSession();
+
+    if (!session) {
+      return json(
+        {
+          success: false,
+          message: "Sessão inválida ou conta suspensa.",
+        },
+        401,
+      );
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("anuncios")
+      .update({
+        status: "ARQUIVADO",
+        em_destaque: false,
+      })
+      .eq("id", id)
+      .eq("anunciante_id", session.id)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw new Error("Falha ao arquivar o anúncio.");
+
+    if (!data) {
+      return json(
+        { success: false, message: "Anúncio não encontrado." },
+        404,
+      );
+    }
+
+    return json({
+      success: true,
+      message: "Anúncio arquivado sem excluir o histórico.",
+    });
+  } catch (error) {
+    console.error("[Anunciante/Anúncio][DELETE] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível arquivar o anúncio." },
+      500,
     );
   }
-
-  const { error } = await supabaseAdmin
-    .from("anuncios")
-    .delete()
-    .eq("id", id)
-    .eq("anunciante_id", session.id);
-
-  if (error) {
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 },
-    );
-  }
-
-  return NextResponse.json({
-    success: true,
-    message: "Anúncio excluído!",
-  });
 }

@@ -1,159 +1,121 @@
-import { cookies } from "next/headers";
+import { hashAdvertiserPassword } from "@/lib/anuncianteAuth";
+import { getActiveAdvertiserSession } from "@/lib/anuncianteSessionServer";
+import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
-import {
-  hashAdvertiserPassword,
-  parseAdvertiserSessionToken,
-} from "@/lib/anuncianteAuth";
-import { supabaseAdmin } from "@/lib/supabase";
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-async function getAnuncianteSession() {
-  const cookieStore = await cookies();
-
-  const sessionCookie = cookieStore.get(
-    "sj_anunciante_session",
-  );
-
-  if (!sessionCookie?.value) {
-    return null;
-  }
-
-  return parseAdvertiserSessionToken(
-    sessionCookie.value,
-  );
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
 }
 
-export async function PATCH(request) {
-  const session =
-    await getAnuncianteSession();
+function validateOrigin(request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
 
-  if (!session) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Não autorizado",
-      },
-      { status: 401 },
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+
+  try {
+    if (!host || new URL(origin).host !== host) {
+      return json(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
+    }
+  } catch {
+    return json(
+      { success: false, message: "Origem da requisição inválida." },
+      403,
     );
   }
 
+  return null;
+}
+
+export async function PATCH(request) {
   try {
-    const body = await request.json();
+    const originResponse = validateOrigin(request);
+    if (originResponse) return originResponse;
 
-    const senha =
-      typeof body?.senha === "string"
-        ? body.senha
-        : "";
+    const session = await getActiveAdvertiserSession();
 
-    if (
-      senha.length < 8 ||
-      senha.length > 128
-    ) {
-      return NextResponse.json(
+    if (!session) {
+      return json(
         {
           success: false,
-          message:
-            "A senha deve possuir entre 8 e 128 caracteres.",
+          message: "Sessão inválida ou conta suspensa.",
         },
-        { status: 400 },
+        401,
       );
     }
 
-    const passwordHash =
-      hashAdvertiserPassword(senha);
+    const body = await request.json().catch(() => null);
+    const password = String(body?.senha || "");
+
+    if (password.length < 10 || password.length > 128) {
+      return json(
+        {
+          success: false,
+          message: "A senha deve possuir entre 10 e 128 caracteres.",
+        },
+        400,
+      );
+    }
 
     const { error } = await supabaseAdmin
       .from("anunciantes")
       .update({
-        password_hash: passwordHash,
-
-        /*
-         * Não mantemos a nova senha em texto puro.
-         * O valor permanece preenchido apenas porque a
-         * coluna antiga pode possuir restrição NOT NULL.
-         */
+        password_hash: hashAdvertiserPassword(password),
         password: "__MIGRATED_TO_HASH__",
       })
-      .eq("id", session.id);
+      .eq("id", session.id)
+      .eq("ativo", true);
 
-    if (error) {
-      console.error(
-        "[Anunciante/Perfil] Erro ao atualizar senha:",
-        error,
-      );
+    if (error) throw new Error("Falha ao atualizar a senha.");
 
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Não foi possível atualizar a senha.",
-        },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({
+    return json({
       success: true,
-      message:
-        "Senha atualizada com segurança!",
+      message: "Senha atualizada com segurança.",
     });
   } catch (error) {
-    console.error(
-      "[Anunciante/Perfil] Erro inesperado:",
-      error,
-    );
-
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "Erro ao processar requisição.",
-      },
-      { status: 500 },
+    console.error("[Anunciante/Perfil][PATCH] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível atualizar a senha." },
+      500,
     );
   }
 }
 
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const originResponse = validateOrigin(request);
+    if (originResponse) return originResponse;
+
+    const body = await request.json().catch(() => null);
 
     if (body?.logout !== true) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Solicitação inválida.",
-        },
-        { status: 400 },
-      );
+      return json({ success: false, message: "Solicitação inválida." }, 400);
     }
 
-    const response = NextResponse.json({
-      success: true,
-    });
+    const response = json({ success: true });
 
-    response.cookies.set(
-      "sj_anunciante_session",
-      "",
-      {
-        httpOnly: true,
-        secure:
-          process.env.NODE_ENV ===
-          "production",
-        sameSite: "lax",
-        expires: new Date(0),
-        path: "/",
-      },
-    );
+    response.cookies.set("sj_anunciante_session", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      expires: new Date(0),
+      path: "/",
+    });
 
     return response;
   } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Solicitação inválida.",
-      },
-      { status: 400 },
-    );
+    return json({ success: false, message: "Solicitação inválida." }, 400);
   }
 }

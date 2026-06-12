@@ -1,73 +1,215 @@
-import { createClient } from "@supabase/supabase-js";
-import { createClient as createServerClient } from "@/lib/supabaseServer"; // for auth check
+import { getAuthenticatedAdmin } from "@/lib/adminAuth";
+import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-async function ensureAdmin(db, userId) {
-  const { data: admin, error } = await db
-    .from("admins")
-    .select("id, role")
-    .eq("id", userId)
-    .eq("role", "ADMIN")
-    .single();
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
 
-  if (error || !admin) return false;
-  return true;
+function isValidUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || ""),
+  );
+}
+
+function normalizeText(value, maxLength) {
+  return String(value || "").trim().slice(0, maxLength);
+}
+
+function isMissingSupportTable(error) {
+  const message = String(error?.message || "").toLowerCase();
+
+  return (
+    error?.code === "42P01" ||
+    error?.code === "PGRST205" ||
+    message.includes("mensagens_suporte_anunciante")
+  );
+}
+
+function supportMigrationResponse() {
+  return json(
+    {
+      success: false,
+      code: "ADVERTISER_SUPPORT_MIGRATION_REQUIRED",
+      message:
+        "A migração de governança dos anunciantes precisa ser executada para habilitar o suporte.",
+    },
+    409,
+  );
+}
+
+function validateOrigin(request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+
+  try {
+    if (!host || new URL(origin).host !== host) {
+      return json(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
+    }
+  } catch {
+    return json(
+      { success: false, message: "Origem da requisição inválida." },
+      403,
+    );
+  }
+
+  return null;
+}
+
+async function requireAdmin() {
+  const auth = await getAuthenticatedAdmin();
+
+  if (!auth.ok) {
+    return {
+      ok: false,
+      response: json({ success: false, message: auth.message }, auth.status),
+    };
+  }
+
+  if (!supabaseAdmin) {
+    return {
+      ok: false,
+      response: json(
+        { success: false, message: "Serviço de suporte indisponível." },
+        503,
+      ),
+    };
+  }
+
+  return { ok: true, auth, db: supabaseAdmin };
+}
+
+async function advertiserExists(db, advertiserId) {
+  const { data, error } = await db
+    .from("anunciantes")
+    .select("id")
+    .eq("id", advertiserId)
+    .maybeSingle();
+
+  if (error) throw new Error("Falha ao validar o anunciante.");
+  return Boolean(data);
 }
 
 export async function GET(request, { params }) {
-  const { anuncianteId } = await params;
   try {
-    const supabaseClient = createServerClient();
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const { anuncianteId } = await params;
 
-    if (!user) return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+    if (!isValidUuid(anuncianteId)) {
+      return json({ success: false, message: "Anunciante inválido." }, 400);
+    }
 
-    const isAdmin = await ensureAdmin(supabase, user.id);
-    if (!isAdmin) return NextResponse.json({ success: false, message: "Acesso restrito" }, { status: 403 });
+    const access = await requireAdmin();
+    if (!access.ok) return access.response;
 
-    const { data, error } = await supabase
+    if (!(await advertiserExists(access.db, anuncianteId))) {
+      return json({ success: false, message: "Anunciante não encontrado." }, 404);
+    }
+
+    const { data, error } = await access.db
       .from("mensagens_suporte_anunciante")
-      .select("*")
+      .select("id, anunciante_id, sender_type, content, created_at")
       .eq("anunciante_id", anuncianteId)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(500);
 
-    if (error) throw error;
-    return NextResponse.json({ success: true, data: data || [] });
+    if (error) {
+      if (isMissingSupportTable(error)) return supportMigrationResponse();
+      throw new Error("Falha ao carregar o histórico de suporte.");
+    }
+
+    return json({
+      success: true,
+      data: (data || []).map((message) => ({
+        id: message.id,
+        advertiserId: message.anunciante_id,
+        senderType: message.sender_type,
+        content: message.content,
+        createdAt: message.created_at,
+      })),
+    });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    console.error("[Admin/Anunciante/Suporte][GET] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível carregar o suporte." },
+      500,
+    );
   }
 }
 
 export async function POST(request, { params }) {
-  const { anuncianteId } = await params;
   try {
-    const supabaseClient = createServerClient();
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const originResponse = validateOrigin(request);
+    if (originResponse) return originResponse;
 
-    if (!user) return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+    const { anuncianteId } = await params;
 
-    const isAdmin = await ensureAdmin(supabase, user.id);
-    if (!isAdmin) return NextResponse.json({ success: false, message: "Acesso restrito" }, { status: 403 });
+    if (!isValidUuid(anuncianteId)) {
+      return json({ success: false, message: "Anunciante inválido." }, 400);
+    }
 
-    const { content } = await request.json();
+    const access = await requireAdmin();
+    if (!access.ok) return access.response;
 
-    const { data, error } = await supabase
+    if (!(await advertiserExists(access.db, anuncianteId))) {
+      return json({ success: false, message: "Anunciante não encontrado." }, 404);
+    }
+
+    const body = await request.json().catch(() => null);
+    const content = normalizeText(body?.content, 2000);
+
+    if (!content) {
+      return json(
+        { success: false, message: "Informe uma mensagem." },
+        400,
+      );
+    }
+
+    const { data, error } = await access.db
       .from("mensagens_suporte_anunciante")
-      .insert([{
-        anunciante_id: anuncianteId,
-        sender_type: "ADMIN",
-        content: content
-      }])
-      .select()
+      .insert([
+        {
+          anunciante_id: anuncianteId,
+          sender_type: "ADMIN",
+          content,
+        },
+      ])
+      .select("id, anunciante_id, sender_type, content, created_at")
       .single();
 
-    if (error) throw error;
-    return NextResponse.json({ success: true, data });
+    if (error) {
+      if (isMissingSupportTable(error)) return supportMigrationResponse();
+      throw new Error("Falha ao enviar a mensagem.");
+    }
+
+    return json({
+      success: true,
+      data: {
+        id: data.id,
+        advertiserId: data.anunciante_id,
+        senderType: data.sender_type,
+        content: data.content,
+        createdAt: data.created_at,
+      },
+    });
   } catch (error) {
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    console.error("[Admin/Anunciante/Suporte][POST] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível enviar a mensagem." },
+      500,
+    );
   }
 }

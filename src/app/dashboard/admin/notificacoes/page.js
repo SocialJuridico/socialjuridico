@@ -1,190 +1,89 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { 
-  Bell, 
-  Trash2, 
-  ArrowLeft, 
-  MessageSquare,
-  Search,
-  Clock
-} from 'lucide-react';
-import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
-import styles from './Notificacoes.module.css';
-
-const parseMeta = (meta) => {
-  if (!meta) return {};
-  if (typeof meta === 'object') return meta;
-  try {
-     return JSON.parse(meta);
-  } catch {
-     return {};
-  }
-};
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import DeleteNotificationDialog from "./components/DeleteNotificationDialog";
+import NotificationsHeader from "./components/NotificationsHeader";
+import NotificationsList from "./components/NotificationsList";
+import NotificationsSummary from "./components/NotificationsSummary";
+import NotificationsToolbar from "./components/NotificationsToolbar";
+import { useAdminNotifications } from "./hooks/useAdminNotifications";
+import styles from "./Notificacoes.module.css";
 
 export default function AdminNotificacoesPage() {
-  const router = useRouter();
-  const [notificacoes, setNotificacoes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [notifToDelete, setNotifToDelete] = useState(null);
+  const state = useAdminNotifications();
 
-  const fetchNotificacoes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/notificacoes');
-      const data = await res.json();
-      if (data.success) {
-        setNotificacoes(data.data || []);
-      }
-    } catch (err) {
-      console.error("Erro fetch Notificações:", err);
-      toast.error("Erro ao carregar notificações.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  if (state.loading) {
+    return (
+      <main className={styles.loadingPage}>
+        <span className={styles.loadingSpinner} aria-hidden="true" />
+        <h1>Carregando notificações</h1>
+        <p>Preparando mensagens e alertas administrativos.</p>
+      </main>
+    );
+  }
 
-  useEffect(() => {
-    fetchNotificacoes();
-  }, [fetchNotificacoes]);
-
-  const handleDelete = (id) => {
-    setNotifToDelete(id);
-    setShowDeleteConfirm(true);
-  };
-
-  const executeDelete = async () => {
-    if (!notifToDelete) return;
-    try {
-      const res = await fetch(`/api/notificacoes?id=${notifToDelete}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Notificação removida!");
-        setNotificacoes(prev => prev.filter(n => n.id !== notifToDelete));
-        setShowDeleteConfirm(false);
-        setNotifToDelete(null);
-      } else {
-        toast.error(data.message || "Erro ao remover.");
-      }
-    } catch (err) {
-      console.error("Erro delete notif:", err);
-      toast.error("Erro de conexão.");
-    }
-  };
-
-  const handleNotifClick = (notif) => {
-     // Se for chat admin ou broadcast, tentamos abrir o chat com o parceiro certo
-     if (notif.tipo === 'ADMIN_CHAT' || notif.tipo === 'ADMIN_BROADCAST') {
-        const meta = parseMeta(notif.meta);
-        // O parceiro pode estar em chat_with (se for mirror), sender_id (se recebida) ou sent_by (se broadcast)
-        const partnerId = meta.chat_with || meta.sender_id || meta.sent_by;
-        
-        if (partnerId) {
-           router.push(`/chat/admin/${partnerId}`);
-        } else {
-           toast.error("Não foi possível identificar o participante desta conversa.");
-        }
-     }
-  };
-
-  const filtered = notificacoes.filter(n => 
-    (n.titulo || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (n.mensagem || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  if (state.loadError && state.notifications.length === 0) {
+    return (
+      <main className={styles.loadingPage}>
+        <span className={styles.errorIcon}>
+          <AlertTriangle size={28} aria-hidden="true" />
+        </span>
+        <h1>Não foi possível carregar as notificações</h1>
+        <p>{state.loadError}</p>
+        <button type="button" className={styles.secondaryButton} onClick={state.loadNotifications}>
+          <RefreshCw size={16} aria-hidden="true" />
+          Tentar novamente
+        </button>
+      </main>
+    );
+  }
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <Link href="/dashboard/admin" className={styles.backBtn}>
-            <ArrowLeft size={16} />
-          </Link>
-          <div>
-            <h1>Minhas Notificações</h1>
-            <p>Gerencie as mensagens e alertas recebidos pelo sistema.</p>
-          </div>
-        </div>
-        <div className={styles.searchWrapper}>
-           <Search size={18} className={styles.searchIcon} />
-           <input 
-              type="text" 
-              placeholder="Buscar notificações..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={styles.searchInput}
-           />
-        </div>
-      </header>
+    <main className={styles.page}>
+      <div className={styles.pageShell}>
+        <NotificationsHeader
+          total={state.summary.total}
+          unread={state.summary.unread}
+          loading={state.loading}
+          markingAllRead={state.markingAllRead}
+          onReload={state.loadNotifications}
+          onMarkAllRead={state.markAllAsRead}
+          onDeleteAll={state.requestDeleteAll}
+        />
 
-      <div className={styles.content}>
-        {loading ? (
-          <div className={styles.loadingState}>Carregando...</div>
-        ) : filtered.length > 0 ? (
-          <div className={styles.notifGrid}>
-            {filtered.map((notif) => (
-              <div 
-                key={notif.id} 
-                className={`${styles.notifCard} ${(notif.tipo === 'ADMIN_CHAT' || notif.tipo === 'ADMIN_BROADCAST') ? styles.clickable : ''}`}
-                onClick={() => handleNotifClick(notif)}
-              >
-                <div className={styles.notifHeader}>
-                   <div className={styles.notifIcon}>
-                      <Bell size={20} color="#d4af37" />
-                   </div>
-                   <div className={styles.notifTitleInfo}>
-                      <h3>{notif.titulo}</h3>
-                      <span className={styles.notifDate}>
-                         <Clock size={12} style={{ marginRight: 4 }} />
-                         {new Date(notif.created_at).toLocaleString('pt-BR')}
-                      </span>
-                   </div>
-                   <button 
-                      className={styles.deleteBtn} 
-                      onClick={(e) => {
-                         e.stopPropagation();
-                         handleDelete(notif.id);
-                      }}
-                      title="Apagar notificação"
-                   >
-                      <Trash2 size={16} />
-                   </button>
-                </div>
-                <p className={styles.notifMensagem}>{notif.mensagem}</p>
-                {notif.meta && (
-                   <div className={styles.notifFooter}>
-                      <span className={styles.notifTypeBadge}>{notif.tipo || "Geral"}</span>
-                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className={styles.emptyState}>
-             <MessageSquare size={48} style={{ opacity: 0.1, marginBottom: 15 }} />
-             <p>Nenhuma notificação encontrada.</p>
+        {state.loadError && (
+          <div className={styles.warningBanner} role="alert">
+            <AlertTriangle size={18} aria-hidden="true" />
+            <div>
+              <strong>Não foi possível atualizar os dados</strong>
+              <p>{state.loadError}</p>
+            </div>
+            <button type="button" onClick={state.loadNotifications}>Atualizar</button>
           </div>
         )}
+
+        <NotificationsSummary summary={state.summary} />
+        <NotificationsToolbar
+          searchTerm={state.searchTerm}
+          activeFilter={state.activeFilter}
+          visibleCount={state.filteredNotifications.length}
+          onSearchChange={state.setSearchTerm}
+          onFilterChange={state.setActiveFilter}
+        />
+        <NotificationsList
+          notifications={state.filteredNotifications}
+          onOpen={state.openNotification}
+          onDelete={state.requestDelete}
+        />
       </div>
 
-      {showDeleteConfirm && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.confirmModal}>
-             <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', width: '64px', height: '64px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                <Trash2 size={32} />
-             </div>
-             <h3>Excluir Notificação?</h3>
-             <p>Esta mensagem será removida permanentemente da sua caixa de entrada.</p>
-             <div className={styles.modalActions}>
-                <button onClick={() => setShowDeleteConfirm(false)} className={styles.btnCancel}>Cancelar</button>
-                <button onClick={executeDelete} className={styles.btnDelete}>Excluir Agora</button>
-             </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <DeleteNotificationDialog
+        notification={state.notificationToDelete}
+        deleteAll={state.deleteAllRequested}
+        deleting={state.deleting}
+        onClose={state.closeDeleteDialog}
+        onConfirm={state.confirmDelete}
+      />
+    </main>
   );
 }

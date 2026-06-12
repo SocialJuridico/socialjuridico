@@ -1,153 +1,233 @@
-import { createClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabase";
-import { getRoleFromDatabase } from "@/lib/securityUtils";
-import { NextResponse } from "next/server";
-import { resend } from "@/lib/resend";
 import { comunicadoAdminTemplate } from "@/lib/emailTemplates";
+import { resend } from "@/lib/resend";
+import {
+  EMAIL_TARGET_MODES,
+  deduplicateRecipients,
+  escapeHtml,
+  isValidUuid,
+  json,
+  normalizeText,
+  requireAdminCommunicationAccess,
+} from "../communication/adminCommunication";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const BATCH_SIZE = 100;
+const DELAY_BETWEEN_BATCHES_MS = 1500;
+const FROM_EMAIL = "Social Jurídico <contato@socialjuridico.com.br>";
+
+function isEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function mapAdvertiserRecipient(item) {
+  const email = isEmail(item.email)
+    ? item.email
+    : isEmail(item.username)
+      ? item.username
+      : "";
+
+  return {
+    name: item.nome_empresa || item.username || "Anunciante",
+    email,
+  };
+}
+
+async function queryAdvertisers(db, targetId = null) {
+  let withEmail = db
+    .from("anunciantes")
+    .select("nome_empresa, username, email");
+
+  if (targetId) withEmail = withEmail.eq("id", targetId).maybeSingle();
+
+  const primary = await withEmail;
+  if (!primary.error) return primary;
+
+  let fallback = db
+    .from("anunciantes")
+    .select("nome_empresa, username");
+
+  if (targetId) fallback = fallback.eq("id", targetId).maybeSingle();
+
+  return fallback;
+}
+
+async function listRecipients(db, targetMode, targetId) {
+  switch (targetMode) {
+    case "EMAIL_TODOS_ADVOGADOS": {
+      const { data, error } = await db
+        .from("advogados")
+        .select("name, email")
+        .not("email", "is", null);
+      if (error) throw new Error(`Falha ao consultar advogados: ${error.message}`);
+      return data || [];
+    }
+    case "EMAIL_TODOS_CLIENTES": {
+      const { data, error } = await db
+        .from("clientes")
+        .select("name, email")
+        .not("email", "is", null);
+      if (error) throw new Error(`Falha ao consultar clientes: ${error.message}`);
+      return data || [];
+    }
+    case "EMAIL_TODOS_ANUNCIANTES": {
+      const { data, error } = await queryAdvertisers(db);
+      if (error) throw new Error(`Falha ao consultar anunciantes: ${error.message}`);
+      return (data || []).map(mapAdvertiserRecipient);
+    }
+    case "EMAIL_ADVOGADO_ESPECIFICO": {
+      if (!isValidUuid(targetId)) return [];
+      const { data, error } = await db
+        .from("advogados")
+        .select("name, email")
+        .eq("id", targetId)
+        .maybeSingle();
+      if (error) throw new Error(`Falha ao consultar advogado: ${error.message}`);
+      return data?.email ? [data] : [];
+    }
+    case "EMAIL_CLIENTE_ESPECIFICO": {
+      if (!isValidUuid(targetId)) return [];
+      const { data, error } = await db
+        .from("clientes")
+        .select("name, email")
+        .eq("id", targetId)
+        .maybeSingle();
+      if (error) throw new Error(`Falha ao consultar cliente: ${error.message}`);
+      return data?.email ? [data] : [];
+    }
+    case "EMAIL_ANUNCIANTE_ESPECIFICO": {
+      if (!isValidUuid(targetId)) return [];
+      const { data, error } = await queryAdvertisers(db, targetId);
+      if (error) throw new Error(`Falha ao consultar anunciante: ${error.message}`);
+      return data ? [mapAdvertiserRecipient(data)] : [];
+    }
+    default:
+      return [];
+  }
+}
+
+async function sendEmailBatches(recipients, title, message) {
+  let sent = 0;
+  let failed = 0;
+
+  for (let index = 0; index < recipients.length; index += BATCH_SIZE) {
+    const batch = recipients.slice(index, index + BATCH_SIZE);
+    const payloads = batch.map((recipient) => ({
+      from: FROM_EMAIL,
+      to: [recipient.email],
+      subject: `⚖️ ${title}`,
+      html: comunicadoAdminTemplate({
+        recipientName: escapeHtml(recipient.name),
+        titulo: escapeHtml(title),
+        mensagem: escapeHtml(message),
+      }),
+    }));
+
+    try {
+      const { error } = await resend.batch.send(payloads);
+      if (error) {
+        failed += batch.length;
+        console.error("[Admin/Email] Falha no lote:", error);
+      } else {
+        sent += batch.length;
+      }
+    } catch (error) {
+      failed += batch.length;
+      console.error("[Admin/Email] Exceção no lote:", error);
+    }
+
+    if (index + BATCH_SIZE < recipients.length) {
+      await new Promise((resolve) => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+    }
+  }
+
+  return { sent, failed };
+}
 
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const access = await requireAdminCommunicationAccess();
+    if (!access.ok) return access.response;
 
-    if (authError || !user) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+    if (!process.env.RESEND_API_KEY) {
+      return json(
+        {
+          success: false,
+          message: "O serviço de envio de e-mails não está configurado.",
+        },
+        503,
+      );
     }
 
-    const db = supabaseAdmin || supabase;
-    const role = await getRoleFromDatabase(db, user.id);
-    if (role !== "ADMIN") {
-      return NextResponse.json({ success: false, message: "Apenas administradores podem enviar emails." }, { status: 403 });
+    const body = await request.json().catch(() => null);
+    const targetMode = String(body?.targetMode || "").trim();
+    const targetId = String(body?.targetId || "").trim();
+    const title = normalizeText(body?.title, 100);
+    const message = normalizeText(body?.message, 10000);
+
+    if (!EMAIL_TARGET_MODES.has(targetMode)) {
+      return json({ success: false, message: "Público-alvo inválido." }, 400);
     }
 
-    const { targetMode, targetId, title, message } = await request.json();
-
-    if (!title?.trim() || !message?.trim()) {
-      return NextResponse.json({ success: false, message: "Título e mensagem são obrigatórios." }, { status: 400 });
+    if (!title || !message) {
+      return json(
+        { success: false, message: "Título e mensagem são obrigatórios." },
+        400,
+      );
     }
 
-    let recipients = []; // Array de { name, email }
+    const recipients = deduplicateRecipients(
+      await listRecipients(access.db, targetMode, targetId),
+    );
 
-    switch (targetMode) {
-      case "EMAIL_TODOS_ADVOGADOS": {
-        const { data, error } = await db.from("advogados").select("name, email").not("email", "is", null);
-        if (error) throw error;
-        recipients = (data || []).filter(r => r.email);
-        break;
-      }
-      case "EMAIL_TODOS_CLIENTES": {
-        const { data, error } = await db.from("clientes").select("name, email").not("email", "is", null);
-        if (error) throw error;
-        recipients = (data || []).filter(r => r.email);
-        break;
-      }
-      case "EMAIL_TODOS_ANUNCIANTES": {
-        const { data, error } = await db.from("anunciantes").select("nome, email").not("email", "is", null);
-        if (error) throw error;
-        recipients = (data || []).map(r => ({ name: r.nome, email: r.email })).filter(r => r.email);
-        break;
-      }
-      case "EMAIL_ADVOGADO_ESPECIFICO": {
-        if (!targetId) {
-          return NextResponse.json({ success: false, message: "Selecione um advogado." }, { status: 400 });
-        }
-        const { data, error } = await db.from("advogados").select("name, email").eq("id", targetId).single();
-        if (error || !data?.email) {
-          return NextResponse.json({ success: false, message: "Advogado não encontrado ou sem email." }, { status: 404 });
-        }
-        recipients = [data];
-        break;
-      }
-      case "EMAIL_CLIENTE_ESPECIFICO": {
-        if (!targetId) {
-          return NextResponse.json({ success: false, message: "Selecione um cliente." }, { status: 400 });
-        }
-        const { data, error } = await db.from("clientes").select("name, email").eq("id", targetId).single();
-        if (error || !data?.email) {
-          return NextResponse.json({ success: false, message: "Cliente não encontrado ou sem email." }, { status: 404 });
-        }
-        recipients = [data];
-        break;
-      }
-      case "EMAIL_ANUNCIANTE_ESPECIFICO": {
-        if (!targetId) {
-          return NextResponse.json({ success: false, message: "Selecione um anunciante." }, { status: 400 });
-        }
-        const { data, error } = await db.from("anunciantes").select("nome, email").eq("id", targetId).single();
-        if (error || !data?.email) {
-          return NextResponse.json({ success: false, message: "Anunciante não encontrado ou sem email." }, { status: 404 });
-        }
-        recipients = [{ name: data.nome, email: data.email }];
-        break;
-      }
-      default:
-        return NextResponse.json({ success: false, message: "Modo de envio inválido." }, { status: 400 });
+    if (!recipients.length) {
+      return json(
+        {
+          success: false,
+          message: "Nenhum destinatário com e-mail válido foi encontrado.",
+        },
+        404,
+      );
     }
 
-    if (recipients.length === 0) {
-      return NextResponse.json({ success: false, message: "Nenhum destinatário encontrado com email válido." }, { status: 404 });
+    const result = await sendEmailBatches(recipients, title, message);
+
+    if (result.sent === 0) {
+      return json(
+        {
+          success: false,
+          message: "O serviço não confirmou o envio de nenhum e-mail.",
+          data: {
+            totalDestinatarios: recipients.length,
+            enviados: 0,
+            falhas: result.failed,
+          },
+        },
+        502,
+      );
     }
 
-    // Deduplicar emails
-    const seenEmails = new Set();
-    const uniqueRecipients = recipients.filter(r => {
-      const email = r.email?.trim().toLowerCase();
-      if (!email || seenEmails.has(email)) return false;
-      seenEmails.add(email);
-      return true;
-    });
-
-    console.log(`📧 [Admin Email] Enviando "${title}" para ${uniqueRecipients.length} destinatário(s) (modo: ${targetMode})...`);
-
-    // Enviar via Batch API (lotes de 100)
-    const BATCH_SIZE = 100;
-    const DELAY_BETWEEN_BATCHES_MS = 1500;
-    let totalEnviados = 0;
-
-    for (let i = 0; i < uniqueRecipients.length; i += BATCH_SIZE) {
-      const batch = uniqueRecipients.slice(i, i + BATCH_SIZE);
-
-      const emailPayloads = batch.map(r => ({
-        from: 'Social Jurídico <contato@socialjuridico.com.br>',
-        to: [r.email.trim()],
-        subject: `⚖️ ${title.trim()}`,
-        html: comunicadoAdminTemplate({
-          recipientName: r.name || 'Usuário',
-          titulo: title.trim(),
-          mensagem: message.trim(),
-        }),
-      }));
-
-      try {
-        const { error: batchError } = await resend.batch.send(emailPayloads);
-        if (batchError) {
-          console.error(`⚠️ Erro no lote:`, batchError);
-        } else {
-          totalEnviados += batch.length;
-        }
-      } catch (batchErr) {
-        console.error(`❌ Falha no lote:`, batchErr.message);
-      }
-
-      // Delay entre lotes
-      if (i + BATCH_SIZE < uniqueRecipients.length) {
-        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
-      }
-    }
-
-    console.log(`✅ [Admin Email] ${totalEnviados}/${uniqueRecipients.length} emails enviados`);
-
-    return NextResponse.json({
+    return json({
       success: true,
-      message: `Email enviado com sucesso para ${totalEnviados} destinatário(s)!`,
-      data: { totalDestinatarios: uniqueRecipients.length, enviados: totalEnviados },
+      message:
+        result.failed > 0
+          ? `${result.sent} e-mails enviados; ${result.failed} apresentaram falha.`
+          : `${result.sent} e-mails enviados com sucesso.`,
+      data: {
+        totalDestinatarios: recipients.length,
+        enviados: result.sent,
+        falhas: result.failed,
+      },
     });
-
   } catch (error) {
-    console.error("Erro na API POST /api/admin/email:", error);
-    return NextResponse.json(
-      { success: false, message: error.message || "Erro interno no servidor ao enviar emails." },
-      { status: 500 }
+    console.error("[Admin/Email][POST] Erro:", error);
+    return json(
+      {
+        success: false,
+        message: "Não foi possível enviar os e-mails administrativos.",
+      },
+      500,
     );
   }
 }

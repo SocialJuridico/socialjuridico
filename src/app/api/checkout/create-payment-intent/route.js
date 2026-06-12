@@ -1,105 +1,302 @@
-import { stripe } from '@/lib/stripe';
-import { createClient } from '@/lib/supabaseServer';
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
-/**
- * POST /api/checkout/create-payment-intent
- * Cria um PaymentIntent para Checkout Transparente (Stripe Elements).
- * Usado para compra avulsa de Juris (modo 'payment').
- * 
- * IMPORTANTE: Este endpoint NÃO substitui o fluxo antigo de redirect.
- * Ambos coexistem. O webhook continua recebendo o evento e creditando Juris.
- */
-export async function POST(request) {
+import { stripe } from "@/lib/stripe";
+import { createClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabase";
+import {
+  calculateDiscountedAmount,
+  releaseCouponReservation,
+  reserveCouponForCheckout,
+  resolveExpectedCouponType,
+} from "@/lib/coupons/couponServer";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function validateOrigin(request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (!host || new URL(origin).host !== host) {
+      return json({ success: false, message: "Origem não autorizada." }, 403);
+    }
+  } catch {
+    return json({ success: false, message: "Origem inválida." }, 403);
+  }
 
-    if (authError || !user) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+  return null;
+}
+
+function compactSet(values) {
+  return new Set(values.filter(Boolean));
+}
+
+function assertAllowedPrice(priceId, { paymentType, planType }) {
+  const jurisPrices = compactSet([
+    process.env.PRICE_JURIS_10,
+    process.env.PRICE_JURIS_20,
+    process.env.PRICE_JURIS_50,
+    process.env.NEXT_PUBLIC_PRICE_JURIS_10,
+    process.env.NEXT_PUBLIC_PRICE_JURIS_20,
+    process.env.NEXT_PUBLIC_PRICE_JURIS_50,
+  ]);
+
+  const startPrices = compactSet([
+    process.env.STRIPE_PRICE_START_AVULSO,
+    process.env.STRIPE_PRICE_START_MENSAL,
+    process.env.STRIPE_PRICE_START_ANUAL,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_START_AVULSO,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_START_MENSAL,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_START_ANUAL,
+  ]);
+
+  const proPrices = compactSet([
+    process.env.STRIPE_PRICE_PRO_AVULSO,
+    process.env.STRIPE_PRICE_PRO_MENSAL,
+    process.env.STRIPE_PRICE_PRO_ANUAL,
+    process.env.PRICE_PRO_MONTHLY,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_AVULSO,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MENSAL,
+    process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANUAL,
+    process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY,
+  ]);
+
+  let allowed = null;
+  if (paymentType === "JURIS_PURCHASE") allowed = jurisPrices;
+  if (paymentType === "PRO_SUBSCRIPTION") {
+    allowed =
+      String(planType || "PRO").toUpperCase() === "START"
+        ? startPrices
+        : proPrices;
+  }
+
+  if (allowed && (!allowed.size || !allowed.has(priceId))) {
+    const error = new Error("Preço não autorizado para este produto.");
+    error.status = 400;
+    throw error;
+  }
+}
+
+function resolvePaymentType({ planType, addOnType }) {
+  if (addOnType) return "ADDON_PURCHASE";
+  if (planType) return "PRO_SUBSCRIPTION";
+  return "JURIS_PURCHASE";
+}
+
+async function bindReservation(reservationToken, userId, reference) {
+  if (!reservationToken) return;
+
+  const { data, error } = await supabaseAdmin.rpc("bind_coupon_reservation", {
+    p_token: reservationToken,
+    p_advogado_id: userId,
+    p_checkout_reference: reference,
+  });
+
+  if (error || data !== true) {
+    const bindError = new Error(
+      "Não foi possível vincular a reserva do cupom ao pagamento.",
+    );
+    bindError.status = ["PGRST202", "42883"].includes(error?.code) ? 503 : 409;
+    throw bindError;
+  }
+}
+
+export async function POST(request) {
+  let couponReservation = null;
+  let userId = null;
+  let paymentIntentId = null;
+
+  try {
+    const originResponse = validateOrigin(request);
+    if (originResponse) return originResponse;
+
+    if (!supabaseAdmin || !process.env.STRIPE_SECRET_KEY) {
+      return json(
+        { success: false, message: "Serviço de pagamento indisponível." },
+        503,
+      );
     }
 
-    // Validar status OAB do advogado
-    const { data: profile } = await supabase
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return json({ success: false, message: "Não autorizado." }, 401);
+    }
+    userId = user.id;
+
+    const { data: profile } = await supabaseAdmin
       .from("advogados")
       .select("oab_verification_status")
       .eq("id", user.id)
       .maybeSingle();
 
     if (profile?.oab_verification_status === "ERROR") {
-      return NextResponse.json(
-        { success: false, message: "Acesso restrito devido a pendências na OAB." },
-        { status: 403 }
+      return json(
+        {
+          success: false,
+          message: "Acesso restrito devido a pendências na OAB.",
+        },
+        403,
       );
     }
 
-    const { priceId, stripeCouponId, internalCouponId, addOnType, planType, billingCycle } = await request.json();
+    const body = await request.json().catch(() => null);
+    const priceId = String(body?.priceId || "").trim();
+    const internalCouponId =
+      String(body?.internalCouponId || "").trim() || null;
+    const planType =
+      String(body?.planType || "").trim().toUpperCase() || null;
+    const billingCycle =
+      String(body?.billingCycle || "AVULSO").trim().toUpperCase() ||
+      "AVULSO";
+    const addOnType =
+      String(body?.addOnType || "").trim().toUpperCase() || null;
 
     if (!priceId) {
-      return NextResponse.json({ success: false, message: "Price ID é obrigatório" }, { status: 400 });
+      return json({ success: false, message: "Price ID é obrigatório." }, 400);
     }
 
-    // Buscar informações do preço no Stripe para saber o valor em centavos
+    const paymentType = resolvePaymentType({ planType, addOnType });
+    assertAllowedPrice(priceId, { paymentType, planType });
+
+    if (internalCouponId && addOnType) {
+      return json(
+        { success: false, message: "Cupons não são aceitos para expansões." },
+        400,
+      );
+    }
+
     const price = await stripe.prices.retrieve(priceId);
-
-    if (!price || !price.unit_amount) {
-      return NextResponse.json({ success: false, message: "Preço não encontrado no Stripe" }, { status: 400 });
+    if (!price || !price.unit_amount || price.active === false) {
+      return json(
+        { success: false, message: "Preço não encontrado ou indisponível." },
+        400,
+      );
     }
 
-    let amountInCents = price.unit_amount;
+    if (internalCouponId) {
+      couponReservation = await reserveCouponForCheckout(supabaseAdmin, {
+        couponId: internalCouponId,
+        userId: user.id,
+        expectedType: resolveExpectedCouponType({ paymentType, addOnType }),
+      });
 
-    // Se tiver cupom do Stripe, buscar o desconto para calcular o valor final
-    let couponDiscount = null;
-    if (stripeCouponId) {
-      try {
-        const coupon = await stripe.coupons.retrieve(stripeCouponId);
-        if (coupon.valid) {
-          if (coupon.percent_off) {
-            amountInCents = Math.round(amountInCents * (1 - coupon.percent_off / 100));
-            couponDiscount = { type: 'percent', value: coupon.percent_off };
-          } else if (coupon.amount_off) {
-            amountInCents = Math.max(0, amountInCents - coupon.amount_off);
-            couponDiscount = { type: 'fixed', value: coupon.amount_off };
-          }
-        }
-      } catch (couponErr) {
-        console.warn('[create-payment-intent] Erro ao buscar cupom:', couponErr.message);
+      const stripeCoupon = await stripe.coupons.retrieve(
+        couponReservation.coupon.stripe_coupon_id,
+      );
+      if (!stripeCoupon?.valid) {
+        const error = new Error("O cupom não está mais válido no Stripe.");
+        error.status = 409;
+        throw error;
       }
     }
 
-    // Stripe exige valor mínimo de 50 centavos (~R$0.50)
-    if (amountInCents < 50) {
-      amountInCents = 50;
+    const originalAmount = Number(price.unit_amount);
+    const amountInCents = couponReservation
+      ? calculateDiscountedAmount(originalAmount, couponReservation.coupon)
+      : originalAmount;
+
+    if (couponReservation && amountInCents < 50) {
+      const error = new Error(
+        "O desconto deixa o valor abaixo da cobrança mínima de R$ 0,50. Use outro cupom ou produto.",
+      );
+      error.status = 422;
+      throw error;
     }
 
-    // Criar o PaymentIntent
-    // Criar o PaymentIntent
+    const metadata = {
+      userId: user.id,
+      type: paymentType,
+      priceId,
+      planType: planType || "",
+      billingCycle,
+      addOnType: addOnType || "",
+      cupomId: couponReservation?.coupon?.id || "",
+      couponReservationToken: couponReservation?.reservationToken || "",
+    };
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
-      currency: price.currency || 'brl',
-      payment_method_types: ['card'],
-      metadata: {
-        userId: user.id,
-        type: (planType || addOnType) ? (addOnType ? 'ADDON_PURCHASE' : 'PRO_SUBSCRIPTION') : 'JURIS_PURCHASE',
-        priceId: priceId,
-        planType: planType || null,
-        billingCycle: billingCycle || 'AVULSO',
-        addOnType: addOnType || null,
-        cupomId: internalCouponId || null,
-      },
+      currency: price.currency || "brl",
+      payment_method_types: ["card"],
+      metadata,
       receipt_email: user.email,
     });
+    paymentIntentId = paymentIntent.id;
 
-    return NextResponse.json({
+    if (couponReservation) {
+      await bindReservation(
+        couponReservation.reservationToken,
+        user.id,
+        paymentIntent.id,
+      );
+    }
+
+    return json({
       success: true,
       clientSecret: paymentIntent.client_secret,
       amount: amountInCents,
-      currency: price.currency || 'brl',
-      couponDiscount,
+      originalAmount,
+      currency: price.currency || "brl",
+      minimumChargeApplied: false,
+      couponDiscount: couponReservation
+        ? {
+            type:
+              couponReservation.coupon.desconto_tipo === "PERCENTUAL"
+                ? "percent"
+                : "fixed",
+            value: Number(couponReservation.coupon.valor || 0),
+          }
+        : null,
     });
-
   } catch (error) {
-    console.error("Erro ao criar PaymentIntent:", error);
-    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    if (paymentIntentId) {
+      try {
+        await stripe.paymentIntents.cancel(paymentIntentId);
+      } catch (cancelError) {
+        console.warn(
+          "[Checkout/CreatePaymentIntent] Intent não cancelado após falha:",
+          cancelError.message,
+        );
+      }
+    }
+
+    if (couponReservation?.reservationToken && userId) {
+      await releaseCouponReservation(
+        supabaseAdmin,
+        couponReservation.reservationToken,
+        userId,
+      );
+    }
+
+    console.error("[Checkout/CreatePaymentIntent] Erro:", error);
+    const status = Number(error?.status) || 500;
+    return json(
+      {
+        success: false,
+        message:
+          status < 500
+            ? error.message
+            : "Não foi possível preparar o pagamento.",
+      },
+      status,
+    );
   }
 }

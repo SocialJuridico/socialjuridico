@@ -4,14 +4,46 @@ import {
   recordCaseAudit,
   requireAdminCaseAccess,
 } from "../adminCases";
-import { validateAdminCaseMutationOrigin } from "../adminCaseRequestSecurity";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function validateMutationOrigin(request) {
+  const origin = request.headers.get("origin");
+
+  if (!origin) return null;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+
+  try {
+    if (!host || new URL(origin).host !== host) {
+      return json(
+        {
+          success: false,
+          message: "Origem da requisição não autorizada.",
+        },
+        403,
+      );
+    }
+  } catch {
+    return json(
+      {
+        success: false,
+        message: "Origem da requisição inválida.",
+      },
+      403,
+    );
+  }
+
+  return null;
+}
+
 export async function POST(request) {
   try {
-    const originResponse = validateAdminCaseMutationOrigin(request);
+    const originResponse = validateMutationOrigin(request);
     if (originResponse) return originResponse;
 
     const access = await requireAdminCaseAccess();

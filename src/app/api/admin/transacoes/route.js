@@ -49,6 +49,7 @@ function maskEmail(value) {
 function inferProvider(reference) {
   const value = String(reference || "").trim().toLowerCase();
 
+  if (value.startsWith("affiliate_")) return "AFFILIATE_PROGRAM";
   if (value.startsWith("manual_")) return "MANUAL";
   if (value.startsWith("cs_")) return "STRIPE_CHECKOUT";
   if (value.startsWith("pi_")) return "STRIPE_PAYMENT_INTENT";
@@ -75,6 +76,10 @@ function maskProviderReference(value, provider) {
     return `InfinitePay ••••${suffix || "••••"}`;
   }
 
+  if (provider === "AFFILIATE_PROGRAM") {
+    return `Afiliados ••••${suffix || "••••"}`;
+  }
+
   if (provider === "MANUAL") {
     return `Manual ••••${suffix || "••••"}`;
   }
@@ -88,6 +93,7 @@ function inferProduct(transaction) {
   const type = String(transaction.tipo || "").toUpperCase();
   const jurisAmount = Number(transaction.juris_amount || 0);
 
+  if (type === "AFFILIATE_COMMISSION") return "AFFILIATE";
   if (type === "JURIS_PURCHASE") return "JURIS";
   if (type === "ADDON_PURCHASE") return "ADDON";
   if (type === "PRO_SUBSCRIPTION") {
@@ -101,7 +107,10 @@ function classifyFinancialStatus(transaction, provider) {
   const rawStatus = String(transaction.status || "").toLowerCase();
 
   if (provider === "STRIPE_SETUP_INTENT") return "REVIEW";
-  if (provider === "MANUAL" && CONFIRMED_STATUSES.has(rawStatus)) {
+  if (
+    ["MANUAL", "AFFILIATE_PROGRAM"].includes(provider) &&
+    CONFIRMED_STATUSES.has(rawStatus)
+  ) {
     return "MANUAL";
   }
   if (rawStatus.includes("review")) return "REVIEW";
@@ -114,6 +123,8 @@ function classifyFinancialStatus(transaction, provider) {
 
 function getOperationalAlert(transaction, provider, financialStatus) {
   const amount = Number(transaction.valor || 0);
+
+  if (provider === "AFFILIATE_PROGRAM") return null;
 
   if (provider === "STRIPE_SETUP_INTENT") {
     return {

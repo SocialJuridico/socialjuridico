@@ -1,292 +1,746 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { 
-  ArrowLeft, 
-  CreditCard, 
-  FileDown, 
-  Search, 
-  Filter, 
-  Calendar,
-  TrendingUp,
-  DollarSign,
-  ShoppingCart,
-  RotateCcw
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BadgeDollarSign,
+  CheckCircle2,
+  CircleDollarSign,
+  CreditCard,
+  FileDown,
+  Filter,
+  LoaderCircle,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  UserRound,
+  WalletCards,
 } from "lucide-react";
-import toast from "react-hot-toast";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import styles from "./TransacoesAdmin.module.css";
 
+const PRODUCT_LABELS = {
+  JURIS: "Pacote de Juris",
+  START: "Plano START",
+  PRO: "Plano PRO",
+  ADDON: "Expansão",
+  OTHER: "Outro produto",
+};
+
+const STATUS_LABELS = {
+  CONFIRMED: "Confirmada",
+  MANUAL: "Crédito manual",
+  REVIEW: "Revisão necessária",
+  FAILED: "Falhou",
+  PENDING: "Pendente",
+};
+
+const PROVIDER_LABELS = {
+  STRIPE_CHECKOUT: "Stripe Checkout",
+  STRIPE_PAYMENT_INTENT: "Stripe PaymentIntent",
+  STRIPE_SETUP_INTENT: "Stripe SetupIntent",
+  MANUAL: "Operação manual",
+  UNKNOWN: "Origem não identificada",
+};
+
+const EMPTY_SUMMARY = {
+  totalRecords: 0,
+  confirmedCount: 0,
+  confirmedGross: 0,
+  reviewCount: 0,
+  failedCount: 0,
+  pendingCount: 0,
+  manualCount: 0,
+  alertCount: 0,
+  uniqueCustomers: 0,
+  averageTicket: 0,
+  byProduct: {},
+};
+
+function formatCurrency(value, currency = "BRL") {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: currency || "BRL",
+  }).format(Number(value || 0));
+}
+
+function formatDate(value) {
+  const date = new Date(value || 0);
+  if (Number.isNaN(date.getTime())) return "Data indisponível";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function calculateSummary(items) {
+  const summary = items.reduce(
+    (current, transaction) => {
+      current.totalRecords += 1;
+
+      if (transaction.financialStatus === "CONFIRMED") {
+        current.confirmedCount += 1;
+        if (transaction.amount > 0) {
+          current.confirmedGross += transaction.amount;
+          current.positiveConfirmedCount += 1;
+        }
+      }
+
+      if (transaction.financialStatus === "REVIEW") current.reviewCount += 1;
+      if (transaction.financialStatus === "FAILED") current.failedCount += 1;
+      if (transaction.financialStatus === "PENDING") current.pendingCount += 1;
+      if (transaction.financialStatus === "MANUAL") current.manualCount += 1;
+      if (transaction.alert) current.alertCount += 1;
+      if (transaction.lawyerId) current.customerIds.add(transaction.lawyerId);
+
+      current.byProduct[transaction.product] =
+        (current.byProduct[transaction.product] || 0) + 1;
+
+      return current;
+    },
+    {
+      ...EMPTY_SUMMARY,
+      positiveConfirmedCount: 0,
+      customerIds: new Set(),
+      byProduct: {},
+    },
+  );
+
+  return {
+    totalRecords: summary.totalRecords,
+    confirmedCount: summary.confirmedCount,
+    confirmedGross: Number(summary.confirmedGross.toFixed(2)),
+    reviewCount: summary.reviewCount,
+    failedCount: summary.failedCount,
+    pendingCount: summary.pendingCount,
+    manualCount: summary.manualCount,
+    alertCount: summary.alertCount,
+    uniqueCustomers: summary.customerIds.size,
+    averageTicket: summary.positiveConfirmedCount
+      ? Number(
+          (
+            summary.confirmedGross / summary.positiveConfirmedCount
+          ).toFixed(2),
+        )
+      : 0,
+    byProduct: summary.byProduct,
+  };
+}
+
+async function readJson(response) {
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok || !payload?.success) {
+    throw new Error(payload?.message || "Não foi possível concluir a operação.");
+  }
+
+  return payload;
+}
+
 export default function AdminTransacoesPage() {
-  const router = useRouter();
+  const [transactions, setTransactions] = useState([]);
+  const [serverSummary, setServerSummary] = useState(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
-  const [transacoes, setTransacoes] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
-  const [filterType, setFilterType] = useState("ALL");
+  const [productFilter, setProductFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [providerFilter, setProviderFilter] = useState("ALL");
+  const [periodFilter, setPeriodFilter] = useState("ALL");
+  const [alertsOnly, setAlertsOnly] = useState(false);
+
+  const loadTransactions = useCallback(async ({ silent = false } = {}) => {
+    if (silent) setRefreshing(true);
+    else setLoading(true);
+
+    setLoadError("");
+
+    try {
+      const response = await fetch("/api/admin/transacoes", {
+        cache: "no-store",
+      });
+      const payload = await readJson(response);
+
+      setTransactions(payload.data?.transactions || []);
+      setServerSummary(payload.data?.summary || EMPTY_SUMMARY);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Erro ao carregar a governança financeira.";
+      setLoadError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch("/api/admin/transacoes", { cache: "no-store" });
-        const data = await res.json();
+    loadTransactions();
+  }, [loadTransactions]);
 
-        if (!res.ok || !data.success) {
-          toast.error(data.message || "Falha ao carregar transações");
-          router.replace("/dashboard/admin");
-          return;
-        }
+  const filteredTransactions = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const days = periodFilter === "ALL" ? null : Number(periodFilter);
+    const minimumDate = days
+      ? Date.now() - days * 24 * 60 * 60 * 1000
+      : null;
 
-        setTransacoes(data.data || []);
-      } catch (error) {
-        console.error("Erro ao carregar transações:", error);
-        toast.error("Erro ao carregar transações.");
-      } finally {
-        setLoading(false);
+    return transactions.filter((transaction) => {
+      if (
+        productFilter !== "ALL" &&
+        transaction.product !== productFilter
+      ) {
+        return false;
       }
-    };
 
-    load();
-  }, [router]);
+      if (
+        statusFilter !== "ALL" &&
+        transaction.financialStatus !== statusFilter
+      ) {
+        return false;
+      }
 
-  const filteredTransacoes = useMemo(() => {
-    let result = transacoes;
-    
-    // Filtro de Busca
-    if (search.trim()) {
-      const term = search.toLowerCase();
-      result = result.filter(t => 
-        t.advogado?.name?.toLowerCase().includes(term) ||
-        t.advogado?.email?.toLowerCase().includes(term) ||
-        t.stripe_session_id?.toLowerCase().includes(term)
+      if (
+        providerFilter !== "ALL" &&
+        transaction.provider !== providerFilter
+      ) {
+        return false;
+      }
+
+      if (alertsOnly && !transaction.alert) return false;
+
+      if (minimumDate) {
+        const createdAt = new Date(transaction.createdAt || 0).getTime();
+        if (!createdAt || createdAt < minimumDate) return false;
+      }
+
+      if (!term) return true;
+
+      return [
+        transaction.customer?.name,
+        transaction.customer?.maskedEmail,
+        transaction.providerReference,
+        transaction.couponCode,
+        PRODUCT_LABELS[transaction.product],
+        STATUS_LABELS[transaction.financialStatus],
+      ].some((value) =>
+        String(value || "").toLowerCase().includes(term),
       );
+    });
+  }, [
+    alertsOnly,
+    periodFilter,
+    productFilter,
+    providerFilter,
+    search,
+    statusFilter,
+    transactions,
+  ]);
+
+  const visibleSummary = useMemo(
+    () => calculateSummary(filteredTransactions),
+    [filteredTransactions],
+  );
+
+  async function syncStripe() {
+    setSyncing(true);
+    const toastId = toast.loading("Conciliando lançamentos com o Stripe...");
+
+    try {
+      const response = await fetch("/api/admin/transacoes/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const payload = await readJson(response);
+      const result = payload.data || {};
+
+      await loadTransactions({ silent: true });
+
+      const reviewText = result.review
+        ? ` ${result.review} item(ns) precisam de revisão.`
+        : "";
+
+      toast.success(
+        `${result.imported || 0} lançamento(s) importado(s).${reviewText}`,
+        { id: toastId },
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erro ao conciliar com o Stripe.",
+        { id: toastId },
+      );
+    } finally {
+      setSyncing(false);
+    }
+  }
+
+  function exportPdf() {
+    if (!filteredTransactions.length) {
+      toast.error("Não há transações visíveis para exportar.");
+      return;
     }
 
-    // Filtro de Tipo
-    if (filterType !== "ALL") {
-      result = result.filter(t => t.tipo === filterType);
-    }
+    const document = new jsPDF({ orientation: "landscape" });
 
-    return result;
-  }, [transacoes, search, filterType]);
+    document.setFontSize(18);
+    document.text("Relatório de Governança Financeira", 14, 18);
+    document.setFontSize(9);
+    document.text(
+      `Social Jurídico · gerado em ${new Date().toLocaleString("pt-BR")}`,
+      14,
+      25,
+    );
+    document.text(
+      `Receita confirmada: ${formatCurrency(
+        visibleSummary.confirmedGross,
+      )} · Registros: ${visibleSummary.totalRecords} · Revisões: ${
+        visibleSummary.reviewCount
+      } · Falhas: ${visibleSummary.failedCount}`,
+      14,
+      31,
+    );
+    document.text(
+      "Relatório administrativo. E-mails e referências do provedor permanecem mascarados.",
+      14,
+      37,
+    );
 
-  const stats = useMemo(() => {
-    const total = filteredTransacoes.reduce((acc, t) => acc + Number(t.valor || 0), 0);
-    const juris = filteredTransacoes.filter(t => t.tipo === "JURIS_PURCHASE").length;
-    const pro = filteredTransacoes.filter(t => t.tipo === "PRO_SUBSCRIPTION" && t.juris_amount !== 7).length;
-    const start = filteredTransacoes.filter(t => t.tipo === "PRO_SUBSCRIPTION" && t.juris_amount === 7).length;
-    return { total, juris, pro, start };
-  }, [filteredTransacoes]);
-
-  const handleExportPDF = () => {
-    const doc = new jsPDF();
-    
-    // Título do PDF
-    doc.setFontSize(20);
-    doc.setTextColor(212, 175, 55); // Ouro
-    doc.text("Relatório Financeiro - SocialJurídico", 14, 20);
-    
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-    doc.text(`Total de Transações: ${filteredTransacoes.length}`, 14, 33);
-    doc.text(`Valor Total: R$ ${stats.total.toFixed(2)}`, 14, 38);
-
-    const tableData = filteredTransacoes.map(t => [
-      new Date(t.created_at).toLocaleDateString("pt-BR"),
-      t.advogado?.name || "N/A",
-      t.tipo === "JURIS_PURCHASE" ? "Compra de Juris" : "Assinatura PRO",
-      `R$ ${Number(t.valor).toFixed(2)}`,
-      t.cupom?.codigo || "-",
-      t.status === "succeeded" ? "Sucesso" : "Pendente"
-    ]);
-
-    autoTable(doc, {
-      startY: 45,
-      head: [["Data", "Advogado", "Tipo", "Valor", "Cupom", "Status"]],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [11, 11, 14], textColor: [212, 175, 55] },
-      alternateRowStyles: { fillColor: [245, 245, 245] }
+    autoTable(document, {
+      startY: 43,
+      head: [
+        [
+          "Data",
+          "Comprador",
+          "Produto",
+          "Origem",
+          "Valor",
+          "Status",
+          "Cupom",
+          "Referência",
+        ],
+      ],
+      body: filteredTransactions.map((transaction) => [
+        formatDate(transaction.createdAt),
+        `${transaction.customer?.name || "N/A"}\n${
+          transaction.customer?.maskedEmail || ""
+        }`,
+        PRODUCT_LABELS[transaction.product] || "Outro",
+        PROVIDER_LABELS[transaction.provider] || "Não identificada",
+        formatCurrency(transaction.amount, transaction.currency),
+        STATUS_LABELS[transaction.financialStatus] || "Indefinido",
+        transaction.couponCode || "-",
+        transaction.providerReference,
+      ]),
+      theme: "grid",
+      styles: { fontSize: 7, cellPadding: 2.2 },
+      headStyles: { fillColor: [28, 28, 32] },
     });
 
-    doc.save(`relatorio-financeiro-${new Date().getTime()}.pdf`);
-    toast.success("Relatório gerado com sucesso!");
-  };
-
-  const handleSyncTransactions = async () => {
-    const loadingToast = toast.loading("Sincronizando com Stripe...");
-    try {
-      const res = await fetch("/api/admin/transacoes/sync", { method: "POST" });
-      const data = await res.json();
-      
-      if (data.success) {
-        toast.success(`Sincronização concluída! ${data.imported} novas vendas importadas.`, { id: loadingToast });
-        // Recarregar lista
-        const reloadRes = await fetch("/api/admin/transacoes", { cache: "no-store" });
-        const reloadData = await reloadRes.json();
-        if (reloadData.success) setTransacoes(reloadData.data);
-      } else {
-        toast.error(data.message || "Falha na sincronização", { id: loadingToast });
-      }
-    } catch (error) {
-      toast.error("Erro ao sincronizar histórico", { id: loadingToast });
-    }
-  };
+    document.save(
+      `governanca-financeira-${new Date().toISOString().slice(0, 10)}.pdf`,
+    );
+    toast.success("Relatório financeiro gerado.");
+  }
 
   if (loading) {
-    return <div className={styles.loading}>Carregando financeiro...</div>;
+    return (
+      <main className={styles.statePage}>
+        <LoaderCircle className={styles.spinning} size={30} />
+        <h1>Carregando governança financeira</h1>
+        <p>Classificando receita, pendências e riscos operacionais.</p>
+      </main>
+    );
+  }
+
+  if (loadError && transactions.length === 0) {
+    return (
+      <main className={styles.statePage}>
+        <AlertTriangle size={30} />
+        <h1>Não foi possível carregar as transações</h1>
+        <p>{loadError}</p>
+        <button
+          type="button"
+          className={styles.secondaryButton}
+          onClick={() => loadTransactions()}
+        >
+          <RefreshCw size={16} />
+          Tentar novamente
+        </button>
+      </main>
+    );
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link href="/dashboard/admin" className={styles.backLink}>
-          <ArrowLeft size={16} /> Voltar ao dashboard
-        </Link>
-        <div className={styles.headerTitle}>
-          <h1><CreditCard size={24} /> Gestão de Pagamentos</h1>
-          <div className={styles.headerActions}>
-            <button className={styles.syncBtn} onClick={handleSyncTransactions} title="Importar vendas passadas do Stripe">
-              <RotateCcw size={16} /> Sincronizar Histórico
-            </button>
-            <button className={styles.exportBtn} onClick={handleExportPDF}>
-              <FileDown size={18} /> Exportar Relatório PDF
-            </button>
-          </div>
-        </div>
-      </header>
+    <main className={styles.page}>
+      <div className={styles.pageShell}>
+        <header className={styles.header}>
+          <Link href="/dashboard/admin" className={styles.backLink}>
+            <ArrowLeft size={16} />
+            Voltar ao dashboard
+          </Link>
 
-      {/* Cards de Resumo */}
-      <section className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: 'rgba(212, 175, 55, 0.1)', color: 'var(--color-gold)' }}>
-            <TrendingUp size={20} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Faturamento Total</span>
-            <strong className={styles.statValue}>R$ {stats.total.toFixed(2)}</strong>
-          </div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-            <ShoppingCart size={20} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Vendas de Juris</span>
-            <strong className={styles.statValue}>{stats.juris}</strong>
-          </div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: 'rgba(124, 58, 237, 0.1)', color: '#7c3aed' }}>
-            <DollarSign size={20} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Planos START</span>
-            <strong className={styles.statValue}>{stats.start}</strong>
-          </div>
-        </div>
-        <div className={styles.statCard}>
-          <div className={styles.statIcon} style={{ background: 'rgba(99, 102, 241, 0.1)', color: '#6366f1' }}>
-            <DollarSign size={20} />
-          </div>
-          <div className={styles.statInfo}>
-            <span className={styles.statLabel}>Planos PRO</span>
-            <strong className={styles.statValue}>{stats.pro}</strong>
-          </div>
-        </div>
-      </section>
+          <div className={styles.headerContent}>
+            <div>
+              <span className={styles.eyebrow}>Governança financeira</span>
+              <h1>
+                <CreditCard size={25} />
+                Transações e conciliação
+              </h1>
+              <p>
+                Receita confirmada, créditos manuais, falhas de processamento e
+                divergências com o provedor em um único painel.
+              </p>
+            </div>
 
-      {/* Filtros */}
-      <div className={styles.filterSection}>
-        <div className={styles.searchWrap}>
-          <Search size={18} className={styles.searchIcon} />
-          <input 
-            type="text" 
-            placeholder="Buscar por nome, email ou ID da transação..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={styles.searchInput}
-          />
-        </div>
-        <div className={styles.filterOptions}>
-          <div className={styles.selectWrap}>
-            <Filter size={16} className={styles.selectIcon} />
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={styles.selectInput}>
-              <option value="ALL">Todos os Tipos</option>
-              <option value="JURIS_PURCHASE">Compras de Juris</option>
-              <option value="PRO_SUBSCRIPTION">Planos PRO</option>
+            <div className={styles.headerActions}>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() => loadTransactions({ silent: true })}
+                disabled={refreshing || syncing}
+              >
+                <RefreshCw
+                  size={16}
+                  className={refreshing ? styles.spinning : undefined}
+                />
+                Atualizar
+              </button>
+              <button
+                type="button"
+                className={styles.syncButton}
+                onClick={syncStripe}
+                disabled={syncing || refreshing}
+              >
+                <RefreshCw
+                  size={16}
+                  className={syncing ? styles.spinning : undefined}
+                />
+                {syncing ? "Conciliando..." : "Conciliar Stripe"}
+              </button>
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={exportPdf}
+              >
+                <FileDown size={16} />
+                Exportar PDF
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {loadError && (
+          <div className={styles.warningBanner} role="alert">
+            <AlertTriangle size={18} />
+            <div>
+              <strong>Os dados podem estar desatualizados</strong>
+              <p>{loadError}</p>
+            </div>
+          </div>
+        )}
+
+        {serverSummary.alertCount > 0 && (
+          <div className={styles.riskBanner} role="alert">
+            <ShieldAlert size={20} />
+            <div>
+              <strong>
+                {serverSummary.alertCount} lançamento(s) exigem atenção
+              </strong>
+              <p>
+                Itens em revisão, falhas de entrega ou registros incompatíveis
+                com uma cobrança confirmada não entram automaticamente na receita.
+              </p>
+            </div>
+            <button type="button" onClick={() => setAlertsOnly(true)}>
+              Ver alertas
+            </button>
+          </div>
+        )}
+
+        <section className={styles.statsGrid} aria-label="Resumo financeiro">
+          <article className={styles.statCard}>
+            <span className={styles.statIcon} data-tone="success">
+              <CircleDollarSign size={21} />
+            </span>
+            <div>
+              <span>Receita confirmada</span>
+              <strong>{formatCurrency(visibleSummary.confirmedGross)}</strong>
+              <small>{visibleSummary.confirmedCount} transações confirmadas</small>
+            </div>
+          </article>
+
+          <article className={styles.statCard}>
+            <span className={styles.statIcon} data-tone="neutral">
+              <BadgeDollarSign size={21} />
+            </span>
+            <div>
+              <span>Ticket médio</span>
+              <strong>{formatCurrency(visibleSummary.averageTicket)}</strong>
+              <small>{visibleSummary.uniqueCustomers} compradores únicos</small>
+            </div>
+          </article>
+
+          <article className={styles.statCard}>
+            <span className={styles.statIcon} data-tone="warning">
+              <ShieldAlert size={21} />
+            </span>
+            <div>
+              <span>Revisão financeira</span>
+              <strong>{visibleSummary.reviewCount}</strong>
+              <small>{visibleSummary.alertCount} alertas operacionais</small>
+            </div>
+          </article>
+
+          <article className={styles.statCard}>
+            <span className={styles.statIcon} data-tone="danger">
+              <AlertTriangle size={21} />
+            </span>
+            <div>
+              <span>Falhas</span>
+              <strong>{visibleSummary.failedCount}</strong>
+              <small>{visibleSummary.pendingCount} ainda pendentes</small>
+            </div>
+          </article>
+
+          <article className={styles.statCard}>
+            <span className={styles.statIcon} data-tone="manual">
+              <WalletCards size={21} />
+            </span>
+            <div>
+              <span>Créditos manuais</span>
+              <strong>{visibleSummary.manualCount}</strong>
+              <small>Não contabilizados como receita</small>
+            </div>
+          </article>
+        </section>
+
+        <section className={styles.toolbar} aria-label="Filtros financeiros">
+          <div className={styles.searchWrap}>
+            <Search size={17} />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar comprador, cupom ou referência mascarada"
+            />
+          </div>
+
+          <label className={styles.selectWrap}>
+            <Filter size={15} />
+            <select
+              value={productFilter}
+              onChange={(event) => setProductFilter(event.target.value)}
+              aria-label="Filtrar por produto"
+            >
+              <option value="ALL">Todos os produtos</option>
+              <option value="JURIS">Pacotes de Juris</option>
+              <option value="START">Plano START</option>
+              <option value="PRO">Plano PRO</option>
+              <option value="ADDON">Expansões</option>
+              <option value="OTHER">Outros</option>
             </select>
-          </div>
-        </div>
-      </div>
+          </label>
 
-      {/* Tabela */}
-      <div className={styles.tableCard}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th><Calendar size={14} /> Data</th>
-              <th>Advogado</th>
-              <th>Tipo de Produto</th>
-              <th>Valor Bruto</th>
-              <th>Cupom</th>
-              <th>Status</th>
-              <th>ID Stripe</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTransacoes.length > 0 ? (
-              filteredTransacoes.map((t) => (
-                <tr key={t.id}>
-                  <td>
-                    <div className={styles.dateCell}>
-                      <strong>{new Date(t.created_at).toLocaleDateString("pt-BR")}</strong>
-                      <span>{new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={styles.lawyerCell}>
-                      <strong>{t.advogado?.name || "N/A"}</strong>
-                      <span>{t.advogado?.email}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={t.tipo === "JURIS_PURCHASE" ? styles.typeJuris : (t.juris_amount === 7 ? styles.typeStart : styles.typePro)}>
-                      {t.tipo === "JURIS_PURCHASE" ? "PACOTE DE JURIS" : (t.juris_amount === 7 ? "PLANO MENSAL START" : "PLANO MENSAL PRO")}
-                    </span>
-                    {Number(t.juris_amount) > 0 && <div className={styles.jurisBonus}>+{t.juris_amount} Juris</div>}
-                  </td>
-                  <td>
-                    <strong className={styles.amountValue}>
-                      {Number(t.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                    </strong>
-                  </td>
-                  <td>
-                    {t.cupom?.codigo ? (
-                      <span className={styles.couponBadge}>
-                        {t.cupom.codigo}
-                      </span>
-                    ) : "-"}
-                  </td>
-                  <td>
-                    <span className={styles.statusSucceeded}>CONCLUÍDO</span>
-                  </td>
-                  <td>
-                    <code className={styles.stripeId}>{t.stripe_session_id?.substring(0, 12)}...</code>
-                  </td>
+          <label className={styles.selectWrap}>
+            <Filter size={15} />
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              aria-label="Filtrar por status"
+            >
+              <option value="ALL">Todos os status</option>
+              <option value="CONFIRMED">Confirmadas</option>
+              <option value="MANUAL">Créditos manuais</option>
+              <option value="REVIEW">Em revisão</option>
+              <option value="FAILED">Falhas</option>
+              <option value="PENDING">Pendentes</option>
+            </select>
+          </label>
+
+          <label className={styles.selectWrap}>
+            <Filter size={15} />
+            <select
+              value={providerFilter}
+              onChange={(event) => setProviderFilter(event.target.value)}
+              aria-label="Filtrar por origem"
+            >
+              <option value="ALL">Todas as origens</option>
+              <option value="STRIPE_CHECKOUT">Stripe Checkout</option>
+              <option value="STRIPE_PAYMENT_INTENT">PaymentIntent</option>
+              <option value="STRIPE_SETUP_INTENT">SetupIntent</option>
+              <option value="MANUAL">Manual</option>
+              <option value="UNKNOWN">Não identificada</option>
+            </select>
+          </label>
+
+          <label className={styles.selectWrap}>
+            <Filter size={15} />
+            <select
+              value={periodFilter}
+              onChange={(event) => setPeriodFilter(event.target.value)}
+              aria-label="Filtrar por período"
+            >
+              <option value="ALL">Todo o período</option>
+              <option value="7">Últimos 7 dias</option>
+              <option value="30">Últimos 30 dias</option>
+              <option value="90">Últimos 90 dias</option>
+              <option value="365">Últimos 12 meses</option>
+            </select>
+          </label>
+
+          <label className={styles.alertToggle}>
+            <input
+              type="checkbox"
+              checked={alertsOnly}
+              onChange={(event) => setAlertsOnly(event.target.checked)}
+            />
+            Somente alertas
+          </label>
+        </section>
+
+        <div className={styles.resultBar}>
+          <span>
+            {filteredTransactions.length} de {transactions.length} registros
+          </span>
+          <span>
+            START: {visibleSummary.byProduct.START || 0} · PRO:{" "}
+            {visibleSummary.byProduct.PRO || 0} · Juris:{" "}
+            {visibleSummary.byProduct.JURIS || 0}
+          </span>
+        </div>
+
+        <section className={styles.tableCard}>
+          <div className={styles.tableScroller}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Comprador</th>
+                  <th>Produto</th>
+                  <th>Origem</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th>Cupom</th>
+                  <th>Referência</th>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan="7" className={styles.emptyTable}>Nenhuma transação encontrada para os filtros aplicados.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {filteredTransactions.length ? (
+                  filteredTransactions.map((transaction) => (
+                    <tr
+                      key={transaction.id}
+                      data-alert={transaction.alert ? "true" : "false"}
+                    >
+                      <td>
+                        <time dateTime={transaction.createdAt || undefined}>
+                          {formatDate(transaction.createdAt)}
+                        </time>
+                      </td>
+                      <td>
+                        <div className={styles.customerCell}>
+                          <span className={styles.avatar}>
+                            <UserRound size={15} />
+                          </span>
+                          <div>
+                            <strong>{transaction.customer?.name}</strong>
+                            <small>{transaction.customer?.maskedEmail}</small>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span
+                          className={styles.productBadge}
+                          data-product={transaction.product}
+                        >
+                          {PRODUCT_LABELS[transaction.product] || "Outro"}
+                        </span>
+                        {transaction.jurisAmount > 0 && (
+                          <small className={styles.benefitText}>
+                            {transaction.jurisAmount} Juris associados
+                          </small>
+                        )}
+                      </td>
+                      <td>
+                        <span className={styles.providerLabel}>
+                          {PROVIDER_LABELS[transaction.provider] ||
+                            "Não identificada"}
+                        </span>
+                      </td>
+                      <td>
+                        <strong className={styles.amount}>
+                          {formatCurrency(
+                            transaction.amount,
+                            transaction.currency,
+                          )}
+                        </strong>
+                      </td>
+                      <td>
+                        <div className={styles.statusCell}>
+                          <span
+                            className={styles.statusBadge}
+                            data-status={transaction.financialStatus}
+                            title={transaction.rawStatus}
+                          >
+                            {transaction.financialStatus === "CONFIRMED" && (
+                              <CheckCircle2 size={13} />
+                            )}
+                            {transaction.financialStatus !== "CONFIRMED" && (
+                              <AlertTriangle size={13} />
+                            )}
+                            {STATUS_LABELS[transaction.financialStatus] ||
+                              "Indefinido"}
+                          </span>
+                          {transaction.alert && (
+                            <small
+                              className={styles.alertText}
+                              title={transaction.alert.recommendation}
+                            >
+                              {transaction.alert.label}
+                            </small>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        {transaction.couponCode ? (
+                          <span className={styles.couponBadge}>
+                            {transaction.couponCode}
+                          </span>
+                        ) : (
+                          <span className={styles.muted}>—</span>
+                        )}
+                      </td>
+                      <td>
+                        <code className={styles.reference}>
+                          {transaction.providerReference}
+                        </code>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} className={styles.emptyState}>
+                      <CreditCard size={25} />
+                      <strong>Nenhuma transação encontrada</strong>
+                      <span>Revise os filtros aplicados ao painel.</span>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

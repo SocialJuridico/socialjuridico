@@ -1,24 +1,319 @@
-import { stripe } from '@/lib/stripe';
-import { createClient } from '@/lib/supabaseServer';
-import { supabaseAdmin } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
+import { stripe } from "@/lib/stripe";
+import { createClient } from "@/lib/supabaseServer";
+import { supabaseAdmin } from "@/lib/supabase";
+import { NextResponse } from "next/server";
 
-/**
- * POST /api/checkout/confirm-payment
- * Verificação direta após pagamento transparente.
- * O frontend envia o paymentIntentId, o backend verifica com o Stripe
- * e credita os Juris imediatamente (com proteção contra crédito duplo).
- */
-export async function POST(request) {
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const VALID_TYPES = new Set([
+  "JURIS_PURCHASE",
+  "PRO_SUBSCRIPTION",
+  "ADDON_PURCHASE",
+]);
+
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function validateOrigin(request) {
+  const origin = request.headers.get("origin");
+  if (!origin) return null;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (!host || new URL(origin).host !== host) {
+      return json(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
+    }
+  } catch {
+    return json(
+      { success: false, message: "Origem da requisição inválida." },
+      403,
+    );
+  }
 
-    if (authError || !user) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+  return null;
+}
+
+function normalizePaymentType(value) {
+  const type = String(value || "JURIS_PURCHASE").toUpperCase();
+  return VALID_TYPES.has(type) ? type : null;
+}
+
+function resolveJurisAmount(priceId, metadata) {
+  const explicit = Number(metadata?.jurisAmount || metadata?.juris_amount || 0);
+
+  if (Number.isFinite(explicit) && explicit > 0) {
+    return Math.trunc(explicit);
+  }
+
+  const priceMap = {
+    [process.env.PRICE_JURIS_10 || process.env.NEXT_PUBLIC_PRICE_JURIS_10]: 10,
+    [process.env.PRICE_JURIS_20 || process.env.NEXT_PUBLIC_PRICE_JURIS_20]: 20,
+    [process.env.PRICE_JURIS_50 || process.env.NEXT_PUBLIC_PRICE_JURIS_50]: 50,
+  };
+
+  return Number(priceMap[priceId] || 0);
+}
+
+async function findExistingTransaction(paymentIntentId) {
+  const { data, error } = await supabaseAdmin
+    .from("transacoes")
+    .select("id, status")
+    .eq("stripe_session_id", paymentIntentId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Falha ao verificar a idempotência da transação.");
+  }
+
+  return data || null;
+}
+
+async function reserveTransaction({
+  userId,
+  type,
+  amount,
+  currency,
+  jurisAmount,
+  paymentIntentId,
+  couponId,
+}) {
+  const { data, error } = await supabaseAdmin
+    .from("transacoes")
+    .insert([
+      {
+        advogado_id: userId,
+        tipo: type,
+        valor: amount,
+        moeda: currency,
+        status: "processing",
+        juris_amount: jurisAmount,
+        stripe_session_id: paymentIntentId,
+        cupom_id: couponId,
+        created_at: new Date().toISOString(),
+      },
+    ])
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return { duplicate: true, id: null };
+    }
+    throw new Error("Não foi possível reservar o lançamento financeiro.");
+  }
+
+  return { duplicate: false, id: data.id };
+}
+
+async function updateTransactionStatus(transactionId, status) {
+  const { error } = await supabaseAdmin
+    .from("transacoes")
+    .update({ status })
+    .eq("id", transactionId);
+
+  if (error) {
+    console.error(
+      "[ConfirmPayment] Falha ao atualizar status financeiro:",
+      error,
+    );
+  }
+}
+
+async function registerCouponUsage(couponId, userId, paymentIntentId) {
+  if (!couponId) return;
+
+  const { error } = await supabaseAdmin.from("cupom_usos").insert([
+    {
+      cupom_id: couponId,
+      advogado_id: userId,
+      checkout_session_id: paymentIntentId,
+      pago_em: new Date().toISOString(),
+    },
+  ]);
+
+  if (error && error.code !== "23505") {
+    console.error("[ConfirmPayment] Falha ao registrar cupom:", error);
+  }
+}
+
+async function applyPlan(userId, metadata) {
+  const planType =
+    String(metadata?.planType || "PRO").toUpperCase() === "START"
+      ? "START"
+      : "PRO";
+  const billingCycle =
+    String(metadata?.billingCycle || "MONTHLY").toUpperCase() === "ANNUAL"
+      ? "ANNUAL"
+      : "MONTHLY";
+  const jurisBonus = planType === "PRO" ? 20 : 7;
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("advogados")
+    .select("balance")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    throw new Error("Perfil do advogado não localizado.");
+  }
+
+  const expirationDays = billingCycle === "ANNUAL" ? 366 : 31;
+  const { error } = await supabaseAdmin
+    .from("advogados")
+    .update({
+      is_premium: true,
+      plan_type: planType,
+      plan_billing_cycle: billingCycle,
+      premium_expires_at: new Date(
+        Date.now() + expirationDays * 24 * 60 * 60 * 1000,
+      ).toISOString(),
+      uso_redator_ia: 0,
+      uso_triagem: 0,
+      uso_agenda: 0,
+      balance: Number(profile.balance || 0) + jurisBonus,
+    })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error("Falha ao ativar o plano contratado.");
+  }
+
+  return {
+    jurisAmount: jurisBonus,
+    response: {
+      isPro: planType === "PRO",
+      planType,
+      billingCycle,
+      message: `Plano ${planType} ativado com sucesso.`,
+    },
+  };
+}
+
+async function applyAddon(userId, metadata) {
+  const addonMap = {
+    EXTRA_DOCS: {
+      field: "extra_storage_mb",
+      amount: 1024,
+      label: "1GB de armazenamento",
+    },
+    EXTRA_IA: {
+      field: "extra_redator_ia",
+      amount: 10,
+      label: "10 gerações de IA",
+    },
+    EXTRA_TRIAGEM: {
+      field: "extra_triagem",
+      amount: 5,
+      label: "5 diagnósticos de triagem",
+    },
+  };
+
+  const addon = addonMap[String(metadata?.addOnType || "").toUpperCase()];
+
+  if (!addon) {
+    throw new Error("Expansão de produto não reconhecida.");
+  }
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("advogados")
+    .select(addon.field)
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    throw new Error("Perfil do advogado não localizado.");
+  }
+
+  const { error } = await supabaseAdmin
+    .from("advogados")
+    .update({
+      [addon.field]: Number(profile[addon.field] || 0) + addon.amount,
+    })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error("Falha ao ativar a expansão contratada.");
+  }
+
+  return {
+    jurisAmount: 0,
+    response: {
+      message: `Expansão de ${addon.label} ativada com sucesso.`,
+    },
+  };
+}
+
+async function applyJuris(userId, jurisAmount) {
+  if (!Number.isFinite(jurisAmount) || jurisAmount <= 0) {
+    throw new Error("Pacote de Juris não reconhecido.");
+  }
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("advogados")
+    .select("balance")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    throw new Error("Perfil do advogado não localizado.");
+  }
+
+  const newBalance = Number(profile.balance || 0) + jurisAmount;
+  const { error } = await supabaseAdmin
+    .from("advogados")
+    .update({ balance: newBalance })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error("Falha ao creditar os Juris adquiridos.");
+  }
+
+  return {
+    jurisAmount,
+    response: {
+      jurisAmount,
+      newBalance,
+      message: `${jurisAmount} Juris adicionados com sucesso.`,
+    },
+  };
+}
+
+export async function POST(request) {
+  let transactionId = null;
+
+  try {
+    const originResponse = validateOrigin(request);
+    if (originResponse) return originResponse;
+
+    if (!supabaseAdmin || !process.env.STRIPE_SECRET_KEY) {
+      return json(
+        { success: false, message: "Serviço de pagamento indisponível." },
+        503,
+      );
     }
 
-    // Validar status OAB do advogado
+    const supabase = createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return json({ success: false, message: "Não autorizado." }, 401);
+    }
+
     const { data: profileOabCheck } = await supabaseAdmin
       .from("advogados")
       .select("oab_verification_status")
@@ -26,226 +321,158 @@ export async function POST(request) {
       .maybeSingle();
 
     if (profileOabCheck?.oab_verification_status === "ERROR") {
-      return NextResponse.json(
-        { success: false, message: "Acesso restrito devido a pendências na OAB." },
-        { status: 403 }
+      return json(
+        {
+          success: false,
+          message: "Acesso restrito devido a pendências na OAB.",
+        },
+        403,
       );
     }
 
-    const { paymentIntentId } = await request.json();
+    const body = await request.json().catch(() => null);
+    const paymentIntentId = String(body?.paymentIntentId || "").trim();
 
-    if (!paymentIntentId) {
-      return NextResponse.json({ success: false, message: "PaymentIntent ID é obrigatório" }, { status: 400 });
+    if (!paymentIntentId.startsWith("pi_")) {
+      return json(
+        {
+          success: false,
+          message:
+            "Identificador de pagamento inválido. SetupIntent não comprova cobrança.",
+        },
+        400,
+      );
     }
 
-    // 1. Verificar o Intent diretamente no Stripe
-    let intent;
-    let isSetup = false;
-    
-    if (paymentIntentId.startsWith('seti_')) {
-      intent = await stripe.setupIntents.retrieve(paymentIntentId);
-      isSetup = true;
-    } else {
-      intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (intent.status !== "succeeded") {
+      return json(
+        {
+          success: false,
+          message: `Pagamento ainda não confirmado. Status: ${intent.status}.`,
+        },
+        409,
+      );
     }
 
-    if (intent.status !== 'succeeded') {
-      return NextResponse.json({ 
-        success: false, 
-        message: `Transação não confirmada. Status: ${intent.status}` 
-      }, { status: 400 });
+    if (intent.metadata?.userId !== user.id) {
+      return json(
+        {
+          success: false,
+          message: "A transação não pertence ao usuário autenticado.",
+        },
+        403,
+      );
     }
 
-    // 2. Verificar que o userId nos metadata bate com o usuário logado
-    const metaUserId = intent.metadata?.userId;
-    if (metaUserId !== user.id) {
-      return NextResponse.json({ success: false, message: "Transação não pertence a este usuário" }, { status: 403 });
+    const amountReceived = Number(intent.amount_received || intent.amount || 0);
+
+    if (amountReceived <= 0) {
+      return json(
+        {
+          success: false,
+          message: "O Stripe não confirmou um valor cobrado para esta transação.",
+        },
+        409,
+      );
     }
 
-    // 3. Verificar se já foi creditado (proteção contra crédito duplo)
-    const { data: existingTx } = await supabaseAdmin
-      .from("transacoes")
-      .select("id")
-      .eq("stripe_session_id", paymentIntentId)
-      .eq("status", "succeeded")
-      .maybeSingle();
+    const existing = await findExistingTransaction(paymentIntentId);
 
-    if (existingTx) {
-      // Já foi creditado — retornar sucesso sem duplicar
-      return NextResponse.json({ success: true, message: "Créditos já aplicados", alreadyCredited: true });
-    }
-
-    // 4. Resolver quantidade de Juris pelo priceId
-    const type = intent.metadata?.type || 'JURIS_PURCHASE';
-    const priceId = intent.metadata?.priceId;
-    const cupomId = intent.metadata?.cupomId;
-    
-    // Processamento específico para Plano (START/PRO)
-    if (type === 'PRO_SUBSCRIPTION') {
-      const { data: profile } = await supabaseAdmin
-        .from("advogados")
-        .select("balance")
-        .eq("id", user.id)
-        .single();
-
-      const currentBalance = profile?.balance || 0;
-      const planType = intent.metadata?.planType || 'PRO';
-      const billingCycle = intent.metadata?.billingCycle || 'MONTHLY';
-
-      const { error: updateError } = await supabaseAdmin
-        .from("advogados")
-        .update({
-          is_premium: true, // Ambos START e PRO são premium
-          plan_type: planType,
-          plan_billing_cycle: billingCycle,
-          premium_expires_at: new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString(),
-          // Resetar uso no novo ciclo/ativação
-          uso_redator_ia: 0,
-          uso_triagem: 0,
-          uso_agenda: 0,
-          // Bônus de Juris: 20 para PRO, 7 para START
-          balance: planType === 'PRO' ? (currentBalance + 20) : (currentBalance + 7),
-        })
-        .eq("id", user.id);
-
-      if (updateError) {
-        console.error(`❌ [confirm-payment] Erro ao ativar plano:`, updateError);
-        return NextResponse.json({ success: false, message: "Erro ao ativar plano" }, { status: 500 });
-      }
-
-      await supabaseAdmin.from('transacoes').insert([{
-        advogado_id: user.id,
-        tipo: 'PRO_SUBSCRIPTION',
-        valor: isSetup ? 0 : ((intent.amount || 0) / 100),
-        moeda: intent.currency || 'BRL',
-        status: 'succeeded',
-        juris_amount: planType === 'PRO' ? 20 : 7,
-        stripe_session_id: paymentIntentId,
-        cupom_id: (cupomId && cupomId !== 'null') ? cupomId : null,
-        created_at: new Date().toISOString()
-      }]);
-
-      if (cupomId && cupomId !== 'null') {
-        await supabaseAdmin.from('cupom_usos').insert([{
-          cupom_id: cupomId,
-          advogado_id: user.id,
-          checkout_session_id: paymentIntentId
-        }]);
-      }
-
-      console.log(`✅ [confirm-payment] Plano ${planType} (${billingCycle}) ativado para ${user.id}`);
-
-      return NextResponse.json({ 
-        success: true, 
-        isPro: planType === 'PRO',
-        planType,
-        message: `Plano ${planType} ativado com sucesso!` 
+    if (existing?.status === "succeeded") {
+      return json({
+        success: true,
+        message: "Benefício já aplicado anteriormente.",
+        alreadyCredited: true,
       });
     }
 
-    // Processamento específico para Add-ons (Expansões)
-    if (type === 'ADDON_PURCHASE') {
-      const addOnType = intent.metadata?.addOnType;
-      let field = "";
-      let amount = 0;
-      let label = "";
-
-      if (addOnType === 'EXTRA_DOCS') { field = 'extra_storage_mb'; amount = 1024; label = "1GB de Armazenamento"; }
-      if (addOnType === 'EXTRA_IA') { field = 'extra_redator_ia'; amount = 10; label = "10 gerações de IA"; }
-      if (addOnType === 'EXTRA_TRIAGEM') { field = 'extra_triagem'; amount = 5; label = "5 diagnósticos de Triagem"; }
-
-      if (field) {
-        const { data: currentAddons } = await supabaseAdmin.from('advogados').select(field).eq('id', user.id).single();
-        const newValue = (currentAddons?.[field] || 0) + amount;
-        
-        await supabaseAdmin.from('advogados').update({ [field]: newValue }).eq('id', user.id);
-        
-        await supabaseAdmin.from('transacoes').insert([{
-          advogado_id: user.id,
-          tipo: 'ADDON_PURCHASE',
-          valor: (intent.amount || 0) / 100,
-          moeda: intent.currency || 'BRL',
-          status: 'succeeded',
-          stripe_session_id: paymentIntentId,
-          created_at: new Date().toISOString()
-        }]);
-
-        return NextResponse.json({ success: true, message: `Expansão de ${label} ativada!` });
-      }
+    if (existing?.status === "processing") {
+      return json(
+        {
+          success: false,
+          message: "Este pagamento já está sendo processado.",
+        },
+        409,
+      );
     }
 
-    // Processamento para compra avulsa de Juris
-    const priceMap = {
-      [process.env.PRICE_JURIS_10 || process.env.NEXT_PUBLIC_PRICE_JURIS_10]: 10,
-      [process.env.PRICE_JURIS_20 || process.env.NEXT_PUBLIC_PRICE_JURIS_20]: 20,
-      [process.env.PRICE_JURIS_50 || process.env.NEXT_PUBLIC_PRICE_JURIS_50]: 50,
-    };
+    const type = normalizePaymentType(intent.metadata?.type);
 
-    const jurisAmount = priceMap[priceId] || 0;
-
-    if (jurisAmount <= 0) {
-      console.error(`❌ [confirm-payment] Não foi possível resolver Juris para priceId: ${priceId}`);
-      return NextResponse.json({ success: false, message: "Não foi possível identificar o pacote" }, { status: 400 });
+    if (!type) {
+      return json(
+        { success: false, message: "Tipo de produto não reconhecido." },
+        400,
+      );
     }
 
-    // 5. Buscar saldo atual e atualizar
-    const { data: profile } = await supabaseAdmin
-      .from("advogados")
-      .select("balance")
-      .eq("id", user.id)
-      .single();
+    const couponId =
+      intent.metadata?.cupomId && intent.metadata.cupomId !== "null"
+        ? intent.metadata.cupomId
+        : null;
+    const priceId = intent.metadata?.priceId;
+    const plannedJurisAmount =
+      type === "PRO_SUBSCRIPTION"
+        ? String(intent.metadata?.planType || "PRO").toUpperCase() === "START"
+          ? 7
+          : 20
+        : type === "JURIS_PURCHASE"
+          ? resolveJurisAmount(priceId, intent.metadata)
+          : 0;
 
-    const currentBalance = profile?.balance || 0;
-    const newBalance = currentBalance + jurisAmount;
-
-    const { error: updateError } = await supabaseAdmin
-      .from("advogados")
-      .update({ balance: newBalance })
-      .eq("id", user.id);
-
-    if (updateError) {
-      console.error(`❌ [confirm-payment] Erro ao atualizar saldo:`, updateError);
-      return NextResponse.json({ success: false, message: "Erro ao creditar Juris" }, { status: 500 });
-    }
-
-    // 6. Registrar transação
-    await supabaseAdmin.from('transacoes').insert([{
-      advogado_id: user.id,
-      tipo: 'JURIS_PURCHASE',
-      valor: isSetup ? 0 : ((intent.amount || 0) / 100),
-      moeda: intent.currency || 'BRL',
-      status: 'succeeded',
-      juris_amount: jurisAmount,
-      stripe_session_id: paymentIntentId,
-      cupom_id: (cupomId && cupomId !== 'null') ? cupomId : null,
-      created_at: new Date().toISOString()
-    }]);
-
-    // 7. Registrar uso do cupom se existir
-    if (cupomId && cupomId !== 'null') {
-      await supabaseAdmin.from('cupom_usos').insert([{
-        cupom_id: cupomId,
-        advogado_id: user.id,
-        checkout_session_id: paymentIntentId
-      }]);
-    }
-
-    console.log(`✅ [confirm-payment] +${jurisAmount} Juris para ${user.id} (${currentBalance} → ${newBalance})`);
-
-    return NextResponse.json({ 
-      success: true, 
-      jurisAmount, 
-      newBalance,
-      message: `${jurisAmount} Juris adicionados com sucesso!` 
+    const reservation = await reserveTransaction({
+      userId: user.id,
+      type,
+      amount: amountReceived / 100,
+      currency: String(intent.currency || "BRL").toUpperCase(),
+      jurisAmount: plannedJurisAmount,
+      paymentIntentId,
+      couponId,
     });
 
+    if (reservation.duplicate) {
+      return json({
+        success: true,
+        message: "Pagamento já registrado anteriormente.",
+        alreadyCredited: true,
+      });
+    }
+
+    transactionId = reservation.id;
+
+    let applied;
+
+    if (type === "PRO_SUBSCRIPTION") {
+      applied = await applyPlan(user.id, intent.metadata);
+    } else if (type === "ADDON_PURCHASE") {
+      applied = await applyAddon(user.id, intent.metadata);
+    } else {
+      applied = await applyJuris(user.id, plannedJurisAmount);
+    }
+
+    await updateTransactionStatus(transactionId, "succeeded");
+    await registerCouponUsage(couponId, user.id, paymentIntentId);
+
+    return json({
+      success: true,
+      ...applied.response,
+    });
   } catch (error) {
-    console.error("❌ [confirm-payment] Erro CRITICO:", error);
-    return NextResponse.json({ 
-      success: false, 
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    }, { status: 500 });
+    if (transactionId) {
+      await updateTransactionStatus(transactionId, "error_updating_balance");
+    }
+
+    console.error("[ConfirmPayment][POST] Erro:", error);
+    return json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível confirmar o pagamento.",
+      },
+      500,
+    );
   }
 }

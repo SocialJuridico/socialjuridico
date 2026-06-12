@@ -1,527 +1,637 @@
+import {
+  boasVindasPlanoTemplate,
+  jurisCreditadoTemplate,
+  novaVendaAdminTemplate,
+} from "@/lib/emailTemplates";
+import { resend } from "@/lib/resend";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import { resend } from "@/lib/resend";
-import { novaVendaAdminTemplate, jurisCreditadoTemplate, boasVindasPlanoTemplate } from "@/lib/emailTemplates";
 
-const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-// ═══════════════════════════════════════════════════════════════
-// MAPEAMENTO ROBUSTO DE PRICE IDs → QUANTIDADE DE JURIS
-// Usa múltiplas estratégias para garantir que o crédito seja aplicado.
-// ═══════════════════════════════════════════════════════════════
+const VALID_TYPES = new Set([
+  "JURIS_PURCHASE",
+  "PRO_SUBSCRIPTION",
+  "ADDON_PURCHASE",
+]);
 
-/**
- * Resolve a quantidade de Juris a partir do Price ID.
- * Tenta env vars (server-side primeiro, depois NEXT_PUBLIC), e
- * se nenhuma bater, usa a API do Stripe para buscar o nome do preço.
- */
-async function resolveJurisAmount(priceId, amountTotalCents) {
-  // ── Estratégia 1: Comparar com variáveis de ambiente ──
-  // Prioriza variáveis server-only (PRICE_JURIS_*) e cai nas NEXT_PUBLIC como fallback
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function normalizeType(value) {
+  const type = String(value || "JURIS_PURCHASE").toUpperCase();
+  return VALID_TYPES.has(type) ? type : "JURIS_PURCHASE";
+}
+
+function normalizeCouponId(value) {
+  const couponId = String(value || "").trim();
+  return couponId && couponId !== "null" ? couponId : null;
+}
+
+function resolveJurisFromEnvironment(priceId) {
   const priceMap = {
-    10: process.env.PRICE_JURIS_10 || process.env.NEXT_PUBLIC_PRICE_JURIS_10,
-    20: process.env.PRICE_JURIS_20 || process.env.NEXT_PUBLIC_PRICE_JURIS_20,
-    50: process.env.PRICE_JURIS_50 || process.env.NEXT_PUBLIC_PRICE_JURIS_50,
+    [process.env.PRICE_JURIS_10 || process.env.NEXT_PUBLIC_PRICE_JURIS_10]: 10,
+    [process.env.PRICE_JURIS_20 || process.env.NEXT_PUBLIC_PRICE_JURIS_20]: 20,
+    [process.env.PRICE_JURIS_50 || process.env.NEXT_PUBLIC_PRICE_JURIS_50]: 50,
   };
 
-  for (const [amount, envPriceId] of Object.entries(priceMap)) {
-    if (envPriceId && priceId === envPriceId) {
-      console.log(`✅ [resolveJuris] Matched via env var: ${amount} Juris (priceId: ${priceId})`);
-      return parseInt(amount);
-    }
+  return Number(priceMap[priceId] || 0);
+}
+
+async function resolveJurisAmount(priceId, metadata) {
+  const explicit = Number(metadata?.jurisAmount || metadata?.juris_amount || 0);
+
+  if (Number.isFinite(explicit) && explicit > 0) {
+    return Math.trunc(explicit);
   }
 
-  console.warn(`⚠️ [resolveJuris] PriceId "${priceId}" não bateu com nenhuma env var. Tentando Stripe API...`);
+  const fromEnvironment = resolveJurisFromEnvironment(priceId);
+  if (fromEnvironment > 0) return fromEnvironment;
 
-  // ── Estratégia 2: Buscar informações do preço na API do Stripe ──
+  if (!priceId) return 0;
+
   try {
-    const stripePrice = await stripe.prices.retrieve(priceId, {
-      expand: ['product'],
+    const price = await stripe.prices.retrieve(priceId, {
+      expand: ["product"],
     });
-    
-    const productName = stripePrice.product?.name?.toLowerCase() || '';
-    const priceNickname = (stripePrice.nickname || '').toLowerCase();
-    const lookupKey = (stripePrice.lookup_key || '').toLowerCase();
-    
-    console.log(`🔎 [resolveJuris] Stripe Price info: product="${stripePrice.product?.name}", nickname="${stripePrice.nickname}", amount=${stripePrice.unit_amount}`);
+    const searchable = [
+      price.nickname,
+      price.lookup_key,
+      typeof price.product === "object" ? price.product?.name : "",
+    ]
+      .join(" ")
+      .toLowerCase();
 
-    // Tentar extrair do nome do produto ou nickname
-    for (const field of [productName, priceNickname, lookupKey]) {
-      if (field.includes('50')) return 50;
-      if (field.includes('20')) return 20;
-      if (field.includes('10')) return 10;
+    for (const amount of [50, 20, 10]) {
+      if (searchable.includes(String(amount))) return amount;
     }
-  } catch (stripeErr) {
-    console.error(`❌ [resolveJuris] Erro ao buscar preço no Stripe:`, stripeErr.message);
-  }
-
-  // ── Estratégia 3 (último recurso): Inferir pelo valor pago ──
-  // Usa o amount_total em centavos para tentar deduzir o pacote
-  // Preços reais: 10 Juris = R$9.90, 20 Juris = R$16.90, 50 Juris = R$39.90
-  if (amountTotalCents > 0) {
-    const amountBRL = amountTotalCents / 100;
-    console.warn(`⚠️ [resolveJuris] Tentando inferir Juris pelo valor pago: R$${amountBRL.toFixed(2)}`);
-    
-    if (amountBRL <= 13.00) return 10;    // R$9.90 → 10 Juris
-    if (amountBRL <= 28.00) return 20;    // R$16.90 → 20 Juris
-    if (amountBRL <= 60.00) return 50;    // R$39.90 → 50 Juris
-    // Acima de R$60 pode ser PRO ou pacote personalizado
-    console.warn(`⚠️ [resolveJuris] Valor R$${amountBRL.toFixed(2)} não se encaixa nos pacotes conhecidos`);
+  } catch (error) {
+    console.error("[StripeWebhook] Falha ao resolver Price ID:", error);
   }
 
   return 0;
 }
 
-export async function POST(request) {
-  const body = await request.text();
-  const sig = request.headers.get("stripe-signature");
+async function resolveUserId(metadata, email) {
+  const metadataUserId = String(metadata?.userId || "").trim();
 
-  let event;
+  if (metadataUserId) return metadataUserId;
 
-  try {
-    event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
-  } catch (err) {
-    console.error(`❌ Webhook Error: ${err.message}`);
-    return NextResponse.json(
-      { message: `Webhook Error: ${err.message}` },
-      { status: 400 },
-    );
-  }
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail) return null;
 
-  console.log(`📩 [Webhook] Evento recebido: ${event.type} (id: ${event.id})`);
-
-  // Handle the event
-  switch (event.type) {
-    case "checkout.session.completed":
-      const session = event.data.object;
-      await handleCheckoutCompleted(session);
-      break;
-
-    case "payment_intent.succeeded":
-    case "setup_intent.succeeded":
-      const intent = event.data.object;
-      await handlePaymentIntentSucceeded(intent);
-      break;
-
-    case "customer.subscription.deleted":
-      const subscription = event.data.object;
-      await handleSubscriptionDeleted(subscription);
-      break;
-
-    default:
-      console.log(`ℹ️ [Webhook] Evento não tratado: ${event.type}`);
-  }
-
-  return NextResponse.json({ received: true });
-}
-
-async function handleCheckoutCompleted(session) {
-  const userId = session.metadata?.userId;
-  const type = session.metadata?.type;
-  const cupomId = session.metadata?.cupomId;
-
-  console.log(`🛒 [handleCheckout] Sessão ${session.id} | tipo: ${type} | userId: ${userId} | amount: ${session.amount_total} | metadata:`, JSON.stringify(session.metadata));
-
-  if (!userId) {
-    console.error(`❌ [handleCheckout] ERRO CRÍTICO: userId ausente nos metadata da sessão ${session.id}. Email: ${session.customer_email || session.customer_details?.email}`);
-    // Tentar recuperar pelo email
-    const email = session.customer_email || session.customer_details?.email;
-    if (email) {
-      const { data: adv } = await supabaseAdmin
-        .from("advogados")
-        .select("id")
-        .eq("email", email)
-        .single();
-      if (adv) {
-        console.log(`🔧 [handleCheckout] Recuperado userId ${adv.id} via email ${email}`);
-        // Continuar processando com o ID encontrado
-        await processCheckout(session, adv.id, type || 'JURIS_PURCHASE', cupomId);
-        return;
-      }
-    }
-    console.error(`❌ [handleCheckout] Impossível identificar o advogado. Sessão ${session.id} será ignorada.`);
-    return;
-  }
-
-  await processCheckout(session, userId, type, cupomId);
-}
-
-async function processCheckout(session, userId, type, cupomId) {
-  // Registrar uso do cupom se existir
-  if (cupomId && cupomId !== 'null') {
-    console.log(`🎟️ Registrando uso do cupom ${cupomId} para o usuário ${userId}`);
-    const { error: cupomError } = await supabaseAdmin
-      .from('cupom_usos')
-      .insert([{
-        cupom_id: cupomId,
-        advogado_id: userId,
-        checkout_session_id: session.id
-      }]);
-    if (cupomError) {
-      console.error(`⚠️ Erro ao registrar cupom (não-fatal):`, cupomError.message);
-    }
-  }
-
-  if (type === "JURIS_PURCHASE") {
-    await handleJurisPurchase(session, userId, cupomId);
-  } else if (type === "PRO_SUBSCRIPTION") {
-    await handleProSubscription(session, userId, cupomId);
-  } else {
-    console.warn(`⚠️ [processCheckout] Tipo desconhecido: "${type}". Tentando tratar como JURIS_PURCHASE.`);
-    await handleJurisPurchase(session, userId, cupomId);
-  }
-}
-
-async function handleJurisPurchase(session, userId, cupomId) {
-  // ── Obter o Price ID da sessão ──
-  // O metadata.priceId é a fonte mais confiável
-  let priceId = session.metadata?.priceId;
-
-  // Se não tiver no metadata, buscar via API do Stripe
-  if (!priceId) {
-    console.warn(`⚠️ [JURIS] priceId ausente nos metadata. Buscando via Stripe API...`);
-    try {
-      const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
-        expand: ['line_items.data.price'],
-      });
-      priceId = fullSession.line_items?.data?.[0]?.price?.id;
-      console.log(`🔎 [JURIS] PriceId recuperado via API: ${priceId}`);
-    } catch (err) {
-      console.error(`❌ [JURIS] Falha ao buscar line_items via Stripe API:`, err.message);
-    }
-  }
-
-  // ── Resolver quantidade de Juris ──
-  const jurisAmount = await resolveJurisAmount(priceId, session.amount_total || 0);
-
-  if (jurisAmount <= 0) {
-    console.error(`❌❌❌ [JURIS] FALHA CRÍTICA: jurisAmount = 0!`);
-    console.error(`    PriceId: ${priceId}`);
-    console.error(`    Amount total (centavos): ${session.amount_total}`);
-    console.error(`    Session ID: ${session.id}`);
-    console.error(`    User ID: ${userId}`);
-    console.error(`    ENV PRICE_JURIS_10: ${process.env.PRICE_JURIS_10 || process.env.NEXT_PUBLIC_PRICE_JURIS_10 || 'NÃO DEFINIDO'}`);
-    console.error(`    ENV PRICE_JURIS_20: ${process.env.PRICE_JURIS_20 || process.env.NEXT_PUBLIC_PRICE_JURIS_20 || 'NÃO DEFINIDO'}`);
-    console.error(`    ENV PRICE_JURIS_50: ${process.env.PRICE_JURIS_50 || process.env.NEXT_PUBLIC_PRICE_JURIS_50 || 'NÃO DEFINIDO'}`);
-    
-    // MESMO ASSIM, registrar a transação como pendente para análise manual
-    await supabaseAdmin.from('transacoes').insert([{
-      advogado_id: userId,
-      tipo: 'JURIS_PURCHASE',
-      valor: (session.amount_total || 0) / 100,
-      moeda: session.currency || 'BRL',
-      status: 'pending_manual_review',
-      juris_amount: 0,
-      stripe_session_id: session.id,
-      cupom_id: cupomId || null,
-      created_at: new Date().toISOString()
-    }]);
-    return;
-  }
-
-  console.log(`💰 Adicionando ${jurisAmount} Juris para o usuário ${userId}`);
-
-  // Buscar saldo atual
-  const { data: profile, error: fetchError } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("advogados")
-    .select("name, balance")
-    .eq("id", userId)
+    .select("id")
+    .ilike("email", normalizedEmail)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Falha ao identificar o comprador.");
+  }
+
+  return data?.id || null;
+}
+
+async function getExistingTransaction(reference) {
+  const { data, error } = await supabaseAdmin
+    .from("transacoes")
+    .select("id, status")
+    .eq("stripe_session_id", reference)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error("Falha ao consultar idempotência financeira.");
+  }
+
+  return data || null;
+}
+
+async function reserveTransaction({
+  reference,
+  userId,
+  type,
+  amount,
+  currency,
+  jurisAmount,
+  couponId,
+  createdAt,
+}) {
+  const existing = await getExistingTransaction(reference);
+
+  if (existing?.status === "succeeded" || existing?.status === "processing") {
+    return { duplicate: true, transactionId: existing.id };
+  }
+
+  if (existing) {
+    const { error } = await supabaseAdmin
+      .from("transacoes")
+      .update({
+        advogado_id: userId,
+        tipo: type,
+        valor: amount,
+        moeda: currency,
+        status: "processing",
+        juris_amount: jurisAmount,
+        cupom_id: couponId,
+      })
+      .eq("id", existing.id);
+
+    if (error) {
+      throw new Error("Falha ao reabrir o processamento financeiro.");
+    }
+
+    return { duplicate: false, transactionId: existing.id };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("transacoes")
+    .insert([
+      {
+        advogado_id: userId,
+        tipo: type,
+        valor: amount,
+        moeda: currency,
+        status: "processing",
+        juris_amount: jurisAmount,
+        stripe_session_id: reference,
+        cupom_id: couponId,
+        created_at: createdAt,
+      },
+    ])
+    .select("id")
     .single();
 
-  if (fetchError) {
-    console.error(`❌ Erro ao buscar saldo do perfil ${userId}:`, fetchError);
-    // Tentar com balance = 0 se o perfil não foi encontrado
+  if (error) {
+    if (error.code === "23505") {
+      return { duplicate: true, transactionId: null };
+    }
+    throw new Error("Falha ao reservar o lançamento financeiro.");
   }
 
-  const currentBalance = profile?.balance || 0;
-  const newBalance = currentBalance + jurisAmount;
+  return { duplicate: false, transactionId: data.id };
+}
 
-  console.log(`📈 Atualizando saldo de ${currentBalance} para ${newBalance} (userId: ${userId})`);
+async function updateTransactionStatus(transactionId, status) {
+  if (!transactionId) return;
 
+  const { error } = await supabaseAdmin
+    .from("transacoes")
+    .update({ status })
+    .eq("id", transactionId);
+
+  if (error) {
+    console.error("[StripeWebhook] Falha ao atualizar transação:", error);
+  }
+}
+
+async function incrementBalance(userId, amount) {
+  const rpcResult = await supabaseAdmin.rpc("increment_lawyer_balance", {
+    p_lawyer_id: userId,
+    p_amount: amount,
+  });
+
+  if (!rpcResult.error) {
+    return Number(rpcResult.data || 0);
+  }
+
+  const missingFunction =
+    rpcResult.error.code === "PGRST202" ||
+    String(rpcResult.error.message || "")
+      .toLowerCase()
+      .includes("increment_lawyer_balance");
+
+  if (!missingFunction) {
+    throw new Error("Falha ao atualizar o saldo do advogado.");
+  }
+
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("advogados")
+    .select("balance")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    throw new Error("Perfil do advogado não localizado.");
+  }
+
+  const newBalance = Number(profile.balance || 0) + amount;
   const { error: updateError } = await supabaseAdmin
     .from("advogados")
     .update({ balance: newBalance })
     .eq("id", userId);
 
   if (updateError) {
-    console.error(`❌ ERRO FATAL ao atualizar saldo do perfil ${userId}:`, updateError);
-    // Registrar transação com status de erro para rastreamento
-    await supabaseAdmin.from('transacoes').insert([{
-      advogado_id: userId,
-      tipo: 'JURIS_PURCHASE',
-      valor: (session.amount_total || 0) / 100,
-      moeda: session.currency || 'BRL',
-      status: 'error_updating_balance',
-      juris_amount: jurisAmount,
-      stripe_session_id: session.id,
-      cupom_id: cupomId || null,
-      created_at: new Date().toISOString()
-    }]);
-  } else {
-    console.log(`✅ Saldo atualizado com sucesso: ${currentBalance} → ${newBalance} (userId: ${userId})`);
-
-    // Registrar log de transação com sucesso
-    const { error: transError } = await supabaseAdmin.from('transacoes').insert([{
-      advogado_id: userId,
-      tipo: 'JURIS_PURCHASE',
-      valor: (session.amount_total || 0) / 100,
-      moeda: session.currency || 'BRL',
-      status: 'succeeded',
-      juris_amount: jurisAmount,
-      stripe_session_id: session.id,
-      cupom_id: cupomId || null,
-      created_at: new Date().toISOString()
-    }]);
-
-    if (transError) {
-      console.error(`⚠️ Erro ao registrar transação (crédito já foi aplicado):`, transError.message);
-    }
-
-    // 📧 NOTIFICAR ADMINS DA VENDA
-    const advEmail = session.customer_email || session.customer_details?.email || '';
-    await notifyAdminsOfSale({
-      tipoVenda: 'JURIS_PURCHASE',
-      advogadoId: userId,
-      advogadoEmail: advEmail,
-      valor: ((session.amount_total || 0) / 100).toFixed(2),
-      jurisAmount,
-    });
-
-    // 📧 ENVIAR EMAIL PARA O ADVOGADO
-    try {
-      if (advEmail) {
-        await resend.emails.send({
-          from: 'Social Jurídico <contato@socialjuridico.com.br>',
-          to: [advEmail],
-          subject: '💰 Seus Juris foram creditados!',
-          html: jurisCreditadoTemplate({
-            lawyerName: profile?.name || 'Advogado',
-            amount: jurisAmount,
-            balance: newBalance
-          })
-        });
-        console.log(`📧 Email de crédito de Juris enviado para \${advEmail}`);
-      }
-    } catch (emailErr) {
-      console.error("⚠️ Erro ao enviar email para o advogado (não-fatal):", emailErr.message);
-    }
+    throw new Error("Falha ao atualizar o saldo do advogado.");
   }
+
+  return newBalance;
 }
 
-async function handleProSubscription(session, userId, cupomId) {
-  let finalUserId = userId;
-  console.log(`🚀 [handleProSubscription] Processando upgrade. userId inicial: ${finalUserId}`);
-  console.log(`📦 [handleProSubscription] Session ID: ${session.id}`);
-  console.log(`🏷️ [handleProSubscription] Metadata:`, JSON.stringify(session.metadata));
+async function applyPlan(userId, metadata) {
+  const planType =
+    String(metadata?.planType || "PRO").toUpperCase() === "START"
+      ? "START"
+      : "PRO";
+  const billingCycle =
+    String(metadata?.billingCycle || "MONTHLY").toUpperCase() === "ANNUAL"
+      ? "ANNUAL"
+      : "MONTHLY";
+  const jurisBonus = planType === "PRO" ? 20 : 7;
+  const newBalance = await incrementBalance(userId, jurisBonus);
+  const expirationDays = billingCycle === "ANNUAL" ? 366 : 31;
 
-  // Fallback para userId via email se estiver vindo vazio
-  if (!finalUserId) {
-    const email = session.customer_email || session.customer_details?.email;
-    console.warn(`⚠️ [handleProSubscription] userId ausente. Tentando recuperar por email: ${email}`);
-    if (email) {
-      const { data: adv } = await supabaseAdmin.from("advogados").select("id").eq("email", email).single();
-      if (adv) {
-        finalUserId = adv.id;
-        console.log(`✅ [handleProSubscription] userId recuperado via email: ${finalUserId}`);
-      }
-    }
-  }
-
-  if (!finalUserId) {
-    console.error(`❌ [handleProSubscription] Falha crítica: userId não identificado para a sessão ${session.id}`);
-    return;
-  }
-
-  const planType = session.metadata?.planType || 'PRO';
-  const billingCycle = session.metadata?.billingCycle || 'MONTHLY';
-
-  console.log(`💎 [handleProSubscription] Plano: ${planType} | Ciclo: ${billingCycle}`);
-  const jurisBonus = planType === 'PRO' ? 20 : 7;
-
-  console.log(`👑 Ativando Plano ${planType} para o usuário ${finalUserId}. Bônus: ${jurisBonus} Juris.`);
-
-  // Buscar saldo atual para somar os Juris de bônus
-  const { data: advogado, error: fetchError } = await supabaseAdmin
-    .from("advogados")
-    .select("name, balance")
-    .eq("id", finalUserId)
-    .single();
-
-  if (fetchError) {
-    console.error(`❌ [PRO] Erro ao buscar perfil ${finalUserId}:`, fetchError);
-  }
-
-  const newBalance = (advogado?.balance || 0) + jurisBonus;
-
-  const { error: updateError } = await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from("advogados")
     .update({
       is_premium: true,
       plan_type: planType,
+      plan_billing_cycle: billingCycle,
       premium_expires_at: new Date(
-        Date.now() + (billingCycle === 'ANNUAL' ? 365 : 30) * 24 * 60 * 60 * 1000,
+        Date.now() + expirationDays * 24 * 60 * 60 * 1000,
       ).toISOString(),
-      balance: newBalance,
+      uso_redator_ia: 0,
+      uso_triagem: 0,
+      uso_agenda: 0,
     })
-    .eq("id", finalUserId);
+    .eq("id", userId);
 
-  if (updateError) {
-    console.error(`❌ [PRO] ERRO FATAL ao ativar ${planType} para ${finalUserId}:`, updateError);
-  } else {
-    console.log(`✅ ${planType} ativado. +${jurisBonus} Juris para ${finalUserId}`);
+  if (error) {
+    throw new Error("Falha ao ativar o plano contratado.");
   }
 
-  // Registrar log de transação Real para PRO
-  const { error: transError } = await supabaseAdmin.from('transacoes').insert([{
-    advogado_id: finalUserId,
-    tipo: 'PRO_SUBSCRIPTION',
-    valor: (session.amount_total || 0) / 100,
-    moeda: session.currency || 'BRL',
-    status: updateError ? 'error_updating_balance' : 'succeeded',
-    juris_amount: jurisBonus,
-    stripe_session_id: session.id,
-    cupom_id: cupomId || null,
-    created_at: new Date().toISOString()
-  }]);
-
-  if (transError) {
-    console.error(`⚠️ [PRO] Erro ao registrar transação:`, transError.message);
-  }
-
-  // 📧 NOTIFICAR ADMINS DA VENDA PRO
-  if (!updateError) {
-    const advEmail = session.customer_email || session.customer_details?.email || '';
-    await notifyAdminsOfSale({
-      tipoVenda: 'PRO_SUBSCRIPTION',
-      advogadoId: userId,
-      advogadoEmail: advEmail,
-      valor: ((session.amount_total || 0) / 100).toFixed(2),
-      jurisAmount: 20,
-    });
-  }
+  return { planType, jurisAmount: jurisBonus, newBalance };
 }
 
-// ═══════════════════════════════════════════════════════════════
-// HELPER: Notificar todos os admins sobre uma venda
-// ═══════════════════════════════════════════════════════════════
-async function notifyAdminsOfSale({ tipoVenda, advogadoId, advogadoEmail, valor, jurisAmount }) {
-  try {
-    // Buscar nome do advogado comprador
-    const { data: advogado } = await supabaseAdmin
-      .from("advogados")
-      .select("name, email")
-      .eq("id", advogadoId)
-      .single();
+async function applyAddon(userId, metadata) {
+  const addonMap = {
+    EXTRA_DOCS: { field: "extra_storage_mb", amount: 1024 },
+    EXTRA_IA: { field: "extra_redator_ia", amount: 10 },
+    EXTRA_TRIAGEM: { field: "extra_triagem", amount: 5 },
+  };
+  const addon = addonMap[String(metadata?.addOnType || "").toUpperCase()];
 
-    const advNome = advogado?.name || 'Advogado';
-    const advMail = advogado?.email || advogadoEmail;
-
-    // Buscar todos os admins
-    const { data: admins, error: adminError } = await supabaseAdmin
-      .from("admins")
-      .select("name, email")
-      .not("email", "is", null);
-
-    if (adminError || !admins?.length) {
-      console.warn("⚠️ [notifyAdmins] Nenhum admin encontrado para notificar");
-      return;
-    }
-
-    console.log(`📧 Notificando ${admins.length} admin(s) sobre venda de ${tipoVenda}...`);
-
-    const emailPayloads = admins.filter(a => a.email).map(admin => ({
-      from: 'Social Jurídico <contato@socialjuridico.com.br>',
-      to: [admin.email],
-      subject: tipoVenda === 'PRO_SUBSCRIPTION'
-        ? `👑 Nova venda: Plano PRO — R$ ${valor}`
-        : `💰 Nova venda: ${jurisAmount} Juris — R$ ${valor}`,
-      html: novaVendaAdminTemplate({
-        adminName: admin.name || 'Admin',
-        tipoVenda,
-        advogadoNome: advNome,
-        advogadoEmail: advMail,
-        valor,
-        jurisAmount,
-      }),
-    }));
-
-    if (emailPayloads.length > 0) {
-      await resend.batch.send(emailPayloads);
-      console.log(`✅ Email de venda enviado para ${emailPayloads.length} admin(s)`);
-    }
-  } catch (err) {
-    console.error("⚠️ Erro ao notificar admins de venda (não-fatal):", err.message);
-  }
-}
-
-async function handleSubscriptionDeleted(subscription) {
-  // Se a assinatura for cancelada no Stripe, removemos o premium aqui
-  try {
-    const customer = await stripe.customers.retrieve(subscription.customer);
-    const email = customer.email;
-
-    if (email) {
-      const { error } = await supabaseAdmin
-        .from("advogados")
-        .update({ 
-          is_premium: false,
-          plan_type: 'FREE',
-          premium_expires_at: null
-        })
-        .eq("email", email);
-      
-      if (error) {
-        console.error(`❌ [SubDeleted] Erro ao desativar PRO para ${email}:`, error);
-      } else {
-        console.log(`✅ [SubDeleted] Plano desativado (FREE) para ${email}`);
-      }
-    }
-  } catch (err) {
-    console.error(`❌ [SubDeleted] Erro ao processar cancelamento:`, err.message);
-  }
-}
-
-/**
- * Trata pagamentos vindos do Checkout Transparente (Stripe Elements / PaymentIntent).
- * Reutiliza a mesma lógica do processCheckout para manter consistência.
- */
-async function handlePaymentIntentSucceeded(intent) {
-  const userId = intent.metadata?.userId;
-  const type = intent.metadata?.type;
-  const cupomId = intent.metadata?.cupomId;
-  const priceId = intent.metadata?.priceId;
-
-  console.log(`💳 [Intent Succeeded] ${intent.id} | tipo: ${type} | userId: ${userId}`);
-
-  if (!userId || !type) {
-    console.warn(`⚠️ [Intent Succeeded] Ignorando: metadata incompleto (userId: ${userId}, type: ${type})`);
-    return;
+  if (!addon) {
+    throw new Error("Expansão contratada não reconhecida.");
   }
 
-  // Verificar se já foi processado via confirm-payment
-  const { data: existingTx } = await supabaseAdmin
-    .from("transacoes")
-    .select("id")
-    .eq("advogado_id", userId)
-    .eq("stripe_session_id", intent.id)
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("advogados")
+    .select(addon.field)
+    .eq("id", userId)
     .maybeSingle();
 
-  if (existingTx) {
-    console.log(`ℹ️ [PaymentIntent] Já processado anteriormente (tx: ${existingTx.id}). Pulando.`);
+  if (profileError || !profile) {
+    throw new Error("Perfil do advogado não localizado.");
+  }
+
+  const { error } = await supabaseAdmin
+    .from("advogados")
+    .update({
+      [addon.field]: Number(profile[addon.field] || 0) + addon.amount,
+    })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error("Falha ao ativar a expansão contratada.");
+  }
+
+  return { jurisAmount: 0 };
+}
+
+async function applyProduct({ userId, type, jurisAmount, metadata }) {
+  if (type === "PRO_SUBSCRIPTION") {
+    return applyPlan(userId, metadata);
+  }
+
+  if (type === "ADDON_PURCHASE") {
+    return applyAddon(userId, metadata);
+  }
+
+  if (!Number.isFinite(jurisAmount) || jurisAmount <= 0) {
+    throw new Error("Quantidade de Juris não comprovada pelo pagamento.");
+  }
+
+  const newBalance = await incrementBalance(userId, jurisAmount);
+  return { jurisAmount, newBalance };
+}
+
+async function registerCouponUsage(couponId, userId, reference) {
+  if (!couponId) return;
+
+  const { error } = await supabaseAdmin.from("cupom_usos").insert([
+    {
+      cupom_id: couponId,
+      advogado_id: userId,
+      checkout_session_id: reference,
+      pago_em: new Date().toISOString(),
+    },
+  ]);
+
+  if (error && error.code !== "23505") {
+    console.error("[StripeWebhook] Falha ao registrar cupom:", error);
+  }
+}
+
+async function notifySale({
+  userId,
+  email,
+  type,
+  amount,
+  jurisAmount,
+  planType,
+  newBalance,
+}) {
+  try {
+    const [{ data: lawyer }, { data: admins }] = await Promise.all([
+      supabaseAdmin
+        .from("advogados")
+        .select("name, email")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("admins")
+        .select("name, email")
+        .not("email", "is", null),
+    ]);
+
+    const lawyerName = lawyer?.name || "Advogado";
+    const lawyerEmail = lawyer?.email || email || "";
+
+    if (lawyerEmail) {
+      if (type === "JURIS_PURCHASE") {
+        await resend.emails.send({
+          from: "Social Jurídico <contato@socialjuridico.com.br>",
+          to: [lawyerEmail],
+          subject: "Seus Juris foram creditados",
+          html: jurisCreditadoTemplate({
+            lawyerName,
+            amount: jurisAmount,
+            balance: newBalance,
+          }),
+        });
+      }
+
+      if (type === "PRO_SUBSCRIPTION") {
+        await resend.emails.send({
+          from: "Social Jurídico <contato@socialjuridico.com.br>",
+          to: [lawyerEmail],
+          subject: `Bem-vindo ao Plano ${planType}`,
+          html: boasVindasPlanoTemplate({
+            lawyerName,
+            planType,
+            jurisBonus: jurisAmount,
+          }),
+        });
+      }
+    }
+
+    const adminPayloads = (admins || [])
+      .filter((admin) => admin.email)
+      .map((admin) => ({
+        from: "Social Jurídico <contato@socialjuridico.com.br>",
+        to: [admin.email],
+        subject:
+          type === "PRO_SUBSCRIPTION"
+            ? `Nova venda: Plano ${planType}`
+            : `Nova venda: ${jurisAmount || 0} Juris`,
+        html: novaVendaAdminTemplate({
+          adminName: admin.name || "Administrador",
+          tipoVenda: type,
+          advogadoNome: lawyerName,
+          advogadoEmail: lawyerEmail,
+          valor: amount.toFixed(2),
+          jurisAmount,
+        }),
+      }));
+
+    if (adminPayloads.length) {
+      await resend.batch.send(adminPayloads);
+    }
+  } catch (error) {
+    console.error("[StripeWebhook] Falha não fatal nas notificações:", error);
+  }
+}
+
+async function processPaidObject({
+  reference,
+  userId,
+  email,
+  metadata,
+  amountCents,
+  currency,
+  created,
+  priceId,
+}) {
+  if (!amountCents || amountCents <= 0) {
+    throw new Error("Pagamento sem valor confirmado.");
+  }
+
+  const resolvedUserId = await resolveUserId(metadata, email);
+
+  if (!resolvedUserId) {
+    throw new Error("Comprador não identificado.");
+  }
+
+  const type = normalizeType(metadata?.type);
+  const couponId = normalizeCouponId(metadata?.cupomId);
+  const jurisAmount =
+    type === "PRO_SUBSCRIPTION"
+      ? String(metadata?.planType || "PRO").toUpperCase() === "START"
+        ? 7
+        : 20
+      : type === "JURIS_PURCHASE"
+        ? await resolveJurisAmount(priceId || metadata?.priceId, metadata)
+        : 0;
+
+  const reservation = await reserveTransaction({
+    reference,
+    userId: resolvedUserId,
+    type,
+    amount: Number((amountCents / 100).toFixed(2)),
+    currency: String(currency || "BRL").toUpperCase(),
+    jurisAmount,
+    couponId,
+    createdAt: new Date(Number(created || 0) * 1000).toISOString(),
+  });
+
+  if (reservation.duplicate) return;
+
+  try {
+    const applied = await applyProduct({
+      userId: resolvedUserId,
+      type,
+      jurisAmount,
+      metadata,
+    });
+
+    await updateTransactionStatus(reservation.transactionId, "succeeded");
+    await registerCouponUsage(couponId, resolvedUserId, reference);
+    await notifySale({
+      userId: resolvedUserId,
+      email,
+      type,
+      amount: amountCents / 100,
+      jurisAmount: applied.jurisAmount || jurisAmount,
+      planType: applied.planType,
+      newBalance: applied.newBalance,
+    });
+  } catch (error) {
+    await updateTransactionStatus(
+      reservation.transactionId,
+      "error_updating_balance",
+    );
+    throw error;
+  }
+}
+
+async function processCheckoutSession(session) {
+  if (String(session.payment_status || "").toLowerCase() !== "paid") {
+    console.warn(
+      "[StripeWebhook] Checkout concluído sem pagamento confirmado:",
+      session.id,
+    );
     return;
   }
 
-  // Montar objeto compatível com processCheckout
-  const sessionLike = {
-    id: intent.id,
-    amount_total: intent.amount || 0,
-    currency: intent.currency || 'brl',
-    customer_email: intent.receipt_email || null,
-    customer_details: { email: intent.receipt_email || null },
-    metadata: intent.metadata,
-  };
+  let priceId = session.metadata?.priceId;
 
-  await processCheckout(sessionLike, userId, type, cupomId);
+  if (!priceId && normalizeType(session.metadata?.type) === "JURIS_PURCHASE") {
+    try {
+      const detailed = await stripe.checkout.sessions.retrieve(session.id, {
+        expand: ["line_items.data.price"],
+      });
+      priceId = detailed.line_items?.data?.[0]?.price?.id || null;
+    } catch (error) {
+      console.error("[StripeWebhook] Falha ao consultar itens do Checkout:", error);
+    }
+  }
+
+  await processPaidObject({
+    reference: session.id,
+    userId: session.metadata?.userId,
+    email: session.customer_email || session.customer_details?.email,
+    metadata: session.metadata || {},
+    amountCents: session.amount_total,
+    currency: session.currency,
+    created: session.created,
+    priceId,
+  });
 }
 
+async function processPaymentIntent(intent) {
+  const checkoutSessions = await stripe.checkout.sessions.list({
+    payment_intent: intent.id,
+    limit: 1,
+  });
+
+  if (checkoutSessions.data.length) {
+    return;
+  }
+
+  await processPaidObject({
+    reference: intent.id,
+    userId: intent.metadata?.userId,
+    email: intent.receipt_email,
+    metadata: intent.metadata || {},
+    amountCents: intent.amount_received || intent.amount,
+    currency: intent.currency,
+    created: intent.created,
+    priceId: intent.metadata?.priceId,
+  });
+}
+
+async function deactivateSubscription(subscription) {
+  try {
+    let userId = subscription.metadata?.userId || null;
+
+    if (!userId && subscription.customer) {
+      const customer = await stripe.customers.retrieve(subscription.customer);
+      const email = !customer.deleted ? customer.email : null;
+
+      if (email) {
+        const { data } = await supabaseAdmin
+          .from("advogados")
+          .select("id")
+          .ilike("email", email)
+          .maybeSingle();
+        userId = data?.id || null;
+      }
+    }
+
+    if (!userId) return;
+
+    const { error } = await supabaseAdmin
+      .from("advogados")
+      .update({
+        is_premium: false,
+        plan_type: "FREE",
+        premium_expires_at: null,
+      })
+      .eq("id", userId);
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.error("[StripeWebhook] Falha ao desativar assinatura:", error);
+  }
+}
+
+export async function POST(request) {
+  if (!process.env.STRIPE_WEBHOOK_SECRET || !process.env.STRIPE_SECRET_KEY) {
+    return json({ received: false, message: "Webhook não configurado." }, 503);
+  }
+
+  const body = await request.text();
+  const signature = request.headers.get("stripe-signature");
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET,
+    );
+  } catch (error) {
+    console.error("[StripeWebhook] Assinatura inválida:", error);
+    return json({ received: false, message: "Assinatura inválida." }, 400);
+  }
+
+  try {
+    if (event.type === "checkout.session.completed") {
+      await processCheckoutSession(event.data.object);
+    } else if (event.type === "payment_intent.succeeded") {
+      await processPaymentIntent(event.data.object);
+    } else if (event.type === "setup_intent.succeeded") {
+      console.info(
+        "[StripeWebhook] SetupIntent recebido e ignorado como pagamento:",
+        event.id,
+      );
+    } else if (event.type === "customer.subscription.deleted") {
+      await deactivateSubscription(event.data.object);
+    }
+
+    return json({ received: true });
+  } catch (error) {
+    console.error(
+      `[StripeWebhook] Falha ao processar ${event.type} (${event.id}):`,
+      error,
+    );
+
+    return json(
+      {
+        received: false,
+        message: "Falha temporária no processamento do evento.",
+      },
+      500,
+    );
+  }
+}

@@ -1,256 +1,286 @@
-import { createClient } from '@/lib/supabaseServer';
-import { supabaseAdmin } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { ensureDb } from '@/lib/dbSignatureHelper';
-import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import crypto from "node:crypto";
 
-const generateVerificationCode = () => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Evita O/0, I/1 para evitar ambiguidade na leitura visual
-  const genPart = (len) => {
-    let part = '';
-    for (let i = 0; i < len; i++) {
-      part += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return part;
-  };
-  return `SJ-${genPart(4)}-${genPart(4)}`;
-};
+import { supabaseAdmin } from "@/lib/supabase";
 
-async function getSessionUser(req) {
-  if (req) {
-    const authHeader = req.headers.get("Authorization");
-    const fallbackToken =
-      req.headers.get("x-access-token") ||
-      (req.url ? new URL(req.url).searchParams.get("token") : null);
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : fallbackToken;
+import {
+  applySignatureScope,
+  generateSignatureVerificationCode,
+  getSignaturePublicStorageUrl,
+  hasValidSignatureMutationOrigin,
+  isOwnedSignatureUploadPath,
+  readSignatureStorageFile,
+  requireDigitalSignatureAccess,
+  serializeDashboardSignature,
+  serializePublicSigningSignature,
+  serializePublicValidationSignature,
+  signatureJson,
+  signatureServerFailure,
+} from "@/lib/digitalSignatures/signatureServer";
+import {
+  isValidSignatureEmail,
+  isValidSignatureUuid,
+  isValidVerificationCode,
+  normalizeSignatureEmail,
+  normalizeSignatureRole,
+  normalizeSignatureText,
+  sanitizeSignatureMetadata,
+} from "@/lib/digitalSignatures/signatureValidation";
 
-    // Se houver indício de token, valida estritamente por token
-    if (token && token !== "null" && token !== "undefined") {
-      const authUser = await getAuthenticatedUser(req);
-      if (!authUser) {
-        console.error("[getSessionUser] Bearer token validation failed, blocking request");
-        return null;
-      }
-      const { data: adv, error: advError } = await supabaseAdmin
-        .from("advogados")
-        .select("id, name, cargo, escritorio_id")
-        .eq("id", authUser.id)
-        .single();
-      
-      if (adv && !advError) {
-        return {
-          id: adv.id,
-          name: adv.name,
-          cargo: adv.cargo || "advogado",
-          escritorio_id: adv.escritorio_id || null,
-          isOfficeAdmin: false
-        };
-      }
-      return null;
-    }
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function storagePathFromPublicUrl(value) {
+  try {
+    const url = new URL(value);
+    const marker = "/storage/v1/object/public/crm_documents/";
+    const index = url.pathname.indexOf(marker);
+    return index >= 0
+      ? decodeURIComponent(url.pathname.slice(index + marker.length))
+      : "";
+  } catch {
+    return "";
   }
-
-  // Fallback apenas para cookies (sem token)
-  const cookieStore = await cookies();
-  
-  // 1. Verificação via Cookie do Escritório (Administrador / Gestor)
-  const sessionCookie = cookieStore.get("sj_escritorio_session");
-  if (sessionCookie?.value) {
-    try {
-      const decoded = JSON.parse(Buffer.from(sessionCookie.value, "base64").toString("utf8"));
-      return {
-        id: decoded.id,
-        name: `${decoded.nome} (Gestor)`,
-        cargo: "admin",
-        escritorio_id: decoded.id,
-        isOfficeAdmin: true
-      };
-    } catch (e) {
-      console.error("Erro ao decodificar cookie de escritorio:", e);
-    }
-  }
-
-  // 2. Verificação via Supabase Auth (Advogado / Membro Normal)
-  const authUser = await getAuthenticatedUser(req);
-  if (authUser) {
-    const { data: adv, error: advError } = await supabaseAdmin
-      .from("advogados")
-      .select("id, name, cargo, escritorio_id")
-      .eq("id", authUser.id)
-      .single();
-    
-    if (adv && !advError) {
-      return {
-        id: adv.id,
-        name: adv.name,
-        cargo: adv.cargo || "advogado",
-        escritorio_id: adv.escritorio_id || null,
-        isOfficeAdmin: false
-      };
-    }
-  }
-
-  return null;
 }
 
-// GET /api/crm/assinatura -> Lista assinaturas do advogado logado (ou busca uma específica por ?id=...)
+async function uniqueVerificationCode(db) {
+  for (let index = 0; index < 8; index += 1) {
+    const code = generateSignatureVerificationCode();
+    const { count, error } = await db
+      .from("assinaturas_digitais")
+      .select("id", { count: "exact", head: true })
+      .eq("verification_code", code);
+    if (error) throw error;
+    if (!count) return code;
+  }
+  throw new Error("Não foi possível gerar um código de verificação.");
+}
+
 export async function GET(request) {
   try {
-    await ensureDb();
-
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    const code = searchParams.get('code');
+    const id = searchParams.get("id");
+    const code = String(searchParams.get("code") || "").toUpperCase().trim();
+    const role = normalizeSignatureRole(searchParams.get("role"));
 
-    // Se busca por código de validação público (qualquer um pode acessar a validação pública)
     if (code) {
+      if (!isValidVerificationCode(code)) {
+        return signatureJson(
+          { success: false, message: "Código de validação inválido." },
+          400,
+        );
+      }
       const { data, error } = await supabaseAdmin
-        .from('assinaturas_digitais')
-        .select('*')
-        .eq('verification_code', code.toUpperCase())
+        .from("assinaturas_digitais")
+        .select(
+          "id, document_name, document_type, verification_code, status, original_hash, signed_hash, metadata, created_at",
+        )
+        .eq("verification_code", code)
         .maybeSingle();
-
       if (error) throw error;
       if (!data) {
-        return NextResponse.json({ success: false, message: "Documento não encontrado" }, { status: 404 });
+        return signatureJson(
+          { success: false, message: "Documento não encontrado." },
+          404,
+        );
       }
-      return NextResponse.json({ success: true, data });
+      return signatureJson({
+        success: true,
+        data: serializePublicValidationSignature(data),
+      });
     }
 
-    // Se busca por ID específico (usado na página pública de assinatura e pelo advogado)
     if (id) {
+      if (!isValidSignatureUuid(id)) {
+        return signatureJson(
+          { success: false, message: "Link de assinatura inválido." },
+          400,
+        );
+      }
       const { data, error } = await supabaseAdmin
-        .from('assinaturas_digitais')
-        .select('*')
-        .eq('id', id)
+        .from("assinaturas_digitais")
+        .select(
+          "id, document_name, document_type, verification_code, status, metadata, created_at",
+        )
+        .eq("id", id)
         .maybeSingle();
-
       if (error) throw error;
       if (!data) {
-        return NextResponse.json({ success: false, message: "Assinatura não encontrada" }, { status: 404 });
+        return signatureJson(
+          { success: false, message: "Assinatura não encontrada." },
+          404,
+        );
       }
-
-      return NextResponse.json({ success: true, data });
+      const publicData = role
+        ? serializePublicSigningSignature(data, role)
+        : {
+            id: data.id,
+            document_name: data.document_name,
+            document_type: data.document_type,
+            verification_code: data.verification_code,
+            status: data.status,
+            created_at: data.created_at,
+            metadata: sanitizeSignatureMetadata(data.metadata, {
+              maskSensitive: true,
+            }),
+            document_url: `/api/crm/assinatura/proxy-pdf?id=${data.id}`,
+          };
+      return signatureJson({ success: true, data: publicData });
     }
 
-    // Listagem geral das assinaturas (apenas para advogados autenticados)
-    const userSession = await getSessionUser(request);
-
-    if (!userSession) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
-    }
-
-    let query = supabaseAdmin.from('assinaturas_digitais').select('*');
-
-    if (userSession.escritorio_id) {
-      const { data: membros } = await supabaseAdmin
-        .from('advogados')
-        .select('id')
-        .eq('escritorio_id', userSession.escritorio_id);
-      
-      const memberIds = (membros || []).map(m => m.id);
-      if (userSession.isOfficeAdmin) {
-        memberIds.push(userSession.id);
-      }
-      query = query.in('lawyer_id', memberIds);
-    } else {
-      query = query.eq('lawyer_id', userSession.id);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false });
-
+    const access = await requireDigitalSignatureAccess(request);
+    if (!access.ok) return access.response;
+    let query = access.db
+      .from("assinaturas_digitais")
+      .select(
+        "id, document_name, document_type, verification_code, status, original_hash, signed_hash, metadata, created_at, updated_at",
+      );
+    query = applySignatureScope(query, access.lawyerIds);
+    const { data, error } = await query
+      .order("created_at", { ascending: false })
+      .limit(100);
     if (error) throw error;
-
-    return NextResponse.json({ success: true, data: data || [] });
-
+    return signatureJson({
+      success: true,
+      data: (data || []).map(serializeDashboardSignature),
+    });
   } catch (error) {
-    console.error("Erro na API GET /api/crm/assinatura:", error);
-    return NextResponse.json({ success: false, message: "Erro ao buscar dados de assinatura" }, { status: 500 });
+    console.error("[CRM/Assinatura][GET] Erro:", error);
+    const failure = signatureServerFailure(
+      error,
+      "Não foi possível consultar a assinatura.",
+    );
+    return signatureJson(
+      { success: false, message: failure.message },
+      failure.status,
+    );
   }
 }
 
-// POST /api/crm/assinatura -> Cria um novo processo de assinatura digital
 export async function POST(request) {
   try {
-    await ensureDb();
-    const userSession = await getSessionUser(request);
-
-    if (!userSession) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+    if (!hasValidSignatureMutationOrigin(request)) {
+      return signatureJson(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
     }
+    const access = await requireDigitalSignatureAccess(request);
+    if (!access.ok) return access.response;
 
     const body = await request.json();
-    const {
-      client_id,
-      document_name,
-      document_url,
-      original_hash,
-      document_type, // 'contrato', 'procuracao', 'outro'
-      lawyer_name,
-      lawyer_email,
-      client_name,
-      client_email
-    } = body;
+    const documentName = normalizeSignatureText(body.document_name, 180);
+    const documentType = ["contrato", "procuracao", "outro"].includes(
+      body.document_type,
+    )
+      ? body.document_type
+      : "contrato";
+    const clientName = normalizeSignatureText(body.client_name, 140);
+    const clientEmail = normalizeSignatureEmail(body.client_email);
+    const clientId = isValidSignatureUuid(body.client_id) ? body.client_id : null;
+    const uploadPath = storagePathFromPublicUrl(body.document_url);
 
-    if (!document_name || !lawyer_name || !lawyer_email || !client_name || !client_email) {
-      return NextResponse.json({ success: false, message: "Campos obrigatórios ausentes" }, { status: 400 });
+    if (
+      documentName.length < 3 ||
+      clientName.length < 2 ||
+      !isValidSignatureEmail(clientEmail)
+    ) {
+      return signatureJson(
+        { success: false, message: "Campos obrigatórios ausentes ou inválidos." },
+        400,
+      );
+    }
+    if (!isOwnedSignatureUploadPath(uploadPath, access.user.id)) {
+      return signatureJson(
+        { success: false, message: "Documento enviado não autorizado." },
+        403,
+      );
     }
 
-    const verification_code = generateVerificationCode();
-
-    const insertData = {
-      lawyer_id: userSession.id,
-      client_id: client_id || null,
-      document_name,
-      document_url: document_url || null,
-      original_hash: original_hash || '',
-      verification_code,
-      status: 'pending',
-      document_type: document_type || 'contrato',
-      metadata: {
-        lawyer: { 
-          name: lawyer_name, 
-          email: lawyer_email.toLowerCase().trim(), 
-          signed: false, 
-          signed_at: null, 
-          ip: null, 
-          user_agent: null, 
-          otp: null, 
-          otp_expires: null 
+    const fileBuffer = await readSignatureStorageFile(uploadPath);
+    if (!fileBuffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+      return signatureJson(
+        { success: false, message: "Documento PDF inválido." },
+        400,
+      );
+    }
+    const originalHash = crypto
+      .createHash("sha256")
+      .update(fileBuffer)
+      .digest("hex");
+    const verificationCode = await uniqueVerificationCode(access.db);
+    const requestId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const metadata = {
+      request_id: requestId,
+      storage: { original_path: uploadPath, signed_path: null },
+      lawyer: {
+        name: access.profile.name || "Advogado",
+        email: access.profile.email,
+        signed: false,
+        signed_at: null,
+        ip: null,
+        user_agent: null,
+        otp_hash: null,
+        otp_expires: null,
+        otp_attempts: 0,
+      },
+      client: {
+        name: clientName,
+        email: clientEmail,
+        signed: false,
+        signed_at: null,
+        ip: null,
+        user_agent: null,
+        otp_hash: null,
+        otp_expires: null,
+        otp_attempts: 0,
+      },
+      history: [
+        {
+          event: "created",
+          timestamp: now,
+          details: "Processo de assinatura digital iniciado.",
         },
-        client: { 
-          name: client_name, 
-          email: client_email.toLowerCase().trim(), 
-          signed: false, 
-          signed_at: null, 
-          ip: null, 
-          user_agent: null, 
-          otp: null, 
-          otp_expires: null 
-        },
-        history: [
-          { 
-            event: "created", 
-            timestamp: new Date().toISOString(), 
-            details: "Processo de assinatura digital iniciado" 
-          }
-        ]
-      }
+      ],
     };
 
-    const { data, error } = await supabaseAdmin
-      .from('assinaturas_digitais')
-      .insert([insertData])
-      .select()
+    const { data, error } = await access.db
+      .from("assinaturas_digitais")
+      .insert([
+        {
+          request_id: requestId,
+          lawyer_id: access.user.id,
+          client_id: clientId,
+          document_name: documentName,
+          document_url: getSignaturePublicStorageUrl(uploadPath),
+          original_storage_path: uploadPath,
+          original_hash: originalHash,
+          verification_code: verificationCode,
+          status: "pending",
+          document_type: documentType,
+          metadata,
+          updated_at: now,
+        },
+      ])
+      .select(
+        "id, document_name, document_type, verification_code, status, original_hash, signed_hash, metadata, created_at, updated_at",
+      )
       .single();
-
     if (error) throw error;
 
-    return NextResponse.json({ success: true, data });
-
+    return signatureJson(
+      { success: true, data: serializeDashboardSignature(data) },
+      201,
+    );
   } catch (error) {
-    console.error("Erro na API POST /api/crm/assinatura:", error);
-    return NextResponse.json({ success: false, message: "Erro ao criar processo de assinatura" }, { status: 500 });
+    console.error("[CRM/Assinatura][POST] Erro:", error);
+    const failure = signatureServerFailure(
+      error,
+      "Não foi possível criar o processo de assinatura.",
+    );
+    return signatureJson(
+      { success: false, message: failure.message },
+      failure.status,
+    );
   }
 }

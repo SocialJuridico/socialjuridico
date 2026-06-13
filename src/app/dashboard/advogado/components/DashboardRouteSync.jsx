@@ -9,15 +9,23 @@ const ROUTE_TO_TAB = new Map([
   ["/dashboard/advogado/oportunidade", "oportunidades"],
   ["/dashboard/advogado/indiqueganhe", "indicacoes"],
   ["/dashboard/advogado/mensagens", "minhas-mensagens"],
+  ["/dashboard/advogado/queroumsite", "quero-site"],
   ["/dashboard/advogado/meuscasos", "meus-casos"],
   ["/dashboard/advogado/declareiinteresse", "declarei-interesse"],
+  ["/dashboard/advogado/anuncioseservicos", "anuncios-PREPOSTOS"],
+  ["/dashboard/advogado/anuncioseserviços", "anuncios-PREPOSTOS"],
 ]);
 
 const LEGACY_TAB_ROUTES = new Map([
   ["indicacoes", "/dashboard/advogado/indiqueganhe"],
   ["minhas-mensagens", "/dashboard/advogado/mensagens"],
+  ["quero-site", "/dashboard/advogado/queroumsite"],
   ["meus-casos", "/dashboard/advogado/meuscasos"],
   ["declarei-interesse", "/dashboard/advogado/declareiinteresse"],
+  ["anuncios-PREPOSTOS", "/dashboard/advogado/anuncioseservicos?categoria=PREPOSTOS"],
+  ["anuncios-DILIGENCIAS", "/dashboard/advogado/anuncioseservicos?categoria=DILIGENCIAS"],
+  ["anuncios-OUTROS", "/dashboard/advogado/anuncioseservicos?categoria=OUTROS"],
+  ["assinatura", "/dashboard/advogado/assinaturadigital"],
 ]);
 
 export default function DashboardRouteSync() {

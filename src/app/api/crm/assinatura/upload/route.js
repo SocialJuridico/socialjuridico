@@ -1,77 +1,105 @@
-import { createClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabase";
-import { NextResponse } from "next/server";
-import crypto from "crypto";
-import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import crypto from "node:crypto";
+
+import {
+  getSignaturePublicStorageUrl,
+  hasValidSignatureMutationOrigin,
+  requireDigitalSignatureAccess,
+  signatureJson,
+  signatureServerFailure,
+  signatureStoragePrefix,
+} from "@/lib/digitalSignatures/signatureServer";
+import {
+  MAX_SIGNATURE_FILE_BYTES,
+  validateSignatureFileDescriptor,
+} from "@/lib/digitalSignatures/signatureValidation";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function POST(request) {
   try {
-    const user = await getAuthenticatedUser(request);
+    if (!hasValidSignatureMutationOrigin(request)) {
+      return signatureJson(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
+    }
+    const access = await requireDigitalSignatureAccess(request);
+    if (!access.ok) return access.response;
 
-    if (!user) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+    const contentType = String(request.headers.get("content-type") || "")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+    const declaredSize = Number(request.headers.get("content-length") || 0);
+    if (declaredSize > MAX_SIGNATURE_FILE_BYTES) {
+      return signatureJson(
+        { success: false, message: "O PDF excede o limite de 15 MB." },
+        413,
+      );
     }
 
-    const contentType = request.headers.get("content-type") || "";
-    let buffer;
     let fileName = "documento.pdf";
-
-    if (contentType.includes("multipart/form-data")) {
-      // Fallback para FormData
-      const formData = await request.formData();
-      const file = formData.get("file");
-      if (file) {
-        const arrayBuffer = await file.arrayBuffer();
-        buffer = Buffer.from(arrayBuffer);
-        fileName = file.name;
-      }
-    } else {
-      // Por padrão, trata como upload binário bruto no corpo da requisição
-      const arrayBuffer = await request.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-      const rawFileName = request.headers.get("x-file-name");
-      if (rawFileName) {
-        fileName = decodeURIComponent(rawFileName);
+    const headerName = request.headers.get("x-file-name");
+    if (headerName) {
+      try {
+        fileName = decodeURIComponent(headerName);
+      } catch {
+        fileName = headerName;
       }
     }
 
-    if (!buffer || buffer.length === 0) {
-      return NextResponse.json({ success: false, message: "Arquivo é obrigatório" }, { status: 400 });
-    }
-
-    const originalHash = crypto.createHash("sha256").update(buffer).digest("hex");
-
-    const fileExt = fileName.split(".").pop() || "pdf";
-    const filePath = `signatures/originals/${crypto.randomUUID()}.${fileExt}`;
-
-    // Upload directly to Supabase storage
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from("crm_documents")
-      .upload(filePath, buffer, {
-        contentType: 'application/pdf',
-        duplex: 'half'
-      });
-
-    if (uploadError) {
-      console.error("Storage upload error:", uploadError);
-      throw uploadError;
-    }
-
-    const { data: { publicUrl } } = supabaseAdmin.storage
-      .from("crm_documents")
-      .getPublicUrl(filePath);
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        document_url: publicUrl,
-        original_hash: originalHash,
-        file_name: fileName
-      }
+    const buffer = Buffer.from(await request.arrayBuffer());
+    const validation = validateSignatureFileDescriptor({
+      fileName,
+      contentType,
+      size: buffer.length,
     });
+    if (!validation.valid) {
+      return signatureJson(
+        { success: false, message: validation.errors.file },
+        400,
+      );
+    }
+    if (!buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+      return signatureJson(
+        { success: false, message: "O conteúdo enviado não corresponde a um PDF." },
+        400,
+      );
+    }
 
+    const storagePath = `${signatureStoragePrefix(access.user.id)}${crypto.randomUUID()}.pdf`;
+    const originalHash = crypto.createHash("sha256").update(buffer).digest("hex");
+    const { error } = await access.db.storage
+      .from("crm_documents")
+      .upload(storagePath, buffer, {
+        contentType: "application/pdf",
+        cacheControl: "0",
+        upsert: false,
+      });
+    if (error) throw error;
+
+    return signatureJson(
+      {
+        success: true,
+        data: {
+          document_url: getSignaturePublicStorageUrl(storagePath),
+          original_hash: originalHash,
+          upload_path: storagePath,
+          file_name: validation.safeName,
+        },
+      },
+      201,
+    );
   } catch (error) {
-    console.error("Erro no upload do documento de assinatura:", error);
-    return NextResponse.json({ success: false, message: "Erro ao fazer upload do documento" }, { status: 500 });
+    console.error("[CRM/Assinatura/Upload] Erro:", error);
+    const failure = signatureServerFailure(
+      error,
+      "Não foi possível fazer o upload do documento.",
+    );
+    return signatureJson(
+      { success: false, message: failure.message },
+      failure.status,
+    );
   }
 }

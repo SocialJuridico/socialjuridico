@@ -1,370 +1,472 @@
-import { supabaseAdmin } from '@/lib/supabase';
-import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
-import { ensureDb } from '@/lib/dbSignatureHelper';
+import crypto from "node:crypto";
+
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+
+import { supabaseAdmin } from "@/lib/supabase";
+import {
+  getSignaturePublicStorageUrl,
+  hasValidSignatureMutationOrigin,
+  readSignatureStorageFile,
+  recordPublicSignatureAudit,
+  signatureJson,
+  signatureServerFailure,
+  verifySignatureOtp,
+} from "@/lib/digitalSignatures/signatureServer";
+import {
+  isValidSignatureUuid,
+  normalizeSignatureRole,
+  normalizeSignatureText,
+  parseSignatureMetadata,
+} from "@/lib/digitalSignatures/signatureValidation";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+const MAX_OTP_ATTEMPTS = 5;
+const STAMP_WIDTH = 240;
+const STAMP_HEIGHT = 65;
+
+function storagePathFromPublicUrl(value) {
+  try {
+    const url = new URL(value);
+    const marker = "/storage/v1/object/public/crm_documents/";
+    const index = url.pathname.indexOf(marker);
+    return index >= 0
+      ? decodeURIComponent(url.pathname.slice(index + marker.length))
+      : "";
+  } catch {
+    return "";
+  }
+}
+
+function requestIp(request) {
+  return normalizeSignatureText(
+    request.headers.get("cf-connecting-ip") ||
+      request.headers.get("x-real-ip") ||
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown",
+    100,
+  );
+}
+
+function safePdfText(value, maxLength = 32) {
+  return normalizeSignatureText(value, maxLength)
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "")
+    .toUpperCase();
+}
+
+function clamp(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+
+function resolveStampPosition({ role, width, height, x, y, position }) {
+  let stampX = role === "lawyer" ? 40 : width - STAMP_WIDTH - 40;
+  let stampY = 40;
+
+  const presets = {
+    "header-left": [40, height - STAMP_HEIGHT - 40],
+    "header-center": [(width - STAMP_WIDTH) / 2, height - STAMP_HEIGHT - 40],
+    "header-right": [width - STAMP_WIDTH - 40, height - STAMP_HEIGHT - 40],
+    "middle-left": [40, (height - STAMP_HEIGHT) / 2],
+    "middle-center": [(width - STAMP_WIDTH) / 2, (height - STAMP_HEIGHT) / 2],
+    "middle-right": [width - STAMP_WIDTH - 40, (height - STAMP_HEIGHT) / 2],
+    "footer-left": [40, 40],
+    "footer-center": [(width - STAMP_WIDTH) / 2, 40],
+    "footer-right": [width - STAMP_WIDTH - 40, 40],
+  };
+  if (presets[position]) [stampX, stampY] = presets[position];
+
+  const numericX = Number(x);
+  if (Number.isFinite(numericX)) {
+    stampX = numericX >= 0 && numericX <= 1 ? numericX * width : numericX;
+  }
+  const numericY = Number(y);
+  if (Number.isFinite(numericY)) {
+    stampY =
+      numericY >= 0 && numericY <= 1
+        ? (1 - numericY) * height - STAMP_HEIGHT
+        : numericY;
+  }
+
+  return {
+    x: clamp(stampX, 10, Math.max(10, width - STAMP_WIDTH - 10)),
+    y: clamp(stampY, 10, Math.max(10, height - STAMP_HEIGHT - 10)),
+  };
+}
+
+async function registerRejectedAttempt(request, signature, metadata, role, party) {
+  const attempts = Number(party.otp_attempts || 0) + 1;
+  metadata[role] = { ...party, otp_attempts: attempts };
+  metadata.history = Array.isArray(metadata.history) ? metadata.history : [];
+  metadata.history.push({
+    event: `otp_rejected_${role}`,
+    timestamp: new Date().toISOString(),
+    details: "Tentativa de confirmação com código inválido.",
+  });
+  await supabaseAdmin
+    .from("assinaturas_digitais")
+    .update({ metadata, updated_at: new Date().toISOString() })
+    .eq("id", signature.id)
+    .eq("updated_at", signature.updated_at);
+  await recordPublicSignatureAudit(request, signature, "OTP_REJECTED", {
+    role,
+    attempts,
+  });
+  return attempts;
+}
 
 export async function POST(request) {
+  let uploadedPath = null;
   try {
-    await ensureDb();
+    if (!hasValidSignatureMutationOrigin(request)) {
+      return signatureJson(
+        { success: false, message: "Origem da requisição não autorizada." },
+        403,
+      );
+    }
+
     const body = await request.json();
-    const { signature_id, role, code, stamp_x, stamp_y, stamp_page, stamp_position } = body;
-
-    if (!signature_id || !role || !code) {
-      return NextResponse.json({ success: false, message: "Campos obrigatórios ausentes" }, { status: 400 });
+    const signatureId = String(body.signature_id || "");
+    const role = normalizeSignatureRole(body.role);
+    const code = normalizeSignatureText(body.code, 6);
+    if (!isValidSignatureUuid(signatureId) || !role || !/^\d{6}$/.test(code)) {
+      return signatureJson(
+        { success: false, message: "Dados de confirmação inválidos." },
+        400,
+      );
     }
 
-    // 1. Busca os detalhes da assinatura no banco de dados
-    const { data: sig, error: fetchError } = await supabaseAdmin
-      .from('assinaturas_digitais')
-      .select('*')
-      .eq('id', signature_id)
+    const { data: signature, error } = await supabaseAdmin
+      .from("assinaturas_digitais")
+      .select("*")
+      .eq("id", signatureId)
       .maybeSingle();
-
-    if (fetchError || !sig) {
-      return NextResponse.json({ success: false, message: "Processo de assinatura não encontrado" }, { status: 404 });
+    if (error) throw error;
+    if (!signature) {
+      return signatureJson(
+        { success: false, message: "Processo de assinatura não encontrado." },
+        404,
+      );
     }
 
-    const meta = typeof sig.metadata === 'string' ? JSON.parse(sig.metadata) : sig.metadata;
-    const targetParty = meta[role];
-    const otherRole = role === 'lawyer' ? 'client' : 'lawyer';
-    const otherParty = meta[otherRole];
-
-    if (!targetParty || !targetParty.otp) {
-      return NextResponse.json({ success: false, message: "Nenhum código OTP foi enviado para este signatário" }, { status: 400 });
+    const metadata = parseSignatureMetadata(signature.metadata);
+    const party = metadata[role];
+    const otherRole = role === "lawyer" ? "client" : "lawyer";
+    const otherParty = metadata[otherRole] || {};
+    if (!party) {
+      return signatureJson(
+        { success: false, message: "Signatário não encontrado." },
+        400,
+      );
+    }
+    if (party.signed) {
+      return signatureJson(
+        { success: false, message: "Este signatário já realizou a assinatura." },
+        409,
+      );
+    }
+    if (!party.otp_hash && !party.otp) {
+      return signatureJson(
+        { success: false, message: "Solicite um código antes de assinar." },
+        400,
+      );
+    }
+    if (Number(party.otp_attempts || 0) >= MAX_OTP_ATTEMPTS) {
+      return signatureJson(
+        {
+          success: false,
+          message: "Código bloqueado após várias tentativas. Solicite um novo.",
+        },
+        429,
+      );
+    }
+    if (!party.otp_expires || Date.now() > Date.parse(party.otp_expires)) {
+      return signatureJson(
+        { success: false, message: "O código expirou. Solicite um novo." },
+        400,
+      );
+    }
+    if (!verifySignatureOtp(signatureId, role, code, party)) {
+      const attempts = await registerRejectedAttempt(
+        request,
+        signature,
+        metadata,
+        role,
+        party,
+      );
+      return signatureJson(
+        {
+          success: false,
+          message:
+            attempts >= MAX_OTP_ATTEMPTS
+              ? "Código bloqueado. Solicite um novo código."
+              : "Código de verificação incorreto.",
+        },
+        attempts >= MAX_OTP_ATTEMPTS ? 429 : 400,
+      );
     }
 
-    if (targetParty.signed) {
-      return NextResponse.json({ success: false, message: "Este signatário já realizou a assinatura" }, { status: 400 });
+    const storageMetadata = metadata.storage || {};
+    const currentStoragePath =
+      signature.signed_storage_path ||
+      storageMetadata.signed_path ||
+      signature.original_storage_path ||
+      storageMetadata.original_path ||
+      storagePathFromPublicUrl(signature.document_url);
+    if (!currentStoragePath) {
+      return signatureJson(
+        { success: false, message: "Arquivo do documento não localizado." },
+        404,
+      );
     }
 
-    // 2. Valida o código OTP e expiração
-    const now = new Date();
-    const expiresAt = new Date(targetParty.otp_expires);
+    const sourceBuffer = await readSignatureStorageFile(currentStoragePath);
+    const pdfDocument = await PDFDocument.load(sourceBuffer, {
+      ignoreEncryption: false,
+      updateMetadata: false,
+    });
+    const pages = pdfDocument.getPages();
+    if (!pages.length) throw new Error("O PDF não possui páginas válidas.");
 
-    if (targetParty.otp !== code.trim()) {
-      return NextResponse.json({ success: false, message: "Código de verificação incorreto" }, { status: 400 });
-    }
-
-    if (now > expiresAt) {
-      return NextResponse.json({ success: false, message: "Código de verificação expirou" }, { status: 400 });
-    }
-
-    // 3. Atualiza os dados de assinatura do signatário atual
-    const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "127.0.0.1";
-    const userAgent = request.headers.get("user-agent") || "Navegador Desconhecido";
-    const signatureDate = new Date().toISOString();
-
-    meta[role] = {
-      ...targetParty,
-      signed: true,
-      signed_at: signatureDate,
-      ip: clientIp,
-      user_agent: userAgent,
-      otp: null, // Limpa o OTP usado
-      otp_expires: null
-    };
-
-    meta.history.push({
-      event: `${role}_signed`,
-      timestamp: signatureDate,
-      details: `Documento assinado eletronicamente por ${targetParty.name} (IP: ${clientIp})`
+    const requestedPage = Number.parseInt(body.stamp_page, 10);
+    const pageIndex = Number.isFinite(requestedPage)
+      ? clamp(requestedPage - 1, 0, pages.length - 1)
+      : pages.length - 1;
+    const page = pages[pageIndex];
+    const { width, height } = page.getSize();
+    const coordinates = resolveStampPosition({
+      role,
+      width,
+      height,
+      x: body.stamp_x,
+      y: body.stamp_y,
+      position: body.stamp_position,
     });
 
-    // 4. Inicia a modificação do PDF utilizando pdf-lib
-    const originalPdfUrl = sig.document_url;
-    if (!originalPdfUrl) {
-      return NextResponse.json({ success: false, message: "URL do documento original não encontrada" }, { status: 400 });
-    }
+    const regularFont = await pdfDocument.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDocument.embedFont(StandardFonts.HelveticaBold);
+    const x = coordinates.x;
+    const y = coordinates.y;
 
-    // Baixa o PDF original (adiciona cache-buster para evitar cache do Next.js/CDN e garantir que pegue o PDF com a assinatura anterior)
-    const cacheBuster = originalPdfUrl.includes("?") ? `&t=${Date.now()}` : `?t=${Date.now()}`;
-    const pdfResponse = await fetch(`${originalPdfUrl}${cacheBuster}`, { cache: 'no-store' });
-    if (!pdfResponse.ok) {
-      throw new Error(`Erro ao baixar PDF do Storage: ${pdfResponse.statusText}`);
-    }
-    const pdfBuffer = await pdfResponse.arrayBuffer();
-
-    // Carrega o PDF na biblioteca pdf-lib
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
-    const pages = pdfDoc.getPages();
-    
-    // Determina a página alvo para carimbar
-    let pageIndex = pages.length - 1;
-    if (stamp_page !== undefined) {
-      const parsedPage = parseInt(stamp_page);
-      if (!isNaN(parsedPage) && parsedPage >= 1 && parsedPage <= pages.length) {
-        pageIndex = parsedPage - 1;
-      }
-    }
-    
-    const targetPage = pages[pageIndex];
-    const { width, height } = targetPage.getSize();
-
-    // Carrega fontes padrões do PDF
-    const fontHelvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontHelveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-    // Configurações de layout do carimbo
-    const stampWidth = 240;
-    const stampHeight = 65;
-    
-    // Posição padrão
-    let xPosition = role === 'lawyer' ? 40 : width - stampWidth - 40;
-    let yPosition = 40; // Margem inferior padrão
-
-    // Aplica posições pré-definidas se passadas
-    if (stamp_position) {
-      switch (stamp_position) {
-        case 'header-left':
-          xPosition = 40;
-          yPosition = height - stampHeight - 40;
-          break;
-        case 'header-center':
-          xPosition = (width - stampWidth) / 2;
-          yPosition = height - stampHeight - 40;
-          break;
-        case 'header-right':
-          xPosition = width - stampWidth - 40;
-          yPosition = height - stampHeight - 40;
-          break;
-        case 'middle-left':
-          xPosition = 40;
-          yPosition = (height - stampHeight) / 2;
-          break;
-        case 'middle-center':
-          xPosition = (width - stampWidth) / 2;
-          yPosition = (height - stampHeight) / 2;
-          break;
-        case 'middle-right':
-          xPosition = width - stampWidth - 40;
-          yPosition = (height - stampHeight) / 2;
-          break;
-        case 'footer-left':
-          xPosition = 40;
-          yPosition = 40;
-          break;
-        case 'footer-center':
-          xPosition = (width - stampWidth) / 2;
-          yPosition = 40;
-          break;
-        case 'footer-right':
-          xPosition = width - stampWidth - 40;
-          yPosition = 40;
-          break;
-      }
-    }
-
-    // Se passou coordenadas personalizadas (sobrescreve os presets)
-    // Suporta tanto coordenadas absolutas em pixels/pontos quanto relativas em porcentagem (0.0 a 1.0)
-    if (stamp_x !== undefined) {
-      const xNum = Number(stamp_x);
-      if (xNum >= 0 && xNum <= 1.0) {
-        xPosition = Math.max(10, Math.min(width - stampWidth - 10, xNum * width));
-      } else {
-        xPosition = xNum;
-      }
-    }
-    if (stamp_y !== undefined) {
-      const yNum = Number(stamp_y);
-      if (yNum >= 0 && yNum <= 1.0) {
-        yPosition = Math.max(10, Math.min(height - stampHeight - 10, (1 - yNum) * height - stampHeight));
-      } else {
-        yPosition = yNum;
-      }
-    }
-
-    // --- DESENHAR O CARIMBO VISUAL NO TARGET PAGE ---
-    
-    // 1. Fundo Branco para cobrir qualquer texto abaixo e garantir legibilidade
-    targetPage.drawRectangle({
-      x: xPosition,
-      y: yPosition,
-      width: stampWidth,
-      height: stampHeight,
+    page.drawRectangle({
+      x,
+      y,
+      width: STAMP_WIDTH,
+      height: STAMP_HEIGHT,
       color: rgb(1, 1, 1),
-    });
-
-    // 2. Bordas Duplas (Estilo GOV.BR mas com cores exclusivas)
-    // Borda Externa (Dourado Claro)
-    targetPage.drawRectangle({
-      x: xPosition,
-      y: yPosition,
-      width: stampWidth,
-      height: stampHeight,
-      borderColor: rgb(0.77, 0.63, 0.35), // Dourado (#c5a059)
+      borderColor: rgb(0.77, 0.63, 0.35),
       borderWidth: 1.5,
     });
-    // Borda Interna (Linha fina dourada)
-    targetPage.drawRectangle({
-      x: xPosition + 3,
-      y: yPosition + 3,
-      width: stampWidth - 6,
-      height: stampHeight - 6,
+    page.drawRectangle({
+      x: x + 3,
+      y: y + 3,
+      width: STAMP_WIDTH - 6,
+      height: STAMP_HEIGHT - 6,
       borderColor: rgb(0.88, 0.8, 0.63),
       borderWidth: 0.5,
     });
-
-    // 3. Logo do SocialJurídico (Quadrado Dourado com texto "SJ" em vetor para máxima nitidez)
-    const logoSize = 34;
-    const logoX = xPosition + 10;
-    const logoY = yPosition + (stampHeight - logoSize) / 2;
-
-    targetPage.drawRectangle({
-      x: logoX,
-      y: logoY,
-      width: logoSize,
-      height: logoSize,
+    page.drawRectangle({
+      x: x + 10,
+      y: y + 15.5,
+      width: 34,
+      height: 34,
       color: rgb(0.77, 0.63, 0.35),
-      borderRadius: 4,
     });
-    
-    targetPage.drawText("SJ", {
-      x: logoX + 8,
-      y: logoY + 10,
+    page.drawText("SJ", {
+      x: x + 18,
+      y: y + 25.5,
       size: 14,
-      font: fontHelveticaBold,
+      font: boldFont,
       color: rgb(1, 1, 1),
     });
 
-    // 4. Textos do Carimbo de Assinatura
-    const textX = xPosition + logoSize + 20;
-    const startY = yPosition + stampHeight - 12;
-
-    // Linha 1: "Documento assinado digitalmente"
-    targetPage.drawText("Documento assinado digitalmente", {
+    const signedAt = new Date().toISOString();
+    const formattedDate = new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: "America/Sao_Paulo",
+      hour12: false,
+    }).format(new Date(signedAt));
+    const textX = x + 54;
+    const startY = y + 53;
+    page.drawText("Documento assinado eletronicamente", {
       x: textX,
       y: startY,
       size: 6.5,
-      font: fontHelveticaBold,
+      font: boldFont,
       color: rgb(0.4, 0.4, 0.4),
     });
-
-    // Linha 2: Nome do Signatário (Mais destacado)
-    const displayName = targetParty.name.toUpperCase().substring(0, 32);
-    targetPage.drawText(displayName, {
+    page.drawText(safePdfText(party.name), {
       x: textX,
       y: startY - 10,
       size: 7.5,
-      font: fontHelveticaBold,
+      font: boldFont,
       color: rgb(0.1, 0.1, 0.1),
     });
-
-    // Linha 3: Data e Hora da Assinatura (Fuso horário de Brasília -0300)
-    const formattedDate = new Intl.DateTimeFormat('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      timeZone: 'America/Sao_Paulo'
-    }).format(new Date(signatureDate));
-
-    targetPage.drawText(`Data: ${formattedDate}-0300`, {
+    page.drawText(`Data: ${formattedDate} -03:00`, {
       x: textX,
       y: startY - 20,
       size: 6.5,
-      font: fontHelvetica,
+      font: regularFont,
       color: rgb(0.3, 0.3, 0.3),
     });
-
-    // Linha 4: Link de Validação
-    targetPage.drawText("Verifique em socialjuridico.com.br/validar", {
+    page.drawText("Valide em socialjuridico.com.br/validar", {
       x: textX,
       y: startY - 30,
       size: 5.8,
-      font: fontHelvetica,
+      font: regularFont,
       color: rgb(0.5, 0.5, 0.5),
     });
-
-    // Linha 5: Código de Validação do Documento
-    targetPage.drawText(`Código: ${sig.verification_code}`, {
+    page.drawText(`Codigo: ${signature.verification_code}`, {
       x: textX,
       y: startY - 40,
       size: 6.5,
-      font: fontHelveticaBold,
+      font: boldFont,
       color: rgb(0.77, 0.63, 0.35),
     });
 
-    // Salva o PDF modificado em bytes
-    const pdfBytes = await pdfDoc.save();
-
-    // 5. Calcula o HASH SHA-256 da versão assinada
-    const signedHash = crypto.createHash("sha256").update(pdfBytes).digest("hex");
-
-    // 6. Faz o upload da nova versão assinada de volta para o Supabase Storage (Substitui ou cria uma versão de assinatura)
-    const filePath = `signatures/signed_${signature_id}.pdf`;
-    
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+    const pdfBytes = await pdfDocument.save({ useObjectStreams: true });
+    const signedHash = crypto
+      .createHash("sha256")
+      .update(pdfBytes)
+      .digest("hex");
+    uploadedPath = `signatures/signed/${signatureId}/${crypto.randomUUID()}.pdf`;
+    const { error: uploadError } = await supabaseAdmin.storage
       .from("crm_documents")
-      .upload(filePath, pdfBytes, {
-        contentType: 'application/pdf',
-        upsert: true,
-        cacheControl: '0'
+      .upload(uploadedPath, pdfBytes, {
+        contentType: "application/pdf",
+        cacheControl: "0",
+        upsert: false,
       });
+    if (uploadError) throw uploadError;
 
-    if (uploadError) {
-      console.error("Erro ao subir PDF assinado para o Storage:", uploadError);
-      throw uploadError;
-    }
-
-    const { data: { publicUrl } } = supabaseAdmin.storage.from("crm_documents").getPublicUrl(filePath);
-
-    // 7. Determina o novo status da assinatura
-    // Se a outra parte já assinou, vira 'signed', senão vira 'partially_signed'
-    const isCompleted = otherParty.signed;
-    const finalStatus = isCompleted ? 'signed' : 'partially_signed';
-
-    if (isCompleted) {
-      meta.history.push({
-        event: "completed",
-        timestamp: new Date().toISOString(),
-        details: "Todas as partes assinaram o documento. Processo finalizado."
-      });
-    }
-
-    // 8. Salva todas as atualizações no Banco de Dados
-    const { error: dbError } = await supabaseAdmin
-      .from('assinaturas_digitais')
-      .update({
-        status: finalStatus,
-        document_url: publicUrl,
-        signed_hash: signedHash,
-        metadata: meta
-      })
-      .eq('id', signature_id);
-
-    if (dbError) throw dbError;
-
-    // 9. Se finalizado, gera uma notificação interna para o Advogado informando que o documento foi assinado!
-    if (isCompleted) {
-      try {
-        await supabaseAdmin.from('notificacoes').insert([{
-          user_id: sig.lawyer_id,
-          titulo: "Documento Assinado por Completo! ✍️",
-          mensagem: `O documento "${sig.document_name}" foi completamente assinado por você e pelo cliente ${otherParty.name}.`,
-          tipo: "CRM_SIGNATURE",
-          lida: false,
-          created_at: new Date().toISOString()
-        }]);
-      } catch (notifErr) {
-        console.error("Erro ao criar notificação de assinatura completa:", notifErr);
-      }
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      message: "Documento assinado com sucesso!",
-      data: {
-        status: finalStatus,
-        document_url: publicUrl,
-        signed_hash: signedHash
-      }
+    const clientIp = requestIp(request);
+    const userAgent = normalizeSignatureText(
+      request.headers.get("user-agent") || "Navegador não identificado",
+      500,
+    );
+    metadata[role] = {
+      ...party,
+      signed: true,
+      signed_at: signedAt,
+      ip: clientIp,
+      user_agent: userAgent,
+      otp: null,
+      otp_hash: null,
+      otp_expires: null,
+      otp_attempts: 0,
+    };
+    metadata.storage = {
+      original_path:
+        signature.original_storage_path || storageMetadata.original_path || null,
+      signed_path: uploadedPath,
+    };
+    metadata.history = Array.isArray(metadata.history) ? metadata.history : [];
+    metadata.history.push({
+      event: `${role}_signed`,
+      timestamp: signedAt,
+      details: `Documento assinado eletronicamente por ${party.name}.`,
     });
 
+    const completed = Boolean(otherParty.signed);
+    const finalStatus = completed ? "signed" : "partially_signed";
+    if (completed) {
+      metadata.history.push({
+        event: "completed",
+        timestamp: signedAt,
+        details: "Todas as partes assinaram o documento.",
+      });
+    }
+
+    const nextUpdatedAt = new Date().toISOString();
+    const { data: updated, error: updateError } = await supabaseAdmin
+      .from("assinaturas_digitais")
+      .update({
+        status: finalStatus,
+        document_url: getSignaturePublicStorageUrl(uploadedPath),
+        signed_storage_path: uploadedPath,
+        signed_hash: signedHash,
+        metadata,
+        updated_at: nextUpdatedAt,
+      })
+      .eq("id", signatureId)
+      .eq("updated_at", signature.updated_at)
+      .select("id")
+      .maybeSingle();
+    if (updateError) throw updateError;
+    if (!updated) {
+      await supabaseAdmin.storage.from("crm_documents").remove([uploadedPath]);
+      uploadedPath = null;
+      return signatureJson(
+        {
+          success: false,
+          message:
+            "O documento foi atualizado por outra assinatura. Recarregue e tente novamente.",
+        },
+        409,
+      );
+    }
+
+    await recordPublicSignatureAudit(request, signature, "SIGNED", {
+      role,
+      status: finalStatus,
+      page: pageIndex + 1,
+      signed_hash: signedHash,
+    });
+    if (completed) {
+      await recordPublicSignatureAudit(request, signature, "COMPLETED", {
+        signed_hash: signedHash,
+      });
+      const { error: notificationError } = await supabaseAdmin
+        .from("notificacoes")
+        .insert([
+          {
+            user_id: signature.lawyer_id,
+            titulo: "Documento assinado por completo! ✍️",
+            mensagem: `O documento "${signature.document_name}" foi assinado por todos os signatários.`,
+            tipo: "CRM_SIGNATURE",
+            lida: false,
+            created_at: signedAt,
+          },
+        ]);
+      if (notificationError) {
+        console.error(
+          "[Assinatura] Falha ao criar notificação:",
+          notificationError,
+        );
+      }
+    }
+
+    return signatureJson({
+      success: true,
+      message: "Documento assinado com sucesso.",
+      data: {
+        status: finalStatus,
+        document_url: `/api/crm/assinatura/proxy-pdf?id=${signatureId}`,
+        signed_hash: signedHash,
+      },
+    });
   } catch (error) {
-    console.error("Erro na API POST /api/crm/assinatura/validar-otp:", error);
-    return NextResponse.json({ success: false, message: error.message || "Erro ao processar assinatura eletrônica" }, { status: 500 });
+    if (uploadedPath) {
+      await supabaseAdmin.storage
+        .from("crm_documents")
+        .remove([uploadedPath])
+        .catch(() => null);
+    }
+    console.error("[CRM/Assinatura/ValidarOTP] Erro:", error);
+    const failure = signatureServerFailure(
+      error,
+      "Não foi possível processar a assinatura eletrônica.",
+    );
+    return signatureJson(
+      { success: false, message: failure.message },
+      failure.status,
+    );
   }
 }

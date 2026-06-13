@@ -1,39 +1,99 @@
-import { NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase";
+import {
+  readSignatureStorageFile,
+  signatureJson,
+} from "@/lib/digitalSignatures/signatureServer";
+import {
+  isValidSignatureUuid,
+  parseSignatureMetadata,
+} from "@/lib/digitalSignatures/signatureValidation";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function storagePathFromPublicUrl(value) {
+  try {
+    const url = new URL(value);
+    const marker = "/storage/v1/object/public/crm_documents/";
+    const index = url.pathname.indexOf(marker);
+    return index >= 0
+      ? decodeURIComponent(url.pathname.slice(index + marker.length))
+      : "";
+  } catch {
+    return "";
+  }
+}
 
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const pdfUrl = searchParams.get("url");
-
-  if (!pdfUrl) {
-    return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });
-  }
-
   try {
-    let absoluteUrl = pdfUrl;
-    if (!pdfUrl.startsWith("http://") && !pdfUrl.startsWith("https://")) {
-      const origin = request.nextUrl.origin;
-      absoluteUrl = `${origin}${pdfUrl.startsWith("/") ? "" : "/"}${pdfUrl}`;
+    const requestUrl = new URL(request.url);
+    let id = requestUrl.searchParams.get("id");
+    if (!id) {
+      const legacyUrl = requestUrl.searchParams.get("url");
+      if (legacyUrl?.startsWith("/api/crm/assinatura/proxy-pdf?")) {
+        id = new URL(legacyUrl, requestUrl.origin).searchParams.get("id");
+      }
+    }
+    if (!isValidSignatureUuid(id)) {
+      return signatureJson(
+        { success: false, message: "Documento inválido." },
+        400,
+      );
     }
 
-    const cacheBuster = absoluteUrl.includes("?") ? `&t=${Date.now()}` : `?t=${Date.now()}`;
-    const response = await fetch(`${absoluteUrl}${cacheBuster}`, { cache: 'no-store' });
-    
-    if (!response.ok) {
-      return NextResponse.json({ error: "Failed to fetch PDF from remote source" }, { status: response.status });
+    const { data: signature, error } = await supabaseAdmin
+      .from("assinaturas_digitais")
+      .select(
+        "id, document_url, original_storage_path, signed_storage_path, metadata",
+      )
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!signature) {
+      return signatureJson(
+        { success: false, message: "Documento não encontrado." },
+        404,
+      );
     }
 
-    const pdfBuffer = await response.arrayBuffer();
+    const metadata = parseSignatureMetadata(signature.metadata);
+    const storagePath =
+      signature.signed_storage_path ||
+      metadata.storage?.signed_path ||
+      signature.original_storage_path ||
+      metadata.storage?.original_path ||
+      storagePathFromPublicUrl(signature.document_url);
+    if (!storagePath || storagePath.includes("..")) {
+      return signatureJson(
+        { success: false, message: "Arquivo não localizado." },
+        404,
+      );
+    }
 
-    return new Response(pdfBuffer, {
+    const buffer = await readSignatureStorageFile(storagePath);
+    if (!buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+      return signatureJson(
+        { success: false, message: "Arquivo inválido." },
+        422,
+      );
+    }
+
+    return new Response(buffer, {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "public, max-age=31536000",
+        "Content-Disposition": "inline; filename=assinatura.pdf",
+        "Cache-Control": "private, no-store, max-age=0",
+        Pragma: "no-cache",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox",
       },
     });
   } catch (error) {
-    console.error("Error proxying PDF:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("[CRM/Assinatura/ProxyPDF] Erro:", error);
+    return signatureJson(
+      { success: false, message: "Não foi possível carregar o PDF." },
+      500,
+    );
   }
 }

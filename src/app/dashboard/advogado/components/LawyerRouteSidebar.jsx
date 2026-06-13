@@ -11,6 +11,7 @@ import {
   Lock,
   LogOut,
   MessageSquare,
+  MonitorSmartphone,
   PenTool,
   Search,
   Shield,
@@ -41,6 +42,10 @@ const DIRECT_ROUTES = {
     path: "/dashboard/advogado/mensagens",
     activeRoute: "mensagens",
   },
+  "quero-site": {
+    path: "/dashboard/advogado/queroumsite",
+    activeRoute: "queroumsite",
+  },
   "meus-casos": {
     path: "/dashboard/advogado/meuscasos",
     activeRoute: "meuscasos",
@@ -49,12 +54,29 @@ const DIRECT_ROUTES = {
     path: "/dashboard/advogado/declareiinteresse",
     activeRoute: "declareiinteresse",
   },
+  "anuncios-PREPOSTOS": {
+    path: "/dashboard/advogado/anuncioseservicos",
+    activeRoute: "anuncioseservicos",
+  },
+  "anuncios-DILIGENCIAS": {
+    path: "/dashboard/advogado/anuncioseservicos?categoria=DILIGENCIAS",
+    activeRoute: "anuncioseservicos",
+  },
+  "anuncios-OUTROS": {
+    path: "/dashboard/advogado/anuncioseservicos?categoria=OUTROS",
+    activeRoute: "anuncioseservicos",
+  },
+  assinatura: {
+    path: "/dashboard/advogado/assinaturadigital",
+    activeRoute: "assinaturadigital",
+  },
 };
 
 const PRIMARY_ITEMS = [
   { tab: "indicacoes", label: "Indique e Ganhe", icon: UserPlus },
   { tab: "oportunidades", label: "Oportunidades", icon: Globe },
   { tab: "minhas-mensagens", label: "Minhas Mensagens", icon: MessageSquare },
+  { tab: "quero-site", label: "Quero um Site", icon: MonitorSmartphone },
   { tab: "meus-casos", label: "Meus Casos", icon: Briefcase },
   { tab: "declarei-interesse", label: "Declarei Interesse", icon: Check },
   { tab: "anuncios-PREPOSTOS", label: "Anúncios de Serviços", icon: Zap },

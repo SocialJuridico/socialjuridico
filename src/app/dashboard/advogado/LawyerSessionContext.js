@@ -11,6 +11,7 @@ import {
 } from "react";
 import toast from "react-hot-toast";
 
+import JurisPurchaseModalHost from "@/components/JurisPurchase/JurisPurchaseModalHost";
 import LawyerPlansModalHost from "@/components/LawyerPlans/LawyerPlansModalHost";
 import { supabase } from "@/lib/supabase";
 
@@ -23,6 +24,12 @@ const PLAN_QUERY_VALUES = new Set([
   "upgrade",
   "true",
   "1",
+]);
+const JURIS_QUERY_VALUES = new Set([
+  "juris",
+  "comprar-juris",
+  "buy-juris",
+  "credits",
 ]);
 
 function readJson(response) {
@@ -52,6 +59,15 @@ function shouldOpenPlansFromLocation() {
     : false;
 }
 
+function shouldOpenJurisFromLocation() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get("open") || params.get("modal");
+  return value
+    ? JURIS_QUERY_VALUES.has(String(value).trim().toLowerCase())
+    : false;
+}
+
 function parseNotificationMeta(value) {
   if (!value) return {};
   if (typeof value === "object") return value;
@@ -77,6 +93,7 @@ export function LawyerSessionProvider({ children }) {
   const [sessionError, setSessionError] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPlansModalOpen, setIsPlansModalOpen] = useState(false);
+  const [isJurisModalOpen, setIsJurisModalOpen] = useState(false);
   const notificationIdsRef = useRef(new Set());
 
   const refreshProfile = useCallback(async () => {
@@ -134,6 +151,7 @@ export function LawyerSessionProvider({ children }) {
 
   const openPlansModal = useCallback(() => {
     setIsSidebarOpen(false);
+    setIsJurisModalOpen(false);
     setIsPlansModalOpen(true);
   }, []);
 
@@ -141,22 +159,39 @@ export function LawyerSessionProvider({ children }) {
     setIsPlansModalOpen(false);
   }, []);
 
+  const openJurisModal = useCallback(() => {
+    setIsSidebarOpen(false);
+    setIsPlansModalOpen(false);
+    setIsJurisModalOpen(true);
+  }, []);
+
+  const closeJurisModal = useCallback(() => {
+    setIsJurisModalOpen(false);
+  }, []);
+
   useEffect(() => {
     void Promise.all([refreshProfile(), refreshNotifications()]);
-    if (shouldOpenPlansFromLocation()) setIsPlansModalOpen(true);
+    if (shouldOpenJurisFromLocation()) setIsJurisModalOpen(true);
+    else if (shouldOpenPlansFromLocation()) setIsPlansModalOpen(true);
   }, [refreshNotifications, refreshProfile]);
 
   useEffect(() => {
     const handleOpenPlans = () => openPlansModal();
     const handleClosePlans = () => closePlansModal();
+    const handleOpenJuris = () => openJurisModal();
+    const handleCloseJuris = () => closeJurisModal();
 
     window.addEventListener("sj:open-lawyer-plans", handleOpenPlans);
     window.addEventListener("sj:close-lawyer-plans", handleClosePlans);
+    window.addEventListener("sj:open-juris-purchase", handleOpenJuris);
+    window.addEventListener("sj:close-juris-purchase", handleCloseJuris);
     return () => {
       window.removeEventListener("sj:open-lawyer-plans", handleOpenPlans);
       window.removeEventListener("sj:close-lawyer-plans", handleClosePlans);
+      window.removeEventListener("sj:open-juris-purchase", handleOpenJuris);
+      window.removeEventListener("sj:close-juris-purchase", handleCloseJuris);
     };
-  }, [closePlansModal, openPlansModal]);
+  }, [closeJurisModal, closePlansModal, openJurisModal, openPlansModal]);
 
   useEffect(() => {
     let channel;
@@ -228,17 +263,23 @@ export function LawyerSessionProvider({ children }) {
       isPlansModalOpen,
       openPlansModal,
       closePlansModal,
+      isJurisModalOpen,
+      openJurisModal,
+      closeJurisModal,
       refreshProfile,
       refreshNotifications,
       logout,
     }),
     [
+      closeJurisModal,
       closePlansModal,
+      isJurisModalOpen,
       isPlansModalOpen,
       isSidebarOpen,
       loadingProfile,
       logout,
       notifications,
+      openJurisModal,
       openPlansModal,
       profileData,
       refreshNotifications,
@@ -255,6 +296,12 @@ export function LawyerSessionProvider({ children }) {
         isOpen={isPlansModalOpen}
         profileData={profileData}
         onClose={closePlansModal}
+        onProfileRefresh={refreshProfile}
+      />
+      <JurisPurchaseModalHost
+        isOpen={isJurisModalOpen}
+        profileData={profileData}
+        onClose={closeJurisModal}
         onProfileRefresh={refreshProfile}
       />
     </LawyerSessionContext.Provider>

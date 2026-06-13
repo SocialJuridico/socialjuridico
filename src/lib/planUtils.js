@@ -25,60 +25,62 @@ export const PLAN_LIMITS = {
     agenda: Infinity,
     has_calculadora: true,
     has_jurisprudencia: true,
-  }
+  },
 };
 
 export async function getUserPlanLimits(supabaseDb, userId) {
   let { data: user, error } = await supabaseDb
-    .from('advogados')
-    .select('plan_type, is_premium, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb')
-    .eq('id', userId)
+    .from("advogados")
+    .select(
+      "plan_type, is_premium, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb",
+    )
+    .eq("id", userId)
     .maybeSingle();
 
   if (!user) {
     const { data: office, error: officeError } = await supabaseDb
-      .from('escritorios')
-      .select('plano, limites')
-      .eq('id', userId)
+      .from("escritorios")
+      .select("plano, limites")
+      .eq("id", userId)
       .maybeSingle();
 
     if (office && !officeError) {
       const limitsObj = office.limites || {};
       const maxIa = limitsObj.creditos_ia || 999999;
       const maxStorage = limitsObj.storage_mb || 1024000;
-      
+
       return {
-        planType: office.plano || 'PRO',
+        planType: office.plano || "PRO",
         isLegacyPro: true,
-        
+
         // CRM
         maxCrmClients: Infinity,
-        
+
         // Smart Docs
         maxStorageMb: maxStorage,
         usedStorageMb: 0,
-        canUploadDocs: function(fileSizeMb) {
+        canUploadDocs: function () {
           return true;
         },
 
         // Redator IA
         maxRedatorIa: maxIa,
         usedRedatorIa: 0,
-        canUseRedatorIa: function() {
+        canUseRedatorIa: function () {
           return true;
         },
 
         // Triagem
         maxTriagem: limitsObj.osint || 999999,
         usedTriagem: 0,
-        canUseTriagem: function() {
+        canUseTriagem: function () {
           return true;
         },
 
         // Agenda
         maxAgenda: Infinity,
         usedAgenda: 0,
-        canUseAgenda: function() {
+        canUseAgenda: function () {
           return true;
         },
 
@@ -90,15 +92,18 @@ export async function getUserPlanLimits(supabaseDb, userId) {
   }
 
   if (error && !user) {
-    console.error(`[getUserPlanLimits] Erro ao buscar limites para o usuário ${userId}:`, error);
+    console.error(
+      `[getUserPlanLimits] Erro ao buscar limites para o usuário ${userId}:`,
+      error,
+    );
   }
 
   if (!user) return null;
 
   // Garantir retrocompatibilidade: quem já era premium vira PRO implicitamente
-  let planType = user.plan_type || 'FREE';
-  if (user.is_premium && planType === 'FREE') {
-    planType = 'PRO';
+  let planType = String(user.plan_type || "FREE").toUpperCase();
+  if (user.is_premium && planType === "FREE") {
+    planType = "PRO";
   }
 
   const baseLimits = PLAN_LIMITS[planType] || PLAN_LIMITS.FREE;
@@ -106,35 +111,35 @@ export async function getUserPlanLimits(supabaseDb, userId) {
   return {
     planType,
     isLegacyPro: user.is_premium,
-    
+
     // CRM
     maxCrmClients: baseLimits.crm_clients,
-    
+
     // Smart Docs
     maxStorageMb: baseLimits.smart_docs_mb + (user.extra_storage_mb || 0),
     usedStorageMb: user.uso_storage_mb || 0,
-    canUploadDocs: function(fileSizeMb) {
-      return (this.usedStorageMb + fileSizeMb) <= this.maxStorageMb;
+    canUploadDocs: function (fileSizeMb) {
+      return this.usedStorageMb + fileSizeMb <= this.maxStorageMb;
     },
 
     // Redator IA
     maxRedatorIa: baseLimits.redator_ia + (user.extra_redator_ia || 0),
     usedRedatorIa: user.uso_redator_ia || 0,
-    canUseRedatorIa: function() {
+    canUseRedatorIa: function () {
       return this.usedRedatorIa < this.maxRedatorIa;
     },
 
     // Triagem
     maxTriagem: baseLimits.triagem + (user.extra_triagem || 0),
     usedTriagem: user.uso_triagem || 0,
-    canUseTriagem: function() {
+    canUseTriagem: function () {
       return this.usedTriagem < this.maxTriagem;
     },
 
     // Agenda
     maxAgenda: baseLimits.agenda,
     usedAgenda: user.uso_agenda || 0,
-    canUseAgenda: function() {
+    canUseAgenda: function () {
       return this.usedAgenda < this.maxAgenda;
     },
 
@@ -145,31 +150,48 @@ export async function getUserPlanLimits(supabaseDb, userId) {
 }
 
 export async function incrementUsage(supabaseDb, userId, field, amount = 1) {
-    try {
-        const { data, error: selectError } = await supabaseDb.from('advogados').select(field).eq('id', userId).single();
-        
-        if (selectError) {
-            console.error(`[incrementUsage] Erro ao buscar ${field} para o usuário ${userId}:`, selectError);
-            return null;
-        }
+  try {
+    const { data, error: selectError } = await supabaseDb
+      .from("advogados")
+      .select(field)
+      .eq("id", userId)
+      .single();
 
-        if (data) {
-            const newValue = (data[field] || 0) + amount;
-            const { error: updateError } = await supabaseDb.from('advogados').update({ [field]: newValue }).eq('id', userId);
-            
-            if (updateError) {
-                console.error(`[incrementUsage] Erro ao atualizar ${field} para ${newValue} (usuário ${userId}):`, updateError);
-                return null;
-            }
-
-            console.log(`[incrementUsage] ${field} atualizado para ${newValue} (usuário ${userId})`);
-            return newValue;
-        }
-        
-        console.warn(`[incrementUsage] Usuário ${userId} não encontrado na tabela advogados.`);
-        return null;
-    } catch (err) {
-        console.error(`[incrementUsage] Erro inesperado:`, err);
-        return null;
+    if (selectError) {
+      console.error(
+        `[incrementUsage] Erro ao buscar ${field} para o usuário ${userId}:`,
+        selectError,
+      );
+      return null;
     }
+
+    if (data) {
+      const newValue = (data[field] || 0) + amount;
+      const { error: updateError } = await supabaseDb
+        .from("advogados")
+        .update({ [field]: newValue })
+        .eq("id", userId);
+
+      if (updateError) {
+        console.error(
+          `[incrementUsage] Erro ao atualizar ${field} para ${newValue} (usuário ${userId}):`,
+          updateError,
+        );
+        return null;
+      }
+
+      console.log(
+        `[incrementUsage] ${field} atualizado para ${newValue} (usuário ${userId})`,
+      );
+      return newValue;
+    }
+
+    console.warn(
+      `[incrementUsage] Usuário ${userId} não encontrado na tabela advogados.`,
+    );
+    return null;
+  } catch (err) {
+    console.error("[incrementUsage] Erro inesperado:", err);
+    return null;
+  }
 }

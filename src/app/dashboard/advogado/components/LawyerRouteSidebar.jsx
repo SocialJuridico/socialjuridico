@@ -70,6 +70,18 @@ const DIRECT_ROUTES = {
     path: "/dashboard/advogado/assinaturadigital",
     activeRoute: "assinaturadigital",
   },
+  crm: {
+    path: "/dashboard/advogado/meusclientes",
+    activeRoute: "meusclientes",
+  },
+  docs: {
+    path: "/dashboard/advogado/smartdoc",
+    activeRoute: "smartdoc",
+  },
+  blindagem: {
+    path: "/dashboard/advogado/blindagemdedocumentos",
+    activeRoute: "blindagemdedocumentos",
+  },
 };
 
 const PRIMARY_ITEMS = [
@@ -170,11 +182,12 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     logout,
   } = useLawyerSession();
 
-  const planType = profileData?.plan_type || "FREE";
+  const planType = String(profileData?.plan_type || "FREE").toUpperCase();
   const hasPremium =
     profileData?.is_premium === true ||
     planType === "START" ||
-    planType === "PRO";
+    planType === "PRO" ||
+    planType.startsWith("ENTERPRISE_");
 
   function closeSidebar() {
     setIsSidebarOpen(false);

@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import LawyerServiceAdsDashboard from "../anuncioseserviços/components/LawyerServiceAdsDashboard";
 
 export const metadata = {
@@ -7,5 +9,9 @@ export const metadata = {
 };
 
 export default function LawyerServiceAdsPage() {
-  return <LawyerServiceAdsDashboard />;
+  return (
+    <Suspense fallback={null}>
+      <LawyerServiceAdsDashboard />
+    </Suspense>
+  );
 }

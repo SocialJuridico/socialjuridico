@@ -26,6 +26,7 @@ const LEGACY_TAB_ROUTES = new Map([
   ["anuncios-DILIGENCIAS", "/dashboard/advogado/anuncioseservicos?categoria=DILIGENCIAS"],
   ["anuncios-OUTROS", "/dashboard/advogado/anuncioseservicos?categoria=OUTROS"],
   ["assinatura", "/dashboard/advogado/assinaturadigital"],
+  ["crm", "/dashboard/advogado/meusclientes"],
 ]);
 
 export default function DashboardRouteSync() {

@@ -97,7 +97,7 @@ export const metadata = {
 
   icons: {
     icon: "/favicon.ico",
-    apple: "/icon.png",
+    apple: "/favicon.ico",
   },
 
   verification: {
@@ -140,7 +140,6 @@ export default function RootLayout({ children }) {
         <CookieNotice />
         <PWAInstallPrompt />
         <ScrollToTop />
-       
       </body>
     </html>
   );

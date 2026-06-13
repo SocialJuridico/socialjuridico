@@ -12,7 +12,7 @@ export default function LawyerRouteTopBar({ title, subtitle, icon: Icon }) {
     profileData,
     userName,
     setIsSidebarOpen,
-    openPlansModal,
+    openJurisModal,
   } = useLawyerSession();
 
   const safeName = userName || profileData?.name || "Advogado";
@@ -52,8 +52,8 @@ export default function LawyerRouteTopBar({ title, subtitle, icon: Icon }) {
         <div className={styles.balance} aria-label="Saldo de Juris">
           <Coins size={15} aria-hidden="true" />
           <span>{profileData?.balance || 0} Juris</span>
-          <button type="button" onClick={openPlansModal}>
-            Ver planos
+          <button type="button" onClick={openJurisModal}>
+            Comprar
           </button>
         </div>
 

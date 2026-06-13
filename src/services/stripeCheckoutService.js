@@ -4,14 +4,40 @@
  * somente como contingência quando o formulário incorporado não pode abrir.
  */
 
-function getDashboardReturnPath() {
-  if (typeof window === "undefined") return "/dashboard/advogado";
+function readLocation(locationLike) {
+  if (locationLike) return locationLike;
+  if (typeof window !== "undefined") return window.location;
+  return {
+    origin: "",
+    pathname: "/dashboard/advogado/oportunidade",
+    search: "",
+  };
+}
 
-  return window.location.pathname.startsWith(
-    "/dashboard/advogado/oportunidade",
-  )
-    ? "/dashboard/advogado/oportunidade"
-    : "/dashboard/advogado";
+export function getDashboardReturnPath(locationLike) {
+  const location = readLocation(locationLike);
+  const pathname = String(location.pathname || "");
+  const safePathname = pathname.startsWith("/dashboard/advogado")
+    ? pathname
+    : "/dashboard/advogado/oportunidade";
+  const searchParams = new URLSearchParams(String(location.search || ""));
+  searchParams.delete("payment");
+  searchParams.delete("payment_status");
+  const search = searchParams.toString();
+  return `${safePathname}${search ? `?${search}` : ""}`;
+}
+
+export function buildDashboardReturnUrl(
+  status,
+  parameter = "payment",
+  locationLike,
+) {
+  const location = readLocation(locationLike);
+  const origin = String(location.origin || "");
+  const path = getDashboardReturnPath(location);
+  const url = new URL(path, origin || "https://socialjuridico.local");
+  url.searchParams.set(parameter, String(status || "success"));
+  return origin ? `${origin}${url.pathname}${url.search}` : `${url.pathname}${url.search}`;
 }
 
 function getInternalCouponId(couponData) {
@@ -33,15 +59,14 @@ export async function createJurisCheckout(jurisAmount, couponData = null) {
       );
     }
 
-    const returnPath = getDashboardReturnPath();
     const response = await fetch("/api/checkout/juris", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         priceId,
         internalCouponId: getInternalCouponId(couponData),
-        successUrl: `${window.location.origin}${returnPath}?payment=success`,
-        cancelUrl: `${window.location.origin}${returnPath}?payment=canceled`,
+        successUrl: buildDashboardReturnUrl("success"),
+        cancelUrl: buildDashboardReturnUrl("canceled"),
       }),
     });
 
@@ -81,15 +106,14 @@ export async function createProSubscription(couponData = null) {
       throw new Error("Price ID do PRO mensal não configurado.");
     }
 
-    const returnPath = getDashboardReturnPath();
     const response = await fetch("/api/checkout/pro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         priceId: selectedPriceId,
         internalCouponId: getInternalCouponId(couponData),
-        successUrl: `${window.location.origin}${returnPath}?payment=success`,
-        cancelUrl: `${window.location.origin}${returnPath}?payment=canceled`,
+        successUrl: buildDashboardReturnUrl("success"),
+        cancelUrl: buildDashboardReturnUrl("canceled"),
       }),
     });
 

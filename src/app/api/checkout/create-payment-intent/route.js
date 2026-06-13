@@ -7,6 +7,10 @@ import {
   resolveExpectedCouponType,
 } from "@/lib/coupons/couponServer";
 import {
+  assertAllowedCheckoutPrice,
+  normalizeCheckoutProductContext,
+} from "@/lib/checkout/paymentProduct";
+import {
   assertLawyerPlanPurchaseAllowed,
   normalizeLawyerPlanType,
 } from "@/lib/lawyerPlans/planAccessServer";
@@ -42,49 +46,6 @@ function validateOrigin(request) {
   }
 
   return null;
-}
-
-function compactSet(values) {
-  return new Set(values.filter(Boolean));
-}
-
-function assertAllowedPrice(priceId, { paymentType, planType }) {
-  const jurisPrices = compactSet([
-    process.env.PRICE_JURIS_10,
-    process.env.PRICE_JURIS_20,
-    process.env.PRICE_JURIS_50,
-    process.env.NEXT_PUBLIC_PRICE_JURIS_10,
-    process.env.NEXT_PUBLIC_PRICE_JURIS_20,
-    process.env.NEXT_PUBLIC_PRICE_JURIS_50,
-  ]);
-
-  const startAvulsoPrices = compactSet([
-    process.env.STRIPE_PRICE_START_AVULSO,
-    process.env.NEXT_PUBLIC_STRIPE_PRICE_START_AVULSO,
-  ]);
-
-  const proAvulsoPrices = compactSet([
-    process.env.STRIPE_PRICE_PRO_AVULSO,
-    process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_AVULSO,
-  ]);
-
-  let allowed = null;
-  if (paymentType === "JURIS_PURCHASE") allowed = jurisPrices;
-  if (paymentType === "PRO_SUBSCRIPTION") {
-    allowed = planType === "START" ? startAvulsoPrices : proAvulsoPrices;
-  }
-
-  if (allowed && (!allowed.size || !allowed.has(priceId))) {
-    const error = new Error("Preço não autorizado para este produto.");
-    error.status = 400;
-    throw error;
-  }
-}
-
-function resolvePaymentType({ planType, addOnType }) {
-  if (addOnType) return "ADDON_PURCHASE";
-  if (planType) return "PRO_SUBSCRIPTION";
-  return "JURIS_PURCHASE";
 }
 
 async function bindReservation(reservationToken, userId, reference) {
@@ -151,6 +112,13 @@ export async function POST(request) {
       );
     }
 
+    const product = normalizeCheckoutProductContext({
+      priceId,
+      planType,
+      billingCycle,
+      addOnType,
+    });
+
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("advogados")
       .select("oab_verification_status, plan_type, subscription_status")
@@ -174,9 +142,8 @@ export async function POST(request) {
       );
     }
 
-    const paymentType = resolvePaymentType({ planType, addOnType });
-    if (planType) {
-      if (billingCycle !== "AVULSO") {
+    if (product.planType) {
+      if (product.billingCycle !== "AVULSO") {
         return json(
           {
             success: false,
@@ -185,12 +152,15 @@ export async function POST(request) {
           400,
         );
       }
-      assertLawyerPlanPurchaseAllowed(profile, planType);
+      assertLawyerPlanPurchaseAllowed(profile, product.planType);
     }
 
-    assertAllowedPrice(priceId, { paymentType, planType });
+    assertAllowedCheckoutPrice(priceId, {
+      paymentType: product.paymentType,
+      planType: product.planType,
+    });
 
-    if (internalCouponId && addOnType) {
+    if (internalCouponId && product.addOnType) {
       return json(
         { success: false, message: "Cupons não são aceitos para expansões." },
         400,
@@ -214,7 +184,10 @@ export async function POST(request) {
       couponReservation = await reserveCouponForCheckout(supabaseAdmin, {
         couponId: internalCouponId,
         userId: user.id,
-        expectedType: resolveExpectedCouponType({ paymentType, addOnType }),
+        expectedType: resolveExpectedCouponType({
+          paymentType: product.paymentType,
+          addOnType: product.addOnType,
+        }),
       });
 
       const stripeCoupon = await stripe.coupons.retrieve(
@@ -242,11 +215,11 @@ export async function POST(request) {
 
     const metadata = {
       userId: user.id,
-      type: paymentType,
+      type: product.paymentType,
       priceId,
-      planType: planType || "",
-      billingCycle,
-      addOnType: addOnType || "",
+      planType: product.planType || "",
+      billingCycle: product.billingCycle,
+      addOnType: product.addOnType || "",
       cupomId: couponReservation?.coupon?.id || "",
       couponReservationToken: couponReservation?.reservationToken || "",
     };

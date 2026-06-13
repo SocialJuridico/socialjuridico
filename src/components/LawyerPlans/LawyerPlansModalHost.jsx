@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-import TransparentCheckoutModal from "@/components/TransparentCheckout/TransparentCheckoutModal";
+import StableTransparentCheckoutModal from "@/components/TransparentCheckout/StableTransparentCheckoutModal";
 
 import LawyerPlansModal from "./LawyerPlansModal";
 
@@ -48,7 +48,7 @@ export default function LawyerPlansModalHost({
         onSelectPlan={handleSelectPlan}
       />
 
-      <TransparentCheckoutModal
+      <StableTransparentCheckoutModal
         key={checkoutKey}
         isOpen={Boolean(checkout)}
         onClose={closeCheckout}

@@ -9,7 +9,7 @@ import PesquisaSatisfacaoClientePopup from "@/components/PesquisaSatisfacaoClien
 import ClientCaseComposer from "./components/ClientCaseComposer";
 import { ClientCases, ClientConversations } from "./components/ClientCases";
 import ClientDirectory from "./components/ClientDirectory";
-import ClientModals from "./components/ClientModals";
+import ClientModalsGoverned from "./components/ClientModalsGoverned";
 import ClientNotifications from "./components/ClientNotifications";
 import ClientOverview from "./components/ClientOverview";
 import ClientProfile from "./components/ClientProfile";
@@ -136,7 +136,7 @@ export default function ClientDashboardPage() {
         />
       )}
 
-      <ClientModals controller={controller} />
+      <ClientModalsGoverned controller={controller} />
       <AdvogadoMesPopup />
       <PesquisaSatisfacaoClientePopup />
     </ClientShell>

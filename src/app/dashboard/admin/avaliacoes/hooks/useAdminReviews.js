@@ -14,14 +14,17 @@ export function useAdminReviews() {
   const [search, setSearch] = useState("");
   const [ratingFilter, setRatingFilter] = useState("ALL");
   const [commentFilter, setCommentFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [expandedId, setExpandedId] = useState(null);
+  const [moderationModal, setModerationModal] = useState(null);
+  const [moderationBusy, setModerationBusy] = useState(false);
 
   const loadReviews = useCallback(async () => {
     setLoading(true);
     setLoadError("");
 
     try {
-      const response = await fetch("/api/avaliacoes", { cache: "no-store" });
+      const response = await fetch("/api/admin/reviews", { cache: "no-store" });
       const data = await response.json().catch(() => null);
 
       if (response.status === 401 || response.status === 403) {
@@ -45,7 +48,7 @@ export function useAdminReviews() {
   }, [router]);
 
   useEffect(() => {
-    loadReviews();
+    void loadReviews();
   }, [loadReviews]);
 
   const filteredReviews = useMemo(() => {
@@ -69,9 +72,11 @@ export function useAdminReviews() {
       if (commentFilter === "WITH_COMMENT" && !hasComment) return false;
       if (commentFilter === "WITHOUT_COMMENT" && hasComment) return false;
 
+      if (statusFilter !== "ALL" && review.status !== statusFilter) return false;
+
       return true;
     });
-  }, [reviews, search, ratingFilter, commentFilter]);
+  }, [reviews, search, ratingFilter, commentFilter, statusFilter]);
 
   const summary = useMemo(
     () => ({
@@ -85,11 +90,70 @@ export function useAdminReviews() {
     setSearch("");
     setRatingFilter("ALL");
     setCommentFilter("ALL");
+    setStatusFilter("ALL");
   }, []);
 
   const toggleExpanded = useCallback((reviewId) => {
     setExpandedId((current) => (current === reviewId ? null : reviewId));
   }, []);
+
+  const openModeration = useCallback((review, nextStatus) => {
+    setModerationModal({ review, nextStatus, reason: "" });
+  }, []);
+
+  const closeModeration = useCallback(() => {
+    if (!moderationBusy) setModerationModal(null);
+  }, [moderationBusy]);
+
+  const setModerationReason = useCallback((reason) => {
+    setModerationModal((current) =>
+      current ? { ...current, reason: reason.slice(0, 2000) } : current,
+    );
+  }, []);
+
+  const submitModeration = useCallback(async () => {
+    if (!moderationModal) return;
+    setModerationBusy(true);
+
+    try {
+      const response = await fetch("/api/admin/reviews", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: moderationModal.review.id,
+          status: moderationModal.nextStatus,
+          reason: moderationModal.reason,
+          version: moderationModal.review.version,
+        }),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Não foi possível moderar a avaliação.");
+      }
+
+      setReviews((current) =>
+        current.map((review) =>
+          review.id === moderationModal.review.id
+            ? {
+                ...review,
+                status: data.data.status,
+                version: data.data.version,
+                moderated_at: data.data.moderated_at || review.moderated_at,
+                moderation_reason:
+                  data.data.moderation_reason || moderationModal.reason || null,
+              }
+            : review,
+        ),
+      );
+      setModerationModal(null);
+      toast.success(data.message || "Avaliação moderada com sucesso.");
+    } catch (error) {
+      toast.error(error.message || "Não foi possível moderar a avaliação.");
+    } finally {
+      setModerationBusy(false);
+    }
+  }, [moderationModal]);
 
   return {
     reviews,
@@ -99,13 +163,21 @@ export function useAdminReviews() {
     search,
     ratingFilter,
     commentFilter,
+    statusFilter,
     expandedId,
     summary,
+    moderationModal,
+    moderationBusy,
     setSearch,
     setRatingFilter,
     setCommentFilter,
+    setStatusFilter,
     loadReviews,
     clearFilters,
     toggleExpanded,
+    openModeration,
+    closeModeration,
+    setModerationReason,
+    submitModeration,
   };
 }

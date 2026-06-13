@@ -1,9 +1,11 @@
 "use client";
 
 import { AlertTriangle, RefreshCw } from "lucide-react";
+
+import GovernedReviewsList from "./components/GovernedReviewsList";
+import ReviewModerationModal from "./components/ReviewModerationModal";
 import ReviewsFilters from "./components/ReviewsFilters";
 import ReviewsHeader from "./components/ReviewsHeader";
-import ReviewsList from "./components/ReviewsList";
 import ReviewsSummary from "./components/ReviewsSummary";
 import { useAdminReviews } from "./hooks/useAdminReviews";
 import styles from "./Avaliacoes.module.css";
@@ -36,7 +38,11 @@ export default function AdminAvaliacoesPage() {
 
   return (
     <main className={styles.page}>
-      <ReviewsHeader total={state.summary.total} visible={state.summary.visible} onReload={state.loadReviews} />
+      <ReviewsHeader
+        total={state.summary.total}
+        visible={state.summary.visible}
+        onReload={state.loadReviews}
+      />
 
       {state.loadError && (
         <div className={styles.warningBanner} role="alert">
@@ -46,18 +52,27 @@ export default function AdminAvaliacoesPage() {
         </div>
       )}
 
-      <ReviewsSummary summary={state.summary} activeFilter={state.ratingFilter} onFilter={state.setRatingFilter} />
+      <ReviewsSummary
+        summary={state.summary}
+        activeFilter={state.ratingFilter}
+        onFilter={state.setRatingFilter}
+      />
+
       <ReviewsFilters
         search={state.search}
         ratingFilter={state.ratingFilter}
         commentFilter={state.commentFilter}
+        statusFilter={state.statusFilter}
         visibleCount={state.summary.visible}
         onSearch={state.setSearch}
         onRatingFilter={state.setRatingFilter}
         onCommentFilter={state.setCommentFilter}
+        onStatusFilter={state.setStatusFilter}
         onClear={state.clearFilters}
       />
-      <ReviewsList reviews={state.filteredReviews} expandedId={state.expandedId} onToggle={state.toggleExpanded} />
+
+      <GovernedReviewsList state={state} />
+      <ReviewModerationModal state={state} />
     </main>
   );
 }

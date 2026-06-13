@@ -2,11 +2,9 @@ import {
   listAdminReviews,
   moderateAdminReview,
 } from "@/lib/reviews/reviewAdminHandlers";
-import { submitClientReview } from "@/lib/reviews/reviewClientHandlers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = listAdminReviews;
-export const POST = submitClientReview;
 export const PATCH = moderateAdminReview;

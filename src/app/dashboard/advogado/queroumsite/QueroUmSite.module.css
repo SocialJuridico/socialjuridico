@@ -1,0 +1,1044 @@
+.page {
+  display: grid;
+  gap: 24px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  gap: 34px;
+  align-items: center;
+  overflow: hidden;
+  padding: clamp(26px, 4vw, 46px);
+  border: 1px solid rgba(212, 175, 55, 0.24);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 86% 10%, rgba(212, 175, 55, 0.2), transparent 30%),
+    linear-gradient(135deg, rgba(212, 175, 55, 0.1), transparent 48%),
+    rgba(255, 255, 255, 0.024);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.34);
+}
+
+.heroContent {
+  display: grid;
+  gap: 16px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 7px;
+  color: #e3c75f;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.hero h2 {
+  max-width: 780px;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2rem, 4.2vw, 3.6rem);
+  line-height: 1.03;
+  letter-spacing: -0.05em;
+}
+
+.hero h2 span {
+  color: #d4af37;
+}
+
+.heroContent > p {
+  max-width: 720px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.63);
+  font-size: clamp(0.88rem, 1.7vw, 1rem);
+  line-height: 1.7;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 13px;
+  margin-top: 4px;
+}
+
+.heroActions button,
+.projectCard button,
+.submitArea button,
+.successPanel > button:last-child,
+.historyCard footer button {
+  display: inline-flex;
+  min-height: 43px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(212, 175, 55, 0.48);
+  border-radius: 11px;
+  background: linear-gradient(135deg, #e2c65d, #ad8513);
+  color: #080808;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.heroActions button {
+  padding: 10px 17px;
+}
+
+.heroActions button:hover,
+.projectCard button:hover,
+.submitArea button:hover:not(:disabled),
+.successPanel > button:last-child:hover:not(:disabled),
+.historyCard footer button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+.heroActions > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.heroActions > span svg {
+  color: #d4af37;
+}
+
+.heroVisual {
+  position: relative;
+  min-height: 330px;
+}
+
+.browserMockup {
+  position: absolute;
+  inset: 24px 4% auto 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: #151515;
+  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.48);
+  transform: perspective(1100px) rotateY(-6deg) rotateX(2deg);
+}
+
+.browserMockup > header {
+  display: flex;
+  gap: 6px;
+  padding: 11px 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: #1d1d1d;
+}
+
+.browserMockup > header span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.mockupBody {
+  display: grid;
+  min-height: 236px;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(212, 175, 55, 0.13), transparent 46%),
+    #101010;
+}
+
+.mockupLogo {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #e2c75e, #9f7812);
+}
+
+.mockupTitle {
+  width: 68%;
+  height: 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.mockupText {
+  width: 48%;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.mockupButton {
+  width: 98px;
+  height: 28px;
+  margin-top: 5px;
+  border-radius: 8px;
+  background: #d4af37;
+}
+
+.mockupCards {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.mockupCards span {
+  height: 45px;
+  border: 1px solid rgba(212, 175, 55, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.mobileMockup {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 112px;
+  height: 208px;
+  padding: 11px 8px;
+  border: 2px solid rgba(212, 175, 55, 0.42);
+  border-radius: 22px;
+  background: #111;
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.5);
+  transform: rotate(4deg);
+}
+
+.mobileSpeaker {
+  width: 28px;
+  height: 4px;
+  margin: 0 auto 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.mobileContent {
+  width: 100%;
+  height: calc(100% - 14px);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(212, 175, 55, 0.18), transparent 35%),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0 5px, transparent 5px 15px),
+    #181818;
+}
+
+.proofGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.proofGrid article {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.022);
+}
+
+.proofGrid article > svg {
+  flex: 0 0 auto;
+  color: #d4af37;
+}
+
+.proofGrid article div {
+  display: grid;
+  gap: 3px;
+}
+
+.proofGrid strong {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.76rem;
+}
+
+.proofGrid span {
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 0.65rem;
+  line-height: 1.45;
+}
+
+.section,
+.formSection,
+.historySection {
+  display: grid;
+  gap: 18px;
+}
+
+.sectionHeader,
+.formHeader,
+.historySection > header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.sectionHeader {
+  display: grid;
+  justify-content: initial;
+  gap: 5px;
+  text-align: center;
+}
+
+.sectionHeader > span,
+.formHeader > div:first-child > span,
+.historySection > header > div > span {
+  color: #d4af37;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.sectionHeader h2,
+.formHeader h2,
+.historySection h2 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(1.35rem, 2.7vw, 2rem);
+  letter-spacing: -0.025em;
+}
+
+.sectionHeader p,
+.formHeader p {
+  max-width: 650px;
+  margin: 0 auto;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.projectsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.projectCard {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.013));
+  transition: 170ms ease;
+}
+
+.projectCard:hover,
+.projectCardSelected {
+  transform: translateY(-3px);
+  border-color: rgba(212, 175, 55, 0.34);
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.28);
+}
+
+.projectCardSelected {
+  background:
+    radial-gradient(circle at 100% 0, rgba(212, 175, 55, 0.14), transparent 36%),
+    linear-gradient(145deg, rgba(212, 175, 55, 0.06), rgba(255, 255, 255, 0.014));
+}
+
+.projectCard > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.projectIcon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-radius: 13px;
+  background: rgba(212, 175, 55, 0.09);
+  color: #e1c65e;
+}
+
+.selectedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.13);
+  color: #ecd879;
+  font-size: 0.57rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.projectCard h3 {
+  margin: 2px 0 0;
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.projectCard > strong {
+  color: #e3c85f;
+  font-size: 0.8rem;
+}
+
+.projectCard > p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.51);
+  font-size: 0.7rem;
+  line-height: 1.55;
+}
+
+.projectCard ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.projectCard li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.65rem;
+  line-height: 1.4;
+}
+
+.projectCard li svg {
+  flex: 0 0 auto;
+  color: #d4af37;
+}
+
+.projectCard button {
+  width: 100%;
+  margin-top: auto;
+  padding: 9px 11px;
+  font-size: 0.66rem;
+}
+
+.formSection,
+.historySection {
+  padding: clamp(17px, 2.8vw, 27px);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 21px;
+  background: rgba(255, 255, 255, 0.022);
+  box-shadow: 0 22px 65px rgba(0, 0, 0, 0.2);
+  scroll-margin-top: 90px;
+}
+
+.formHeader > div:first-child,
+.historySection > header > div {
+  display: grid;
+  gap: 5px;
+}
+
+.formHeader p {
+  margin: 0;
+}
+
+.selectedProjectSummary {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 3px;
+  padding: 11px 14px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 13px;
+  background: rgba(212, 175, 55, 0.055);
+  text-align: right;
+}
+
+.selectedProjectSummary strong {
+  color: rgba(255, 255, 255, 0.83);
+  font-size: 0.74rem;
+}
+
+.selectedProjectSummary span {
+  color: #e5ca63;
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+
+.successPanel {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 13px;
+  align-items: center;
+  padding: 15px;
+  border: 1px solid rgba(34, 197, 94, 0.26);
+  border-radius: 15px;
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.successIcon {
+  display: grid;
+  width: 49px;
+  height: 49px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.1);
+  color: #4ade80;
+}
+
+.successPanel > div {
+  display: grid;
+  gap: 4px;
+}
+
+.successPanel h3 {
+  margin: 0;
+  color: #eafcef;
+  font-size: 0.85rem;
+}
+
+.successPanel p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.successPanel > button:last-child {
+  padding: 9px 13px;
+}
+
+.successClose {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.field,
+.fieldset {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.field > span,
+.fieldset legend {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 11px;
+  outline: 0;
+  background: #111;
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  transition: 150ms ease;
+}
+
+.field input,
+.field select {
+  min-height: 43px;
+  padding: 9px 11px;
+}
+
+.field textarea {
+  min-height: 112px;
+  resize: vertical;
+  padding: 11px;
+  line-height: 1.55;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.075);
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.counter {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 0.56rem;
+}
+
+.fieldError {
+  color: #fca5a5;
+  font-size: 0.62rem;
+  line-height: 1.4;
+}
+
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset legend {
+  margin-bottom: 7px;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.featuresGrid label {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.64rem;
+  cursor: pointer;
+  transition: 150ms ease;
+}
+
+.featuresGrid label:hover,
+.featuresGrid .featureChecked {
+  border-color: rgba(212, 175, 55, 0.28);
+  background: rgba(212, 175, 55, 0.055);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.featuresGrid input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.featuresGrid label > span {
+  display: grid;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+  background: #141414;
+  color: #111;
+}
+
+.featuresGrid .featureChecked > span {
+  border-color: #d4af37;
+  background: #d4af37;
+}
+
+.infoField {
+  display: flex;
+  min-height: 67px;
+  align-items: center;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  border-radius: 11px;
+  background: rgba(212, 175, 55, 0.03);
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.infoField svg {
+  flex: 0 0 auto;
+  color: #d4af37;
+}
+
+.contactChoices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.contactChoices > label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.56);
+  cursor: pointer;
+}
+
+.contactChoices > label.contactActive {
+  border-color: rgba(212, 175, 55, 0.36);
+  background: rgba(212, 175, 55, 0.06);
+  color: #e2c65d;
+}
+
+.contactChoices input {
+  accent-color: #d4af37;
+}
+
+.contactChoices > label > span {
+  display: grid;
+  gap: 2px;
+}
+
+.contactChoices strong {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.72rem;
+}
+
+.contactChoices small {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.6rem;
+}
+
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.66rem;
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.consent input {
+  margin-top: 2px;
+  accent-color: #d4af37;
+}
+
+.submitArea {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.submitArea > div {
+  display: flex;
+  max-width: 590px;
+  align-items: flex-start;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 0.66rem;
+  line-height: 1.5;
+}
+
+.submitArea > div svg {
+  flex: 0 0 auto;
+  color: #d4af37;
+}
+
+.submitArea button {
+  min-width: 174px;
+  padding: 10px 16px;
+}
+
+.submitArea button:disabled,
+.successPanel > button:last-child:disabled,
+.historyCard footer button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.historySection > header > button,
+.historyState button {
+  display: inline-flex;
+  min-height: 37px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.historyList {
+  display: grid;
+  gap: 11px;
+}
+
+.historyCard {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.historyCard > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.statusNew {
+  background: rgba(59, 130, 246, 0.1);
+  color: #93c5fd;
+}
+
+.statusContacted,
+.statusQualified {
+  background: rgba(212, 175, 55, 0.12);
+  color: #ead67f;
+}
+
+.statusProposal {
+  background: rgba(168, 85, 247, 0.12);
+  color: #d8b4fe;
+}
+
+.statusConverted {
+  background: rgba(34, 197, 94, 0.1);
+  color: #86efac;
+}
+
+.statusClosed {
+  background: rgba(148, 163, 184, 0.1);
+  color: #cbd5e1;
+}
+
+.historyCard time {
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 0.59rem;
+}
+
+.historyCard h4 {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.82rem;
+}
+
+.historyCard > p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.historyCard footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 13px;
+  padding-top: 5px;
+}
+
+.historyCard footer > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.61rem;
+}
+
+.historyCard footer button {
+  min-height: 35px;
+  margin-left: auto;
+  padding: 7px 11px;
+  font-size: 0.62rem;
+}
+
+.historyState {
+  display: grid;
+  min-height: 160px;
+  place-items: center;
+  align-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 22px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.69rem;
+  text-align: center;
+}
+
+.historyState > svg {
+  color: #d4af37;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1180px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) 350px;
+  }
+
+  .projectsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .proofGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .featuresGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .heroVisual {
+    min-height: 300px;
+  }
+
+  .sectionHeader,
+  .formHeader,
+  .historySection > header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .selectedProjectSummary {
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    padding: 22px 17px;
+  }
+
+  .hero h2 {
+    font-size: 2.05rem;
+  }
+
+  .heroActions,
+  .submitArea,
+  .successPanel,
+  .historyCard footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .heroActions button,
+  .submitArea button,
+  .successPanel > button:last-child,
+  .historyCard footer button {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .heroVisual {
+    min-height: 250px;
+  }
+
+  .browserMockup {
+    inset: 10px 5% auto 0;
+  }
+
+  .mobileMockup {
+    width: 92px;
+    height: 174px;
+  }
+
+  .proofGrid,
+  .projectsGrid,
+  .form,
+  .contactChoices,
+  .featuresGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .formSection,
+  .historySection {
+    padding: 15px;
+    border-radius: 16px;
+  }
+
+  .fieldFull {
+    grid-column: auto;
+  }
+
+  .featuresGrid label {
+    min-height: 41px;
+  }
+
+  .successPanel {
+    display: flex;
+    align-items: center;
+  }
+
+  .successClose {
+    top: 5px;
+    right: 5px;
+  }
+
+  .historyCard > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

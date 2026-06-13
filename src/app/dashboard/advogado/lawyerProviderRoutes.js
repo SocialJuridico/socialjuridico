@@ -1,0 +1,21 @@
+export const LAWYER_SESSION_ROUTES = Object.freeze([
+  "/dashboard/advogado/oportunidade",
+  "/dashboard/advogado/indiqueganhe",
+  "/dashboard/advogado/mensagens",
+  "/dashboard/advogado/declareiinteresse",
+  "/dashboard/advogado/meuscasos",
+  "/dashboard/advogado/anuncioseservicos",
+  "/dashboard/advogado/anuncioseserviços",
+  "/dashboard/advogado/queroumsite",
+  "/dashboard/advogado/assinaturadigital",
+  "/dashboard/advogado/meusclientes",
+  "/dashboard/advogado/smartdoc",
+  "/dashboard/advogado/blindagemdedocumentos"
+]);
+
+export function usesLawyerSessionProvider(pathname) {
+  const currentPath = String(pathname || "");
+  return LAWYER_SESSION_ROUTES.some(
+    (route) => currentPath === route || currentPath.startsWith(`${route}/`),
+  );
+}

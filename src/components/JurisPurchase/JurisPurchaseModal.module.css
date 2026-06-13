@@ -1,0 +1,321 @@
+.backdrop {
+  position: fixed;
+  z-index: 2200;
+  inset: 0;
+  display: grid;
+  overflow-y: auto;
+  place-items: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(12px);
+}
+
+.modal {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  border: 1px solid rgba(212, 175, 55, 0.32);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(212, 175, 55, 0.08), transparent 23rem),
+    #202024;
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 38px 40px 20px;
+}
+
+.header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #e0bd46;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.header h2 {
+  margin: 7px 0 0;
+  font-size: clamp(2rem, 5vw, 2.85rem);
+  letter-spacing: -0.045em;
+  line-height: 1;
+}
+
+.header p {
+  margin: 20px 0 0;
+  color: #9ca3af;
+  font-size: 1rem;
+}
+
+.closeIcon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #d4d4d8;
+  cursor: pointer;
+}
+
+.content {
+  padding: 18px 40px 38px;
+}
+
+.helper {
+  margin: 0 0 28px;
+  color: #c6c6ca;
+  font-size: 0.82rem;
+}
+
+.packages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.package,
+.packagePopular {
+  position: relative;
+  display: flex;
+  min-height: 230px;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  padding: 28px 16px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.028);
+  text-align: center;
+}
+
+.packagePopular {
+  border: 2px solid #d9af22;
+  background: rgba(212, 175, 55, 0.07);
+}
+
+.popularBadge {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  padding: 5px 14px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #dfb82d;
+  color: #111;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.amount {
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.unit {
+  margin-top: 7px;
+  color: #b6b6bb;
+  font-size: 0.72rem;
+}
+
+.price {
+  margin-top: 22px;
+  color: #e0b82e;
+  font-size: 1.36rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.originalPrice {
+  display: block;
+  min-height: 18px;
+  margin-top: 4px;
+  color: #81818a;
+  font-size: 0.68rem;
+  text-decoration: line-through;
+}
+
+.package button,
+.packagePopular button {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.packagePopular button {
+  border-color: transparent;
+  background: #dfb82d;
+  color: #111;
+}
+
+.package button:disabled,
+.packagePopular button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.couponArea {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.couponArea > span {
+  display: block;
+  color: #a6a6ad;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.couponForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.couponForm input {
+  min-width: 0;
+  height: 44px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 11px;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.035);
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.couponForm input:focus {
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+}
+
+.couponForm button {
+  min-width: 96px;
+  border: 0;
+  border-radius: 10px;
+  background: #8f792d;
+  color: #111;
+  font-size: 0.7rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.couponForm button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.couponSuccess {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 11px;
+  padding: 10px 12px;
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.07);
+  color: #86efac;
+  font-size: 0.72rem;
+}
+
+.couponSuccess button {
+  border: 0;
+  background: transparent;
+  color: #d4d4d8;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.footer button {
+  border: 0;
+  background: transparent;
+  color: #c5c5ca;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+@media (max-width: 720px) {
+  .backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: 96vh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .header,
+  .content {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .packages {
+    grid-template-columns: 1fr;
+  }
+
+  .package,
+  .packagePopular {
+    min-height: 190px;
+  }
+}
+
+@media (max-width: 460px) {
+  .header {
+    padding-top: 26px;
+  }
+
+  .couponForm {
+    grid-template-columns: 1fr;
+  }
+
+  .couponForm button {
+    min-height: 42px;
+  }
+}

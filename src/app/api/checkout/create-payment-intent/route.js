@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 
-import { stripe } from "@/lib/stripe";
-import { createClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabase";
 import {
   calculateDiscountedAmount,
   releaseCouponReservation,
   reserveCouponForCheckout,
   resolveExpectedCouponType,
 } from "@/lib/coupons/couponServer";
+import {
+  assertLawyerPlanPurchaseAllowed,
+  normalizeLawyerPlanType,
+} from "@/lib/lawyerPlans/planAccessServer";
+import { stripe } from "@/lib/stripe";
+import { supabaseAdmin } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,33 +58,20 @@ function assertAllowedPrice(priceId, { paymentType, planType }) {
     process.env.NEXT_PUBLIC_PRICE_JURIS_50,
   ]);
 
-  const startPrices = compactSet([
+  const startAvulsoPrices = compactSet([
     process.env.STRIPE_PRICE_START_AVULSO,
-    process.env.STRIPE_PRICE_START_MENSAL,
-    process.env.STRIPE_PRICE_START_ANUAL,
     process.env.NEXT_PUBLIC_STRIPE_PRICE_START_AVULSO,
-    process.env.NEXT_PUBLIC_STRIPE_PRICE_START_MENSAL,
-    process.env.NEXT_PUBLIC_STRIPE_PRICE_START_ANUAL,
   ]);
 
-  const proPrices = compactSet([
+  const proAvulsoPrices = compactSet([
     process.env.STRIPE_PRICE_PRO_AVULSO,
-    process.env.STRIPE_PRICE_PRO_MENSAL,
-    process.env.STRIPE_PRICE_PRO_ANUAL,
-    process.env.PRICE_PRO_MONTHLY,
     process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_AVULSO,
-    process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MENSAL,
-    process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANUAL,
-    process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY,
   ]);
 
   let allowed = null;
   if (paymentType === "JURIS_PURCHASE") allowed = jurisPrices;
   if (paymentType === "PRO_SUBSCRIPTION") {
-    allowed =
-      String(planType || "PRO").toUpperCase() === "START"
-        ? startPrices
-        : proPrices;
+    allowed = planType === "START" ? startAvulsoPrices : proAvulsoPrices;
   }
 
   if (allowed && (!allowed.size || !allowed.has(priceId))) {
@@ -141,13 +132,39 @@ export async function POST(request) {
     }
     userId = user.id;
 
-    const { data: profile } = await supabaseAdmin
+    const body = await request.json().catch(() => null);
+    const priceId = String(body?.priceId || "").trim();
+    const internalCouponId =
+      String(body?.internalCouponId || "").trim() || null;
+    const rawPlanType = String(body?.planType || "").trim();
+    const planType = rawPlanType ? normalizeLawyerPlanType(rawPlanType) : null;
+    const billingCycle = String(body?.billingCycle || "AVULSO")
+      .trim()
+      .toUpperCase();
+    const addOnType =
+      String(body?.addOnType || "").trim().toUpperCase() || null;
+
+    if (!priceId || (rawPlanType && !planType)) {
+      return json(
+        { success: false, message: "Produto ou preço inválido." },
+        400,
+      );
+    }
+
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("advogados")
-      .select("oab_verification_status")
+      .select("oab_verification_status, plan_type, subscription_status")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (profile?.oab_verification_status === "ERROR") {
+    if (profileError || !profile) {
+      return json(
+        { success: false, message: "Perfil de advogado não encontrado." },
+        404,
+      );
+    }
+
+    if (profile.oab_verification_status === "ERROR") {
       return json(
         {
           success: false,
@@ -157,23 +174,20 @@ export async function POST(request) {
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const priceId = String(body?.priceId || "").trim();
-    const internalCouponId =
-      String(body?.internalCouponId || "").trim() || null;
-    const planType =
-      String(body?.planType || "").trim().toUpperCase() || null;
-    const billingCycle =
-      String(body?.billingCycle || "AVULSO").trim().toUpperCase() ||
-      "AVULSO";
-    const addOnType =
-      String(body?.addOnType || "").trim().toUpperCase() || null;
-
-    if (!priceId) {
-      return json({ success: false, message: "Price ID é obrigatório." }, 400);
+    const paymentType = resolvePaymentType({ planType, addOnType });
+    if (planType) {
+      if (billingCycle !== "AVULSO") {
+        return json(
+          {
+            success: false,
+            message: "Planos recorrentes devem usar o checkout de assinatura.",
+          },
+          400,
+        );
+      }
+      assertLawyerPlanPurchaseAllowed(profile, planType);
     }
 
-    const paymentType = resolvePaymentType({ planType, addOnType });
     assertAllowedPrice(priceId, { paymentType, planType });
 
     if (internalCouponId && addOnType) {
@@ -184,9 +198,14 @@ export async function POST(request) {
     }
 
     const price = await stripe.prices.retrieve(priceId);
-    if (!price || !price.unit_amount || price.active === false) {
+    if (
+      !price ||
+      !price.unit_amount ||
+      price.active === false ||
+      Boolean(price.recurring)
+    ) {
       return json(
-        { success: false, message: "Preço não encontrado ou indisponível." },
+        { success: false, message: "Preço avulso não encontrado ou indisponível." },
         400,
       );
     }

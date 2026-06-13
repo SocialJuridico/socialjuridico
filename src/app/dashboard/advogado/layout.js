@@ -1,9 +1,5 @@
-import { DashboardProvider } from "./DashboardContext";
+import AdvogadoProviderBoundary from "./AdvogadoProviderBoundary";
 
 export default function AdvogadoLayout({ children }) {
-  return (
-    <DashboardProvider>
-      {children}
-    </DashboardProvider>
-  );
+  return <AdvogadoProviderBoundary>{children}</AdvogadoProviderBoundary>;
 }

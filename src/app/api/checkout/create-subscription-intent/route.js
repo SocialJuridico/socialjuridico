@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 
-import { stripe } from "@/lib/stripe";
-import { createClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabase";
 import {
   calculateDiscountedAmount,
   COUPON_TYPES,
   releaseCouponReservation,
   reserveCouponForCheckout,
 } from "@/lib/coupons/couponServer";
+import {
+  assertLawyerPlanPurchaseAllowed,
+  normalizeLawyerPlanType,
+} from "@/lib/lawyerPlans/planAccessServer";
+import { stripe } from "@/lib/stripe";
+import { supabaseAdmin } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,27 +46,43 @@ function validateOrigin(request) {
 
 function allowedPlanPrices(planType) {
   const values =
-    String(planType || "PRO").toUpperCase() === "START"
+    planType === "START"
       ? [
-          process.env.STRIPE_PRICE_START_AVULSO,
           process.env.STRIPE_PRICE_START_MENSAL,
           process.env.STRIPE_PRICE_START_ANUAL,
-          process.env.NEXT_PUBLIC_STRIPE_PRICE_START_AVULSO,
           process.env.NEXT_PUBLIC_STRIPE_PRICE_START_MENSAL,
           process.env.NEXT_PUBLIC_STRIPE_PRICE_START_ANUAL,
         ]
       : [
-          process.env.STRIPE_PRICE_PRO_AVULSO,
           process.env.STRIPE_PRICE_PRO_MENSAL,
           process.env.STRIPE_PRICE_PRO_ANUAL,
           process.env.PRICE_PRO_MONTHLY,
-          process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_AVULSO,
           process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MENSAL,
           process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_ANUAL,
           process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY,
         ];
 
   return new Set(values.filter(Boolean));
+}
+
+function isCompatibleRecurringCycle(recurring, billingCycle) {
+  if (!recurring) return false;
+
+  const interval = recurring.interval;
+  const intervalCount = Number(recurring.interval_count || 1);
+
+  if (billingCycle === "MONTHLY") {
+    return interval === "month" && intervalCount === 1;
+  }
+
+  if (billingCycle === "ANNUAL") {
+    return (
+      (interval === "year" && intervalCount === 1) ||
+      (interval === "month" && intervalCount === 12)
+    );
+  }
+
+  return false;
 }
 
 async function bindReservation(reservationToken, userId, reference) {
@@ -110,13 +130,36 @@ export async function POST(request) {
     }
     userId = user.id;
 
-    const { data: profile } = await supabaseAdmin
+    const body = await request.json().catch(() => null);
+    const priceId = String(body?.priceId || "").trim();
+    const internalCouponId =
+      String(body?.internalCouponId || "").trim() || null;
+    const planType = normalizeLawyerPlanType(body?.planType);
+    const billingCycle = String(body?.billingCycle || "")
+      .trim()
+      .toUpperCase();
+
+    if (!priceId || !planType || !["MONTHLY", "ANNUAL"].includes(billingCycle)) {
+      return json(
+        { success: false, message: "Plano, ciclo ou preço inválido." },
+        400,
+      );
+    }
+
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from("advogados")
-      .select("oab_verification_status")
+      .select("oab_verification_status, plan_type, subscription_status")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (profile?.oab_verification_status === "ERROR") {
+    if (profileError || !profile) {
+      return json(
+        { success: false, message: "Perfil de advogado não encontrado." },
+        404,
+      );
+    }
+
+    if (profile.oab_verification_status === "ERROR") {
       return json(
         {
           success: false,
@@ -126,23 +169,7 @@ export async function POST(request) {
       );
     }
 
-    const body = await request.json().catch(() => null);
-    const priceId = String(body?.priceId || "").trim();
-    const internalCouponId =
-      String(body?.internalCouponId || "").trim() || null;
-    const planType =
-      String(body?.planType || "PRO").trim().toUpperCase() === "START"
-        ? "START"
-        : "PRO";
-    const billingCycle =
-      String(body?.billingCycle || "MONTHLY").trim().toUpperCase() ===
-      "ANNUAL"
-        ? "ANNUAL"
-        : "MONTHLY";
-
-    if (!priceId) {
-      return json({ success: false, message: "Price ID é obrigatório." }, 400);
-    }
+    assertLawyerPlanPurchaseAllowed(profile, planType);
 
     const allowedPrices = allowedPlanPrices(planType);
     if (!allowedPrices.size || !allowedPrices.has(priceId)) {
@@ -153,9 +180,14 @@ export async function POST(request) {
     }
 
     const price = await stripe.prices.retrieve(priceId);
-    if (!price?.active || !price.recurring || price.unit_amount === null) {
+    if (
+      !price?.active ||
+      !price.recurring ||
+      price.unit_amount === null ||
+      !isCompatibleRecurringCycle(price.recurring, billingCycle)
+    ) {
       return json(
-        { success: false, message: "Preço recorrente indisponível." },
+        { success: false, message: "Preço recorrente incompatível com o ciclo." },
         400,
       );
     }
@@ -199,11 +231,11 @@ export async function POST(request) {
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
     } else {
-      const newCustomer = await stripe.customers.create({
+      const customer = await stripe.customers.create({
         email: user.email,
         metadata: { userId: user.id },
       });
-      customerId = newCustomer.id;
+      customerId = customer.id;
     }
 
     const metadata = {
@@ -240,13 +272,13 @@ export async function POST(request) {
     subscriptionId = subscription.id;
 
     const invoice = subscription.latest_invoice;
-    const intentObject = invoice?.payment_intent
+    const intent = invoice?.payment_intent
       ? typeof invoice.payment_intent === "string"
         ? await stripe.paymentIntents.retrieve(invoice.payment_intent)
         : invoice.payment_intent
       : null;
 
-    if (!intentObject?.client_secret || !intentObject.id.startsWith("pi_")) {
+    if (!intent?.client_secret || !intent.id.startsWith("pi_")) {
       const error = new Error(
         "Não foi possível gerar uma cobrança válida para a assinatura.",
       );
@@ -254,27 +286,22 @@ export async function POST(request) {
       throw error;
     }
 
-    const intentMetadata = {
-      ...metadata,
-      subscriptionId: subscription.id,
-    };
-
-    await stripe.paymentIntents.update(intentObject.id, {
-      metadata: intentMetadata,
+    await stripe.paymentIntents.update(intent.id, {
+      metadata: { ...metadata, subscriptionId: subscription.id },
     });
 
     if (couponReservation) {
       await bindReservation(
         couponReservation.reservationToken,
         user.id,
-        intentObject.id,
+        intent.id,
       );
     }
 
     return json({
       success: true,
       subscriptionId: subscription.id,
-      clientSecret: intentObject.client_secret,
+      clientSecret: intent.client_secret,
       amount,
       originalAmount,
       currency: price.currency || "brl",

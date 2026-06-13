@@ -1,8 +1,22 @@
 /**
- * Serviço frontend para integração com Stripe Checkout no SocialJurídico.
- * O navegador envia apenas o identificador interno do cupom. O servidor é
- * responsável por validar regras e resolver o vínculo correto no Stripe.
+ * Serviço frontend para integrações de redirecionamento do Stripe Checkout.
+ * O checkout transparente é o fluxo principal. Estes métodos são utilizados
+ * somente como contingência quando o formulário incorporado não pode abrir.
  */
+
+function getDashboardReturnPath() {
+  if (typeof window === "undefined") return "/dashboard/advogado";
+
+  return window.location.pathname.startsWith(
+    "/dashboard/advogado/oportunidade",
+  )
+    ? "/dashboard/advogado/oportunidade"
+    : "/dashboard/advogado";
+}
+
+function getInternalCouponId(couponData) {
+  return couponData?.id || couponData?.cupom_id || null;
+}
 
 export async function createJurisCheckout(jurisAmount, couponData = null) {
   try {
@@ -14,17 +28,20 @@ export async function createJurisCheckout(jurisAmount, couponData = null) {
 
     const priceId = priceMap[jurisAmount];
     if (!priceId) {
-      throw new Error("Quantidade de Juris inválida ou Price ID não configurado");
+      throw new Error(
+        "Quantidade de Juris inválida ou Price ID não configurado.",
+      );
     }
 
+    const returnPath = getDashboardReturnPath();
     const response = await fetch("/api/checkout/juris", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         priceId,
-        internalCouponId: couponData?.id || couponData?.cupom_id || null,
-        successUrl: `${window.location.origin}/dashboard/advogado?payment=success`,
-        cancelUrl: `${window.location.origin}/dashboard/advogado?payment=canceled`,
+        internalCouponId: getInternalCouponId(couponData),
+        successUrl: `${window.location.origin}${returnPath}?payment=success`,
+        cancelUrl: `${window.location.origin}${returnPath}?payment=canceled`,
       }),
     });
 
@@ -33,7 +50,7 @@ export async function createJurisCheckout(jurisAmount, couponData = null) {
       throw new Error(data?.message || "Não foi possível iniciar o checkout.");
     }
 
-    if (data.url) window.location.href = data.url;
+    if (data.url) window.location.assign(data.url);
     return data;
   } catch (error) {
     console.error("Erro ao iniciar checkout de Juris:", error);
@@ -43,20 +60,36 @@ export async function createJurisCheckout(jurisAmount, couponData = null) {
 
 export async function createProSubscription(couponData = null) {
   try {
-    const priceId = process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY;
+    const selectedPlan = String(
+      window.localStorage.getItem("sj_selected_plan_type") || "PRO",
+    ).toUpperCase();
+    const selectedBilling = String(
+      window.localStorage.getItem("sj_selected_billing") || "MONTHLY",
+    ).toUpperCase();
+    const selectedPriceId =
+      window.localStorage.getItem("sj_selected_price_id") ||
+      process.env.NEXT_PUBLIC_PRICE_PRO_MONTHLY ||
+      process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO_MENSAL;
 
-    if (!priceId) {
-      throw new Error("Price ID do PRO não configurado");
+    if (selectedPlan !== "PRO" || selectedBilling !== "MONTHLY") {
+      throw new Error(
+        "O checkout alternativo está disponível somente para o plano PRO mensal. Reabra os planos e tente novamente pelo pagamento integrado.",
+      );
     }
 
+    if (!selectedPriceId) {
+      throw new Error("Price ID do PRO mensal não configurado.");
+    }
+
+    const returnPath = getDashboardReturnPath();
     const response = await fetch("/api/checkout/pro", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        priceId,
-        internalCouponId: couponData?.id || couponData?.cupom_id || null,
-        successUrl: `${window.location.origin}/dashboard/advogado?payment=success`,
-        cancelUrl: `${window.location.origin}/dashboard/advogado?payment=canceled`,
+        priceId: selectedPriceId,
+        internalCouponId: getInternalCouponId(couponData),
+        successUrl: `${window.location.origin}${returnPath}?payment=success`,
+        cancelUrl: `${window.location.origin}${returnPath}?payment=canceled`,
       }),
     });
 
@@ -65,7 +98,7 @@ export async function createProSubscription(couponData = null) {
       throw new Error(data?.message || "Não foi possível iniciar a assinatura.");
     }
 
-    if (data.url) window.location.href = data.url;
+    if (data.url) window.location.assign(data.url);
     return data;
   } catch (error) {
     console.error("Erro ao iniciar assinatura PRO:", error);

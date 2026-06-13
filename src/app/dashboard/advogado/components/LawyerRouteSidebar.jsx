@@ -41,6 +41,10 @@ const DIRECT_ROUTES = {
     path: "/dashboard/advogado/mensagens",
     activeRoute: "mensagens",
   },
+  "declarei-interesse": {
+    path: "/dashboard/advogado/declareiinteresse",
+    activeRoute: "declareiinteresse",
+  },
 };
 
 const PRIMARY_ITEMS = [

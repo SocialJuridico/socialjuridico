@@ -9,11 +9,13 @@ const ROUTE_TO_TAB = new Map([
   ["/dashboard/advogado/oportunidade", "oportunidades"],
   ["/dashboard/advogado/indiqueganhe", "indicacoes"],
   ["/dashboard/advogado/mensagens", "minhas-mensagens"],
+  ["/dashboard/advogado/declareiinteresse", "declarei-interesse"],
 ]);
 
 const LEGACY_TAB_ROUTES = new Map([
   ["indicacoes", "/dashboard/advogado/indiqueganhe"],
   ["minhas-mensagens", "/dashboard/advogado/mensagens"],
+  ["declarei-interesse", "/dashboard/advogado/declareiinteresse"],
 ]);
 
 export default function DashboardRouteSync() {

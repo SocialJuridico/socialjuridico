@@ -274,26 +274,43 @@ export default function ClientCaseComposer({ composer, onCancel }) {
               <strong>Relato por voz</strong>
               <p>Grave um áudio quando for mais fácil explicar verbalmente.</p>
             </div>
-            {composer.isRecording ? (
-              <button
-                type="button"
-                className={styles.recordingButton}
-                onClick={composer.stopRecording}
-              >
-                <Pause size={15} aria-hidden="true" />
+            <button
+              type="button"
+              className={
+                composer.isRecording
+                  ? styles.recordingButton
+                  : styles.secondaryButton
+              }
+              onClick={
+                composer.isRecording
+                  ? composer.stopRecording
+                  : composer.startRecording
+              }
+              disabled={
+                !composer.isRecording &&
+                composer.uploadsByCategory.AUDIO.length >= 1
+              }
+              aria-label={
+                composer.isRecording
+                  ? "Parar gravação de áudio"
+                  : "Iniciar gravação de áudio"
+              }
+            >
+              <Pause
+                size={15}
+                hidden={!composer.isRecording}
+                aria-hidden="true"
+              />
+              <Mic
+                size={15}
+                hidden={composer.isRecording}
+                aria-hidden="true"
+              />
+              <span hidden={!composer.isRecording}>
                 Parar gravação · {composer.recordingTime}s
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={composer.startRecording}
-                disabled={composer.uploadsByCategory.AUDIO.length >= 1}
-              >
-                <Mic size={15} aria-hidden="true" />
-                Iniciar gravação
-              </button>
-            )}
+              </span>
+              <span hidden={composer.isRecording}>Iniciar gravação</span>
+            </button>
           </article>
         </div>
 

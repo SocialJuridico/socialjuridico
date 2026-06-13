@@ -191,13 +191,6 @@ export function createAdminSections(stats) {
           tone: ADMIN_CARD_TONES.green,
         },
         {
-          title: "Configurar avisos",
-          value: "Gerenciar",
-          href: "/dashboard/admin/avisos",
-          icon: Bell,
-          tone: ADMIN_CARD_TONES.orange,
-        },
-        {
           title: "LGPD: Exclusões",
           value: "Ver pedidos",
           href: "/dashboard/admin/solicitacoes-exclusao",

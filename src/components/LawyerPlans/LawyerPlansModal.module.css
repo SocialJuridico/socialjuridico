@@ -1,0 +1,496 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 250;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(12px, 2.5vw, 28px);
+  background: rgba(0, 0, 0, 0.86);
+  backdrop-filter: blur(12px);
+}
+
+.modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(1180px, 96vw);
+  height: min(92dvh, 920px);
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 82% 0%, rgba(212, 175, 55, 0.12), transparent 28rem),
+    #0d0d0d;
+  color: #fff;
+  box-shadow: 0 34px 120px rgba(0, 0, 0, 0.72);
+}
+
+.header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(13, 13, 13, 0.92);
+  backdrop-filter: blur(14px);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 7px;
+  color: #d4af37;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.heading h2 {
+  margin: 0;
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+}
+
+.heading p {
+  max-width: 680px;
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.closeButton {
+  display: grid;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #fff;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.closeButton:hover,
+.closeButton:focus-visible {
+  border-color: rgba(212, 175, 55, 0.42);
+  background: rgba(212, 175, 55, 0.1);
+  color: #f0d77a;
+  outline: none;
+}
+
+.body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: clamp(18px, 3vw, 28px);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.75fr);
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 20px;
+}
+
+.controlGroup {
+  display: grid;
+  gap: 7px;
+}
+
+.controlLabel {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cycleTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.cycleButton {
+  position: relative;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.58);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.cycleButton:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.cycleButtonActive {
+  border-color: rgba(212, 175, 55, 0.32);
+  background: rgba(212, 175, 55, 0.12);
+  color: #efd77c;
+}
+
+.savingsBadge {
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #6ee7b7;
+  font-size: 0.57rem;
+}
+
+.couponRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+}
+
+.couponInput {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  outline: none;
+  background: #111;
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.couponInput:focus {
+  border-color: rgba(212, 175, 55, 0.48);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+}
+
+.couponButton,
+.clearCouponButton {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 13px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.couponButton {
+  border: 1px solid rgba(212, 175, 55, 0.38);
+  background: rgba(212, 175, 55, 0.11);
+  color: #efd77c;
+}
+
+.clearCouponButton {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.couponButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.couponStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid rgba(16, 185, 129, 0.24);
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.075);
+  color: #86efac;
+  font-size: 0.73rem;
+  font-weight: 750;
+}
+
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.planCard {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 15px;
+  padding: clamp(18px, 2.4vw, 25px);
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.015));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.planCardRecommended {
+  border-color: rgba(212, 175, 55, 0.38);
+  background:
+    linear-gradient(145deg, rgba(212, 175, 55, 0.09), rgba(255, 255, 255, 0.015));
+}
+
+.recommendedBadge,
+.currentBadge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 0.59rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.recommendedBadge {
+  background: #d4af37;
+  color: #090909;
+}
+
+.currentBadge {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+.planHeader {
+  padding-right: 92px;
+}
+
+.planName {
+  margin: 0;
+  color: #fff;
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+}
+
+.planTag {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.7rem;
+}
+
+.priceBlock {
+  display: grid;
+  gap: 4px;
+}
+
+.oldPrice {
+  min-height: 18px;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.7rem;
+  text-decoration: line-through;
+}
+
+.priceLine {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.price {
+  color: #fff;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.planCardRecommended .price {
+  color: #e8cc69;
+}
+
+.period {
+  color: rgba(255, 255, 255, 0.44);
+  font-size: 0.72rem;
+}
+
+.totalText,
+.planDescription {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.promoNotice {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  color: #86efac;
+  font-size: 0.66rem;
+  font-weight: 850;
+}
+
+.jurisBonus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 11px;
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  border-radius: 10px;
+  background: rgba(212, 175, 55, 0.055);
+  color: #e6ca67;
+  font-size: 0.73rem;
+  font-weight: 750;
+}
+
+.featureList {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+
+.featureDisabled {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.selectButton {
+  display: inline-flex;
+  width: 100%;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.045);
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.selectButtonPro {
+  border-color: rgba(212, 175, 55, 0.52);
+  background: linear-gradient(135deg, #e2c45c, #b58d18);
+  color: #090909;
+}
+
+.selectButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(212, 175, 55, 0.38);
+}
+
+.selectButton:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.securityNote {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 0.67rem;
+  text-align: center;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 850px) {
+  .modal {
+    width: min(100%, 720px);
+    height: 95dvh;
+  }
+
+  .controls,
+  .planGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .overlay {
+    align-items: end;
+    padding: 0;
+  }
+
+  .modal {
+    width: 100%;
+    height: 97dvh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .header {
+    padding: 16px;
+  }
+
+  .body {
+    padding: 14px;
+  }
+
+  .cycleButton {
+    font-size: 0.68rem;
+  }
+
+  .couponRow {
+    grid-template-columns: 1fr;
+  }
+
+  .couponButton {
+    width: 100%;
+  }
+
+  .planHeader {
+    padding-right: 82px;
+  }
+}

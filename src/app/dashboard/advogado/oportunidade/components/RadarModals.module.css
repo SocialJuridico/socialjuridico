@@ -1,0 +1,12 @@
+.reportTextarea {
+  min-height: 128px;
+  resize: vertical;
+  padding: 12px;
+  line-height: 1.55;
+}
+
+.characterCount {
+  justify-self: end;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.68rem;
+}

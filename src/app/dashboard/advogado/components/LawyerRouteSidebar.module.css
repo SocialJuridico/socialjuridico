@@ -1,0 +1,17 @@
+.planTrigger {
+  width: calc(100% - 32px);
+  justify-content: flex-start;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.planTrigger:hover,
+.planTrigger:focus-visible {
+  border-color: rgba(212, 175, 55, 0.42);
+  background: rgba(212, 175, 55, 0.19);
+  color: #f5df93;
+  outline: none;
+  transform: translateY(-1px);
+}

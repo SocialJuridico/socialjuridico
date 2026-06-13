@@ -41,6 +41,10 @@ const DIRECT_ROUTES = {
     path: "/dashboard/advogado/mensagens",
     activeRoute: "mensagens",
   },
+  "meus-casos": {
+    path: "/dashboard/advogado/meuscasos",
+    activeRoute: "meuscasos",
+  },
   "declarei-interesse": {
     path: "/dashboard/advogado/declareiinteresse",
     activeRoute: "declareiinteresse",

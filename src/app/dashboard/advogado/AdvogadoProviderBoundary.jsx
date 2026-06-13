@@ -11,6 +11,7 @@ const LIGHTWEIGHT_ROUTES = [
   "/dashboard/advogado/indiqueganhe",
   "/dashboard/advogado/mensagens",
   "/dashboard/advogado/declareiinteresse",
+  "/dashboard/advogado/meuscasos",
 ];
 
 export default function AdvogadoProviderBoundary({ children }) {

@@ -9,12 +9,14 @@ const ROUTE_TO_TAB = new Map([
   ["/dashboard/advogado/oportunidade", "oportunidades"],
   ["/dashboard/advogado/indiqueganhe", "indicacoes"],
   ["/dashboard/advogado/mensagens", "minhas-mensagens"],
+  ["/dashboard/advogado/meuscasos", "meus-casos"],
   ["/dashboard/advogado/declareiinteresse", "declarei-interesse"],
 ]);
 
 const LEGACY_TAB_ROUTES = new Map([
   ["indicacoes", "/dashboard/advogado/indiqueganhe"],
   ["minhas-mensagens", "/dashboard/advogado/mensagens"],
+  ["meus-casos", "/dashboard/advogado/meuscasos"],
   ["declarei-interesse", "/dashboard/advogado/declareiinteresse"],
 ]);
 

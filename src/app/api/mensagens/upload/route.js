@@ -1,7 +1,6 @@
-import {
-  ACTIVE_MESSAGE_INTEREST_STATUSES,
-  isValidMessageUuid,
-} from "@/lib/messages/messagePresentation";
+import crypto from "node:crypto";
+
+import { isValidMessageUuid } from "@/lib/messages/messagePresentation";
 import {
   messageJson,
   requireMessageUser,
@@ -19,6 +18,23 @@ const MIME_EXTENSIONS = new Map([
   ["image/webp", "webp"],
   ["image/gif", "gif"],
   ["application/pdf", "pdf"],
+  ["application/msword", "doc"],
+  [
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "docx",
+  ],
+  ["application/vnd.ms-excel", "xls"],
+  [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "xlsx",
+  ],
+  ["application/vnd.ms-powerpoint", "ppt"],
+  [
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "pptx",
+  ],
+  ["application/rtf", "rtf"],
+  ["text/rtf", "rtf"],
   ["audio/webm", "webm"],
   ["audio/mpeg", "mp3"],
   ["audio/mp4", "m4a"],
@@ -38,32 +54,6 @@ function safeOriginalName(value) {
       .trim()
       .slice(0, 180) || "Arquivo"
   );
-}
-
-async function hasFallbackNegotiationAccess(db, userId, caseId) {
-  const { data: caseItem, error: caseError } = await db
-    .from("casos")
-    .select("id, cliente_id")
-    .eq("id", caseId)
-    .maybeSingle();
-
-  if (caseError) throw caseError;
-  if (!caseItem) return false;
-
-  let query = db
-    .from("case_interests")
-    .select("id")
-    .eq("case_id", caseId)
-    .in("status", ACTIVE_MESSAGE_INTEREST_STATUSES)
-    .limit(1);
-
-  if (String(caseItem.cliente_id) !== String(userId)) {
-    query = query.eq("lawyer_id", userId);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return Boolean(data?.length);
 }
 
 export async function POST(request) {
@@ -90,6 +80,13 @@ export async function POST(request) {
       return messageJson({ success: false, message: "Caso inválido." }, 400);
     }
 
+    if (interestId && !isValidMessageUuid(interestId)) {
+      return messageJson(
+        { success: false, message: "Negociação inválida." },
+        400,
+      );
+    }
+
     if (file.size > MAX_FILE_BYTES) {
       return messageJson(
         { success: false, message: "O arquivo excede o limite de 15 MB." },
@@ -107,7 +104,7 @@ export async function POST(request) {
         {
           success: false,
           message:
-            "Formato não permitido. Envie imagem, PDF, áudio, vídeo ou TXT.",
+            "Formato não permitido. Envie imagem, PDF, documento Office, áudio, vídeo, RTF ou TXT.",
         },
         415,
       );
@@ -121,20 +118,15 @@ export async function POST(request) {
     );
 
     if (!resolved.ok) {
-      const fallbackAllowed =
-        !interestId &&
-        resolved.status === 403 &&
-        (await hasFallbackNegotiationAccess(access.db, access.user.id, caseId));
-
-      if (!fallbackAllowed) {
-        return messageJson(
-          { success: false, message: resolved.message },
-          resolved.status,
-        );
-      }
+      return messageJson(
+        { success: false, message: resolved.message },
+        resolved.status,
+      );
     }
 
-    const filePath = `chat-attachments/${caseId}/${crypto.randomUUID()}.${extension}`;
+    const filePath = `chat-attachments/${caseId}/${
+      interestId || "case"
+    }/${access.user.id}/${crypto.randomUUID()}.${extension}`;
     const { error: uploadError } = await access.db.storage
       .from("cases")
       .upload(filePath, file, {
@@ -160,7 +152,7 @@ export async function POST(request) {
       201,
     );
   } catch (error) {
-    console.error("[Mensagens/Upload] Erro:", error);
+    console.error("[Mensagens/Upload Legado] Erro:", error);
     return messageJson(
       { success: false, message: "Não foi possível enviar o arquivo." },
       500,

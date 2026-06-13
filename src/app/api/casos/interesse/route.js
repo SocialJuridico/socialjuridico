@@ -5,6 +5,7 @@ import {
   safeClientError,
   validateClientMutationOrigin,
 } from "@/lib/clientDashboard/clientServer";
+import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 import { formatStoredOAB } from "@/lib/oab";
 
 import { runInterestSideEffects } from "./interestSideEffects";
@@ -29,15 +30,19 @@ function rpcError(error) {
 
 function actionMessage(result) {
   if (result.action === "ACCEPT") {
-    return "Negociação iniciada. Você já pode conversar com o advogado.";
+    return result.already_accepted
+      ? "Esta negociação já estava ativa."
+      : "Negociação iniciada. 2 Juris foram debitados do advogado.";
   }
   if (result.action === "DECLINE") {
-    return "Interesse recusado e profissional notificado.";
+    return result.already_declined
+      ? "Este interesse já estava recusado."
+      : "Interesse recusado e profissional notificado.";
   }
   if (result.already_hired) {
     return "Este advogado já estava contratado para o caso.";
   }
-  return "Advogado contratado com sucesso. O chat está disponível.";
+  return "Advogado contratado com sucesso. Mais 2 Juris foram debitados e o chat está disponível.";
 }
 
 export async function POST(request) {
@@ -73,12 +78,33 @@ export async function POST(request) {
       throw new Error("A operação não retornou os dados esperados.");
     }
 
-    await runInterestSideEffects(access.db, data).catch((sideEffectError) => {
-      console.error(
-        "[Interesses] Operação concluída com efeito posterior pendente:",
-        sideEffectError.message,
-      );
-    });
+    if (
+      action === "ACCEPT" &&
+      Number(data?.charged_juris || 0) > 0
+    ) {
+      await checkAndNotifyLowBalance(
+        data.lawyer_id,
+        Number(data.previous_balance || 0),
+        Number(data.new_balance || 0),
+      ).catch((balanceError) => {
+        console.error(
+          "[Interesses] Falha ao verificar saldo após aceite:",
+          balanceError.message,
+        );
+      });
+    }
+
+    const alreadyProcessed =
+      data.already_accepted || data.already_declined || data.already_hired;
+
+    if (!alreadyProcessed) {
+      await runInterestSideEffects(access.db, data).catch((sideEffectError) => {
+        console.error(
+          "[Interesses] Operação concluída com efeito posterior pendente:",
+          sideEffectError.message,
+        );
+      });
+    }
 
     return clientJson({
       success: true,

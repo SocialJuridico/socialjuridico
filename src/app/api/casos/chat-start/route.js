@@ -1,14 +1,41 @@
+import crypto from "node:crypto";
+
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isLawyer } from "@/lib/securityUtils";
+import {
+  isUuid,
+  normalizeRequestId,
+} from "@/lib/lawyerOpportunities/opportunityValidation";
+import {
+  getRequestIpHash,
+  getRequestUserAgent,
+  hasValidMutationOrigin,
+} from "@/lib/lawyerOpportunities/opportunityServerUtils";
 import { NextResponse } from "next/server";
-import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 
-// POST /api/casos/chat-start
-// Body: { casoId }
-// Cobra 1 Juri do advogado ao iniciar atendimento via chat pela primeira vez.
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function rpcStatus(error) {
+  if (["PGRST202", "42883"].includes(error?.code)) return 503;
+  if (error?.code === "P0003") return 403;
+  return 409;
+}
+
 export async function POST(request) {
   try {
+    if (!hasValidMutationOrigin(request)) {
+      return json(
+        { success: false, message: "Origem da requisição inválida." },
+        403,
+      );
+    }
+
     const supabase = createClient();
     const {
       data: { user },
@@ -16,152 +43,106 @@ export async function POST(request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 },
-      );
+      return json({ success: false, message: "Não autorizado." }, 401);
     }
 
     const db = supabaseAdmin || supabase;
     if (!(await isLawyer(db, user.id))) {
-      return NextResponse.json(
-        { success: false, message: "Apenas advogados utilizam esta rota" },
-        { status: 403 },
+      return json(
+        { success: false, message: "Apenas advogados utilizam esta rota." },
+        403,
       );
     }
 
-    const { casoId, interestId } = await request.json();
+    const body = await request.json().catch(() => null);
+    const caseId = String(body?.casoId || body?.caseId || "").trim();
+    const interestId = String(body?.interestId || "").trim() || null;
 
-    if (!casoId) {
-      return NextResponse.json(
-        { success: false, message: "casoId é obrigatório" },
-        { status: 400 },
+    if (!isUuid(caseId) || (interestId && !isUuid(interestId))) {
+      return json(
+        { success: false, message: "Caso ou negociação inválida." },
+        400,
       );
     }
 
-    // Se houver interestId, é um chat de NEGOCIAÇÃO
     if (interestId) {
-      const { data: interest, error: iError } = await db
+      const { data: interest, error: interestError } = await db
         .from("case_interests")
-        .select("id, lawyer_id")
+        .select("id, case_id, lawyer_id, status")
         .eq("id", interestId)
-        .single();
-        
-      if (iError || !interest) {
-        console.error("Erro ao buscar case_interests:", iError);
-        return NextResponse.json(
-          { success: false, message: "Interesse não encontrado" },
-          { status: 404 },
+        .maybeSingle();
+
+      if (interestError) throw interestError;
+      if (
+        !interest ||
+        String(interest.case_id) !== caseId ||
+        String(interest.lawyer_id) !== String(user.id)
+      ) {
+        return json(
+          {
+            success: false,
+            message: "Negociação não encontrada ou sem permissão.",
+          },
+          403,
         );
       }
 
-      // Verificar se o usuário é o advogado do interesse OU o cliente dono do caso
-      const { data: casoOwner } = await db
-        .from("casos")
-        .select("cliente_id, chat_started")
-        .eq("id", casoId)
-        .single();
-
-      const isInterestLawyer = interest.lawyer_id === user.id;
-      const isCaseClient = casoOwner?.cliente_id === user.id;
-
-      if (!isInterestLawyer && !isCaseClient) {
-        return NextResponse.json(
-          { success: false, message: "Interesse inválido ou não autorizado" },
-          { status: 403 },
+      if (!["NEGOTIATING", "HIRED"].includes(interest.status)) {
+        return json(
+          {
+            success: false,
+            message: "Esta negociação não está disponível para conversa.",
+          },
+          409,
         );
       }
 
-      // O advogado já pagou 1 Juri na hora de manifestar o interesse (rota /vincular).
-      // O cliente não paga.
-      // E a tabela 'case_interests' não possui coluna 'chat_started', portanto não precisa atualizar nada.
-      return NextResponse.json({
+      return json({
         success: true,
         alreadyStarted: true,
-        message: "Acesso autorizado ao chat de negociação.",
+        chargedJuris: 0,
+        message: "Acesso autorizado ao chat de negociação, sem nova cobrança.",
       });
     }
 
-    // 1. Verificar se o caso pertence ao advogado logado (fluxo contratado tradicional)
-    const { data: caso, error: cError } = await db
-      .from("casos")
-      .select("id, advogado_id, chat_started, titulo, cliente_id")
-      .eq("id", casoId)
-      .single();
+    const requestId =
+      normalizeRequestId(body?.requestId) || crypto.randomUUID();
+    const { data, error } = await db.rpc("open_lawyer_case_chat", {
+      p_case_id: caseId,
+      p_lawyer_id: user.id,
+      p_request_id: requestId,
+      p_ip_hash: getRequestIpHash(request),
+      p_user_agent: getRequestUserAgent(request),
+    });
 
-    if (cError || !caso) {
-      return NextResponse.json(
-        { success: false, message: "Caso não encontrado" },
-        { status: 404 },
-      );
-    }
-
-    if (caso.advogado_id !== user.id) {
-      return NextResponse.json(
+    if (error) {
+      const missingMigration = ["PGRST202", "42883"].includes(error.code);
+      return json(
         {
           success: false,
-          message: "Você não é o advogado vinculado a este caso",
+          message: missingMigration
+            ? "Execute a migração de governança de Meus Casos antes de continuar."
+            : error.message || "Não foi possível abrir o atendimento.",
         },
-        { status: 403 },
+        rpcStatus(error),
       );
     }
 
-    // 2. Se já foi iniciado, pode prosseguir sem cobrar novamente
-    if (caso.chat_started) {
-      return NextResponse.json({
-        success: true,
-        alreadyStarted: true,
-        message: "Chat já iniciado anteriormente.",
-      });
-    }
-
-    // 3. Verificar saldo do advogado (precisa de 1 Juri)
-    const { data: advogado, error: advError } = await db
-      .from("advogados")
-      .select("balance")
-      .eq("id", user.id)
-      .single();
-
-    if (advError || !advogado) {
-      return NextResponse.json(
-        { success: false, message: "Perfil de advogado não encontrado" },
-        { status: 404 },
-      );
-    }
-
-    if ((advogado.balance || 0) < 1) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Saldo insuficiente. Você precisa de 1 Juri para iniciar o atendimento. Saldo atual: ${advogado.balance || 0} Juri(s).`,
-          balance: advogado.balance || 0,
-        },
-        { status: 402 },
-      );
-    }
-
-    // 4. Debitar 1 Juri e marcar chat_started
-    const newBalance = advogado.balance - 1;
-
-    await Promise.all([
-      db.from("advogados").update({ balance: newBalance }).eq("id", user.id),
-      db.from("casos").update({ chat_started: true }).eq("id", casoId),
-    ]);
-
-    // Verificar e notificar estoque baixo de Juris
-    await checkAndNotifyLowBalance(user.id, advogado.balance, newBalance);
-
-    return NextResponse.json({
+    return json({
       success: true,
-      alreadyStarted: false,
-      message: "Chat iniciado! 1 Juri debitado.",
-      newBalance,
+      alreadyStarted: Boolean(data?.already_started),
+      alreadyProcessed: Boolean(data?.already_processed),
+      chargedJuris: 0,
+      newBalance: data?.new_balance,
+      message: data?.already_started
+        ? "Atendimento já estava disponível."
+        : "Atendimento aberto sem cobrança adicional.",
     });
   } catch (error) {
-    console.error("Erro ao iniciar chat:", error);
-    return NextResponse.json(
-      { success: false, message: "Erro interno no servidor" },
-      { status: 500 },
+    console.error("[Casos/ChatStart] Erro:", error);
+    return json(
+      { success: false, message: "Erro interno ao abrir o atendimento." },
+      500,
     );
   }
 }

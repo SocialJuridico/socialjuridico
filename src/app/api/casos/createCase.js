@@ -5,6 +5,9 @@ import {
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
 import { getRoleFromDatabase } from "@/lib/securityUtils";
+import { resolveCaseUploads } from "@/lib/clientDashboard/caseUploadServer";
+import { attachCaseUploadsSafely } from "@/lib/clientDashboard/caseUploadAttachServer";
+import { validateClientMutationOrigin } from "@/lib/clientDashboard/clientServer";
 import {
   json,
   normalizeText,
@@ -28,6 +31,19 @@ function deduplicateLawyers(lawyers) {
     seen.add(email);
     return true;
   });
+}
+
+function normalizeVideoLink(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:") return undefined;
+    return url.toString().slice(0, 1000);
+  } catch {
+    return undefined;
+  }
 }
 
 async function sendEmailBatches(lawyers, buildPayload) {
@@ -68,7 +84,8 @@ async function notifyLawyers(db, caseItem) {
     const { data: lawyers, error } = await db
       .from("advogados")
       .select("name, email, estado")
-      .not("email", "is", null);
+      .not("email", "is", null)
+      .neq("oab_verification_status", "ERROR");
 
     if (error) {
       console.error("[Casos/Criação] Falha ao consultar advogados:", error);
@@ -119,6 +136,9 @@ async function notifyLawyers(db, caseItem) {
 
 export async function createCase(request) {
   try {
+    const originResponse = validateClientMutationOrigin(request);
+    if (originResponse) return originResponse;
+
     const access = await requireCaseUser(request);
     if (!access.ok) return access.response;
 
@@ -137,13 +157,13 @@ export async function createCase(request) {
     const description = normalizeText(body?.descricao, 20000);
     const area = normalizeText(body?.area_atuacao, 120);
     const city = normalizeText(body?.cidade, 120);
-    const state = normalizeText(body?.estado, 40);
-    const videoLink = normalizeText(body?.video_link, 1000) || null;
-    const attachments = Array.isArray(body?.anexos)
-      ? body.anexos.slice(0, 50)
+    const state = normalizeText(body?.estado, 2).toUpperCase();
+    const videoLink = normalizeVideoLink(body?.video_link);
+    const uploadIds = Array.isArray(body?.upload_ids)
+      ? body.upload_ids.slice(0, 7)
       : [];
 
-    if (!title || !description || !area || !city || !state) {
+    if (!title || !description || !area || !city || state.length !== 2) {
       return json(
         {
           success: false,
@@ -154,6 +174,22 @@ export async function createCase(request) {
       );
     }
 
+    if (videoLink === undefined) {
+      return json(
+        {
+          success: false,
+          message: "O link externo do vídeo deve ser uma URL HTTPS válida.",
+        },
+        400,
+      );
+    }
+
+    const resolvedUploads = await resolveCaseUploads(
+      access.db,
+      access.user.id,
+      uploadIds,
+    );
+
     const createdAt = new Date().toISOString();
     const payload = {
       titulo: title,
@@ -162,55 +198,70 @@ export async function createCase(request) {
       cidade: city,
       estado: state,
       cliente_id: access.user.id,
-      anexos: attachments,
+      anexos: resolvedUploads.attachments,
       video_link: videoLink,
-      video_url: body?.video_url || null,
-      audio_url: body?.audio_url || null,
+      video_url: resolvedUploads.videoUrl,
+      audio_url: resolvedUploads.audioUrl,
       status: "ABERTO",
       created_at: createdAt,
+      updated_at: createdAt,
     };
 
-    let result = await access.db
+    const { data: caseItem, error: insertError } = await access.db
       .from("casos")
       .insert([payload])
-      .select()
+      .select(
+        "id, titulo, descricao, area_atuacao, cidade, estado, status, advogado_id, anexos, video_link, video_url, audio_url, created_at, updated_at",
+      )
       .single();
 
-    if (result.error) {
-      const fallbackPayload = { ...payload };
-      delete fallbackPayload.video_link;
-      delete fallbackPayload.video_url;
-      delete fallbackPayload.audio_url;
+    if (insertError) {
+      throw new Error(`Falha ao criar caso: ${insertError.message}`);
+    }
 
-      result = await access.db
+    try {
+      await attachCaseUploadsSafely(
+        access.db,
+        access.user.id,
+        caseItem.id,
+        resolvedUploads.tickets,
+      );
+    } catch (uploadError) {
+      await access.db
         .from("casos")
-        .insert([fallbackPayload])
-        .select()
-        .single();
+        .delete()
+        .eq("id", caseItem.id)
+        .eq("cliente_id", access.user.id);
+      throw uploadError;
     }
 
-    if (result.error) {
-      throw new Error(`Falha ao criar caso: ${result.error.message}`);
-    }
-
-    await upsertCaseGovernance(access.db, result.data.id, {
+    await upsertCaseGovernance(access.db, caseItem.id, {
       operational_stage: "NEW",
       risk_level:
-        attachments.length || body?.video_url || body?.audio_url || videoLink
-          ? "RESTRICTED"
-          : "STANDARD",
+        resolvedUploads.tickets.length || videoLink ? "RESTRICTED" : "STANDARD",
     }).catch((error) => {
       console.error("[Casos/Criação] Falha ao inicializar governança:", error);
     });
 
-    await notifyLawyers(access.db, result.data);
+    await notifyLawyers(access.db, caseItem);
 
-    return json({ success: true, data: result.data });
+    return json({ success: true, data: caseItem }, 201);
   } catch (error) {
-    console.error("[Casos][POST] Erro:", error);
+    console.error("[Casos][POST] Erro:", {
+      code: error?.code || null,
+      message: error?.message || "unknown",
+    });
+
+    const status = Number(error?.status) || 500;
     return json(
-      { success: false, message: "Não foi possível publicar o caso." },
-      500,
+      {
+        success: false,
+        message:
+          status < 500
+            ? error.message
+            : "Não foi possível publicar o caso.",
+      },
+      status,
     );
   }
 }

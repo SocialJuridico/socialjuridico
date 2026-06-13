@@ -1,16 +1,16 @@
-import { cancelCase } from "./cancelCase";
+import { cancelCaseSecure } from "./cancelCaseSecure";
 import { createCase } from "./createCase";
 import { getCases } from "./getCases";
 import {
-  updateCaseContent,
-  updateCaseStatus,
-} from "./updateCases";
+  updateCaseContentSecure,
+  updateCaseStatusSecure,
+} from "./updateCasesSecure";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const POST = createCase;
 export const GET = getCases;
-export const PUT = updateCaseContent;
-export const PATCH = updateCaseStatus;
-export const DELETE = cancelCase;
+export const PUT = updateCaseContentSecure;
+export const PATCH = updateCaseStatusSecure;
+export const DELETE = cancelCaseSecure;

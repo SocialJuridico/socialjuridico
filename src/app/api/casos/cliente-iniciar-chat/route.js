@@ -1,97 +1,105 @@
-import { createClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabase";
-import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 
-// POST /api/casos/cliente-iniciar-chat
-// Caso o cliente escolha um advogado PRO para falar diretamente
+import {
+  clientJson,
+  isClientUuid,
+  requireClientUser,
+  safeClientError,
+  validateClientMutationOrigin,
+} from "@/lib/clientDashboard/clientServer";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const originResponse = validateClientMutationOrigin(request);
+    if (originResponse) return originResponse;
 
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 },
+    const access = await requireClientUser(request);
+    if (!access.ok) return access.response;
+
+    const body = await request.json().catch(() => null);
+    const caseId = String(body?.caseId || "").trim();
+    const lawyerId = String(body?.lawyerId || "").trim();
+
+    if (!isClientUuid(caseId) || !isClientUuid(lawyerId)) {
+      return clientJson(
+        { success: false, message: "Caso ou advogado inválido." },
+        400,
       );
     }
 
-    const { caseId, lawyerId } = await request.json();
+    const [{ data: lawyer, error: lawyerError }, { data: caseItem, error: caseError }] =
+      await Promise.all([
+        access.db
+          .from("advogados")
+          .select("id, name, is_premium, oab_verification_status")
+          .eq("id", lawyerId)
+          .maybeSingle(),
+        access.db
+          .from("casos")
+          .select("id, cliente_id, titulo, advogado_id, status, updated_at")
+          .eq("id", caseId)
+          .eq("cliente_id", access.user.id)
+          .maybeSingle(),
+      ]);
 
-    if (!caseId || !lawyerId) {
-      return NextResponse.json(
-        { success: false, message: "Parâmetros obrigatórios ausentes" },
-        { status: 400 },
+    if (lawyerError) {
+      throw new Error(`Falha ao consultar advogado: ${lawyerError.message}`);
+    }
+    if (!lawyer) {
+      return clientJson(
+        { success: false, message: "Advogado não encontrado." },
+        404,
       );
     }
-
-    // 1. Buscar Perfil do Advogado
-    const { data: lawyer, error: lError } = await supabaseAdmin
-      .from("advogados")
-      .select("id, name, is_premium, balance")
-      .eq("id", lawyerId)
-      .single();
-
-    if (lError || !lawyer) {
-      return NextResponse.json(
-        { success: false, message: "Advogado não encontrado" },
-        { status: 404 },
-      );
-    }
-
-    // Apenas PRO podem ser contatados diretamente
-    if (!lawyer.is_premium) {
-      return NextResponse.json(
+    if (!lawyer.is_premium || lawyer.oab_verification_status === "ERROR") {
+      return clientJson(
         {
           success: false,
           message: "Este advogado não aceita contatos diretos no momento.",
         },
-        { status: 403 },
+        403,
       );
     }
 
-    // 2. Buscar o Caso
-    const { data: caso, error: cError } = await supabaseAdmin
-      .from("casos")
-      .select("id, cliente_id, titulo, advogado_id, status")
-      .eq("id", caseId)
-      .single();
-
-    if (cError || !caso) {
-      return NextResponse.json(
-        { success: false, message: "Caso não encontrado" },
-        { status: 404 },
+    if (caseError) {
+      throw new Error(`Falha ao consultar caso: ${caseError.message}`);
+    }
+    if (!caseItem) {
+      return clientJson(
+        { success: false, message: "Caso não encontrado ou sem permissão." },
+        404,
       );
     }
 
-    if (caso.cliente_id !== user.id) {
-      return NextResponse.json(
-        { success: false, message: "Você não tem permissão neste caso" },
-        { status: 403 },
-      );
-    }
-
-    // Já vinculado?
-    if (caso.advogado_id) {
-      if (caso.advogado_id === lawyerId) {
-        return NextResponse.json({
+    if (caseItem.advogado_id) {
+      if (caseItem.advogado_id === lawyerId) {
+        return clientJson({
           success: true,
           message: "Você já está em contato com este advogado.",
+          data: { caseId },
         });
       }
-      return NextResponse.json(
-        { success: false, message: "Este caso já possui um advogado vinculado" },
-        { status: 400 },
+      return clientJson(
+        { success: false, message: "Este caso já possui um advogado vinculado." },
+        409,
       );
     }
 
-    // 4. Executar Vinculação (Sem débito para o advogado quando o cliente inicia)
-    const now = new Date().toISOString();
+    if (!["ABERTO", "NEGOCIANDO"].includes(caseItem.status)) {
+      return clientJson(
+        {
+          success: false,
+          message: "Este caso não está disponível para iniciar um novo contato.",
+        },
+        409,
+      );
+    }
 
-    const { error: updateCaseError } = await supabaseAdmin
+    const now = new Date().toISOString();
+    const { data: updatedCase, error: updateError } = await access.db
       .from("casos")
       .update({
         advogado_id: lawyerId,
@@ -99,42 +107,56 @@ export async function POST(request) {
         chat_started: true,
         updated_at: now,
       })
-      .eq("id", caseId);
+      .eq("id", caseId)
+      .eq("cliente_id", access.user.id)
+      .is("advogado_id", null)
+      .in("status", ["ABERTO", "NEGOCIANDO"])
+      .eq("updated_at", caseItem.updated_at)
+      .select("id, advogado_id, status, updated_at")
+      .maybeSingle();
 
-    if (updateCaseError) throw updateCaseError;
-
-    // 5. Notificar o Advogado
-    const notifBase = {
-      user_id: lawyerId,
-      titulo: "Novo chat iniciado por cliente!",
-      mensagem: `Um cliente iniciou um contato direto sobre o caso: "${caso.titulo}".`,
-      lida: false,
-      created_at: now,
-    };
-
-    const { error: notifError } = await supabaseAdmin
-      .from("notificacoes")
-      .insert([
+    if (updateError) {
+      throw new Error(`Falha ao vincular advogado: ${updateError.message}`);
+    }
+    if (!updatedCase) {
+      return clientJson(
         {
-          ...notifBase,
-          tipo: "CHAT_INICIADO",
-          meta: JSON.stringify({ case_id: caseId }),
+          success: false,
+          message:
+            "O caso foi alterado em outra sessão. Atualize o painel e tente novamente.",
         },
-      ]);
-
-    if (notifError?.code === "PGRST204") {
-      await supabaseAdmin.from("notificacoes").insert([notifBase]);
+        409,
+      );
     }
 
-    return NextResponse.json({
+    const notification = {
+      id: crypto.randomUUID(),
+      user_id: lawyerId,
+      titulo: "Novo chat iniciado por cliente",
+      mensagem: `Um cliente iniciou um contato direto sobre o caso “${caseItem.titulo}”.`,
+      lida: false,
+      created_at: now,
+      tipo: "CHAT_INICIADO",
+      meta: JSON.stringify({ case_id: caseId }),
+    };
+
+    const { error: notificationError } = await access.db
+      .from("notificacoes")
+      .insert([notification]);
+
+    if (notificationError) {
+      console.error(
+        "[Cliente/Chat] Vínculo criado, mas a notificação falhou:",
+        notificationError.message,
+      );
+    }
+
+    return clientJson({
       success: true,
-      message: "Chat iniciado com sucesso!",
+      message: "Chat iniciado com sucesso.",
+      data: updatedCase,
     });
   } catch (error) {
-    console.error("Erro ao iniciar chat via cliente:", error);
-    return NextResponse.json(
-      { success: false, message: "Erro interno no servidor" },
-      { status: 500 },
-    );
+    return safeClientError(error, "Não foi possível iniciar o contato.");
   }
 }

@@ -1,256 +1,260 @@
+import { NextResponse } from "next/server";
+
+import { validateClientMutationOrigin } from "@/lib/clientDashboard/clientServer";
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
-import { NextResponse } from "next/server";
-import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
-// GET /api/notificacoes -> lista notificacoes do usuario autenticado
-export async function GET(req) {
+export const dynamic = "force-dynamic";
+
+function json(payload, status = 200) {
+  return NextResponse.json(payload, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function parseMeta(value) {
+  if (!value) return {};
+  if (typeof value === "object") return value;
   try {
-    const finalUser = await getAuthenticatedUser(req);
+    return JSON.parse(value);
+  } catch {
+    return {};
+  }
+}
 
-    if (!finalUser) {
-      console.error("[notificacoes] Auth error: No user or session found");
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 },
-      );
-    }
+function serializeMeta(value) {
+  return JSON.stringify(value || {});
+}
 
-    const supabase = createClient();
-    const db = supabaseAdmin || supabase;
+async function requireNotificationUser(request) {
+  const user = await getAuthenticatedUser(request);
+  if (!user) {
+    return {
+      ok: false,
+      response: json({ success: false, message: "Não autorizado." }, 401),
+    };
+  }
 
-    const { data, error } = await db
+  const supabase = createClient();
+  const db = supabaseAdmin || supabase;
+  return { ok: true, user, db };
+}
+
+async function isAdminUser(db, userId) {
+  const [profileResult, adminResult] = await Promise.all([
+    db.from("perfil").select("role").eq("id", userId).maybeSingle(),
+    db.from("admins").select("id").eq("id", userId).maybeSingle(),
+  ]);
+
+  return profileResult.data?.role === "ADMIN" || Boolean(adminResult.data);
+}
+
+async function hideNotificationForUser(db, notification) {
+  const meta = parseMeta(notification.meta);
+  meta.deleted_by_user = true;
+
+  const shared = ["ADMIN_CHAT", "ADMIN_BROADCAST"].includes(notification.tipo);
+  if (!shared || meta.deleted_by_admin) {
+    const { error } = await db
       .from("notificacoes")
-      .select("*")
-      .eq("user_id", finalUser.id)
-      .order("created_at", { ascending: false });
+      .delete()
+      .eq("id", notification.id)
+      .eq("user_id", notification.user_id);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await db
+    .from("notificacoes")
+    .update({ meta: serializeMeta(meta) })
+    .eq("id", notification.id)
+    .eq("user_id", notification.user_id);
+  if (error) throw error;
+}
+
+async function hideNotificationForAdmin(db, notification) {
+  const meta = parseMeta(notification.meta);
+  meta.deleted_by_admin = true;
+
+  if (meta.deleted_by_user) {
+    const { error } = await db
+      .from("notificacoes")
+      .delete()
+      .eq("id", notification.id);
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await db
+    .from("notificacoes")
+    .update({ meta: serializeMeta(meta) })
+    .eq("id", notification.id);
+  if (error) throw error;
+}
+
+export async function GET(request) {
+  try {
+    const access = await requireNotificationUser(request);
+    if (!access.ok) return access.response;
+
+    const { data, error } = await access.db
+      .from("notificacoes")
+      .select("id, titulo, mensagem, tipo, link, lida, meta, created_at")
+      .eq("user_id", access.user.id)
+      .order("created_at", { ascending: false })
+      .limit(200);
 
     if (error) throw error;
 
-    const filtered = (data || []).filter((n) => {
-      const meta =
-        typeof n.meta === "string" ? JSON.parse(n.meta || "{}") : n.meta || {};
-      return !meta.deleted_by_user;
-    });
+    const notifications = (data || [])
+      .map((item) => ({ ...item, meta: parseMeta(item.meta) }))
+      .filter((item) => !item.meta.deleted_by_user);
 
-    return NextResponse.json({ success: true, data: filtered });
+    return json({ success: true, data: notifications });
   } catch (error) {
-    console.error("Erro na API GET /api/notificacoes:", error);
-    return NextResponse.json(
-      { success: false, message: "Erro interno no servidor" },
-      { status: 500 },
+    console.error("[Notificações][GET] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível carregar as notificações." },
+      500,
     );
   }
 }
 
-// DELETE /api/notificacoes?id=...
-export async function DELETE(req) {
+export async function DELETE(request) {
   try {
-    const supabase = createClient();
-    const { searchParams } = new URL(req.url);
-    const notificationId = searchParams.get("id");
+    const originResponse = validateClientMutationOrigin(request);
+    if (originResponse) return originResponse;
 
-    const user = await getAuthenticatedUser(req);
+    const access = await requireNotificationUser(request);
+    if (!access.ok) return access.response;
 
-    if (!user) {
-      console.error("[DELETE Notif] No user session");
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 },
-      );
-    }
+    const { searchParams } = new URL(request.url);
+    const notificationId = String(searchParams.get("id") || "all").trim();
 
-    const db = supabaseAdmin || supabase;
-
-    // Caso seja solicitado limpar todas as notificações (limpar tudo)
-    if (notificationId === "all" || !notificationId) {
-      console.log(
-        `[DELETE Notif] Clearing all notifications for user: ${user.email}`,
-      );
-      const { error } = await db
+    if (notificationId === "all") {
+      const { data, error } = await access.db
         .from("notificacoes")
-        .delete()
-        .eq("user_id", user.id);
+        .select("id, user_id, tipo, meta")
+        .eq("user_id", access.user.id)
+        .limit(500);
 
       if (error) throw error;
 
-      return NextResponse.json({
+      for (const notification of data || []) {
+        await hideNotificationForUser(access.db, notification);
+      }
+
+      return json({
         success: true,
-        message: "Todas as notificações foram excluídas com sucesso",
+        message: "Todas as notificações visíveis foram removidas.",
       });
     }
 
-    // 2. Verifica se o usuário é ADMIN (Checa perfil e tb tabela admins)
-    const [profileRes, adminRes] = await Promise.all([
-      db.from("perfil").select("role").eq("id", user.id).maybeSingle(),
-      db.from("admins").select("id").eq("id", user.id).maybeSingle(),
-    ]);
-
-    const isAdmin = profileRes.data?.role === "ADMIN" || !!adminRes.data;
-
-    console.log(
-      `[DELETE Notif] User: ${user.email}, isAdmin: ${isAdmin}, ID: ${notificationId}`,
-    );
-
-    // 3. Executa o soft-delete ou delete definitivo
-    const { data: targetNotif, error: fetchError } = await db
+    const { data: notification, error } = await access.db
       .from("notificacoes")
-      .select("*")
+      .select("id, user_id, tipo, meta")
       .eq("id", notificationId)
       .maybeSingle();
 
-    if (fetchError) throw fetchError;
-    if (!targetNotif)
-      return NextResponse.json({ success: true, message: "Já removida" });
-
-    // Permissão: se não for admin, só pode mexer se for dono
-    if (!isAdmin && targetNotif.user_id !== user.id) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 403 },
-      );
+    if (error) throw error;
+    if (!notification) {
+      return json({ success: true, message: "A notificação já foi removida." });
     }
 
-    const currentMeta =
-      typeof targetNotif.meta === "string"
-        ? JSON.parse(targetNotif.meta || "{}")
-        : targetNotif.meta || {};
-    const isLawyerAction = targetNotif.user_id === user.id;
+    const admin = await isAdminUser(access.db, access.user.id);
+    const owner = notification.user_id === access.user.id;
 
-    // Se for o advogado apagando a dele
-    if (isLawyerAction) {
-      currentMeta.deleted_by_user = true;
-      // Se o admin já tinha "apagado" (pelo lado dele no papo), ou se não é uma msg de papo, apaga de vez
-      const isShared =
-        targetNotif.tipo === "ADMIN_CHAT" ||
-        targetNotif.tipo === "ADMIN_BROADCAST";
-      if (!isShared || currentMeta.deleted_by_admin) {
-        await db.from("notificacoes").delete().eq("id", notificationId);
-      } else {
-        await db
-          .from("notificacoes")
-          .update({ meta: JSON.stringify(currentMeta) })
-          .eq("id", notificationId);
-      }
-    } else if (isAdmin) {
-      // Se for o admin apagando uma do advogado (comunicado enviado por exemplo)
-      currentMeta.deleted_by_admin = true;
-      if (currentMeta.deleted_by_user) {
-        await db.from("notificacoes").delete().eq("id", notificationId);
-      } else {
-        await db
-          .from("notificacoes")
-          .update({ meta: JSON.stringify(currentMeta) })
-          .eq("id", notificationId);
-      }
+    if (!owner && !admin) {
+      return json({ success: false, message: "Não autorizado." }, 403);
     }
 
-    console.log(`[DELETE Notif] Success. ID: ${notificationId}`);
+    if (owner) {
+      await hideNotificationForUser(access.db, notification);
+    } else {
+      await hideNotificationForAdmin(access.db, notification);
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: "Mensagem excluída com sucesso",
-    });
+    return json({ success: true, message: "Notificação removida." });
   } catch (error) {
-    console.error("Erro na API DELETE /api/notificacoes:", error);
-    return NextResponse.json(
-      { success: false, message: "Erro ao excluir mensagem" },
-      { status: 500 },
+    console.error("[Notificações][DELETE] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível remover a notificação." },
+      500,
     );
   }
 }
 
-// PATCH /api/notificacoes -> marca todas as notificações do usuário como lidas
-export async function PATCH(req) {
+export async function PATCH(request) {
   try {
-    const supabase = createClient();
+    const originResponse = validateClientMutationOrigin(request);
+    if (originResponse) return originResponse;
 
-    const user = await getAuthenticatedUser(req);
+    const access = await requireNotificationUser(request);
+    if (!access.ok) return access.response;
 
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 },
+    const body = await request.json().catch(() => ({}));
+    const notificationId = String(body?.id || "").trim() || null;
+
+    let query = access.db
+      .from("notificacoes")
+      .update({ lida: true })
+      .eq("user_id", access.user.id);
+
+    query = notificationId
+      ? query.eq("id", notificationId)
+      : query.eq("lida", false);
+
+    const { error } = await query;
+    if (error) throw error;
+
+    return json({
+      success: true,
+      message: notificationId
+        ? "Notificação marcada como lida."
+        : "Notificações marcadas como lidas.",
+    });
+  } catch (error) {
+    console.error("[Notificações][PATCH] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível atualizar as notificações." },
+      500,
+    );
+  }
+}
+
+export async function POST(request) {
+  try {
+    const originResponse = validateClientMutationOrigin(request);
+    if (originResponse) return originResponse;
+
+    const access = await requireNotificationUser(request);
+    if (!access.ok) return access.response;
+
+    const body = await request.json().catch(() => ({}));
+    const token = String(body?.token || "").trim().slice(0, 500);
+
+    if (token.length < 20) {
+      return json(
+        { success: false, message: "Token de notificação inválido." },
+        400,
       );
     }
 
-    const { id } = await req.json().catch(() => ({}));
-    const db = supabaseAdmin || supabase;
-
-    // 2. Executa o update
-    let query = db
-      .from("notificacoes")
-      .update({ lida: true })
-      .eq("user_id", user.id);
-
-    // Se passou um ID específico, marca só ela
-    if (id) {
-      query = query.eq("id", id);
-    } else {
-      // Caso contrário, marca todas as não lidas do usuário
-      query = query.eq("lida", false);
-    }
-
-    const { error } = await query;
+    const { error } = await access.db.from("user_push_tokens").upsert(
+      { user_id: access.user.id, token },
+      { onConflict: "token" },
+    );
 
     if (error) throw error;
 
-    return NextResponse.json({
-      success: true,
-      message: "Notificações marcadas como lidas",
-    });
+    return json({ success: true, message: "Token registrado com sucesso." });
   } catch (error) {
-    console.error("Erro na API PATCH /api/notificacoes:", error);
-    return NextResponse.json(
-      { success: false, message: "Erro ao atualizar notificações" },
-      { status: 500 },
-    );
-  }
-}
-
-// POST /api/notificacoes -> registra token de push notification do usuário autenticado
-export async function POST(req) {
-  try {
-    const finalUser = await getAuthenticatedUser(req);
-
-    if (!finalUser) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 },
-      );
-    }
-
-    const { token } = await req.json().catch(() => ({}));
-
-    if (!token) {
-      return NextResponse.json(
-        { success: false, message: "Token é obrigatório" },
-        { status: 400 },
-      );
-    }
-
-    const supabase = createClient();
-    const db = supabaseAdmin || supabase;
-
-    // Upsert token in user_push_tokens table
-    const { error } = await db
-      .from("user_push_tokens")
-      .upsert({ user_id: finalUser.id, token: token }, { onConflict: "token" });
-
-    if (error) {
-      console.error("[notificacoes] Error registering push token:", error);
-      throw error;
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "Token registrado com sucesso",
-    });
-  } catch (error) {
-    console.error("Erro na API POST /api/notificacoes:", error);
-    return NextResponse.json(
-      { success: false, message: "Erro ao registrar token" },
-      { status: 500 },
+    console.error("[Notificações][POST] Erro:", error);
+    return json(
+      { success: false, message: "Não foi possível registrar o dispositivo." },
+      500,
     );
   }
 }

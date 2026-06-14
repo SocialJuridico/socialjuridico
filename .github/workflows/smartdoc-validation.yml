@@ -1,0 +1,251 @@
+name: Lawyer routes, documents, tutorials, agenda and digital card validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smartdoc-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CI: "true"
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-anon-placeholder"
+      SUPABASE_SERVICE_ROLE_KEY: "ci-service-placeholder"
+      NEXT_PUBLIC_STRIPE_PUBLIC_KEY: "ci-stripe-placeholder"
+      OPENAI_API_KEY: "ci-openai-placeholder"
+      RESEND_API_KEY: "ci-resend-placeholder"
+      AUDIT_IP_SALT: "ci-audit-placeholder"
+      OFFICE_SESSION_SECRET: "ci-office-session-placeholder"
+      GOOGLE_OAUTH_STATE_SECRET: "ci-google-state-placeholder"
+      NEXT_PUBLIC_APP_URL: "https://example.com"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.5"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run focused module tests
+        id: smartdoc
+        continue-on-error: true
+        run: >-
+          npm test -- --runInBand
+          src/app/dashboard/advogado/lawyerProviderRoutes.test.js
+          src/app/dashboard/advogado/documentacao/presentationViewerUtils.test.js
+          src/app/api/advogado/blindagemdedocumentos/route.test.js
+          src/components/TransparentCheckout/intentRequestCache.test.js
+          src/lib/checkout/paymentProduct.test.js
+          src/lib/extrajudicialNotificationValidation.test.js
+          src/lib/lawyerAgenda/agendaValidation.test.js
+          src/lib/lawyerAgenda/agendaRequest.test.js
+          src/lib/lawyerAgenda/googleCalendarState.test.js
+          src/lib/lawyerDigitalCard/digitalCardValidation.test.js
+          src/lib/lawyerDigitalCard/digitalCardVcard.test.js
+          src/lib/officeSession.test.js
+          src/lib/platformContent/contentServer.test.js
+          src/lib/platformContent/contentValidation.test.js
+          src/lib/platformContent/presentationDelivery.test.js
+          src/lib/platformTutorials/tutorialRoutes.test.js
+          src/lib/lawyerSmartDocs/__tests__/smartDocValidation.test.js
+          src/lib/lawyerSmartDocs/__tests__/smartDocServer.test.js
+          src/lib/lawyerDocumentProtection/__tests__/documentProtectionValidation.test.js
+          src/lib/lawyerDocumentProtection/__tests__/documentProtectionServer.test.js
+          src/services/__tests__/stripeCheckoutService.test.js
+          database/migrations/__tests__/smartdocMigration.test.js
+          database/migrations/__tests__/smartdocEnterprise.test.js
+          database/migrations/__tests__/documentProtectionMigration.test.js
+          database/migrations/__tests__/digitalCardMigration.test.js
+          database/migrations/__tests__/platformContentMigration.test.js
+          > smartdoc-tests.log 2>&1
+
+      - name: Run full test suite
+        id: tests
+        continue-on-error: true
+        run: npm test -- --runInBand > full-tests.log 2>&1
+
+      - name: Run focused ESLint
+        id: smartdoc_lint
+        continue-on-error: true
+        run: >-
+          npx eslint
+          src/app/dashboard/advogado/AdvogadoProviderBoundary.jsx
+          src/app/dashboard/advogado/lawyerProviderRoutes.js
+          src/app/dashboard/advogado/lawyerProviderRoutes.test.js
+          src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx
+          src/app/dashboard/advogado/documentacao/page.js
+          src/app/dashboard/advogado/documentacao/DocumentationDashboard.jsx
+          src/app/dashboard/advogado/documentacao/PresentationFrame.jsx
+          src/app/dashboard/advogado/documentacao/presentationViewerUtils.js
+          src/app/dashboard/advogado/documentacao/presentationViewerUtils.test.js
+          src/app/dashboard/advogado/documentacao/useDocumentation.js
+          src/app/dashboard/cliente/page.js
+          src/app/dashboard/admin/documentacao/page.js
+          src/app/dashboard/admin/documentacao/useAdminDocumentation.js
+          src/app/dashboard/admin/tutoriais/page.js
+          src/app/dashboard/admin/tutoriais/useAdminTutorials.js
+          src/components/Tutorials/PlatformTutorialHost.jsx
+          src/app/api/admin/documentacao/route.js
+          src/app/api/admin/documentacao/upload/route.js
+          src/app/api/admin/documentacao/[documentId]/route.js
+          src/app/api/admin/documentacao/[documentId]/processar/route.js
+          src/app/api/admin/documentacao/[documentId]/publicar/route.js
+          src/app/api/advogado/documentacao/route.js
+          src/app/api/advogado/documentacao/[slug]/route.js
+          src/app/api/advogado/documentacao-slide/route.js
+          src/app/api/admin/tutoriais/route.js
+          src/app/api/admin/tutoriais/upload/route.js
+          src/app/api/admin/tutoriais/[tutorialId]/route.js
+          src/app/api/tutorials/route.js
+          src/app/api/tutorials/progress/route.js
+          src/lib/platformContent/contentServer.js
+          src/lib/platformContent/contentServer.test.js
+          src/lib/platformContent/contentValidation.js
+          src/lib/platformContent/contentValidation.test.js
+          src/lib/platformContent/documentationAi.js
+          src/lib/platformContent/presentationDelivery.test.js
+          src/lib/platformTutorials/tutorialRoutes.js
+          src/lib/platformTutorials/tutorialRoutes.test.js
+          src/services/documentationService.js
+          src/services/tutorialService.js
+          src/app/dashboard/advogado/smartdoc/page.js
+          src/app/dashboard/advogado/smartdoc/useSmartDocs.js
+          src/app/dashboard/advogado/smartdoc/components/SmartDocDashboard.jsx
+          src/app/dashboard/advogado/blindagemdedocumentos/page.js
+          src/app/dashboard/advogado/blindagemdedocumentos/useDocumentProtection.js
+          src/app/dashboard/advogado/blindagemdedocumentos/components/DocumentProtectionDashboard.jsx
+          src/app/dashboard/advogado/notificacaoextrajudicial/page.js
+          src/app/dashboard/advogado/notificacaoextrajudicial/useExtrajudicialNotifications.js
+          src/app/dashboard/advogado/notificacaoextrajudicial/useExtrajudicialNotificationsController.js
+          src/app/dashboard/advogado/notificacaoextrajudicial/notificationCertificate.js
+          src/app/dashboard/advogado/notificacaoextrajudicial/components/ExtrajudicialNotificationDashboard.jsx
+          src/app/dashboard/advogado/notificacaoextrajudicial/preview/[notificationId]/page.js
+          src/app/dashboard/advogado/notificacaoextrajudicial/preview/[notificationId]/NotificationPreviewDashboard.jsx
+          src/app/dashboard/advogado/agenda/page.js
+          src/app/dashboard/advogado/agenda/useLawyerAgenda.js
+          src/app/dashboard/advogado/agenda/components/AgendaDashboard.jsx
+          src/app/dashboard/advogado/cartaodigital/page.js
+          src/app/dashboard/advogado/cartaodigital/useDigitalCard.js
+          src/app/dashboard/advogado/cartaodigital/digitalCardPdf.js
+          src/app/dashboard/advogado/cartaodigital/components/DigitalCardDashboard.jsx
+          src/app/dashboard/advogado/cartaodigital/components/DigitalCardPreview.jsx
+          src/app/cartao/[slug]/page.js
+          src/app/cartao/[slug]/PublicDigitalCard.jsx
+          src/app/api/advogado/agenda/route.js
+          src/app/api/advogado/agenda/[itemId]/route.js
+          src/app/api/advogado/cartaodigital/route.js
+          src/app/api/advogado/cartaodigital/qr/route.js
+          src/app/api/cartao/[slug]/evento/route.js
+          src/app/api/cartao/[slug]/vcard/route.js
+          src/app/api/crm/agenda/route.js
+          src/app/api/auth/google/route.js
+          src/app/api/auth/google/callback/route.js
+          src/app/api/auth/login-escritorio/route.js
+          src/app/api/auth/logout-escritorio/route.js
+          src/app/api/advogado/smartdoc/route.js
+          src/app/api/advogado/smartdoc/[documentId]/arquivo/route.js
+          src/app/api/advogado/blindagemdedocumentos/route.js
+          src/app/api/advogado/blindagemdedocumentos/route.test.js
+          src/app/api/advogado/blindagemdedocumentos/[documentId]/route.js
+          src/app/api/advogado/blindagemdedocumentos/[documentId]/arquivo/route.js
+          src/app/api/advogado/notificacaoextrajudicial/route.js
+          src/app/api/advogado/notificacaoextrajudicial/enviar/route.js
+          src/app/api/advogado/notificacaoextrajudicial/[notificationId]/route.js
+          src/app/api/advogado/notificacaoextrajudicial/[notificationId]/arquivo/route.js
+          src/app/api/checkout/create-payment-intent/route.js
+          src/components/JurisPurchase/JurisPurchaseModalHost.jsx
+          src/components/LawyerPlans/LawyerPlansModalHost.jsx
+          src/components/TransparentCheckout/StableTransparentCheckoutModal.jsx
+          src/components/TransparentCheckout/intentRequestCache.js
+          src/components/TransparentCheckout/intentRequestCache.test.js
+          src/lib/checkout/paymentProduct.js
+          src/lib/checkout/paymentProduct.test.js
+          src/lib/extrajudicialNotificationValidation.js
+          src/lib/extrajudicialNotificationValidation.test.js
+          src/lib/lawyerAgenda/agendaHandlers.js
+          src/lib/lawyerAgenda/agendaRequest.js
+          src/lib/lawyerAgenda/agendaRequest.test.js
+          src/lib/lawyerAgenda/agendaServer.js
+          src/lib/lawyerAgenda/agendaValidation.js
+          src/lib/lawyerAgenda/agendaValidation.test.js
+          src/lib/lawyerAgenda/googleCalendarState.js
+          src/lib/lawyerAgenda/googleCalendarState.test.js
+          src/lib/lawyerDigitalCard/digitalCardServer.js
+          src/lib/lawyerDigitalCard/digitalCardValidation.js
+          src/lib/lawyerDigitalCard/digitalCardValidation.test.js
+          src/lib/lawyerDigitalCard/digitalCardVcard.js
+          src/lib/lawyerDigitalCard/digitalCardVcard.test.js
+          src/lib/officeSession.js
+          src/lib/officeSession.test.js
+          src/lib/lawyerSmartDocs/smartDocServer.js
+          src/lib/lawyerSmartDocs/smartDocValidation.js
+          src/lib/lawyerSmartDocs/__tests__/smartDocServer.test.js
+          src/lib/lawyerSmartDocs/__tests__/smartDocValidation.test.js
+          src/lib/lawyerDocumentProtection/documentProtectionServer.js
+          src/lib/lawyerDocumentProtection/documentProtectionValidation.js
+          src/lib/lawyerDocumentProtection/__tests__/documentProtectionServer.test.js
+          src/lib/lawyerDocumentProtection/__tests__/documentProtectionValidation.test.js
+          src/services/agendaService.js
+          src/services/digitalCardService.js
+          src/services/stripeCheckoutService.js
+          src/services/__tests__/stripeCheckoutService.test.js
+          > smartdoc-lint.log 2>&1
+
+      - name: Run repository ESLint diagnostic
+        id: repository_lint
+        continue-on-error: true
+        run: npm run lint > lint.log 2>&1
+
+      - name: Build application
+        id: build
+        continue-on-error: true
+        run: npm run build > build.log 2>&1
+
+      - name: Upload validation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartdoc-validation-logs
+          path: |
+            smartdoc-tests.log
+            full-tests.log
+            smartdoc-lint.log
+            lint.log
+            build.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: Enforce validation result
+        if: always()
+        env:
+          SMARTDOC_RESULT: ${{ steps.smartdoc.outcome }}
+          TESTS_RESULT: ${{ steps.tests.outcome }}
+          SMARTDOC_LINT_RESULT: ${{ steps.smartdoc_lint.outcome }}
+          REPOSITORY_LINT_RESULT: ${{ steps.repository_lint.outcome }}
+          BUILD_RESULT: ${{ steps.build.outcome }}
+        run: |
+          printf 'Module tests: %s\nFull tests: %s\nModule lint: %s\nRepository lint: %s\nBuild: %s\n' \
+            "$SMARTDOC_RESULT" "$TESTS_RESULT" "$SMARTDOC_LINT_RESULT" \
+            "$REPOSITORY_LINT_RESULT" "$BUILD_RESULT"
+          test "$SMARTDOC_RESULT" = "success"
+          test "$TESTS_RESULT" = "success"
+          test "$SMARTDOC_LINT_RESULT" = "success"
+          test "$REPOSITORY_LINT_RESULT" = "success"
+          test "$BUILD_RESULT" = "success"

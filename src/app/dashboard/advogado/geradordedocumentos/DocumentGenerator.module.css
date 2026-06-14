@@ -1,0 +1,451 @@
+.page {
+  display: grid;
+  gap: 18px;
+}
+
+.hero,
+.formPanel,
+.previewPanel,
+.loadingPanel,
+.notice,
+.usageCard {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(14, 14, 14, 0.86);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.22);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 18px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.14), rgba(255, 255, 255, 0.035));
+}
+
+.hero > div:first-child {
+  display: grid;
+  gap: 12px;
+  align-content: center;
+}
+
+.eyebrow {
+  width: fit-content;
+  border: 1px solid rgba(212, 175, 55, 0.24);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: #f5df93;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.hero h2,
+.notice h2,
+.panelHeader h3,
+.previewHeader h3 {
+  margin: 0;
+}
+
+.hero h2 {
+  max-width: 820px;
+  font-size: clamp(1.45rem, 3vw, 2.1rem);
+}
+
+.hero p,
+.notice p,
+.securityNote p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  line-height: 1.6;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.badges span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.usageCard {
+  display: grid;
+  gap: 12px;
+  align-content: center;
+  padding: 18px;
+}
+
+.usageCard > span,
+.usageCard small,
+.field > span,
+.panelHeader small {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.76rem;
+}
+
+.usageCard strong {
+  color: #f5df93;
+  font-size: 1.35rem;
+}
+
+.progress {
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #d4af37, #22c55e);
+}
+
+.modeTabs {
+  display: flex;
+  gap: 10px;
+}
+
+.modeTabs button,
+.toneGrid button,
+.generateButton,
+.previewActions button,
+.notice button,
+.previewFooter a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.84);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.modeTabs button {
+  min-height: 44px;
+  padding: 0 16px;
+}
+
+.modeTabs .activeMode,
+.toneGrid .activeTone {
+  border-color: rgba(212, 175, 55, 0.45);
+  background: rgba(212, 175, 55, 0.16);
+  color: #f5df93;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.92fr) minmax(0, 1.08fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.formPanel,
+.previewPanel {
+  min-width: 0;
+  padding: 18px;
+}
+
+.panelHeader,
+.previewHeader,
+.panelHeader > div,
+.previewHeader > div,
+.previewActions {
+  display: flex;
+  align-items: center;
+}
+
+.panelHeader,
+.previewHeader {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panelHeader > div,
+.previewHeader > div:first-child,
+.previewActions {
+  gap: 9px;
+}
+
+.panelHeader > div,
+.previewHeader > div:first-child {
+  color: #f5df93;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.field > span {
+  font-weight: 750;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.field input,
+.field select {
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.field textarea {
+  min-height: 150px;
+  resize: vertical;
+  padding: 12px;
+  line-height: 1.55;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: rgba(212, 175, 55, 0.44);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.12);
+}
+
+.field option {
+  background: #111;
+  color: #fff;
+}
+
+.twoColumns,
+.threeColumns,
+.toneGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.twoColumns {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.threeColumns {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.toneGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.toneGrid button {
+  min-height: 38px;
+}
+
+.partyCard {
+  display: grid;
+  gap: 0;
+  margin: 0 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.partyCard legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 7px;
+  color: #f5df93;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.securityNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 2px 0 14px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(34, 197, 94, 0.07);
+}
+
+.securityNote svg {
+  flex: 0 0 auto;
+  color: #4ade80;
+}
+
+.securityNote p {
+  font-size: 0.78rem;
+}
+
+.generateButton {
+  width: 100%;
+  min-height: 48px;
+  border-color: rgba(212, 175, 55, 0.35);
+  background: #d4af37;
+  color: #090909;
+}
+
+.previewActions button {
+  width: 38px;
+  height: 38px;
+}
+
+.preview {
+  overflow: auto;
+  min-height: 650px;
+  max-height: 78vh;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.preview pre {
+  margin: 0;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: inherit;
+  font-size: 0.9rem;
+  line-height: 1.72;
+  white-space: pre-wrap;
+}
+
+.emptyPreview {
+  display: grid;
+  min-height: 650px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 24px;
+  color: rgba(255, 255, 255, 0.62);
+  text-align: center;
+}
+
+.emptyPreview svg {
+  color: #d4af37;
+}
+
+.emptyPreview strong {
+  color: #fff;
+}
+
+.previewFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.78rem;
+}
+
+.previewFooter a,
+.notice button {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.loadingPanel,
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+}
+
+.notice {
+  justify-content: space-between;
+  border-color: rgba(248, 113, 113, 0.22);
+  background: rgba(127, 29, 29, 0.2);
+}
+
+.notice > div {
+  flex: 1;
+}
+
+.notice svg {
+  color: #f87171;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1180px) {
+  .hero,
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .preview,
+  .emptyPreview {
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero,
+  .formPanel,
+  .previewPanel {
+    padding: 16px;
+  }
+
+  .twoColumns,
+  .threeColumns,
+  .toneGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .modeTabs,
+  .previewFooter,
+  .panelHeader,
+  .previewHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modeTabs button {
+    width: 100%;
+  }
+
+  .preview,
+  .emptyPreview {
+    min-height: 430px;
+  }
+}

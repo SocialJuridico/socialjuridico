@@ -32,17 +32,27 @@ const OTHER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const OFFICE_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const REQUEST_ID = "55e1f4ff-7fa8-4d38-8cc7-d67a292fa4d5";
 
-function request({ origin, referer, site, authorization } = {}) {
+function request({
+  origin,
+  referer,
+  site,
+  authorization,
+  url = "https://socialjuridico.com.br/api/advogado/smartdoc",
+  host,
+  forwardedHost,
+} = {}) {
   const values = new Map(
     Object.entries({
       origin,
       referer,
       "sec-fetch-site": site,
       authorization,
+      host,
+      "x-forwarded-host": forwardedHost,
     }).filter(([, value]) => value !== undefined),
   );
   return {
-    url: "https://socialjuridico.com.br/api/advogado/smartdoc",
+    url,
     headers: { get: (name) => values.get(name) || null },
   };
 }
@@ -128,6 +138,37 @@ describe("SmartDoc mutation origin", () => {
     expect(
       hasValidSmartDocOrigin(request({ authorization: "Bearer valid-token" })),
     ).toBe(true);
+  });
+
+  test("accepts the public app origin when production requests arrive through an internal host", () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NODE_ENV = "production";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://socialjuridico.com.br";
+
+    try {
+      expect(
+        hasValidSmartDocOrigin(
+          request({
+            origin: "https://socialjuridico.com.br",
+            url: "https://internal-runtime.local/api/advogado/smartdoc",
+            host: "internal-runtime.local",
+          }),
+        ),
+      ).toBe(true);
+      expect(
+        hasValidSmartDocOrigin(
+          request({
+            origin: "https://www.socialjuridico.com.br",
+            url: "https://internal-runtime.local/api/advogado/smartdoc",
+            forwardedHost: "internal-runtime.local",
+          }),
+        ),
+      ).toBe(true);
+    } finally {
+      process.env.NODE_ENV = previousNodeEnv;
+      process.env.NEXT_PUBLIC_SITE_URL = previousSiteUrl;
+    }
   });
 
   test("rejects cross-origin and ungrounded requests", () => {

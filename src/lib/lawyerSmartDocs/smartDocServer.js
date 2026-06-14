@@ -5,6 +5,7 @@ import OpenAI from "openai";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
 import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 import { getUserPlanLimits } from "@/lib/planUtils";
+import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import { supabaseAdmin } from "@/lib/supabase";
 
 import { isClientUuid, normalizeClientText } from "@/lib/lawyerClients/clientValidation";
@@ -44,26 +45,8 @@ export function smartDocJson(payload, status = 200) {
   });
 }
 
-function requestHostMatches(request, value) {
-  if (!value) return false;
-  try {
-    return new URL(value).host === new URL(request.url).host;
-  } catch {
-    return false;
-  }
-}
-
 export function hasValidSmartDocOrigin(request) {
-  const authorization = request.headers.get("authorization");
-  if (authorization?.startsWith("Bearer ")) return true;
-
-  const origin = request.headers.get("origin");
-  if (origin) return requestHostMatches(request, origin);
-
-  const referer = request.headers.get("referer");
-  if (referer) return requestHostMatches(request, referer);
-
-  return request.headers.get("sec-fetch-site") === "same-origin";
+  return hasTrustedMutationOrigin(request, { allowMissingOrigin: false });
 }
 
 function readObject(value) {

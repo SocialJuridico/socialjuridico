@@ -6,7 +6,7 @@ const SITE_URL = "https://www.socialjuridico.com.br";
 const DASHBOARD_URL = `${SITE_URL}/dashboard/cliente`;
 const LOGIN_URL = `${SITE_URL}/login`;
 
-function isPublicDestination(value) {
+export function isPublicDestination(value) {
   if (!value) {
     return false;
   }
@@ -23,6 +23,7 @@ function isPublicDestination(value) {
       (
         url.pathname.startsWith("/confirmar-email") ||
         url.pathname.startsWith("/atualizar-senha") ||
+        url.pathname.startsWith("/notificacao/") ||
         url.pathname.startsWith("/api/auth/confirm-email") ||
         url.pathname.startsWith("/login") ||
         url.pathname.startsWith("/cadastro")

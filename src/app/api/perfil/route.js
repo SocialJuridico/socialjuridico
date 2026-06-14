@@ -1,7 +1,13 @@
-import { createClient } from "@/lib/supabaseServer";
-import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import { supabaseAdmin } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
+import { sanitizeString } from "@/lib/securityUtils";
+
+const JSON_HEADERS = {
+  "Cache-Control": "private, no-store",
+};
 
 const PROFILE_SELECT_FIELDS = {
   clientes: "id, name, email, role, phone, avatar, bio, created_at",
@@ -12,118 +18,212 @@ const PROFILE_SELECT_FIELDS = {
 
 const PROFILE_UPDATE_FIELDS = {
   clientes: ["name", "phone", "bio", "avatar"],
-  advogados: [
-    "name",
-    "phone",
-    "bio",
-    "oab",
-    "estado",
-    "email",
-    "specialties",
-    "consulta",
-    "tempo",
-    "valor",
-    "avatar",
-  ],
+  advogados: ["phone", "bio", "specialties", "consulta", "tempo", "valor", "avatar"],
   admins: ["name", "phone", "avatar"],
 };
 
+function json(data, init = {}) {
+  return NextResponse.json(data, {
+    ...init,
+    headers: {
+      ...JSON_HEADERS,
+      ...(init.headers || {}),
+    },
+  });
+}
+
 function getSelectFields(table) {
   return PROFILE_SELECT_FIELDS[table] || PROFILE_SELECT_FIELDS.clientes;
+}
+
+function limitText(value, maxLength) {
+  return sanitizeString(value || "").slice(0, maxLength);
+}
+
+function normalizeProfileField(field, value) {
+  switch (field) {
+    case "name":
+      return limitText(value, 160);
+    case "phone":
+      return String(value || "")
+        .replace(/\D/g, "")
+        .slice(0, 13);
+    case "bio":
+      return limitText(value, 1200);
+    case "specialties":
+      return String(value || "")
+        .split(",")
+        .map((item) => limitText(item, 40))
+        .filter(Boolean)
+        .slice(0, 20)
+        .join(", ");
+    case "consulta":
+      return value === "Paga" ? "Paga" : "Gratuita";
+    case "tempo":
+      return limitText(value, 60);
+    case "valor": {
+      const numeric = Number(value || 0);
+      if (!Number.isFinite(numeric) || numeric < 0) return 0;
+      return Math.min(numeric, 100000);
+    }
+    case "avatar":
+      return typeof value === "string" && value.startsWith("http")
+        ? value.slice(0, 1000)
+        : "";
+    default:
+      return value;
+  }
 }
 
 function buildUpdateData(body, allowedFields) {
   const updateData = {};
   for (const field of allowedFields) {
     if (body[field] !== undefined) {
-      updateData[field] = body[field];
+      updateData[field] = normalizeProfileField(field, body[field]);
     }
   }
   return updateData;
 }
 
+function validateProfilePayload(body) {
+  if (!body || typeof body !== "object") {
+    return "Dados invalidos.";
+  }
+
+  if (body.password !== undefined && body.password !== "") {
+    if (typeof body.password !== "string") return "Senha invalida.";
+    if (body.password.length < 6) {
+      return "A nova senha precisa ter pelo menos 6 caracteres.";
+    }
+    if (body.password.length > 72) {
+      return "A nova senha ultrapassa o limite permitido.";
+    }
+  }
+
+  if (body.consulta !== undefined && !["Gratuita", "Paga"].includes(body.consulta)) {
+    return "Tipo de consulta invalido.";
+  }
+
+  if (body.valor !== undefined) {
+    const numeric = Number(body.valor);
+    if (!Number.isFinite(numeric) || numeric < 0 || numeric > 100000) {
+      return "Valor de consulta invalido.";
+    }
+  }
+
+  return "";
+}
+
+async function findProfileByIdOrEmail(db, finalUser, fields = "id") {
+  for (const table of ["clientes", "advogados", "admins"]) {
+    const { data, error } = await db
+      .from(table)
+      .select(fields === "profile" ? getSelectFields(table) : fields)
+      .eq("id", finalUser.id)
+      .maybeSingle();
+    if (data && !error) return { table, data };
+  }
+
+  if (!finalUser.email) return null;
+
+  for (const table of ["clientes", "advogados", "admins"]) {
+    const { data, error } = await db
+      .from(table)
+      .select(fields === "profile" ? getSelectFields(table) : fields)
+      .eq("email", finalUser.email)
+      .maybeSingle();
+    if (data && !error) return { table, data };
+  }
+
+  return null;
+}
+
+async function ensureProfile(db, finalUser) {
+  const existing = await findProfileByIdOrEmail(db, finalUser, "profile");
+  if (existing?.data) return existing.data;
+
+  const newProfile = {
+    id: finalUser.id,
+    email: finalUser.email,
+    name: finalUser.user_metadata?.full_name || finalUser.email?.split("@")[0] || "Cliente",
+    role: "CLIENT",
+    created_at: new Date().toISOString(),
+  };
+
+  const { data: inserted, error: insertError } = await db
+    .from("clientes")
+    .insert([newProfile])
+    .select(getSelectFields("clientes"))
+    .single();
+
+  if (!insertError && inserted) return inserted;
+
+  console.error("[perfil] Erro ao criar perfil:", insertError?.message);
+  const retry = await findProfileByIdOrEmail(db, finalUser, "profile");
+  return retry?.data || null;
+}
+
+async function updateOabWarningIfNeeded(db, profile) {
+  if (
+    profile.role !== "LAWYER" ||
+    profile.oab_verification_status !== "PENDING"
+  ) {
+    return profile;
+  }
+
+  const now = new Date();
+  if (!profile.oab_warning_started_at) {
+    const startedAt = now.toISOString();
+    const { error } = await db
+      .from("advogados")
+      .update({ oab_warning_started_at: startedAt })
+      .eq("id", profile.id);
+    if (!error) profile.oab_warning_started_at = startedAt;
+    return profile;
+  }
+
+  const startedDate = new Date(profile.oab_warning_started_at);
+  const daysPassed = (now.getTime() - startedDate.getTime()) / (1000 * 60 * 60 * 24);
+  if (daysPassed >= 7) {
+    await db
+      .from("advogados")
+      .update({ oab_verification_status: "ERROR" })
+      .eq("id", profile.id);
+    profile.oab_verification_status = "ERROR";
+  }
+
+  return profile;
+}
+
+async function attachOfficeName(db, profile) {
+  if (profile.role !== "LAWYER" || !profile.escritorio_id) return profile;
+
+  const { data } = await db
+    .from("escritorios")
+    .select("nome")
+    .eq("id", profile.escritorio_id)
+    .maybeSingle();
+
+  if (data?.nome) profile.nome_escritorio = data.nome;
+  return profile;
+}
+
 export async function GET(request) {
   try {
     const finalUser = await getAuthenticatedUser(request);
-
     if (!finalUser) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 },
-      );
+      return json({ success: false, message: "Nao autorizado" }, { status: 401 });
     }
 
     const supabase = createClient();
     const db = supabaseAdmin || supabase;
-    const tables = ["clientes", "advogados", "admins"];
-    let profile = null;
-
-    // 1ª tentativa: buscar por ID
-    for (const table of tables) {
-      const { data, error } = await db
-        .from(table)
-        .select(getSelectFields(table))
-        .eq("id", finalUser.id)
-        .maybeSingle();
-      if (data && !error) {
-        profile = data;
-        break;
-      }
-    }
-
-    // 2ª tentativa: buscar por email (caso o ID Auth difira do ID no banco)
-    if (!profile) {
-      // ⚠️ SEGURANÇA: Não logar finalUser.email
-      for (const table of tables) {
-        const { data, error } = await db
-          .from(table)
-          .select(getSelectFields(table))
-          .eq("email", finalUser.email)
-          .maybeSingle();
-        if (data && !error) {
-          profile = data;
-          break;
-        }
-      }
-    }
-
-    // 3ª tentativa: criar perfil padrão
-    if (!profile) {
-      console.warn(`[perfil] Criando perfil padrão para ${finalUser.email}`);
-      const newProfile = {
-        id: finalUser.id,
-        email: finalUser.email,
-        name:
-          finalUser.user_metadata?.full_name || finalUser.email.split("@")[0],
-        role: "CLIENT",
-        created_at: new Date().toISOString(),
-      };
-
-      const { data: inserted, error: insertError } = await db
-        .from("clientes")
-        .insert([newProfile])
-        .select(getSelectFields("clientes"))
-        .single();
-
-      if (!insertError && inserted) {
-        profile = inserted;
-      } else {
-        console.error(`[perfil] Erro ao criar perfil:`, insertError?.message);
-        // Última chance: tentar buscar de novo (pode ter dado unique constraint se já existe)
-        const { data: retry } = await db
-          .from("clientes")
-          .select(getSelectFields("clientes"))
-          .eq("email", finalUser.email)
-          .maybeSingle();
-        if (retry) profile = retry;
-      }
-    }
+    let profile = await ensureProfile(db, finalUser);
 
     if (!profile) {
-      return NextResponse.json(
+      return json(
         {
           success: false,
-          message: "Perfil não encontrado. Entre em contato com o suporte.",
+          message: "Perfil nao encontrado. Entre em contato com o suporte.",
         },
         { status: 404 },
       );
@@ -131,69 +231,24 @@ export async function GET(request) {
 
     profile.onboarding_complete =
       finalUser.user_metadata?.onboarding_complete === true;
-
-    // -- Lógica de Contagem de Verificação da OAB --
-    if (
-      profile.role === "LAWYER" &&
-      profile.oab_verification_status === "PENDING"
-    ) {
-      const now = new Date();
-      if (!profile.oab_warning_started_at) {
-        // Inicia o contador no primeiro login com status PENDING
-        const startedAt = now.toISOString();
-        const { error: updateError } = await db
-          .from("advogados")
-          .update({ oab_warning_started_at: startedAt })
-          .eq("id", profile.id);
-
-        if (!updateError) {
-          profile.oab_warning_started_at = startedAt;
-        }
-      } else {
-        // Verifica se já passaram 7 dias
-        const startedDate = new Date(profile.oab_warning_started_at);
-        const diffMs = now.getTime() - startedDate.getTime();
-        const daysPassed = diffMs / (1000 * 60 * 60 * 24);
-
-        if (daysPassed >= 7) {
-          // Prazo estourou, suspende a conta
-          await db
-            .from("advogados")
-            .update({ oab_verification_status: "ERROR" })
-            .eq("id", profile.id);
-
-          profile.oab_verification_status = "ERROR";
-        }
-      }
-    }
+    profile = await updateOabWarningIfNeeded(db, profile);
 
     if (profile.role === "LAWYER" && profile.oab_verification_status === "ERROR") {
-      return NextResponse.json(
+      return json(
         {
           success: false,
           blocked: true,
-          message: "Acesso suspenso por inconsistências na verificação da OAB.",
+          message: "Acesso suspenso por inconsistencias na verificacao da OAB.",
         },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
-    // Se o advogado for membro de escritório, buscar o nome do escritório
-    if (profile.role === "LAWYER" && profile.escritorio_id) {
-      const { data: officeData } = await db
-        .from("escritorios")
-        .select("nome")
-        .eq("id", profile.escritorio_id)
-        .maybeSingle();
-      if (officeData) {
-        profile.nome_escritorio = officeData.nome;
-      }
-    }
-
-    return NextResponse.json({ success: true, data: profile });
+    profile = await attachOfficeName(db, profile);
+    return json({ success: true, data: profile });
   } catch (error) {
     console.error("Erro na API GET /api/perfil:", error);
-    return NextResponse.json(
+    return json(
       { success: false, message: "Erro interno no servidor" },
       { status: 500 },
     );
@@ -203,75 +258,69 @@ export async function GET(request) {
 export async function PUT(request) {
   try {
     const finalUser = await getAuthenticatedUser(request);
-
     if (!finalUser) {
-      return NextResponse.json(
-        { success: false, message: "Não autorizado" },
-        { status: 401 },
-      );
+      return json({ success: false, message: "Nao autorizado" }, { status: 401 });
     }
 
-    const body = await request.json();
+    const body = await request.json().catch(() => null);
+    const validationError = validateProfilePayload(body);
+    if (validationError) {
+      return json({ success: false, message: validationError }, { status: 400 });
+    }
+
     const supabase = createClient();
     const db = supabaseAdmin || supabase;
+    const profileRecord = await findProfileByIdOrEmail(db, finalUser, "id");
 
-    // Descobrir em qual tabela o perfil está
-    let profileTable = "clientes";
-    for (const table of ["clientes", "advogados", "admins"]) {
-      const { data } = await db
-        .from(table)
-        .select("id")
-        .eq("id", finalUser.id)
-        .maybeSingle();
-      if (data) {
-        profileTable = table;
-        break;
-      }
+    if (!profileRecord?.data?.id) {
+      return json(
+        { success: false, message: "Perfil nao encontrado." },
+        { status: 404 },
+      );
     }
 
     const updateData = buildUpdateData(
       body,
-      PROFILE_UPDATE_FIELDS[profileTable] || PROFILE_UPDATE_FIELDS.clientes,
+      PROFILE_UPDATE_FIELDS[profileRecord.table] || PROFILE_UPDATE_FIELDS.clientes,
     );
 
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: "Nada para atualizar",
-      });
+    if (Object.keys(updateData).length > 0) {
+      const { error } = await db
+        .from(profileRecord.table)
+        .update(updateData)
+        .eq("id", profileRecord.data.id);
+      if (error) throw error;
     }
 
-    const { error: updateError } = await db
-      .from(profileTable)
-      .update(updateData)
-      .eq("id", finalUser.id);
+    if (body.password) {
+      let adminPasswordError = null;
 
-    if (updateError) throw updateError;
-
-    // Atualizar senha no Auth se fornecida
-    if (body.password && body.password.length >= 6) {
-      const authClient = supabaseAdmin || supabase;
-      const { error: pwdError } = await authClient.auth.admin.updateUserById(
-        finalUser.id,
-        {
+      if (supabaseAdmin?.auth?.admin?.updateUserById) {
+        const result = await supabaseAdmin.auth.admin.updateUserById(finalUser.id, {
           password: body.password,
-        },
-      );
-      if (pwdError) {
-        console.error(
-          "[perfil] Erro ao atualizar senha via Admin:",
-          pwdError.message,
-        );
-        // Tentar via user auth se admin falhar/não disponível
-        await supabase.auth.updateUser({ password: body.password });
+        });
+        adminPasswordError = result.error;
+      }
+
+      if (!supabaseAdmin || adminPasswordError) {
+        if (adminPasswordError) {
+          console.error(
+            "[perfil] Erro ao atualizar senha via Admin:",
+            adminPasswordError.message,
+          );
+        }
+        const { error: userPasswordError } = await supabase.auth.updateUser({
+          password: body.password,
+        });
+        if (userPasswordError) throw userPasswordError;
       }
     }
 
-    return NextResponse.json({ success: true, message: "Perfil atualizado" });
+    return json({ success: true, message: "Perfil atualizado" });
   } catch (error) {
     console.error("Erro na API PUT /api/perfil:", error);
-    return NextResponse.json(
-      { success: false, message: error.message },
+    return json(
+      { success: false, message: "Erro interno ao atualizar perfil." },
       { status: 500 },
     );
   }

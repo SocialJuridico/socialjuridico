@@ -1977,14 +1977,16 @@ export default function AdvogadoDashboard() {
   // REAL-TIME: Notificações do advogado em tempo real
   useEffect(() => {
     let notifChannel;
+    let isMounted = true;
     const setup = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !isMounted) return;
 
+      const channelTopic = `advogado:notificacoes:${user.id}:${Date.now()}`;
       notifChannel = supabase
-        .channel(`advogado:notificacoes:${user.id}`)
+        .channel(channelTopic)
         .on(
           "postgres_changes",
           {
@@ -2023,6 +2025,7 @@ export default function AdvogadoDashboard() {
 
     setup();
     return () => {
+      isMounted = false;
       if (notifChannel) supabase.removeChannel(notifChannel);
     };
   }, []);

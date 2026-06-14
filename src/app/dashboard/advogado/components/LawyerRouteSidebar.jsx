@@ -107,6 +107,18 @@ const DIRECT_ROUTES = {
     path: "/dashboard/advogado/jurisprudencia",
     activeRoute: "jurisprudencia",
   },
+  "cartao-visitas": {
+    path: "/dashboard/advogado/cartaodigital",
+    activeRoute: "cartaodigital",
+  },
+  perfil: {
+    path: "/dashboard/advogado/meuperfil",
+    activeRoute: "meuperfil",
+  },
+  comunicacao: {
+    path: "/dashboard/advogado/comunicacaointerna",
+    activeRoute: "comunicacaointerna",
+  },
 };
 
 const PRIMARY_ITEMS = [
@@ -341,7 +353,10 @@ export default function LawyerRouteSidebar({ activeRoute }) {
 
         <nav className={styles.navGroup} aria-label="Conta e suporte">
           <span className={styles.navLabel}>Conta e suporte</span>
-          {ACCOUNT_ITEMS.map((item) => renderItem(item))}
+          {ACCOUNT_ITEMS.filter(
+            (item) =>
+              item.tab !== "comunicacao" || Boolean(profileData?.escritorio_id),
+          ).map((item) => renderItem(item))}
           <button
             type="button"
             className={`${styles.navItem} ${styles.navItemDanger}`}

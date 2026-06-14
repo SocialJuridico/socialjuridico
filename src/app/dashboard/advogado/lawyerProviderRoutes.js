@@ -18,6 +18,7 @@ export const LAWYER_SESSION_ROUTES = Object.freeze([
   "/dashboard/advogado/calculadora",
   "/dashboard/advogado/jurisprudencia",
   "/dashboard/advogado/cartaodigital",
+  "/dashboard/advogado/documentacao",
   "/dashboard/advogado/meuperfil",
   "/dashboard/advogado/comunicacaointerna",
 ]);

@@ -31,94 +31,29 @@ import sidebarStyles from "./LawyerRouteSidebar.module.css";
 import styles from "./LawyerShell.module.css";
 
 const DIRECT_ROUTES = {
-  indicacoes: {
-    path: "/dashboard/advogado/indiqueganhe",
-    activeRoute: "indiqueganhe",
-  },
-  oportunidades: {
-    path: "/dashboard/advogado/oportunidade",
-    activeRoute: "oportunidade",
-  },
-  "minhas-mensagens": {
-    path: "/dashboard/advogado/mensagens",
-    activeRoute: "mensagens",
-  },
-  "quero-site": {
-    path: "/dashboard/advogado/queroumsite",
-    activeRoute: "queroumsite",
-  },
-  "meus-casos": {
-    path: "/dashboard/advogado/meuscasos",
-    activeRoute: "meuscasos",
-  },
-  "declarei-interesse": {
-    path: "/dashboard/advogado/declareiinteresse",
-    activeRoute: "declareiinteresse",
-  },
-  "anuncios-PREPOSTOS": {
-    path: "/dashboard/advogado/anuncioseservicos",
-    activeRoute: "anuncioseservicos",
-  },
-  "anuncios-DILIGENCIAS": {
-    path: "/dashboard/advogado/anuncioseservicos?categoria=DILIGENCIAS",
-    activeRoute: "anuncioseservicos",
-  },
-  "anuncios-OUTROS": {
-    path: "/dashboard/advogado/anuncioseservicos?categoria=OUTROS",
-    activeRoute: "anuncioseservicos",
-  },
-  assinatura: {
-    path: "/dashboard/advogado/assinaturadigital",
-    activeRoute: "assinaturadigital",
-  },
-  notificacao: {
-    path: "/dashboard/advogado/notificacaoextrajudicial",
-    activeRoute: "notificacaoextrajudicial",
-  },
-  agenda: {
-    path: "/dashboard/advogado/agenda",
-    activeRoute: "agenda",
-  },
-  crm: {
-    path: "/dashboard/advogado/meusclientes",
-    activeRoute: "meusclientes",
-  },
-  docs: {
-    path: "/dashboard/advogado/smartdoc",
-    activeRoute: "smartdoc",
-  },
-  blindagem: {
-    path: "/dashboard/advogado/blindagemdedocumentos",
-    activeRoute: "blindagemdedocumentos",
-  },
-  redator: {
-    path: "/dashboard/advogado/redator-ia",
-    activeRoute: "redator-ia",
-  },
-  triagem: {
-    path: "/dashboard/advogado/triagem",
-    activeRoute: "triagem",
-  },
-  calculadora: {
-    path: "/dashboard/advogado/calculadora",
-    activeRoute: "calculadora",
-  },
-  juris: {
-    path: "/dashboard/advogado/jurisprudencia",
-    activeRoute: "jurisprudencia",
-  },
-  "cartao-visitas": {
-    path: "/dashboard/advogado/cartaodigital",
-    activeRoute: "cartaodigital",
-  },
-  perfil: {
-    path: "/dashboard/advogado/meuperfil",
-    activeRoute: "meuperfil",
-  },
-  comunicacao: {
-    path: "/dashboard/advogado/comunicacaointerna",
-    activeRoute: "comunicacaointerna",
-  },
+  indicacoes: { path: "/dashboard/advogado/indiqueganhe", activeRoute: "indiqueganhe" },
+  oportunidades: { path: "/dashboard/advogado/oportunidade", activeRoute: "oportunidade" },
+  "minhas-mensagens": { path: "/dashboard/advogado/mensagens", activeRoute: "mensagens" },
+  "quero-site": { path: "/dashboard/advogado/queroumsite", activeRoute: "queroumsite" },
+  "meus-casos": { path: "/dashboard/advogado/meuscasos", activeRoute: "meuscasos" },
+  "declarei-interesse": { path: "/dashboard/advogado/declareiinteresse", activeRoute: "declareiinteresse" },
+  "anuncios-PREPOSTOS": { path: "/dashboard/advogado/anuncioseservicos", activeRoute: "anuncioseservicos" },
+  "anuncios-DILIGENCIAS": { path: "/dashboard/advogado/anuncioseservicos?categoria=DILIGENCIAS", activeRoute: "anuncioseservicos" },
+  "anuncios-OUTROS": { path: "/dashboard/advogado/anuncioseservicos?categoria=OUTROS", activeRoute: "anuncioseservicos" },
+  assinatura: { path: "/dashboard/advogado/assinaturadigital", activeRoute: "assinaturadigital" },
+  notificacao: { path: "/dashboard/advogado/notificacaoextrajudicial", activeRoute: "notificacaoextrajudicial" },
+  agenda: { path: "/dashboard/advogado/agenda", activeRoute: "agenda" },
+  crm: { path: "/dashboard/advogado/meusclientes", activeRoute: "meusclientes" },
+  docs: { path: "/dashboard/advogado/smartdoc", activeRoute: "smartdoc" },
+  blindagem: { path: "/dashboard/advogado/blindagemdedocumentos", activeRoute: "blindagemdedocumentos" },
+  redator: { path: "/dashboard/advogado/redator-ia", activeRoute: "redator-ia" },
+  triagem: { path: "/dashboard/advogado/triagem", activeRoute: "triagem" },
+  calculadora: { path: "/dashboard/advogado/calculadora", activeRoute: "calculadora" },
+  juris: { path: "/dashboard/advogado/jurisprudencia", activeRoute: "jurisprudencia" },
+  "cartao-visitas": { path: "/dashboard/advogado/cartaodigital", activeRoute: "cartaodigital" },
+  perfil: { path: "/dashboard/advogado/meuperfil", activeRoute: "meuperfil" },
+  comunicacao: { path: "/dashboard/advogado/comunicacaointerna", activeRoute: "comunicacaointerna" },
+  documentacao: { path: "/dashboard/advogado/documentacao", activeRoute: "documentacao" },
 };
 
 const PRIMARY_ITEMS = [
@@ -132,70 +67,16 @@ const PRIMARY_ITEMS = [
 ];
 
 const PREMIUM_ITEMS = [
-  {
-    tab: "assinatura",
-    label: "Assinatura Digital",
-    icon: PenTool,
-    permission: "ferr_assinatura",
-  },
-  {
-    tab: "notificacao",
-    label: "Notificação Extrajudicial",
-    icon: BellRing,
-    permission: "ferr_blindagem",
-  },
-  {
-    tab: "crm",
-    label: "Meus Clientes (CRM)",
-    icon: Users,
-    permission: "ferr_crm",
-  },
-  {
-    tab: "docs",
-    label: "IA Smart Docs",
-    icon: FileText,
-    permission: "ferr_smart_docs",
-  },
-  {
-    tab: "blindagem",
-    label: "Blindagem de Documentos",
-    icon: Shield,
-    permission: "ferr_blindagem",
-  },
-  {
-    tab: "redator",
-    label: "Redator IA",
-    icon: Sparkles,
-    permission: "ferr_redator_ia",
-    legalOnly: true,
-  },
-  {
-    tab: "agenda",
-    label: "Agenda & Prazos",
-    icon: Calendar,
-    permission: "ferr_agenda",
-  },
-  {
-    tab: "triagem",
-    label: "Triagem de Casos",
-    icon: Search,
-    permission: "ferr_triagem",
-  },
-  {
-    tab: "calculadora",
-    label: "Calculadoras",
-    icon: Calculator,
-    permission: "ferr_calculadora",
-    proOnly: true,
-  },
-  {
-    tab: "juris",
-    label: "Jurisprudência",
-    icon: BookOpen,
-    permission: "ferr_jurisprudencia",
-    legalOnly: true,
-    proOnly: true,
-  },
+  { tab: "assinatura", label: "Assinatura Digital", icon: PenTool, permission: "ferr_assinatura" },
+  { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem" },
+  { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm" },
+  { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs" },
+  { tab: "blindagem", label: "Blindagem de Documentos", icon: Shield, permission: "ferr_blindagem" },
+  { tab: "redator", label: "Redator IA", icon: Sparkles, permission: "ferr_redator_ia", legalOnly: true },
+  { tab: "agenda", label: "Agenda & Prazos", icon: Calendar, permission: "ferr_agenda" },
+  { tab: "triagem", label: "Triagem de Casos", icon: Search, permission: "ferr_triagem" },
+  { tab: "calculadora", label: "Calculadoras", icon: Calculator, permission: "ferr_calculadora", proOnly: true },
+  { tab: "juris", label: "Jurisprudência", icon: BookOpen, permission: "ferr_jurisprudencia", legalOnly: true, proOnly: true },
 ];
 
 const ACCOUNT_ITEMS = [
@@ -208,7 +89,6 @@ const ACCOUNT_ITEMS = [
 function getPermission(profile, item) {
   const cargo = profile?.cargo;
   const permissions = profile?.permissoes || {};
-
   if (item.legalOnly && cargo === "secretaria") return false;
   if (cargo !== "estagiario" || !item.permission) return true;
   return Boolean(permissions[item.permission]);
@@ -238,16 +118,12 @@ export default function LawyerRouteSidebar({ activeRoute }) {
 
   function navigateTo(tab) {
     closeSidebar();
-
     const directRoute = DIRECT_ROUTES[tab];
     if (directRoute) {
       router.push(directRoute.path);
       return;
     }
-
-    router.push(
-      `/dashboard/advogado?legacy=1&tab=${encodeURIComponent(tab)}`,
-    );
+    router.push(`/dashboard/advogado?legacy=1&tab=${encodeURIComponent(tab)}`);
   }
 
   function navigatePremium(item) {
@@ -259,12 +135,10 @@ export default function LawyerRouteSidebar({ activeRoute }) {
       );
       return;
     }
-
     if (!hasPremium || (item.proOnly && planType !== "PRO")) {
       openPlansModal();
       return;
     }
-
     navigateTo(item.tab);
   }
 
@@ -272,17 +146,13 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     const Icon = item.icon;
     const isActive = DIRECT_ROUTES[item.tab]?.activeRoute === activeRoute;
     const allowed = !premium || getPermission(profileData, item);
-    const planLocked =
-      premium && (!hasPremium || (item.proOnly && planType !== "PRO"));
-
+    const planLocked = premium && (!hasPremium || (item.proOnly && planType !== "PRO"));
     return (
       <button
         key={item.tab}
         type="button"
         className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
-        onClick={() =>
-          premium ? navigatePremium(item) : navigateTo(item.tab)
-        }
+        onClick={() => (premium ? navigatePremium(item) : navigateTo(item.tab))}
         aria-current={isActive ? "page" : undefined}
       >
         <Icon size={17} aria-hidden="true" />
@@ -298,73 +168,27 @@ export default function LawyerRouteSidebar({ activeRoute }) {
   }
 
   return (
-    <aside
-      className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarOpen : ""}`}
-      aria-label="Navegação do advogado"
-    >
+    <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarOpen : ""}`} aria-label="Navegação do advogado">
       <header className={styles.brand}>
-        <div className={styles.brandText}>
-          <strong>Social Jurídico</strong>
-          <span>Área do advogado</span>
-        </div>
-        <button
-          type="button"
-          className={styles.closeSidebar}
-          onClick={closeSidebar}
-          aria-label="Fechar menu"
-        >
-          <X size={19} aria-hidden="true" />
-        </button>
+        <div className={styles.brandText}><strong>Social Jurídico</strong><span>Área do advogado</span></div>
+        <button type="button" className={styles.closeSidebar} onClick={closeSidebar} aria-label="Fechar menu"><X size={19} aria-hidden="true" /></button>
       </header>
 
       {profileData?.nome_escritorio && (
-        <div
-          className={styles.workspaceBadge}
-          title={profileData.nome_escritorio}
-        >
-          <Users size={15} aria-hidden="true" />
-          <span>{profileData.nome_escritorio}</span>
-        </div>
+        <div className={styles.workspaceBadge} title={profileData.nome_escritorio}><Users size={15} aria-hidden="true" /><span>{profileData.nome_escritorio}</span></div>
       )}
 
-      <button
-        type="button"
-        className={`${styles.planBadge} ${sidebarStyles.planTrigger}`}
-        onClick={openPlansModal}
-        title="Ver planos disponíveis"
-      >
-        <Sparkles size={15} aria-hidden="true" />
-        <span>Plano {hasPremium ? planType : "FREE"}</span>
+      <button type="button" className={`${styles.planBadge} ${sidebarStyles.planTrigger}`} onClick={openPlansModal} title="Ver planos disponíveis">
+        <Sparkles size={15} aria-hidden="true" /><span>Plano {hasPremium ? planType : "FREE"}</span>
       </button>
 
       <div className={styles.navScroll}>
-        <nav className={styles.navGroup} aria-label="Navegação principal">
-          <span className={styles.navLabel}>Navegação</span>
-          {PRIMARY_ITEMS.map((item) => renderItem(item))}
-        </nav>
-
-        <nav
-          className={styles.navGroup}
-          aria-label="Ferramentas profissionais"
-        >
-          <span className={styles.navLabel}>Ferramentas profissionais</span>
-          {PREMIUM_ITEMS.map((item) => renderItem(item, true))}
-        </nav>
-
+        <nav className={styles.navGroup} aria-label="Navegação principal"><span className={styles.navLabel}>Navegação</span>{PRIMARY_ITEMS.map((item) => renderItem(item))}</nav>
+        <nav className={styles.navGroup} aria-label="Ferramentas profissionais"><span className={styles.navLabel}>Ferramentas profissionais</span>{PREMIUM_ITEMS.map((item) => renderItem(item, true))}</nav>
         <nav className={styles.navGroup} aria-label="Conta e suporte">
           <span className={styles.navLabel}>Conta e suporte</span>
-          {ACCOUNT_ITEMS.filter(
-            (item) =>
-              item.tab !== "comunicacao" || Boolean(profileData?.escritorio_id),
-          ).map((item) => renderItem(item))}
-          <button
-            type="button"
-            className={`${styles.navItem} ${styles.navItemDanger}`}
-            onClick={logout}
-          >
-            <LogOut size={17} aria-hidden="true" />
-            <span>Sair</span>
-          </button>
+          {ACCOUNT_ITEMS.filter((item) => item.tab !== "comunicacao" || Boolean(profileData?.escritorio_id)).map((item) => renderItem(item))}
+          <button type="button" className={`${styles.navItem} ${styles.navItemDanger}`} onClick={logout}><LogOut size={17} aria-hidden="true" /><span>Sair</span></button>
         </nav>
       </div>
     </aside>

@@ -5,6 +5,8 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
 import ClientTutorial from "@/components/Onboarding/ClientTutorial";
 import PesquisaSatisfacaoClientePopup from "@/components/PesquisaSatisfacaoClientePopup/PesquisaSatisfacaoClientePopup";
+import PlatformTutorialHost from "@/components/Tutorials/PlatformTutorialHost";
+import { resolveClientTutorialRoute } from "@/lib/platformTutorials/tutorialRoutes";
 
 import ClientCaseComposer from "./components/ClientCaseComposer";
 import { ClientCases, ClientConversations } from "./components/ClientCases";
@@ -29,12 +31,7 @@ const ACTIVE_CASE_STATUSES = new Set([
 function ActiveContent({ controller, composer }) {
   switch (controller.activeTab) {
     case "novo":
-      return (
-        <ClientCaseComposer
-          composer={composer}
-          onCancel={() => controller.setActiveTab("painel")}
-        />
-      );
+      return <ClientCaseComposer composer={composer} onCancel={() => controller.setActiveTab("painel")} />;
     case "meus-casos":
       return <ClientCases controller={controller} />;
     case "profissionais":
@@ -65,12 +62,9 @@ export default function ClientDashboardPage() {
       ...baseController.summary,
       totalCases: baseController.cases.length,
       activeCases: activeCases.length,
-      conversations: baseController.cases.filter((item) => item.advogado_id)
-        .length,
+      conversations: baseController.cases.filter((item) => item.advogado_id).length,
       interests: baseController.interests.length,
-      unreadNotifications: baseController.notifications.filter(
-        (item) => !item.lida,
-      ).length,
+      unreadNotifications: baseController.notifications.filter((item) => !item.lida).length,
       lawyers: baseController.lawyers.length,
     },
   };
@@ -82,63 +76,25 @@ export default function ClientDashboardPage() {
   });
 
   if (controller.loading) {
-    return (
-      <main className={styles.loadingPage}>
-        <span className={styles.spinner} aria-hidden="true" />
-        <h1>Carregando sua área jurídica</h1>
-        <p>Sincronizando casos, conversas, profissionais e notificações.</p>
-      </main>
-    );
+    return <main className={styles.loadingPage}><span className={styles.spinner} aria-hidden="true" /><h1>Carregando sua área jurídica</h1><p>Sincronizando casos, conversas, profissionais e notificações.</p></main>;
   }
 
   if (controller.loadError && !controller.profile) {
-    return (
-      <main className={styles.loadingPage}>
-        <span className={styles.errorIcon}>
-          <AlertTriangle size={28} aria-hidden="true" />
-        </span>
-        <h1>Não foi possível carregar seu painel</h1>
-        <p>{controller.loadError}</p>
-        <button
-          type="button"
-          className={styles.secondaryButton}
-          onClick={() => controller.loadDashboard()}
-        >
-          <RefreshCw size={16} aria-hidden="true" />
-          Tentar novamente
-        </button>
-      </main>
-    );
+    return <main className={styles.loadingPage}><span className={styles.errorIcon}><AlertTriangle size={28} aria-hidden="true" /></span><h1>Não foi possível carregar seu painel</h1><p>{controller.loadError}</p><button type="button" className={styles.secondaryButton} onClick={() => controller.loadDashboard()}><RefreshCw size={16} aria-hidden="true" />Tentar novamente</button></main>;
   }
 
   return (
     <ClientShell controller={controller}>
-      {controller.loadError && (
-        <div className={styles.warningBanner} role="alert">
-          <AlertTriangle size={18} aria-hidden="true" />
-          <div>
-            <strong>Alguns dados podem estar desatualizados</strong>
-            <p>{controller.loadError}</p>
-          </div>
-          <button type="button" onClick={() => controller.loadDashboard()}>
-            Atualizar
-          </button>
-        </div>
-      )}
-
+      {controller.loadError && <div className={styles.warningBanner} role="alert"><AlertTriangle size={18} aria-hidden="true" /><div><strong>Alguns dados podem estar desatualizados</strong><p>{controller.loadError}</p></div><button type="button" onClick={() => controller.loadDashboard()}>Atualizar</button></div>}
       <ActiveContent controller={controller} composer={composer} />
-
-      {controller.showOnboarding && (
-        <ClientTutorial
-          activeTab={controller.activeTab}
-          setActiveTab={controller.setActiveTab}
-          onComplete={() => controller.setShowOnboarding(false)}
-        />
-      )}
-
+      {controller.showOnboarding && <ClientTutorial activeTab={controller.activeTab} setActiveTab={controller.setActiveTab} onComplete={() => controller.setShowOnboarding(false)} />}
       <ClientModalsGoverned controller={controller} />
       <AdvogadoMesPopup />
       <PesquisaSatisfacaoClientePopup />
+      <PlatformTutorialHost
+        routeKey={resolveClientTutorialRoute(controller.activeTab)}
+        autoOpenEnabled={!controller.showOnboarding}
+      />
     </ClientShell>
   );
 }

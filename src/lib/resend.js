@@ -1,9 +1,13 @@
 import { Resend } from "resend";
+
+import { sanitizeEmailPayloadPublicUrls } from "./emailPublicUrlSafety";
 import { supabaseAdmin } from "./supabase";
 
 const rawResend = new Resend(process.env.RESEND_API_KEY);
 
-async function transformAndLogPayload(payload) {
+async function transformAndLogPayload(inputPayload) {
+  const payload = sanitizeEmailPayloadPublicUrls(inputPayload);
+
   if (!payload || !payload.to) {
     return payload;
   }
@@ -202,27 +206,32 @@ export const resend = {
   emails: {
     ...rawResend.emails,
     send: async function (payload) {
+      const safePayload = sanitizeEmailPayloadPublicUrls(payload);
       try {
-        const transformed = await transformAndLogPayload(payload);
+        const transformed = await transformAndLogPayload(safePayload);
         return await rawResend.emails.send(transformed);
       } catch (err) {
         console.error("Error in resend.emails.send wrapper:", err);
-        return await rawResend.emails.send(payload);
+        return await rawResend.emails.send(safePayload);
       }
     },
   },
   batch: {
     ...rawResend.batch,
     send: async function (payloads) {
+      const safePayloads = Array.isArray(payloads)
+        ? payloads.map((payload) => sanitizeEmailPayloadPublicUrls(payload))
+        : sanitizeEmailPayloadPublicUrls(payloads);
+
       try {
-        if (!Array.isArray(payloads)) {
-          const transformed = await transformAndLogPayload(payloads);
+        if (!Array.isArray(safePayloads)) {
+          const transformed = await transformAndLogPayload(safePayloads);
           return await rawResend.batch.send(transformed);
         }
 
         const transformedPayloads = [];
 
-        for (const payload of payloads) {
+        for (const payload of safePayloads) {
           const transformed = await transformAndLogPayload(payload);
           transformedPayloads.push(transformed);
         }
@@ -230,7 +239,7 @@ export const resend = {
         return await rawResend.batch.send(transformedPayloads);
       } catch (err) {
         console.error("Error in resend.batch.send wrapper:", err);
-        return await rawResend.batch.send(payloads);
+        return await rawResend.batch.send(safePayloads);
       }
     },
   },

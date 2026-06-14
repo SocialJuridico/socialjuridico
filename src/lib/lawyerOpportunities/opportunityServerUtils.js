@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import { isLawyer } from "@/lib/securityUtils";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -19,17 +20,7 @@ export function opportunityJson(payload, status = 200) {
 }
 
 export function hasValidMutationOrigin(request) {
-  const authorization = request.headers.get("authorization");
-  if (authorization?.startsWith("Bearer ")) return true;
-
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).host === new URL(request.url).host;
-  } catch {
-    return false;
-  }
+  return hasTrustedMutationOrigin(request);
 }
 
 export function getRequestIpHash(request) {

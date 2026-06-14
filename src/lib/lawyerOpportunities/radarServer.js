@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
 import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
+import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import { supabaseAdmin } from "@/lib/supabase";
 
 import {
@@ -53,17 +54,7 @@ function json(payload, status = 200) {
 }
 
 function hasValidMutationOrigin(request) {
-  const authorization = request.headers.get("authorization");
-  if (authorization?.startsWith("Bearer ")) return true;
-
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).host === new URL(request.url).host;
-  } catch {
-    return false;
-  }
+  return hasTrustedMutationOrigin(request);
 }
 
 function getRequestIpHash(request) {

@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
 import { getVerifiedOfficeSession } from "@/lib/officeSession";
 import { getUserPlanLimits } from "@/lib/planUtils";
+import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   getRequestIpHash,
@@ -63,15 +64,7 @@ export function agendaJson(payload, status = 200) {
 }
 
 export function hasValidAgendaMutationOrigin(request) {
-  const authorization = request.headers.get("authorization");
-  if (authorization?.startsWith("Bearer ")) return true;
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === new URL(request.url).host;
-  } catch {
-    return false;
-  }
+  return hasTrustedMutationOrigin(request);
 }
 
 export async function requireLawyerAgendaAccess(request) {

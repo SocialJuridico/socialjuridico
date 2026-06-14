@@ -1,13 +1,12 @@
 import { createClient } from "@/lib/supabaseServer";
+import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 import { NextResponse } from "next/server";
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  "https://socialjuridico.com.br";
-
-function buildConfirmPageUrl(status, message) {
-  const url = new URL("/confirmar-email", SITE_URL);
+function buildConfirmPageUrl(request, status, message) {
+  const url = new URL(
+    "/confirmar-email",
+    resolvePublicAppOrigin(request),
+  );
   url.searchParams.set("status", status);
   if (message) {
     url.searchParams.set("message", message);
@@ -22,7 +21,11 @@ export async function GET(request) {
 
   if (!token_hash) {
     return NextResponse.redirect(
-      buildConfirmPageUrl("error", "Link de confirmação inválido ou incompleto."),
+      buildConfirmPageUrl(
+        request,
+        "error",
+        "Link de confirmação inválido ou incompleto.",
+      ),
     );
   }
 
@@ -42,6 +45,7 @@ export async function GET(request) {
 
       return NextResponse.redirect(
         buildConfirmPageUrl(
+          request,
           "error",
           "Não foi possível confirmar o e-mail. O link pode ter expirado ou já ter sido utilizado.",
         ),
@@ -49,12 +53,20 @@ export async function GET(request) {
     }
 
     return NextResponse.redirect(
-      buildConfirmPageUrl("success", "E-mail confirmado com sucesso!"),
+      buildConfirmPageUrl(
+        request,
+        "success",
+        "E-mail confirmado com sucesso!",
+      ),
     );
   } catch (error) {
     console.error("[confirm-email] Erro inesperado:", error);
     return NextResponse.redirect(
-      buildConfirmPageUrl("error", "Erro interno ao confirmar o e-mail."),
+      buildConfirmPageUrl(
+        request,
+        "error",
+        "Erro interno ao confirmar o e-mail.",
+      ),
     );
   }
 }

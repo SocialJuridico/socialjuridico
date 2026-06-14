@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import { getRoleFromDatabase } from "@/lib/securityUtils";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
@@ -26,23 +27,7 @@ export function platformJson(payload, status = 200) {
 }
 
 export function hasValidPlatformMutationOrigin(request) {
-  const authorization = request.headers.get("authorization");
-  if (authorization?.startsWith("Bearer ")) return true;
-
-  const origin = request.headers.get("origin");
-  const referer = request.headers.get("referer");
-  const candidate = origin || referer;
-  if (!candidate) return request.headers.get("sec-fetch-site") !== "cross-site";
-
-  const host =
-    request.headers.get("x-forwarded-host") ||
-    request.headers.get("host") ||
-    "";
-  try {
-    return Boolean(host && new URL(candidate).host === host);
-  } catch {
-    return false;
-  }
+  return hasTrustedMutationOrigin(request, { allowMissingOrigin: false });
 }
 
 export function getPlatformRequestId(request, body = {}) {

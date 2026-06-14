@@ -39,6 +39,52 @@ function normalizeOrigin(
   }
 }
 
+function originHost(value) {
+  const origin = normalizeOrigin(value);
+  if (!origin) return null;
+
+  try {
+    return new URL(origin).host.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function originUrl(value) {
+  const origin = normalizeOrigin(value);
+  if (!origin) return null;
+
+  try {
+    return new URL(origin);
+  } catch {
+    return null;
+  }
+}
+
+function requestHostCandidates(request) {
+  if (!request) return [];
+
+  const candidates = [
+    request.headers?.get?.("x-forwarded-host"),
+    request.headers?.get?.("host"),
+  ];
+
+  try {
+    candidates.push(new URL(request.url).host);
+  } catch {
+    // request.url can be unavailable in unit-level mocks.
+  }
+
+  return [
+    ...new Set(
+      candidates
+        .flatMap((value) => String(value || "").split(","))
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+}
+
 function requestOrigin(request, { production }) {
   if (!request) return null;
 
@@ -121,4 +167,59 @@ export function resolveStaticPublicAppOrigin(env = process.env) {
     configuredOrigin(env, { production }) ||
     (production ? DEFAULT_PUBLIC_APP_ORIGIN : "http://localhost:3000")
   );
+}
+
+export function isTrustedPublicMutationOrigin(request, candidate) {
+  const candidateUrl = originUrl(candidate);
+  if (!candidateUrl) return false;
+
+  const candidateHost = candidateUrl.host.toLowerCase();
+  const withoutWww = candidateHost.replace(/^www\./, "");
+
+  if (
+    TRUSTED_PRODUCTION_HOSTS.has(withoutWww) &&
+    candidateUrl.protocol !== "https:"
+  ) {
+    return false;
+  }
+
+  const trustedHosts = new Set(requestHostCandidates(request));
+
+  for (const value of [
+    resolvePublicAppOrigin(request),
+    resolveStaticPublicAppOrigin(),
+    DEFAULT_PUBLIC_APP_ORIGIN,
+    "https://www.socialjuridico.com.br",
+  ]) {
+    const host = originHost(value);
+    if (host) trustedHosts.add(host);
+  }
+
+  const withWww = candidateHost.startsWith("www.")
+    ? candidateHost
+    : `www.${candidateHost}`;
+
+  return (
+    trustedHosts.has(candidateHost) ||
+    trustedHosts.has(withoutWww) ||
+    trustedHosts.has(withWww) ||
+    TRUSTED_PRODUCTION_HOSTS.has(withoutWww)
+  );
+}
+
+export function hasTrustedMutationOrigin(request, { allowMissingOrigin = true } = {}) {
+  const authorization = request?.headers?.get?.("authorization");
+  if (authorization?.startsWith("Bearer ")) return true;
+
+  const origin = request?.headers?.get?.("origin");
+  if (origin) return isTrustedPublicMutationOrigin(request, origin);
+
+  const referer = request?.headers?.get?.("referer");
+  if (referer) return isTrustedPublicMutationOrigin(request, referer);
+
+  if (!allowMissingOrigin) {
+    return request?.headers?.get?.("sec-fetch-site") === "same-origin";
+  }
+
+  return true;
 }

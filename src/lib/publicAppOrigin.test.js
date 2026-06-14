@@ -1,82 +1,57 @@
-import {
-  DEFAULT_PUBLIC_APP_ORIGIN,
-  resolvePublicAppOrigin,
-  resolveStaticPublicAppOrigin,
-} from "./publicAppOrigin";
+import { hasTrustedMutationOrigin } from "./publicAppOrigin";
 
-function request(url, headers = {}) {
-  const normalized = new Map(
-    Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]),
-  );
+function request({ origin, referer, url = "https://internal.vercel.app/api/test", host, forwardedHost } = {}) {
+  const headers = new Map();
+  if (origin) headers.set("origin", origin);
+  if (referer) headers.set("referer", referer);
+  if (host) headers.set("host", host);
+  if (forwardedHost) headers.set("x-forwarded-host", forwardedHost);
+
   return {
     url,
     headers: {
       get(name) {
-        return normalized.get(String(name).toLowerCase()) || null;
+        return headers.get(String(name).toLowerCase()) || null;
       },
     },
   };
 }
 
-describe("publicAppOrigin", () => {
-  test("prioriza o host publico encaminhado em producao", () => {
-    expect(
-      resolvePublicAppOrigin(
-        request("http://localhost:3000/api/test", {
-          "x-forwarded-host": "socialjuridico.com.br",
-          "x-forwarded-proto": "https",
-        }),
-        {
-          NODE_ENV: "production",
-          NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
-        },
-      ),
-    ).toBe("https://socialjuridico.com.br");
+describe("hasTrustedMutationOrigin", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+  const originalSiteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+
+  beforeEach(() => {
+    process.env.NODE_ENV = "production";
+    process.env.NEXT_PUBLIC_SITE_URL = "https://socialjuridico.com.br";
   });
 
-  test("rejeita localhost configurado em producao", () => {
-    expect(
-      resolvePublicAppOrigin(
-        request("http://localhost:3000/api/test"),
-        {
-          NODE_ENV: "production",
-          NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
-          NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000",
-        },
-      ),
-    ).toBe(DEFAULT_PUBLIC_APP_ORIGIN);
+  afterAll(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+    process.env.NEXT_PUBLIC_SITE_URL = originalSiteUrl;
   });
 
-  test("não aceita host arbitrario enviado pelo cliente", () => {
+  test("accepts the configured public origin even when request.url uses an internal host", () => {
     expect(
-      resolvePublicAppOrigin(
-        request("http://localhost:3000/api/test", {
-          host: "dominio-malicioso.example",
-          "x-forwarded-proto": "https",
-        }),
-        { NODE_ENV: "production" },
+      hasTrustedMutationOrigin(
+        request({ origin: "https://socialjuridico.com.br" }),
       ),
-    ).toBe(DEFAULT_PUBLIC_APP_ORIGIN);
+    ).toBe(true);
   });
 
-  test("preserva localhost no desenvolvimento", () => {
+  test("accepts the www variant of the production domain", () => {
     expect(
-      resolvePublicAppOrigin(
-        request("http://localhost:3000/api/test"),
-        {
-          NODE_ENV: "development",
-          NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
-        },
+      hasTrustedMutationOrigin(
+        request({ origin: "https://www.socialjuridico.com.br" }),
       ),
-    ).toBe("http://localhost:3000");
+    ).toBe(true);
   });
 
-  test("origem estatica ignora localhost em producao", () => {
+  test("rejects an untrusted origin", () => {
     expect(
-      resolveStaticPublicAppOrigin({
-        NODE_ENV: "production",
-        NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
-      }),
-    ).toBe(DEFAULT_PUBLIC_APP_ORIGIN);
+      hasTrustedMutationOrigin(
+        request({ origin: "https://evil.example" }),
+      ),
+    ).toBe(false);
   });
 });

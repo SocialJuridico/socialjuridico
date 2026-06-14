@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
@@ -33,17 +34,7 @@ export function signatureJson(payload, status = 200) {
 }
 
 export function hasValidSignatureMutationOrigin(request) {
-  const authorization = request.headers.get("authorization");
-  if (authorization?.startsWith("Bearer ")) return true;
-
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-
-  try {
-    return new URL(origin).host === new URL(request.url).host;
-  } catch {
-    return false;
-  }
+  return hasTrustedMutationOrigin(request);
 }
 
 function readPermissions(value) {

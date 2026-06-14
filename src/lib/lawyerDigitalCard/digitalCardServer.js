@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import { hasTrustedMutationOrigin, resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 import {
   getRequestIpHash,
   getRequestUserAgent,
@@ -30,23 +31,11 @@ export function digitalCardJson(payload, status = 200) {
 }
 
 export function hasValidDigitalCardMutationOrigin(request) {
-  const authorization = request.headers.get("authorization");
-  if (authorization?.startsWith("Bearer ")) return true;
-  const origin = request.headers.get("origin");
-  if (!origin) return true;
-  try {
-    return new URL(origin).host === new URL(request.url).host;
-  } catch {
-    return false;
-  }
+  return hasTrustedMutationOrigin(request);
 }
 
 function appOrigin(request) {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    new URL(request.url).origin
-  ).replace(/\/+$/, "");
+  return resolvePublicAppOrigin(request).replace(/\/+$/, "");
 }
 
 function defaultSlug(profile) {

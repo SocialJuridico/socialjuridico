@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 import { useLawyerSession } from "../LawyerSessionContext";
+import { downloadDocumentProtectionCertificate } from "./documentProtectionCertificate";
 
 const EMPTY_USAGE = {
   usedStorageMb: 0,
@@ -12,6 +13,20 @@ const EMPTY_USAGE = {
   remainingStorageMb: 0,
   percentage: 0,
 };
+
+const EMPTY_PAGINATION = {
+  page: 1,
+  pageSize: 18,
+  total: 0,
+  totalPages: 1,
+};
+
+const LEGACY_SOURCE_BY_TYPE = Object.freeze({
+  Contrato: "contratos",
+  "Procuração": "procuracoes",
+  "Prova Digital": "provas",
+  "Notificação": "notificacoes",
+});
 
 function createRequestId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -27,6 +42,34 @@ async function readJson(response) {
   return response.json().catch(() => null);
 }
 
+function mapLegacyDocument(row) {
+  const source = LEGACY_SOURCE_BY_TYPE[row.type];
+  return {
+    id: row.id,
+    source,
+    legacy: true,
+    protocol: row.protocol || null,
+    fileName: row.file_name || "Documento legado",
+    fileUrl: source
+      ? `/api/advogado/blindagemdedocumentos/${row.id}/arquivo?legacySource=${source}`
+      : row.file_url || null,
+    documentType: row.type || "Outros",
+    protected: true,
+    hash: row.hash_sha512 || null,
+    hashAlgorithm: row.hash_sha512 ? "SHA-512" : null,
+    fileSizeBytes: Number(row.file_size_bytes || 0),
+    clientId: row.client_id || null,
+    clientName: row.client_name || null,
+    lawyerId: row.lawyer_id || null,
+    lawyerName: row.lawyer_name || "Advogado responsável",
+    uploadIp: row.upload_ip || null,
+    userAgent: row.user_agent || null,
+    canDelete: false,
+    createdAt: row.created_at,
+    protectedAt: row.created_at,
+  };
+}
+
 export function formatProtectionSize(bytes) {
   const value = Number(bytes || 0);
   if (!value) return "Tamanho não informado";
@@ -39,6 +82,9 @@ export function useDocumentProtection() {
   const session = useLawyerSession();
   const { openJurisModal, openPlansModal, refreshProfile } = session;
   const [items, setItems] = useState([]);
+  const [legacyItems, setLegacyItems] = useState([]);
+  const [legacyLoaded, setLegacyLoaded] = useState(false);
+  const [collection, setCollection] = useState("current");
   const [clients, setClients] = useState([]);
   const [plan, setPlan] = useState({
     type: "FREE",
@@ -48,16 +94,14 @@ export function useDocumentProtection() {
   });
   const [usage, setUsage] = useState(EMPTY_USAGE);
   const [metrics, setMetrics] = useState({ protected: 0, linked: 0, legacy: 0 });
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 18,
-    total: 0,
-    totalPages: 1,
-  });
+  const [pagination, setPagination] = useState(EMPTY_PAGINATION);
+  const [legacyPage, setLegacyPage] = useState(1);
   const [filters, setFilters] = useState({ search: "", type: "all" });
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [legacyLoading, setLegacyLoading] = useState(false);
   const [error, setError] = useState("");
+  const [legacyError, setLegacyError] = useState("");
   const abortRef = useRef(null);
 
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -66,7 +110,7 @@ export function useDocumentProtection() {
   const [selectedType, setSelectedType] = useState("Outros");
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState("");
-  const fileInputRef = useRef(null);
+  const [certificateId, setCertificateId] = useState("");
   const uploadRequestIdRef = useRef("");
 
   useEffect(() => {
@@ -84,7 +128,7 @@ export function useDocumentProtection() {
     [],
   );
 
-  const load = useCallback(
+  const loadCurrent = useCallback(
     async (targetPage = 1) => {
       abortRef.current?.abort();
       const controller = new AbortController();
@@ -136,7 +180,7 @@ export function useDocumentProtection() {
         );
         setUsage(data.usage || EMPTY_USAGE);
         setMetrics(data.metrics || {});
-        setPagination(data.pagination || {});
+        setPagination(data.pagination || EMPTY_PAGINATION);
       } catch (loadError) {
         if (loadError.name === "AbortError") return;
         console.error("[Blindagem] Falha ao carregar:", loadError);
@@ -149,9 +193,55 @@ export function useDocumentProtection() {
     }, [debouncedSearch, filters.type, openPlansModal, pagination.pageSize, router],
   );
 
+  const loadLegacy = useCallback(async (force = false) => {
+    if (legacyLoaded && !force) return;
+    setLegacyLoading(true);
+    setLegacyError("");
+    try {
+      const response = await fetch("/api/crm/blindagem", { cache: "no-store" });
+      const data = await readJson(response);
+      if (response.status === 401) {
+        router.replace(
+          `/login?redirectTo=${encodeURIComponent("/dashboard/advogado/blindagemdedocumentos")}`,
+        );
+        return;
+      }
+      if (!response.ok || !data?.success) {
+        throw new Error(
+          data?.message || "Não foi possível carregar os registros legados.",
+        );
+      }
+      const mapped = (data.data || [])
+        .map(mapLegacyDocument)
+        .sort(
+          (left, right) =>
+            new Date(right.createdAt || 0).getTime() -
+            new Date(left.createdAt || 0).getTime(),
+        );
+      setLegacyItems(mapped);
+      setLegacyLoaded(true);
+      setMetrics((current) => ({ ...current, legacy: mapped.length }));
+    } catch (loadError) {
+      console.error("[Blindagem/Legado] Falha ao carregar:", loadError);
+      setLegacyError(
+        loadError.message || "Não foi possível carregar os registros legados.",
+      );
+    } finally {
+      setLegacyLoading(false);
+    }
+  }, [legacyLoaded, router]);
+
   useEffect(() => {
-    void load(1);
-  }, [load]);
+    if (collection === "current") void loadCurrent(1);
+  }, [collection, loadCurrent]);
+
+  useEffect(() => {
+    if (collection === "legacy") void loadLegacy();
+  }, [collection, loadLegacy]);
+
+  useEffect(() => {
+    if (collection === "legacy") setLegacyPage(1);
+  }, [collection, debouncedSearch, filters.type]);
 
   const resetUploadState = useCallback(() => {
     setUploadOpen(false);
@@ -159,7 +249,6 @@ export function useDocumentProtection() {
     setSelectedClientId("");
     setSelectedType("Outros");
     uploadRequestIdRef.current = "";
-    if (fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
   const openUpload = useCallback(() => {
@@ -176,7 +265,6 @@ export function useDocumentProtection() {
   const setSelectedFile = useCallback((file) => {
     setSelectedFileState(file || null);
     uploadRequestIdRef.current = file ? createRequestId() : "";
-    if (!file && fileInputRef.current) fileInputRef.current.value = "";
   }, []);
 
   const uploadDocument = useCallback(
@@ -207,16 +295,12 @@ export function useDocumentProtection() {
           body,
         });
         const data = await readJson(response);
-        if (response.status === 402 && data?.insufficientJuris) {
-          openJurisModal();
-        }
-        if (response.status === 403 && data?.upgradeRequired) {
-          openPlansModal();
-        }
+        if (response.status === 402 && data?.insufficientJuris) openJurisModal();
+        if (response.status === 403 && data?.upgradeRequired) openPlansModal();
         if (response.status === 409 && data?.alreadyProtected) {
           toast.error(data.message || "Este conteúdo já foi blindado.");
           resetUploadState();
-          await Promise.all([load(1), refreshProfile?.()]);
+          await Promise.all([loadCurrent(1), refreshProfile?.()]);
           return;
         }
         if (!response.ok || !data?.success) {
@@ -228,15 +312,16 @@ export function useDocumentProtection() {
 
         toast.success(data.message || "Documento blindado.");
         resetUploadState();
-        await Promise.all([load(1), refreshProfile?.()]);
+        setCollection("current");
+        await Promise.all([loadCurrent(1), refreshProfile?.()]);
       } catch (uploadError) {
         toast.error(uploadError.message || "Não foi possível blindar o documento.");
-        await load(pagination.page);
+        await loadCurrent(pagination.page);
       } finally {
         setUploading(false);
       }
     }, [
-      load,
+      loadCurrent,
       openJurisModal,
       openPlansModal,
       pagination.page,
@@ -276,7 +361,7 @@ export function useDocumentProtection() {
         }
         toast.success(data.message || "Documento excluído.");
         await Promise.all([
-          load(
+          loadCurrent(
             items.length === 1 && pagination.page > 1
               ? pagination.page - 1
               : pagination.page,
@@ -288,7 +373,7 @@ export function useDocumentProtection() {
       } finally {
         setDeletingId("");
       }
-    }, [deletingId, items.length, load, pagination.page, refreshProfile],
+    }, [deletingId, items.length, loadCurrent, pagination.page, refreshProfile],
   );
 
   const openDocument = useCallback((document) => {
@@ -306,27 +391,105 @@ export function useDocumentProtection() {
     }
   }, []);
 
+  const downloadCertificate = useCallback(async (document) => {
+    if (!document?.id || certificateId) return;
+    setCertificateId(document.id);
+    try {
+      await downloadDocumentProtectionCertificate(document);
+      toast.success("Certificado de blindagem gerado.");
+    } catch (certificateError) {
+      toast.error(
+        certificateError.message || "Não foi possível gerar o certificado.",
+      );
+    } finally {
+      setCertificateId("");
+    }
+  }, [certificateId]);
+
+  const filteredLegacyItems = useMemo(() => {
+    const search = debouncedSearch.toLocaleLowerCase("pt-BR");
+    return legacyItems.filter((document) => {
+      if (filters.type !== "all" && document.documentType !== filters.type) {
+        return false;
+      }
+      if (!search) return true;
+      return [
+        document.fileName,
+        document.documentType,
+        document.protocol,
+        document.hash,
+        document.clientName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("pt-BR")
+        .includes(search);
+    });
+  }, [debouncedSearch, filters.type, legacyItems]);
+
+  const legacyPagination = useMemo(() => ({
+    page: legacyPage,
+    pageSize: pagination.pageSize || 18,
+    total: filteredLegacyItems.length,
+    totalPages: Math.max(
+      1,
+      Math.ceil(filteredLegacyItems.length / (pagination.pageSize || 18)),
+    ),
+  }), [filteredLegacyItems.length, legacyPage, pagination.pageSize]);
+
+  const visibleLegacyItems = useMemo(() => {
+    const from = (legacyPagination.page - 1) * legacyPagination.pageSize;
+    return filteredLegacyItems.slice(from, from + legacyPagination.pageSize);
+  }, [filteredLegacyItems, legacyPagination]);
+
+  const activeItems = collection === "legacy" ? visibleLegacyItems : items;
+  const activePagination = collection === "legacy" ? legacyPagination : pagination;
+  const activeLoading = collection === "legacy" ? legacyLoading : loading;
+  const activeError = collection === "legacy" ? legacyError : error;
+
+  const load = useCallback(
+    async (targetPage = 1) => {
+      if (collection === "legacy") {
+        setLegacyPage(targetPage);
+        if (!legacyLoaded) await loadLegacy();
+        return;
+      }
+      await loadCurrent(targetPage);
+    },
+    [collection, legacyLoaded, loadCurrent, loadLegacy],
+  );
+
+  const reload = useCallback(() => {
+    if (collection === "legacy") return loadLegacy(true);
+    return loadCurrent(pagination.page);
+  }, [collection, loadCurrent, loadLegacy, pagination.page]);
+
   const currentRange = useMemo(() => {
-    if (!pagination.total) return "0 documentos";
-    const start = (pagination.page - 1) * pagination.pageSize + 1;
-    const end = Math.min(pagination.total, pagination.page * pagination.pageSize);
-    return `${start}–${end} de ${pagination.total}`;
-  }, [pagination]);
+    if (!activePagination.total) return "0 documentos";
+    const start = (activePagination.page - 1) * activePagination.pageSize + 1;
+    const end = Math.min(
+      activePagination.total,
+      activePagination.page * activePagination.pageSize,
+    );
+    return `${start}–${end} de ${activePagination.total}`;
+  }, [activePagination]);
 
   return {
     ...session,
-    items,
+    collection,
+    setCollection,
+    items: activeItems,
     clients,
     plan,
     usage,
     metrics,
-    pagination,
+    pagination: activePagination,
     filters,
     setFilters,
-    loading,
-    error,
+    loading: activeLoading,
+    error: activeError,
     load,
-    reload: () => load(pagination.page),
+    reload,
     currentRange,
     uploadOpen,
     openUpload,
@@ -343,6 +506,7 @@ export function useDocumentProtection() {
     deleteDocument,
     openDocument,
     copyHash,
-    fileInputRef,
+    certificateId,
+    downloadCertificate,
   };
 }

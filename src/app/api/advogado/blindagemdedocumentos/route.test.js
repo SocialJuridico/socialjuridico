@@ -52,7 +52,9 @@ describe("Document Protection API security contract", () => {
     expect(download).toContain("requireDocumentProtectionAccess(request)");
     expect(download).toContain("scopeSmartDocQuery(query, access.lawyerIds)");
     expect(download).toContain('.eq("is_blindado", true)');
-    expect(download).toContain("createSignedUrl(storageTarget.path, 120");
+    expect(download).toContain("async function redirectToSignedDownload");
+    expect(download).toContain(".createSignedUrl(path, 120");
+    expect(download).toContain("redirectToSignedDownload(");
     expect(download).not.toContain("getPublicUrl");
   });
 

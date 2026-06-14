@@ -51,8 +51,8 @@ export default function ProtectionOverview({ metrics, openUpload, plan, usage })
           <div>
             <strong>{metrics.legacy} registro(s) do módulo antigo</strong>
             <span>
-              Esses arquivos não são expostos aqui porque ainda dependem do
-              armazenamento público legado.
+              O acervo histórico está disponível na aba Legado, com acesso ao
+              arquivo e emissão do certificado técnico de blindagem.
             </span>
           </div>
         </section>

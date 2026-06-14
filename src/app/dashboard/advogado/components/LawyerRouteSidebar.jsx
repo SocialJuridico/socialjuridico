@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BellRing,
   BookOpen,
   Briefcase,
   Calculator,
@@ -70,6 +71,10 @@ const DIRECT_ROUTES = {
     path: "/dashboard/advogado/assinaturadigital",
     activeRoute: "assinaturadigital",
   },
+  notificacao: {
+    path: "/dashboard/advogado/notificacaoextrajudicial",
+    activeRoute: "notificacaoextrajudicial",
+  },
   crm: {
     path: "/dashboard/advogado/meusclientes",
     activeRoute: "meusclientes",
@@ -100,6 +105,12 @@ const PREMIUM_ITEMS = [
     label: "Assinatura Digital",
     icon: PenTool,
     permission: "ferr_assinatura",
+  },
+  {
+    tab: "notificacao",
+    label: "Notificação Extrajudicial",
+    icon: BellRing,
+    permission: "ferr_blindagem",
   },
   {
     tab: "crm",

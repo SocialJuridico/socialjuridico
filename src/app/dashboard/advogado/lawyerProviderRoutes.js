@@ -8,9 +8,10 @@ export const LAWYER_SESSION_ROUTES = Object.freeze([
   "/dashboard/advogado/anuncioseserviços",
   "/dashboard/advogado/queroumsite",
   "/dashboard/advogado/assinaturadigital",
+  "/dashboard/advogado/notificacaoextrajudicial",
   "/dashboard/advogado/meusclientes",
   "/dashboard/advogado/smartdoc",
-  "/dashboard/advogado/blindagemdedocumentos"
+  "/dashboard/advogado/blindagemdedocumentos",
 ]);
 
 export function usesLawyerSessionProvider(pathname) {

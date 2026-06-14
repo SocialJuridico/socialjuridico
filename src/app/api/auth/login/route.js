@@ -6,6 +6,8 @@ import { NextResponse } from "next/server";
 const loginAttempts = new Map();
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+const LEGACY_DEFAULT_PASSWORD =
+  process.env.LEGACY_DEFAULT_PASSWORD || process.env.DEFAULT_PASSWORD || null;
 
 function checkRateLimit(ip) {
   const now = Date.now();
@@ -94,7 +96,9 @@ export async function POST(request) {
     if (
       authError &&
       (authError.status === 401 || authError.status === 400) &&
-      password === DEFAULT_PASSWORD
+      supabaseAdmin &&
+      LEGACY_DEFAULT_PASSWORD &&
+      password === LEGACY_DEFAULT_PASSWORD
     ) {
       const db = supabaseAdmin || supabase;
       let existingProfile = null;
@@ -118,7 +122,7 @@ export async function POST(request) {
           await supabaseAdmin.auth.admin.createUser({
             id: existingProfile.id,
             email: email.trim().toLowerCase(),
-            password: DEFAULT_PASSWORD,
+            password: LEGACY_DEFAULT_PASSWORD,
             email_confirm: true,
             user_metadata: {
               full_name: existingProfile.name,
@@ -133,7 +137,7 @@ export async function POST(request) {
               await supabaseAdmin.auth.admin.getUserById(existingProfile.id);
 
             await supabaseAdmin.auth.admin.updateUserById(existingProfile.id, {
-              password: DEFAULT_PASSWORD,
+              password: LEGACY_DEFAULT_PASSWORD,
               email_confirm: true,
               user_metadata: {
                 ...(userData?.user?.user_metadata || {}),

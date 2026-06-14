@@ -1,4 +1,5 @@
 import { requireLawyerDigitalCardAccess } from "@/lib/lawyerDigitalCard/digitalCardServer";
+import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function GET(request) {
     } catch {
       return new Response("URL inválida.", { status: 400 });
     }
-    const appHost = new URL(access.origin).host;
+    const appHost = new URL(resolvePublicAppOrigin(request)).host;
     if (target.host !== appHost || !target.pathname.startsWith("/cartao/")) {
       return new Response("URL não autorizada.", { status: 403 });
     }

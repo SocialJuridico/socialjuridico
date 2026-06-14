@@ -15,6 +15,7 @@ import {
   getRequestIpHash,
   getRequestUserAgent,
 } from "@/lib/lawyerOpportunities/opportunityServerUtils";
+import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,10 +30,18 @@ function requestId(request, body = {}) {
     : crypto.randomUUID();
 }
 
+function withPublicOrigin(access, request) {
+  return {
+    ...access,
+    origin: resolvePublicAppOrigin(request),
+  };
+}
+
 export async function GET(request) {
   try {
-    const access = await requireLawyerDigitalCardAccess(request);
-    if (!access.ok) return access.response;
+    const accessResult = await requireLawyerDigitalCardAccess(request);
+    if (!accessResult.ok) return accessResult.response;
+    const access = withPublicOrigin(accessResult, request);
     const ensured = await ensureDigitalCard(access);
     if (ensured.created) {
       await recordDigitalCardAudit(access, request, {
@@ -50,23 +59,37 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error("[Cartão Digital][GET] Erro:", error);
-    const failure = digitalCardFailure(error, "Não foi possível carregar o cartão digital.");
-    return digitalCardJson({ success: false, message: failure.message }, failure.status);
+    const failure = digitalCardFailure(
+      error,
+      "Não foi possível carregar o cartão digital.",
+    );
+    return digitalCardJson(
+      { success: false, message: failure.message },
+      failure.status,
+    );
   }
 }
 
 export async function PUT(request) {
   try {
     if (!hasValidDigitalCardMutationOrigin(request)) {
-      return digitalCardJson({ success: false, message: "Origem não autorizada." }, 403);
+      return digitalCardJson(
+        { success: false, message: "Origem não autorizada." },
+        403,
+      );
     }
-    const access = await requireLawyerDigitalCardAccess(request);
-    if (!access.ok) return access.response;
+    const accessResult = await requireLawyerDigitalCardAccess(request);
+    if (!accessResult.ok) return accessResult.response;
+    const access = withPublicOrigin(accessResult, request);
     const body = await request.json().catch(() => ({}));
     const validation = validateDigitalCardMutation(body, { partial: true });
     if (!validation.success) {
       return digitalCardJson(
-        { success: false, message: "Revise os campos informados.", errors: validation.errors },
+        {
+          success: false,
+          message: "Revise os campos informados.",
+          errors: validation.errors,
+        },
         400,
       );
     }
@@ -75,19 +98,24 @@ export async function PUT(request) {
     const expectedUpdatedAt = body.updatedAt || body.updated_at;
     if (
       expectedUpdatedAt &&
-      new Date(expectedUpdatedAt).getTime() !== new Date(current.updated_at).getTime()
+      new Date(expectedUpdatedAt).getTime() !==
+        new Date(current.updated_at).getTime()
     ) {
       return digitalCardJson(
         {
           success: false,
           conflict: true,
-          message: "O cartão foi alterado em outra sessão. Recarregue antes de salvar.",
+          message:
+            "O cartão foi alterado em outra sessão. Recarregue antes de salvar.",
         },
         409,
       );
     }
 
-    const nextPublished = Object.prototype.hasOwnProperty.call(validation.data, "is_published")
+    const nextPublished = Object.prototype.hasOwnProperty.call(
+      validation.data,
+      "is_published",
+    )
       ? validation.data.is_published
       : current.is_published;
     const update = {
@@ -112,7 +140,11 @@ export async function PUT(request) {
     if (error) throw error;
     if (!updated) {
       return digitalCardJson(
-        { success: false, conflict: true, message: "O cartão foi atualizado por outra sessão." },
+        {
+          success: false,
+          conflict: true,
+          message: "O cartão foi atualizado por outra sessão.",
+        },
         409,
       );
     }
@@ -147,21 +179,33 @@ export async function PUT(request) {
     });
   } catch (error) {
     console.error("[Cartão Digital][PUT] Erro:", error);
-    const failure = digitalCardFailure(error, "Não foi possível salvar o cartão digital.");
-    return digitalCardJson({ success: false, message: failure.message }, failure.status);
+    const failure = digitalCardFailure(
+      error,
+      "Não foi possível salvar o cartão digital.",
+    );
+    return digitalCardJson(
+      { success: false, message: failure.message },
+      failure.status,
+    );
   }
 }
 
 export async function POST(request) {
   try {
     if (!hasValidDigitalCardMutationOrigin(request)) {
-      return digitalCardJson({ success: false, message: "Origem não autorizada." }, 403);
+      return digitalCardJson(
+        { success: false, message: "Origem não autorizada." },
+        403,
+      );
     }
     const access = await requireLawyerDigitalCardAccess(request);
     if (!access.ok) return access.response;
     const body = await request.json().catch(() => ({}));
     if (body.action !== "PDF_DOWNLOAD") {
-      return digitalCardJson({ success: false, message: "Ação inválida." }, 400);
+      return digitalCardJson(
+        { success: false, message: "Ação inválida." },
+        400,
+      );
     }
     const ensured = await ensureDigitalCard(access);
     const minute = new Date();
@@ -169,18 +213,22 @@ export async function POST(request) {
     const ipHash = getRequestIpHash(request);
     const dedupeKey = crypto
       .createHash("sha256")
-      .update(`${ensured.row.id}:PDF_DOWNLOAD:${ipHash}:${minute.toISOString()}`)
+      .update(
+        `${ensured.row.id}:PDF_DOWNLOAD:${ipHash}:${minute.toISOString()}`,
+      )
       .digest("hex");
-    const { error } = await access.db.from("lawyer_digital_card_events").insert([
-      {
-        card_id: ensured.row.id,
-        event_type: "PDF_DOWNLOAD",
-        dedupe_key: dedupeKey,
-        ip_hash: ipHash,
-        user_agent: getRequestUserAgent(request),
-        metadata: { version: ensured.row.version },
-      },
-    ]);
+    const { error } = await access.db
+      .from("lawyer_digital_card_events")
+      .insert([
+        {
+          card_id: ensured.row.id,
+          event_type: "PDF_DOWNLOAD",
+          dedupe_key: dedupeKey,
+          ip_hash: ipHash,
+          user_agent: getRequestUserAgent(request),
+          metadata: { version: ensured.row.version },
+        },
+      ]);
     if (error && error.code !== "23505") throw error;
     await recordDigitalCardAudit(access, request, {
       requestId: requestId(request, body),
@@ -191,7 +239,13 @@ export async function POST(request) {
     return digitalCardJson({ success: true });
   } catch (error) {
     console.error("[Cartão Digital][POST] Erro:", error);
-    const failure = digitalCardFailure(error, "Não foi possível registrar o download.");
-    return digitalCardJson({ success: false, message: failure.message }, failure.status);
+    const failure = digitalCardFailure(
+      error,
+      "Não foi possível registrar o download.",
+    );
+    return digitalCardJson(
+      { success: false, message: failure.message },
+      failure.status,
+    );
   }
 }

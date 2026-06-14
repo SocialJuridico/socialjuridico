@@ -7,6 +7,7 @@ import {
   buildDigitalCardVcard,
   safeVcardFilename,
 } from "@/lib/lawyerDigitalCard/digitalCardVcard";
+import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,12 +16,10 @@ export async function GET(request, context) {
   try {
     const { slug: rawSlug } = await context.params;
     const slug = slugifyDigitalCard(rawSlug);
-    const origin = (
-      process.env.NEXT_PUBLIC_APP_URL ||
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      new URL(request.url).origin
-    ).replace(/\/+$/, "");
-    const card = await getPublicDigitalCardBySlug(slug, origin);
+    const card = await getPublicDigitalCardBySlug(
+      slug,
+      resolvePublicAppOrigin(request),
+    );
     if (!card) {
       return new Response("Cartão não encontrado.", { status: 404 });
     }

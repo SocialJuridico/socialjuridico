@@ -8,10 +8,94 @@ import {
   recordClientAudit,
   requireLawyerClientAccess,
 } from "@/lib/lawyerClients/clientServer";
-import { validateInteractionPayload } from "@/lib/lawyerClients/clientValidation";
+import {
+  SCHEDULABLE_INTERACTION_TYPES,
+  validateInteractionPayload,
+} from "@/lib/lawyerClients/clientValidation";
+import {
+  getScopedAgendaItem,
+  recordAgendaAudit,
+  reserveAgendaItem,
+} from "@/lib/lawyerAgenda/agendaServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function toAgendaType(interactionType) {
+  if (interactionType === "reunião") return "REUNIAO";
+  if (interactionType === "ligação") return "TAREFA";
+  return "OUTRO";
+}
+
+function buildAgendaTitle(interactionType, clientName) {
+  if (interactionType === "reunião") return `Reunião com ${clientName}`;
+  if (interactionType === "ligação") return `Ligação com ${clientName}`;
+  return `Compromisso com ${clientName}`;
+}
+
+async function createAgendaItemForInteraction(access, request, client, interaction) {
+  if (!SCHEDULABLE_INTERACTION_TYPES.includes(interaction.type)) return null;
+
+  const requestId = interaction.requestId || crypto.randomUUID();
+  const start = new Date(interaction.scheduledAt);
+  const reservation = await reserveAgendaItem(
+    {
+      ...access,
+      actorType: "LAWYER",
+      actorId: access.user.id,
+      actorOfficeId: null,
+      officeId: access.profile?.escritorio_id || null,
+    },
+    {
+      requestId,
+      lawyerId: client.lawyer_id || access.user.id,
+      clientId: client.id,
+      title: buildAgendaTitle(interaction.type, client.name),
+      description: interaction.content,
+      date: start.toISOString(),
+      endDate: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
+      type: toAgendaType(interaction.type),
+      urgency: "MEDIUM",
+      status: "PENDING",
+    },
+  );
+
+  if (!reservation.success) {
+    const error = new Error(
+      reservation.code === "QUOTA_EXCEEDED"
+        ? "O limite mensal da agenda foi atingido."
+        : "Não foi possível criar o compromisso na agenda.",
+    );
+    error.status = reservation.httpStatus || 400;
+    error.code = reservation.code;
+    throw error;
+  }
+
+  const agendaItem = await getScopedAgendaItem(access, reservation.item_id);
+  if (!agendaItem) return null;
+
+  await recordAgendaAudit(access, request, {
+    requestId,
+    itemId: agendaItem.id,
+    lawyerId: agendaItem.lawyer_id,
+    action: "CREATE_ITEM",
+    metadata: {
+      source: "CRM_INTERACTION",
+      interactionType: interaction.type,
+      clientId: client.id,
+      reused: reservation.reused === true,
+    },
+  });
+
+  return {
+    id: agendaItem.id,
+    title: agendaItem.title,
+    date: agendaItem.date,
+    type: agendaItem.type,
+    status: agendaItem.status,
+    reused: reservation.reused === true,
+  };
+}
 
 export async function POST(request, context) {
   try {
@@ -45,6 +129,13 @@ export async function POST(request, context) {
       );
     }
 
+    const agendaItem = await createAgendaItemForInteraction(
+      access,
+      request,
+      client,
+      validation.data,
+    );
+
     const interactionId = crypto.randomUUID();
     const now = new Date().toISOString();
     const { data, error } = await access.db
@@ -67,14 +158,20 @@ export async function POST(request, context) {
       requestId: validation.data.requestId,
       clientId: client.id,
       action: "ADD_INTERACTION",
-      metadata: { interaction_id: interactionId, type: validation.data.type },
+      metadata: {
+        interaction_id: interactionId,
+        type: validation.data.type,
+        agenda_item_id: agendaItem?.id || null,
+      },
     });
 
     return clientJson(
       {
         success: true,
-        message: "Interação registrada.",
-        data,
+        message: agendaItem
+          ? "Interação registrada e compromisso criado na agenda."
+          : "Interação registrada.",
+        data: { ...data, agendaItem },
       },
       201,
     );

@@ -13,6 +13,10 @@ export const INTERACTION_TYPES = Object.freeze([
   "whatsapp",
   "auditoria",
 ]);
+export const SCHEDULABLE_INTERACTION_TYPES = Object.freeze([
+  "reunião",
+  "ligação",
+]);
 export const FINANCE_STATUSES = Object.freeze(["PENDENTE", "PAGO", "CANCELADO"]);
 export const MAX_CLIENT_PAGE_SIZE = 30;
 export const DEFAULT_CLIENT_PAGE_SIZE = 12;
@@ -112,13 +116,27 @@ export function normalizeClientQuery(searchParams) {
 }
 
 export function validateInteractionPayload(payload = {}) {
+  const scheduledAt = payload.scheduledAt || payload.scheduled_at || "";
+  const scheduledDate = scheduledAt ? new Date(scheduledAt) : null;
   const data = {
     requestId: normalizeClientText(payload.requestId, 36),
     type: INTERACTION_TYPES.includes(payload.type) ? payload.type : "nota",
     content: normalizeClientText(payload.content, 3000),
+    scheduledAt:
+      scheduledDate && !Number.isNaN(scheduledDate.getTime())
+        ? scheduledDate.toISOString()
+        : null,
   };
   const errors = {};
+
   if (data.content.length < 2) errors.content = "Descreva a interação realizada.";
+  if (scheduledAt && !data.scheduledAt) {
+    errors.scheduledAt = "Informe uma data e hora válidas.";
+  }
+  if (SCHEDULABLE_INTERACTION_TYPES.includes(data.type) && !data.scheduledAt) {
+    errors.scheduledAt = "Informe quando este compromisso acontecerá.";
+  }
+
   return { valid: Object.keys(errors).length === 0, errors, data };
 }
 

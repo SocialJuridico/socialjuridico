@@ -131,6 +131,7 @@ export function useLawyerClients() {
   const [interactionForm, setInteractionForm] = useState({
     type: "nota",
     content: "",
+    scheduledAt: "",
   });
   const [financeForm, setFinanceForm] = useState(EMPTY_FINANCE);
   const [dossierAction, setDossierAction] = useState("");
@@ -408,7 +409,7 @@ export function useLawyerClients() {
         ...current,
         interactions: [data.data, ...(current.interactions || [])],
       }));
-      setInteractionForm({ type: "nota", content: "" });
+      setInteractionForm({ type: "nota", content: "", scheduledAt: "" });
       toast.success(data.message);
     } catch (actionError) {
       toast.error(actionError.message || "Erro ao registrar interação.");

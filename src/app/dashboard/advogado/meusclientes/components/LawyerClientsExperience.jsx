@@ -735,6 +735,10 @@ function OverviewTab({ controller }) {
 }
 
 function TimelineTab({ controller }) {
+  const requiresSchedule = ["reunião", "ligação"].includes(
+    controller.interactionForm.type,
+  );
+
   return (
     <section className={styles.dossierCard}>
       <form className={styles.inlineForm} onSubmit={controller.addInteraction}>
@@ -755,6 +759,9 @@ function TimelineTab({ controller }) {
               controller.setInteractionForm((current) => ({
                 ...current,
                 type: event.target.value,
+                scheduledAt: ["reunião", "ligação"].includes(event.target.value)
+                  ? current.scheduledAt
+                  : "",
               }))
             }
           >
@@ -764,11 +771,29 @@ function TimelineTab({ controller }) {
             <option value="email">E-mail</option>
             <option value="whatsapp">WhatsApp</option>
           </select>
+          {requiresSchedule && (
+            <label className={styles.inlineDateField}>
+              <CalendarDays size={15} />
+              <input
+                type="datetime-local"
+                value={controller.interactionForm.scheduledAt}
+                onChange={(event) =>
+                  controller.setInteractionForm((current) => ({
+                    ...current,
+                    scheduledAt: event.target.value,
+                  }))
+                }
+                aria-label="Data e hora do compromisso"
+                required
+              />
+            </label>
+          )}
           <button
             type="submit"
             disabled={
               controller.dossierAction === "interaction" ||
-              !controller.interactionForm.content.trim()
+              !controller.interactionForm.content.trim() ||
+              (requiresSchedule && !controller.interactionForm.scheduledAt)
             }
           >
             <Plus size={16} /> Registrar

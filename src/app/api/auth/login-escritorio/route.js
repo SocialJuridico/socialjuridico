@@ -1,7 +1,13 @@
+import { NextResponse } from "next/server";
+
+import {
+  OFFICE_SESSION_COOKIE,
+  OFFICE_SESSION_SIGNATURE_COOKIE,
+  signOfficeSessionValue,
+} from "@/lib/officeSession";
 import { hashPassword, isHashedPassword, verifyPassword } from "@/lib/passwordHash";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
-import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +23,16 @@ function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function officeCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 60 * 60 * 8,
+    path: "/",
+  };
+}
+
 function createOfficeSessionResponse(office) {
   const response = json({
     success: true,
@@ -28,29 +44,27 @@ function createOfficeSessionResponse(office) {
       plano: office.plano,
     },
   });
-
-  const sessionData = {
-    id: office.id,
-    email: office.email,
-    nome: office.nome,
-    cnpj: office.cnpj,
-    plano: office.plano,
-    role: "ESCRITORIO",
-    loginAt: new Date().toISOString(),
-  };
-
+  const sessionValue = Buffer.from(
+    JSON.stringify({
+      id: office.id,
+      email: office.email,
+      nome: office.nome,
+      cnpj: office.cnpj,
+      plano: office.plano,
+      role: "ESCRITORIO",
+      loginAt: new Date().toISOString(),
+    }),
+  ).toString("base64");
+  const signature = signOfficeSessionValue(sessionValue);
+  if (!signature) {
+    throw new Error("Não foi possível assinar a sessão do escritório.");
+  }
+  response.cookies.set(OFFICE_SESSION_COOKIE, sessionValue, officeCookieOptions());
   response.cookies.set(
-    "sj_escritorio_session",
-    Buffer.from(JSON.stringify(sessionData)).toString("base64"),
-    {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 8,
-      path: "/",
-    },
+    OFFICE_SESSION_SIGNATURE_COOKIE,
+    signature,
+    officeCookieOptions(),
   );
-
   return response;
 }
 
@@ -59,17 +73,12 @@ export async function POST(request) {
     const body = await request.json().catch(() => null);
     const email = normalizeEmail(body?.email);
     const password = String(body?.password || "");
-
     if (!email || !password) {
-      return json(
-        { success: false, message: "E-mail e senha são obrigatórios." },
-        400,
-      );
+      return json({ success: false, message: "E-mail e senha são obrigatórios." }, 400);
     }
 
     const supabase = createClient();
     const db = supabaseAdmin || supabase;
-
     const { data: staffMember, error: staffError } = await db
       .from("advogados")
       .select(
@@ -78,33 +87,25 @@ export async function POST(request) {
       .eq("email", email)
       .not("escritorio_id", "is", null)
       .maybeSingle();
-
     if (staffError) {
       console.error("[Login Escritório] Falha ao consultar membro:", staffError);
-      return json(
-        { success: false, message: "Não foi possível validar as credenciais." },
-        500,
-      );
+      return json({ success: false, message: "Não foi possível validar as credenciais." }, 500);
     }
 
     if (staffMember) {
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({ email, password });
-
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (authError || !authData?.user) {
-        return json(
-          { success: false, message: "Senha incorreta ou credenciais inválidas." },
-          401,
-        );
+        return json({ success: false, message: "Senha incorreta ou credenciais inválidas." }, 401);
       }
-
       if (!authData.user.email_confirmed_at) {
         await supabase.auth.signOut();
         return json(
           {
             success: false,
-            message:
-              "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.",
+            message: "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada.",
           },
           401,
         );
@@ -112,33 +113,24 @@ export async function POST(request) {
 
       if (staffMember.cargo === "advogado") {
         let hasOabError = staffMember.oab_verification_status === "ERROR";
-
         if (
           !hasOabError &&
           staffMember.oab_verification_status === "PENDING" &&
           staffMember.oab_warning_started_at
         ) {
           const warningStart = new Date(staffMember.oab_warning_started_at);
-          const elapsedDays =
-            (Date.now() - warningStart.getTime()) / 86_400_000;
-
+          const elapsedDays = (Date.now() - warningStart.getTime()) / 86_400_000;
           if (!Number.isNaN(elapsedDays) && elapsedDays >= 7) {
             hasOabError = true;
-
             const { error: updateError } = await db
               .from("advogados")
               .update({ oab_verification_status: "ERROR" })
               .eq("id", staffMember.id);
-
             if (updateError) {
-              console.error(
-                "[Login Escritório] Falha ao atualizar status da OAB:",
-                updateError,
-              );
+              console.error("[Login Escritório] Falha ao atualizar status da OAB:", updateError);
             }
           }
         }
-
         if (hasOabError) {
           await supabase.auth.signOut();
           return json(
@@ -164,14 +156,10 @@ export async function POST(request) {
             authData.user.user_metadata?.needs_password_update === true,
         },
       });
-
       response.cookies.set(
         "sj_login_time",
         Buffer.from(
-          JSON.stringify({
-            loginAt: new Date().toISOString(),
-            userId: authData.user.id,
-          }),
+          JSON.stringify({ loginAt: new Date().toISOString(), userId: authData.user.id }),
         ).toString("base64"),
         {
           httpOnly: true,
@@ -181,7 +169,6 @@ export async function POST(request) {
           path: "/",
         },
       );
-
       return response;
     }
 
@@ -190,22 +177,14 @@ export async function POST(request) {
       .select("id, nome, cnpj, email, plano, senha")
       .eq("email", email)
       .maybeSingle();
-
     if (officeError || !office) {
       return json(
-        {
-          success: false,
-          message: "Escritório não cadastrado ou credenciais incorretas.",
-        },
+        { success: false, message: "Escritório não cadastrado ou credenciais incorretas." },
         401,
       );
     }
-
     if (!verifyPassword(password, office.senha)) {
-      return json(
-        { success: false, message: "Senha incorreta para este escritório." },
-        401,
-      );
+      return json({ success: false, message: "Senha incorreta para este escritório." }, 401);
     }
 
     if (!isHashedPassword(office.senha) && supabaseAdmin) {
@@ -214,27 +193,17 @@ export async function POST(request) {
           .from("escritorios")
           .update({ senha: hashPassword(password) })
           .eq("id", office.id);
-
         if (migrationError) {
-          console.error(
-            "[Login Escritório] Falha ao migrar senha legada:",
-            migrationError,
-          );
+          console.error("[Login Escritório] Falha ao migrar senha legada:", migrationError);
         }
       } catch (migrationError) {
-        console.error(
-          "[Login Escritório] Falha ao gerar hash da senha legada:",
-          migrationError,
-        );
+        console.error("[Login Escritório] Falha ao gerar hash da senha legada:", migrationError);
       }
     }
 
     return createOfficeSessionResponse(office);
   } catch (error) {
     console.error("[Login Escritório] Erro:", error);
-    return json(
-      { success: false, message: "Erro interno no servidor." },
-      500,
-    );
+    return json({ success: false, message: "Erro interno no servidor." }, 500);
   }
 }

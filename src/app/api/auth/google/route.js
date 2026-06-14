@@ -1,44 +1,56 @@
-import { NextResponse } from 'next/server';
-import { google } from 'googleapis';
-import { createClient } from '@/lib/supabaseServer';
+import { google } from "googleapis";
+import { NextResponse } from "next/server";
 
-/**
- * GET /api/auth/google
- * Inicia o fluxo de OAuth2 para conectar o Google Calendar
- */
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import {
+  createGoogleCalendarState,
+  GOOGLE_CALENDAR_NONCE_COOKIE,
+  normalizeGoogleRedirect,
+} from "@/lib/lawyerAgenda/googleCalendarState";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function GET(request) {
   try {
-    const supabase = createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.redirect(new URL('/login?error=unauthorized', request.url));
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.redirect(new URL("/login?error=unauthorized", request.url));
     }
 
+    const redirectTo = normalizeGoogleRedirect(
+      new URL(request.url).searchParams.get("redirectTo"),
+    );
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
+      `${appUrl}/api/auth/google/callback`,
     );
-
-    // Gerar a URL de autenticação
+    const { state, nonce } = createGoogleCalendarState(user.id, redirectTo);
     const authUrl = oauth2Client.generateAuthUrl({
-      // "offline" é obrigatório para receber o refresh_token!
-      access_type: 'offline',
-      // prompt="consent" força a tela de permissão, garantindo que o Google mande o refresh_token
-      prompt: 'consent',
+      access_type: "offline",
+      prompt: "consent",
       scope: [
-        'https://www.googleapis.com/auth/calendar.events', // Permissão para ler/escrever eventos
-        'https://www.googleapis.com/auth/userinfo.email',
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/userinfo.email",
       ],
-      // Passamos o ID do usuário no parâmetro state para sabermos quem é quando o Google retornar
-      state: user.id
+      state,
     });
 
-    return NextResponse.redirect(authUrl);
-
+    const response = NextResponse.redirect(authUrl);
+    response.cookies.set(GOOGLE_CALENDAR_NONCE_COOKIE, nonce, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 10 * 60,
+      path: "/api/auth/google",
+    });
+    return response;
   } catch (error) {
-    console.error("Erro ao iniciar Google OAuth:", error);
-    return NextResponse.redirect(new URL('/dashboard/advogado?error=google_auth_failed', request.url));
+    console.error("[Google Calendar OAuth][Start] Erro:", error);
+    return NextResponse.redirect(
+      new URL("/dashboard/advogado/agenda?google_sync=error", request.url),
+    );
   }
 }

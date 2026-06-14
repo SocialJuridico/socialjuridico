@@ -1,7 +1,7 @@
 import { usesLawyerSessionProvider } from "./lawyerProviderRoutes";
 
 describe("usesLawyerSessionProvider", () => {
-  test("inclui SmartDoc, Blindagem e Notificação Extrajudicial", () => {
+  test("inclui SmartDoc, Blindagem, Notificação Extrajudicial e Agenda", () => {
     expect(usesLawyerSessionProvider("/dashboard/advogado/smartdoc")).toBe(true);
     expect(
       usesLawyerSessionProvider("/dashboard/advogado/smartdoc/documento/123"),
@@ -24,6 +24,10 @@ describe("usesLawyerSessionProvider", () => {
         "/dashboard/advogado/notificacaoextrajudicial/registro/123",
       ),
     ).toBe(true);
+    expect(usesLawyerSessionProvider("/dashboard/advogado/agenda")).toBe(true);
+    expect(
+      usesLawyerSessionProvider("/dashboard/advogado/agenda/compromisso/123"),
+    ).toBe(true);
   });
 
   test("mantem rotas antigas no DashboardProvider", () => {
@@ -45,5 +49,6 @@ describe("usesLawyerSessionProvider", () => {
         "/dashboard/advogado/notificacaoextrajudicial-antiga",
       ),
     ).toBe(false);
+    expect(usesLawyerSessionProvider("/dashboard/advogado/agendamentos")).toBe(false);
   });
 });

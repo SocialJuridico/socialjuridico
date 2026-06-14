@@ -75,6 +75,10 @@ const DIRECT_ROUTES = {
     path: "/dashboard/advogado/notificacaoextrajudicial",
     activeRoute: "notificacaoextrajudicial",
   },
+  agenda: {
+    path: "/dashboard/advogado/agenda",
+    activeRoute: "agenda",
+  },
   crm: {
     path: "/dashboard/advogado/meusclientes",
     activeRoute: "meusclientes",
@@ -86,6 +90,22 @@ const DIRECT_ROUTES = {
   blindagem: {
     path: "/dashboard/advogado/blindagemdedocumentos",
     activeRoute: "blindagemdedocumentos",
+  },
+  redator: {
+    path: "/dashboard/advogado/redator-ia",
+    activeRoute: "redator-ia",
+  },
+  triagem: {
+    path: "/dashboard/advogado/triagem",
+    activeRoute: "triagem",
+  },
+  calculadora: {
+    path: "/dashboard/advogado/calculadora",
+    activeRoute: "calculadora",
+  },
+  juris: {
+    path: "/dashboard/advogado/jurisprudencia",
+    activeRoute: "jurisprudencia",
   },
 };
 

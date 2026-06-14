@@ -1,65 +1,80 @@
-import { NextResponse } from 'next/server';
-import { google } from 'googleapis';
-import { supabaseAdmin } from '@/lib/supabase';
+import { google } from "googleapis";
+import { NextResponse } from "next/server";
 
-/**
- * GET /api/auth/google/callback
- * Recebe o código do Google, troca por tokens e salva o refresh_token no banco.
- */
+import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import {
+  GOOGLE_CALENDAR_NONCE_COOKIE,
+  verifyGoogleCalendarState,
+} from "@/lib/lawyerAgenda/googleCalendarState";
+import { supabaseAdmin } from "@/lib/supabase";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function redirectWithStatus(request, redirectTo, status) {
+  const target = new URL(redirectTo || "/dashboard/advogado/agenda", request.url);
+  target.searchParams.set("google_sync", status);
+  const response = NextResponse.redirect(target);
+  response.cookies.set(GOOGLE_CALENDAR_NONCE_COOKIE, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 0,
+    path: "/api/auth/google",
+  });
+  return response;
+}
+
 export async function GET(request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const code = searchParams.get('code');
-    const userId = searchParams.get('state'); // O ID do advogado que passamos na URL anterior
-    const errorParam = searchParams.get('error');
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  const providerError = url.searchParams.get("error");
+  const nonce = request.cookies.get(GOOGLE_CALENDAR_NONCE_COOKIE)?.value;
+  const verifiedState = verifyGoogleCalendarState(state, nonce);
+  const redirectTo = verifiedState?.redirectTo || "/dashboard/advogado/agenda";
 
-    // Se o usuário recusou na tela do Google
-    if (errorParam || !code || !userId) {
-      console.warn("Google OAuth negado ou incompleto:", errorParam);
-      return NextResponse.redirect(new URL('/dashboard/advogado?google_sync=error', request.url));
+  try {
+    if (providerError || !code || !verifiedState || !supabaseAdmin) {
+      return redirectWithStatus(request, redirectTo, "error");
     }
 
+    const user = await getAuthenticatedUser(request);
+    if (!user || user.id !== verifiedState.userId) {
+      return redirectWithStatus(request, redirectTo, "error");
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || url.origin;
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/google/callback`
+      `${appUrl}/api/auth/google/callback`,
     );
-
-    // Trocar o código pelos tokens de acesso
     const { tokens } = await oauth2Client.getToken(code);
-    
-    // O refresh_token é o mais importante. O access_token expira rápido, o refresh não.
-    if (tokens.refresh_token) {
-      // Salvar no banco
-      const { error: dbError } = await supabaseAdmin
-        .from('advogados')
-        .update({ 
-          google_refresh_token: tokens.refresh_token,
-          google_sync_enabled: true 
-        })
-        .eq('id', userId);
 
-      if (dbError) {
-        console.error("Erro ao salvar refresh token no Supabase:", dbError);
-        return NextResponse.redirect(new URL('/dashboard/advogado?google_sync=db_error', request.url));
-      }
-      
-      console.log(`✅ Google Calendar conectado com sucesso para advogado ${userId}`);
-    } else {
-      console.warn("⚠️ Google não retornou refresh_token. O usuário precisa revogar o acesso no Google e tentar novamente.");
-      // Como pedimos prompt='consent', ele deveria retornar. Se não retornar, 
-      // ativamos a sincronização apenas se ele já tinha um token salvo antes.
-      await supabaseAdmin
-        .from('advogados')
-        .update({ google_sync_enabled: true })
-        .eq('id', userId);
-    }
+    const { data: currentProfile, error: profileError } = await supabaseAdmin
+      .from("advogados")
+      .select("id, google_refresh_token")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profileError) throw profileError;
+    if (!currentProfile) return redirectWithStatus(request, redirectTo, "error");
 
-    // Redirecionar de volta para o dashboard com mensagem de sucesso
-    return NextResponse.redirect(new URL('/dashboard/advogado?google_sync=success', request.url));
+    const refreshToken = tokens.refresh_token || currentProfile.google_refresh_token;
+    if (!refreshToken) return redirectWithStatus(request, redirectTo, "error");
 
+    const { error: updateError } = await supabaseAdmin
+      .from("advogados")
+      .update({
+        google_refresh_token: refreshToken,
+        google_sync_enabled: true,
+      })
+      .eq("id", user.id);
+    if (updateError) throw updateError;
+
+    return redirectWithStatus(request, redirectTo, "success");
   } catch (error) {
-    console.error("Erro no callback do Google OAuth:", error);
-    return NextResponse.redirect(new URL('/dashboard/advogado?google_sync=error', request.url));
+    console.error("[Google Calendar OAuth][Callback] Erro:", error);
+    return redirectWithStatus(request, redirectTo, "error");
   }
 }

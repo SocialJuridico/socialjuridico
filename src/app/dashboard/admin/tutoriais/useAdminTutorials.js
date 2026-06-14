@@ -120,7 +120,7 @@ export function useAdminTutorials() {
         toast.success("Tutorial atualizado.");
       } else {
         await uploadAdminTutorial(form);
-        toast.success("Tutorial enviado como rascunho.");
+        toast.success("Tutorial enviado e publicado.");
       }
       reset();
       await load();
@@ -150,7 +150,7 @@ export function useAdminTutorials() {
   }, [load]);
 
   const remove = useCallback(async (item) => {
-    const reason = window.prompt(`Justificativa para arquivar “${item.title}” (mínimo de 10 caracteres):`);
+    const reason = window.prompt(`Justificativa para arquivar ${item.title} (mínimo de 10 caracteres):`);
     if (!reason) return;
     setBusyId(item.id);
     try {

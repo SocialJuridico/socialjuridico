@@ -7,6 +7,27 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function prepareItem(item) {
+  const blocks = Array.isArray(item?.content_schema?.blocks)
+    ? item.content_schema.blocks
+    : [];
+  const presentation = item?.content_type === "PRESENTATION" || blocks.some(
+    (block) => block?.type === "presentation_pdf" || block?.type === "slide_image",
+  );
+  return {
+    id: item.id,
+    slug: item.slug,
+    title: item.title,
+    subtitle: item.subtitle,
+    summary: item.summary,
+    content_type: presentation ? "PRESENTATION" : item.content_type,
+    content_version: item.content_version,
+    sort_order: item.sort_order,
+    published_at: item.published_at,
+    updated_at: item.updated_at,
+  };
+}
+
 export async function GET(request) {
   try {
     const access = await requireLawyerDocumentationAccess(request);
@@ -17,7 +38,7 @@ export async function GET(request) {
     let builder = access.db
       .from("platform_documentation")
       .select(
-        "id, slug, title, subtitle, summary, content_type, content_version, sort_order, published_at, updated_at",
+        "id, slug, title, subtitle, summary, content_type, content_schema, content_version, sort_order, published_at, updated_at",
       )
       .eq("status", "PUBLISHED")
       .in("target_audience", ["LAWYER", "BOTH"])
@@ -32,7 +53,7 @@ export async function GET(request) {
 
     const { data, error } = await builder;
     if (error) throw error;
-    return platformJson({ success: true, data: data || [] });
+    return platformJson({ success: true, data: (data || []).map(prepareItem) });
   } catch (error) {
     return safePlatformError(error, "Não foi possível carregar a documentação.");
   }

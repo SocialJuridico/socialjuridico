@@ -7,8 +7,10 @@ import {
   Calculator,
   Calendar,
   Check,
+  FilePenLine,
   FileText,
   Globe,
+  Home,
   Lock,
   LogOut,
   MessageSquare,
@@ -31,6 +33,7 @@ import sidebarStyles from "./LawyerRouteSidebar.module.css";
 import styles from "./LawyerShell.module.css";
 
 const DIRECT_ROUTES = {
+  dashboard: { path: "/dashboard/advogado/dashboard", activeRoute: "dashboard" },
   indicacoes: { path: "/dashboard/advogado/indiqueganhe", activeRoute: "indiqueganhe" },
   oportunidades: { path: "/dashboard/advogado/oportunidade", activeRoute: "oportunidade" },
   "minhas-mensagens": { path: "/dashboard/advogado/mensagens", activeRoute: "mensagens" },
@@ -47,6 +50,7 @@ const DIRECT_ROUTES = {
   docs: { path: "/dashboard/advogado/smartdoc", activeRoute: "smartdoc" },
   blindagem: { path: "/dashboard/advogado/blindagemdedocumentos", activeRoute: "blindagemdedocumentos" },
   redator: { path: "/dashboard/advogado/redator-ia", activeRoute: "redator-ia" },
+  "gerador-documentos": { path: "/dashboard/advogado/geradordedocumentos", activeRoute: "geradordedocumentos" },
   triagem: { path: "/dashboard/advogado/triagem", activeRoute: "triagem" },
   calculadora: { path: "/dashboard/advogado/calculadora", activeRoute: "calculadora" },
   juris: { path: "/dashboard/advogado/jurisprudencia", activeRoute: "jurisprudencia" },
@@ -57,6 +61,7 @@ const DIRECT_ROUTES = {
 };
 
 const PRIMARY_ITEMS = [
+  { tab: "dashboard", label: "Dashboard", icon: Home },
   { tab: "indicacoes", label: "Indique e Ganhe", icon: UserPlus },
   { tab: "oportunidades", label: "Oportunidades", icon: Globe },
   { tab: "minhas-mensagens", label: "Minhas Mensagens", icon: MessageSquare },
@@ -73,6 +78,7 @@ const PREMIUM_ITEMS = [
   { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs" },
   { tab: "blindagem", label: "Blindagem de Documentos", icon: Shield, permission: "ferr_blindagem" },
   { tab: "redator", label: "Redator IA", icon: Sparkles, permission: "ferr_redator_ia", legalOnly: true },
+  { tab: "gerador-documentos", label: "Gerador de Documentos", icon: FilePenLine, permission: "ferr_redator_ia", legalOnly: true },
   { tab: "agenda", label: "Agenda & Prazos", icon: Calendar, permission: "ferr_agenda" },
   { tab: "triagem", label: "Triagem de Casos", icon: Search, permission: "ferr_triagem" },
   { tab: "calculadora", label: "Calculadoras", icon: Calculator, permission: "ferr_calculadora", proOnly: true },

@@ -18,6 +18,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request) {
+  let storagePath = "";
   try {
     if (!hasValidPlatformMutationOrigin(request)) {
       return platformJson(
@@ -61,7 +62,8 @@ export async function POST(request) {
     }
 
     const now = new Date();
-    const storagePath = `tutorials/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}.${fileValidation.extension}`;
+    const publishedAt = now.toISOString();
+    storagePath = `tutorials/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}/${crypto.randomUUID()}.${fileValidation.extension}`;
     const { error: uploadError } = await access.db.storage
       .from(TUTORIAL_BUCKET)
       .upload(storagePath, buffer, {
@@ -77,6 +79,21 @@ export async function POST(request) {
       throw error;
     }
 
+    const { error: unpublishError } = await access.db
+      .from("platform_tutorials")
+      .update({
+        status: "DRAFT",
+        published_at: null,
+        published_by: null,
+        updated_by: access.admin.id,
+        updated_at: publishedAt,
+      })
+      .eq("audience", validation.data.audience)
+      .eq("route_key", validation.data.route_key)
+      .eq("status", "PUBLISHED")
+      .is("deleted_at", null);
+    if (unpublishError) throw unpublishError;
+
     const { data: tutorial, error: insertError } = await access.db
       .from("platform_tutorials")
       .insert([
@@ -85,7 +102,9 @@ export async function POST(request) {
           video_path: storagePath,
           video_mime_type: file.type,
           video_size_bytes: buffer.length,
-          status: "DRAFT",
+          status: "PUBLISHED",
+          published_at: publishedAt,
+          published_by: access.admin.id,
           created_by: access.admin.id,
           updated_by: access.admin.id,
         },
@@ -94,6 +113,7 @@ export async function POST(request) {
       .single();
     if (insertError) {
       await access.db.storage.from(TUTORIAL_BUCKET).remove([storagePath]);
+      storagePath = "";
       throw insertError;
     }
 
@@ -106,6 +126,7 @@ export async function POST(request) {
       metadata: {
         route_key: tutorial.route_key,
         audience: tutorial.audience,
+        status: tutorial.status,
         video_mime_type: file.type,
         video_size_bytes: buffer.length,
       },
@@ -115,11 +136,17 @@ export async function POST(request) {
       {
         success: true,
         data: tutorial,
-        message: "Tutorial enviado como rascunho.",
+        message: "Tutorial enviado e publicado.",
       },
       201,
     );
   } catch (error) {
+    if (storagePath) {
+      const access = await requirePlatformAdmin().catch(() => null);
+      if (access?.ok) {
+        await access.db.storage.from(TUTORIAL_BUCKET).remove([storagePath]);
+      }
+    }
     return safePlatformError(error, "Não foi possível enviar o tutorial.");
   }
 }

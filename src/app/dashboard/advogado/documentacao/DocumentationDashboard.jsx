@@ -14,6 +14,7 @@ import {
 
 import LawyerDashboardShell from "../components/LawyerDashboardShell";
 import styles from "./Documentacao.module.css";
+import PresentationFrame from "./PresentationFrame";
 import { useDocumentation } from "./useDocumentation";
 
 const TYPE_META = {
@@ -31,7 +32,7 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(date);
 }
 
-function DocumentationBlock({ block, index }) {
+function DocumentationBlock({ block, index, documentSlug }) {
   if (!block || typeof block !== "object") return null;
 
   if (block.type === "heading") {
@@ -88,6 +89,9 @@ function DocumentationBlock({ block, index }) {
       </article>
     );
   }
+  if (block.type === "slide_image" && documentSlug) {
+    return <PresentationFrame block={block} index={index} documentSlug={documentSlug} />;
+  }
   return null;
 }
 
@@ -103,7 +107,7 @@ function DocumentationRenderer({ document }) {
       </header>
       {document.summary && <p className={styles.summary}>{document.summary}</p>}
       <div className={document.content_type === "PRESENTATION" ? styles.presentationGrid : styles.articleFlow}>
-        {blocks.map((block, index) => <DocumentationBlock key={block.id || `${block.type}-${index}`} block={block} index={index} />)}
+        {blocks.map((block, index) => <DocumentationBlock key={block.id || `${block.type}-${index}`} block={block} index={index} documentSlug={document.slug} />)}
       </div>
     </article>
   );

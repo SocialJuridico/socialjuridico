@@ -15,6 +15,16 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/dashboard/advogado",
+        missing: [{ type: "query", key: "legacy" }],
+        destination: "/dashboard/advogado/dashboard",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

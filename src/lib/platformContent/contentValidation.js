@@ -1,9 +1,10 @@
 import { getTutorialRoute, isTutorialRouteAllowed } from "@/lib/platformTutorials/tutorialRoutes";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SLIDE_STORAGE_PATTERN = /^documentation\/[0-9a-f-]{36}\/v\d+\/slide-\d{3}\.png$/i;
 const ALLOWED_DOCUMENT_TYPES = new Set(["ARTICLE", "GUIDE", "PRESENTATION", "MANUAL", "REFERENCE"]);
 const ALLOWED_AUDIENCES = new Set(["LAWYER", "CLIENT", "BOTH"]);
-const ALLOWED_BLOCK_TYPES = new Set(["heading", "paragraph", "list", "callout", "steps", "table", "quote", "slide"]);
+const ALLOWED_BLOCK_TYPES = new Set(["heading", "paragraph", "list", "callout", "steps", "table", "quote", "slide", "slide_image"]);
 const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
 
 export function isPlatformUuid(value) {
@@ -40,6 +41,17 @@ function normalizeStringArray(value, maxItems = 20, maxLength = 500) {
 function normalizeRows(value) {
   if (!Array.isArray(value)) return [];
   return value.slice(0, 50).map((row) => normalizeStringArray(row, 10, 240));
+}
+
+function normalizePositiveInteger(value, fallback = 0, max = 20000) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number < 0 || number > max) return fallback;
+  return number;
+}
+
+function normalizeSlideStoragePath(value) {
+  const path = String(value || "").trim().replace(/\\/g, "/");
+  return SLIDE_STORAGE_PATTERN.test(path) ? path : "";
 }
 
 export function normalizeDocumentationSchema(value) {
@@ -80,6 +92,20 @@ export function normalizeDocumentationSchema(value) {
         eyebrow: normalizePlatformText(rawBlock.eyebrow, 120),
         text: normalizePlatformText(rawBlock.text, 2200),
         bullets: normalizeStringArray(rawBlock.bullets, 12, 500),
+      }];
+    }
+    if (type === "slide_image") {
+      const storagePath = normalizeSlideStoragePath(
+        rawBlock.storagePath || rawBlock.storage_path,
+      );
+      if (!storagePath) return [];
+      return [{
+        ...base,
+        page: normalizePositiveInteger(rawBlock.page, index + 1, 1000),
+        storagePath,
+        width: normalizePositiveInteger(rawBlock.width, 0),
+        height: normalizePositiveInteger(rawBlock.height, 0),
+        alt: normalizePlatformText(rawBlock.alt, 240) || `Slide ${index + 1}`,
       }];
     }
     return [];

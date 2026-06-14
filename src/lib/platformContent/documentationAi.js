@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { PDFDocument } from "pdf-lib";
 
 import {
   normalizeDocumentationSchema,
@@ -12,6 +13,9 @@ const openai = process.env.OPENAI_API_KEY
 
 export const MAX_DOCUMENTATION_PDF_BYTES = 30 * 1024 * 1024;
 export const MAX_DOCUMENTATION_PAGES = 100;
+export const MAX_PRESENTATION_PAGES = 60;
+export const PRESENTATION_PREVIEW_WIDTH = 1200;
+export const PRESENTATION_SLIDE_WIDTH = 1600;
 
 export function validateDocumentationPdf(file, buffer) {
   if (!file || typeof file.arrayBuffer !== "function" || !buffer?.length) {
@@ -33,10 +37,18 @@ export function validateDocumentationPdf(file, buffer) {
   return { success: true };
 }
 
+function normalizeFileTitle(fileName) {
+  return normalizePlatformText(
+    String(fileName || "Apresentação")
+      .replace(/\.pdf$/i, "")
+      .replace(/[_-]+/g, " "),
+    180,
+  );
+}
+
 export async function extractDocumentationPdf(buffer) {
-  const { extractText, getDocumentProxy } = await import("unpdf");
-  const pdf = await getDocumentProxy(new Uint8Array(buffer));
-  const pageCount = Number(pdf?.numPages || 0);
+  const pdfDocument = await PDFDocument.load(buffer, { updateMetadata: false });
+  const pageCount = pdfDocument.getPageCount();
   if (!pageCount || pageCount > MAX_DOCUMENTATION_PAGES) {
     const error = new Error(
       pageCount > MAX_DOCUMENTATION_PAGES
@@ -47,47 +59,194 @@ export async function extractDocumentationPdf(buffer) {
     throw error;
   }
 
-  const extracted = await extractText(pdf, { mergePages: false });
-  const pages = Array.isArray(extracted?.text)
-    ? extracted.text.map((text, index) => ({
-        page: index + 1,
-        text: normalizePlatformText(text, 12000),
-      }))
-    : String(extracted?.text || "")
-        .split("\f")
-        .map((text, index) => ({
-          page: index + 1,
-          text: normalizePlatformText(text, 12000),
-        }));
+  const pageInfo = pdfDocument.getPages().map((page, index) => {
+    const size = page.getSize();
+    return {
+      page: index + 1,
+      width: Number(size.width || 0),
+      height: Number(size.height || 0),
+    };
+  });
+
+  let pages = Array.from({ length: pageCount }, (_, index) => ({
+    page: index + 1,
+    text: "",
+  }));
+
+  try {
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    const proxy = await getDocumentProxy(new Uint8Array(buffer));
+    const extracted = await extractText(proxy, { mergePages: false });
+    const rawPages = Array.isArray(extracted?.text)
+      ? extracted.text
+      : String(extracted?.text || "").split("\f");
+    pages = Array.from({ length: pageCount }, (_, index) => ({
+      page: index + 1,
+      text: normalizePlatformText(rawPages[index], 12000),
+    }));
+    await proxy?.destroy?.();
+  } catch (error) {
+    console.warn("[DocumentationAI] PDF sem camada textual utilizável:", {
+      message: error?.message || "unknown",
+    });
+  }
 
   const usefulPages = pages.filter((item) => item.text.length > 5);
-  if (!usefulPages.length) {
-    const error = new Error(
-      "O PDF não possui texto legível. Envie um PDF pesquisável, não apenas imagens escaneadas.",
-    );
+  const landscapePages = pageInfo.filter(
+    (page) => page.width > page.height * 1.2,
+  ).length;
+  const landscapeRatio = pageCount ? landscapePages / pageCount : 0;
+
+  return {
+    pageCount,
+    pageInfo,
+    pages,
+    usefulPages,
+    hasUsefulText: usefulPages.length > 0,
+    requiresVisualClassification:
+      usefulPages.length === 0 || landscapeRatio >= 0.6,
+  };
+}
+
+function buildVisualClassificationPrompt({ fileName, pageCount, pageInfo }) {
+  const landscapePages = (pageInfo || []).filter(
+    (page) => Number(page.width) > Number(page.height) * 1.2,
+  ).length;
+
+  return `Classifique visualmente este PDF administrativo do Social Jurídico.
+
+Considere APRESENTAÇÃO quando o arquivo for composto por slides, com narrativa visual, títulos grandes, diagramas, telas, infográficos ou páginas em formato de apresentação. O texto pode estar incorporado apenas nas imagens.
+
+Considere DOCUMENTO_TEXTUAL quando for artigo, manual, regulamento, guia corrido, contrato ou documento cujo conteúdo deva ser transformado em uma página de documentação.
+
+Se for APRESENTAÇÃO:
+- extraia somente o título principal da capa;
+- extraia somente o subtítulo da capa, quando existir;
+- não crie resumo;
+- não reescreva os slides.
+
+Responda somente JSON válido:
+{
+  "kind": "PRESENTATION" ou "TEXT_DOCUMENT",
+  "title": "",
+  "subtitle": ""
+}
+
+Arquivo: ${normalizePlatformText(fileName, 180)}
+Páginas: ${pageCount}
+Páginas em paisagem: ${landscapePages}`;
+}
+
+export async function analyzeDocumentationPdfVisual({
+  fileName,
+  buffer,
+  pageCount,
+  pageInfo,
+}) {
+  if (!openai) {
+    const error = new Error("Serviço de IA temporariamente indisponível.");
+    error.status = 503;
+    throw error;
+  }
+
+  const response = await openai.responses.create({
+    model: "gpt-4o-mini",
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_file",
+            filename: normalizePlatformText(fileName, 180) || "documentacao.pdf",
+            file_data: `data:application/pdf;base64,${buffer.toString("base64")}`,
+          },
+          {
+            type: "input_text",
+            text: buildVisualClassificationPrompt({ fileName, pageCount, pageInfo }),
+          },
+        ],
+      },
+    ],
+  });
+
+  let parsed;
+  try {
+    parsed = JSON.parse(response.output_text || "{}");
+  } catch {
+    const error = new Error("A IA retornou uma classificação visual inválida.");
     error.status = 422;
     throw error;
   }
 
-  return { pageCount, pages: usefulPages };
+  const isPresentation = String(parsed.kind || "").toUpperCase() === "PRESENTATION";
+  return {
+    isPresentation,
+    title:
+      normalizePlatformText(parsed.title, 180) ||
+      normalizeFileTitle(fileName) ||
+      "Apresentação",
+    subtitle: normalizePlatformText(parsed.subtitle, 260),
+    model: "gpt-4o-mini-file-input",
+  };
 }
 
-function buildPrompt({ fileName, pages }) {
+export async function renderDocumentationPages(
+  buffer,
+  { desiredWidth = PRESENTATION_SLIDE_WIDTH } = {},
+) {
+  if (desiredWidth === PRESENTATION_PREVIEW_WIDTH) {
+    return [{ page: 1, width: 0, height: 0, data: Buffer.alloc(0), sourcePdf: buffer }];
+  }
+  return [];
+}
+
+export async function analyzePresentationPdf({
+  fileName,
+  pageCount,
+  pageInfo,
+  screenshots,
+}) {
+  const buffer = screenshots?.[0]?.sourcePdf;
+  if (!buffer) {
+    const error = new Error("Não foi possível preparar o PDF para análise visual.");
+    error.status = 422;
+    throw error;
+  }
+  return analyzeDocumentationPdfVisual({ fileName, buffer, pageCount, pageInfo });
+}
+
+export function createPresentationSchema(value) {
+  const pageCount = Number.isInteger(value) ? value : 0;
+  return {
+    version: 1,
+    blocks: [
+      {
+        id: "presentation-pdf",
+        type: "presentation_pdf",
+        title: "Apresentação completa",
+        pageCount,
+      },
+    ],
+  };
+}
+
+function buildTextPrompt({ fileName, pages }) {
   const source = pages
     .map((item) => `--- PÁGINA ${item.page} ---\n${item.text}`)
     .join("\n\n")
     .slice(0, 55000);
 
-  return `Transforme o PDF administrativo abaixo em documentação oficial da plataforma Social Jurídico.
+  return `Transforme o PDF textual abaixo em documentação oficial da plataforma Social Jurídico.
 
 Regras obrigatórias:
 - Não invente funcionalidades, números, resultados, garantias ou informações ausentes.
 - Preserve o sentido do documento.
-- Identifique se é ARTICLE, GUIDE, PRESENTATION, MANUAL ou REFERENCE.
-- Se o material parecer apresentação, gere um bloco "slide" para cada página relevante, mantendo títulos, textos e tópicos.
-- Para outros materiais use somente: heading, paragraph, list, callout, steps, table, quote.
+- Este fluxo é exclusivo para documentos textuais, não para apresentações de slides.
+- Identifique o tipo entre ARTICLE, GUIDE, MANUAL ou REFERENCE.
+- Crie um resumo profissional, objetivo e fiel ao documento.
+- Use somente: heading, paragraph, list, callout, steps, table e quote.
 - Não gere HTML, Markdown, URLs, scripts, iframes ou estilos.
-- Gere título, subtítulo e resumo objetivos em português brasileiro.
+- Gere título, subtítulo e resumo em português brasileiro.
 - Responda somente JSON válido no formato:
 {
   "title":"",
@@ -101,8 +260,7 @@ Regras obrigatórias:
     {"type":"callout","title":"","text":""},
     {"type":"steps","title":"","steps":[{"title":"","text":""}]},
     {"type":"table","title":"","headers":[""],"rows":[[""]]},
-    {"type":"quote","title":"","text":""},
-    {"type":"slide","eyebrow":"Página 1","title":"","text":"","bullets":[""]}
+    {"type":"quote","title":"","text":""}
   ]
 }
 
@@ -118,6 +276,11 @@ export async function generateDocumentationFromPdf({ fileName, pages }) {
     error.status = 503;
     throw error;
   }
+  if (!Array.isArray(pages) || !pages.length) {
+    const error = new Error("O PDF textual não possui conteúdo suficiente para documentação.");
+    error.status = 422;
+    throw error;
+  }
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
@@ -127,9 +290,9 @@ export async function generateDocumentationFromPdf({ fileName, pages }) {
       {
         role: "system",
         content:
-          "Você estrutura documentação de produto com fidelidade ao material de origem e responde somente JSON válido.",
+          "Você estrutura documentação textual de produto com fidelidade ao material de origem e responde somente JSON válido.",
       },
-      { role: "user", content: buildPrompt({ fileName, pages }) },
+      { role: "user", content: buildTextPrompt({ fileName, pages }) },
     ],
   });
 
@@ -149,7 +312,7 @@ export async function generateDocumentationFromPdf({ fileName, pages }) {
     throw error;
   }
 
-  const allowedTypes = new Set(["ARTICLE", "GUIDE", "PRESENTATION", "MANUAL", "REFERENCE"]);
+  const allowedTypes = new Set(["ARTICLE", "GUIDE", "MANUAL", "REFERENCE"]);
   const contentType = String(parsed.contentType || "ARTICLE").toUpperCase();
   const schema = normalizeDocumentationSchema({ version: 1, blocks: parsed.blocks });
   if (!schema.blocks.length) {

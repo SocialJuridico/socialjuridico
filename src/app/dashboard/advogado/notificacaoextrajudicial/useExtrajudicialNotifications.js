@@ -1,0 +1,1 @@
+export { useExtrajudicialNotifications } from "./useExtrajudicialNotificationsController";

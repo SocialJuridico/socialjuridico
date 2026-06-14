@@ -13,8 +13,10 @@ import {
   validateInteractionPayload,
 } from "@/lib/lawyerClients/clientValidation";
 import {
+  agendaFailure,
   getScopedAgendaItem,
   recordAgendaAudit,
+  requireLawyerAgendaAccess,
   reserveAgendaItem,
 } from "@/lib/lawyerAgenda/agendaServer";
 
@@ -33,22 +35,22 @@ function buildAgendaTitle(interactionType, clientName) {
   return `Compromisso com ${clientName}`;
 }
 
-async function createAgendaItemForInteraction(access, request, client, interaction) {
+async function createAgendaItemForInteraction(request, client, interaction) {
   if (!SCHEDULABLE_INTERACTION_TYPES.includes(interaction.type)) return null;
 
-  const requestId = interaction.requestId || crypto.randomUUID();
-  const start = new Date(interaction.scheduledAt);
-  const reservation = await reserveAgendaItem(
-    {
-      ...access,
-      actorType: "LAWYER",
-      actorId: access.user.id,
-      actorOfficeId: null,
-      officeId: access.profile?.escritorio_id || null,
-    },
-    {
+  try {
+    const agendaAccess = await requireLawyerAgendaAccess(request);
+    if (!agendaAccess.ok) {
+      const error = new Error("Não foi possível acessar a Agenda para criar o compromisso.");
+      error.status = 403;
+      throw error;
+    }
+
+    const requestId = interaction.requestId || crypto.randomUUID();
+    const start = new Date(interaction.scheduledAt);
+    const reservation = await reserveAgendaItem(agendaAccess, {
       requestId,
-      lawyerId: client.lawyer_id || access.user.id,
+      lawyerId: client.lawyer_id || agendaAccess.user.id,
       clientId: client.id,
       title: buildAgendaTitle(interaction.type, client.name),
       description: interaction.content,
@@ -57,44 +59,53 @@ async function createAgendaItemForInteraction(access, request, client, interacti
       type: toAgendaType(interaction.type),
       urgency: "MEDIUM",
       status: "PENDING",
-    },
-  );
+    });
 
-  if (!reservation.success) {
-    const error = new Error(
-      reservation.code === "QUOTA_EXCEEDED"
-        ? "O limite mensal da agenda foi atingido."
-        : "Não foi possível criar o compromisso na agenda.",
-    );
-    error.status = reservation.httpStatus || 400;
-    error.code = reservation.code;
-    throw error;
-  }
+    if (!reservation.success) {
+      const error = new Error(
+        reservation.code === "QUOTA_EXCEEDED"
+          ? "O limite mensal da agenda foi atingido."
+          : "Não foi possível criar o compromisso na agenda.",
+      );
+      error.status = reservation.httpStatus || 400;
+      error.code = reservation.code;
+      throw error;
+    }
 
-  const agendaItem = await getScopedAgendaItem(access, reservation.item_id);
-  if (!agendaItem) return null;
+    const agendaItem = await getScopedAgendaItem(agendaAccess, reservation.item_id);
+    if (!agendaItem) return null;
 
-  await recordAgendaAudit(access, request, {
-    requestId,
-    itemId: agendaItem.id,
-    lawyerId: agendaItem.lawyer_id,
-    action: "CREATE_ITEM",
-    metadata: {
-      source: "CRM_INTERACTION",
-      interactionType: interaction.type,
-      clientId: client.id,
+    await recordAgendaAudit(agendaAccess, request, {
+      requestId,
+      itemId: agendaItem.id,
+      lawyerId: agendaItem.lawyer_id,
+      action: "CREATE_ITEM",
+      metadata: {
+        source: "CRM_INTERACTION",
+        interactionType: interaction.type,
+        clientId: client.id,
+        reused: reservation.reused === true,
+      },
+    });
+
+    return {
+      id: agendaItem.id,
+      title: agendaItem.title,
+      date: agendaItem.date,
+      type: agendaItem.type,
+      status: agendaItem.status,
       reused: reservation.reused === true,
-    },
-  });
-
-  return {
-    id: agendaItem.id,
-    title: agendaItem.title,
-    date: agendaItem.date,
-    type: agendaItem.type,
-    status: agendaItem.status,
-    reused: reservation.reused === true,
-  };
+    };
+  } catch (error) {
+    const failure = agendaFailure(
+      error,
+      "Não foi possível criar o compromisso na agenda.",
+    );
+    const agendaError = new Error(failure.message);
+    agendaError.status = failure.status;
+    agendaError.code = error?.code || null;
+    throw agendaError;
+  }
 }
 
 export async function POST(request, context) {
@@ -105,6 +116,7 @@ export async function POST(request, context) {
         403,
       );
     }
+
     const access = await requireLawyerClientAccess(request);
     if (!access.ok) return access.response;
 
@@ -130,7 +142,6 @@ export async function POST(request, context) {
     }
 
     const agendaItem = await createAgendaItemForInteraction(
-      access,
       request,
       client,
       validation.data,
@@ -176,7 +187,11 @@ export async function POST(request, context) {
       201,
     );
   } catch (error) {
-    console.error("[Advogado/Clientes/Interações] Erro:", error);
+    console.error("[Advogado/Clientes/Interações] Erro:", {
+      message: error?.message,
+      code: error?.code,
+      status: error?.status,
+    });
     const failure = clientFailure(error, "Não foi possível registrar a interação.");
     return clientJson({ success: false, message: failure.message }, failure.status);
   }

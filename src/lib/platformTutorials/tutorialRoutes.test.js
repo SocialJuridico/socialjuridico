@@ -15,6 +15,9 @@ describe("tutorialRoutes", () => {
     expect(resolveLawyerTutorialRoute("/dashboard/advogado/dashboard", "")).toBe(
       "LAWYER_DASHBOARD",
     );
+    expect(resolveLawyerTutorialRoute("/dashboard/advogado/indiqueganhe", "")).toBe(
+      "LAWYER_REFERRALS",
+    );
     expect(
       resolveLawyerTutorialRoute(
         "/dashboard/advogado/geradordedocumentos",
@@ -30,6 +33,27 @@ describe("tutorialRoutes", () => {
         "?legacy=1&tab=documentacao",
       ),
     ).toBe("LAWYER_DOCUMENTATION");
+    expect(
+      resolveLawyerTutorialRoute(
+        "/dashboard/advogado",
+        "?legacy=1&tab=indicacoes",
+      ),
+    ).toBe("LAWYER_REFERRALS");
+  });
+
+  test("inclui todas as rotas principais do menu do advogado", () => {
+    const expected = [
+      ["LAWYER_REFERRALS", "/dashboard/advogado/indiqueganhe"],
+      ["LAWYER_SITE_REQUEST", "/dashboard/advogado/queroumsite"],
+      ["LAWYER_SERVICE_ADS", "/dashboard/advogado/anuncioseservicos"],
+      ["LAWYER_INTERNAL_COMMUNICATION", "/dashboard/advogado/comunicacaointerna"],
+    ];
+
+    for (const [key, path] of expected) {
+      expect(getTutorialRoute(key)?.path).toBe(path);
+      expect(resolveLawyerTutorialRoute(path, "")).toBe(key);
+      expect(isTutorialRouteAllowed(key, "LAWYER")).toBe(true);
+    }
   });
 
   test("não aceita chaves fora do público", () => {

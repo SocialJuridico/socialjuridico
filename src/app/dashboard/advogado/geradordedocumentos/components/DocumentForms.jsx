@@ -1,6 +1,10 @@
 "use client";
 
-import { CONTRACT_TYPES, DOCUMENT_TONES } from "../documentGeneratorUtils";
+import {
+  CONTRACT_TYPES,
+  DOCUMENT_TONES,
+  POWER_OF_ATTORNEY_TYPES,
+} from "../documentGeneratorUtils";
 import styles from "../DocumentGenerator.module.css";
 import PartyFields from "./PartyFields";
 
@@ -111,6 +115,28 @@ export function PowerOfAttorneyForm({ controller, disabled }) {
   const form = controller.powerOfAttorney;
   return (
     <>
+      <label className={styles.field}>
+        <span>Tipo de procuraÃ§Ã£o</span>
+        <select
+          value={form.type}
+          onChange={(event) => {
+            const selected = POWER_OF_ATTORNEY_TYPES.find(
+              (type) => type.id === event.target.value,
+            );
+            controller.updatePowerOfAttorney({
+              type: event.target.value,
+              powers: selected?.powers || form.powers,
+            });
+          }}
+          disabled={disabled}
+        >
+          {POWER_OF_ATTORNEY_TYPES.map((type) => (
+            <option key={type.id} value={type.id}>
+              {type.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <ToneSelector
         value={form.tone}
         onChange={(tone) => controller.updatePowerOfAttorney({ tone })}

@@ -12,6 +12,8 @@ export const DOCUMENT_TYPES = [
   "Contestação",
   "Contrato de Honorários",
   "Procuração",
+  "Procuração Ad Judicia",
+  "Procuração Ad Judicia et Extra",
   "Parecer Jurídico",
   "Recurso",
   "Embargos",

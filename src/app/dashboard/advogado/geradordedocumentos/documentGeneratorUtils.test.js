@@ -33,4 +33,34 @@ describe("documentGeneratorUtils", () => {
     expect(validateDocumentForm("contract", createEmptyContract(), createEmptyPowerOfAttorney())).toBe("Informe o nome do contratante.");
     expect(validateDocumentForm("power-of-attorney", createEmptyContract(), createEmptyPowerOfAttorney())).toBe("Informe o nome do outorgante.");
   });
+
+  test("gera prompt especifico para procuracao ad judicia", () => {
+    const powerOfAttorney = createEmptyPowerOfAttorney();
+    powerOfAttorney.type = "ad-judicia";
+    const payload = buildGenerationPayload(
+      "power-of-attorney",
+      createEmptyContract(),
+      powerOfAttorney,
+    );
+
+    expect(payload.type).toBe("Procuração Ad Judicia");
+    expect(payload.facts).toContain("PROCURAÇÃO AD JUDICIA");
+    expect(payload.facts).toContain("poderes estritamente judiciais");
+  });
+
+  test("usa titulo especifico para procuracao ad judicia et extra", () => {
+    const powerOfAttorney = createEmptyPowerOfAttorney();
+    powerOfAttorney.grantor.name = "Cliente";
+    powerOfAttorney.grantor.document = "000.000.000-00";
+    powerOfAttorney.attorney.name = "Advogado";
+    powerOfAttorney.attorney.oab = "OAB/UF 12345";
+    const result = composeGeneratedDocument(
+      "power-of-attorney",
+      "Corpo da procuração.",
+      createEmptyContract(),
+      powerOfAttorney,
+    );
+
+    expect(result.startsWith("PROCURAÇÃO AD JUDICIA ET EXTRA")).toBe(true);
+  });
 });

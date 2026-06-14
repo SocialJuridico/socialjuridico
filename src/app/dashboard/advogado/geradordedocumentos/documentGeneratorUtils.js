@@ -11,6 +11,27 @@ export const CONTRACT_TYPES = Object.freeze([
   "Contrato de Locação",
 ]);
 
+export const POWER_OF_ATTORNEY_TYPES = Object.freeze([
+  {
+    id: "ad-judicia",
+    label: "Procuração Ad Judicia",
+    title: "PROCURAÇÃO AD JUDICIA",
+    powers:
+      "Poderes da cláusula ad judicia para representar o outorgante em juízo, em qualquer instância ou tribunal, propor ações, contestar, recorrer, acompanhar processos, receber intimações e praticar os atos necessários à defesa dos interesses do outorgante, observados os poderes que exigem menção expressa.",
+    prompt:
+      "Use formato específico de PROCURAÇÃO AD JUDICIA: instrumento simples, com qualificação das partes fora do corpo gerado, nomeação do advogado e poderes estritamente judiciais para foro em geral. Não inclua poderes extrajudiciais amplos.",
+  },
+  {
+    id: "ad-judicia-et-extra",
+    label: "Procuração Ad Judicia et Extra",
+    title: "PROCURAÇÃO AD JUDICIA ET EXTRA",
+    powers:
+      "Poderes da cláusula ad judicia et extra para representar o outorgante judicial e extrajudicialmente, perante juízos, tribunais, repartições públicas, órgãos administrativos, cartórios, instituições públicas ou privadas, podendo requerer, assinar, acompanhar procedimentos e praticar atos necessários à defesa dos interesses do outorgante, observados os poderes que exigem menção expressa.",
+    prompt:
+      "Use formato específico de PROCURAÇÃO AD JUDICIA ET EXTRA: instrumento simples, com qualificação das partes fora do corpo gerado, nomeação do advogado e poderes judiciais e extrajudiciais. Inclua atuação perante órgãos administrativos, cartórios, repartições públicas e entidades privadas quando adequado.",
+  },
+]);
+
 export const DOCUMENT_TONES = Object.freeze([
   "Formal",
   "Técnico",
@@ -40,7 +61,9 @@ export function createEmptyContract() {
 }
 
 export function createEmptyPowerOfAttorney(profile = {}) {
+  const defaultType = POWER_OF_ATTORNEY_TYPES[1];
   return {
+    type: defaultType.id,
     tone: "Formal",
     grantor: { ...EMPTY_PARTY },
     attorney: {
@@ -51,7 +74,7 @@ export function createEmptyPowerOfAttorney(profile = {}) {
       address: profile?.address || "",
       oab: profile?.oab || "",
     },
-    powers: "Ad Judicia et Extra",
+    powers: defaultType.powers,
     jurisdiction: "",
     city: "",
     date: new Date().toISOString().slice(0, 10),
@@ -86,6 +109,13 @@ function qualification(role, party, extra = "") {
   return `${segments.join(", ")}.`;
 }
 
+export function getPowerOfAttorneyType(value) {
+  return (
+    POWER_OF_ATTORNEY_TYPES.find((type) => type.id === value) ||
+    POWER_OF_ATTORNEY_TYPES[1]
+  );
+}
+
 export function buildGenerationPayload(mode, contract, powerOfAttorney) {
   if (mode === "contract") {
     return {
@@ -103,12 +133,16 @@ export function buildGenerationPayload(mode, contract, powerOfAttorney) {
     };
   }
 
+  const powerType = getPowerOfAttorneyType(powerOfAttorney.type);
   return {
-    type: "Procuração",
+    type: powerType.label,
     tone: powerOfAttorney.tone,
     facts: [
-      "Gere somente o corpo jurídico de uma procuração, sem qualificação nominal das partes.",
+      powerType.prompt,
+      "Gere somente o corpo jurídico da procuração, sem título e sem qualificação nominal das partes.",
       "Use os papéis OUTORGANTE e OUTORGADO ao longo do texto.",
+      "Mantenha redação objetiva em parágrafo único ou poucos parágrafos, adequada para instrumento particular de mandato.",
+      "Quando citar poderes especiais como receber citação, confessar, reconhecer procedência, transigir, desistir, renunciar, receber e dar quitação, firmar compromisso ou substabelecer, deixe claro apenas se estiverem descritos nos poderes concedidos.",
       `Poderes concedidos: ${clean(powerOfAttorney.powers, "não informado")}`,
       `Foro/comarca de referência: ${clean(powerOfAttorney.jurisdiction)}`,
       "Não use Markdown e não invente nomes, documentos ou endereços.",
@@ -140,8 +174,9 @@ export function composeGeneratedDocument(mode, draft, contract, powerOfAttorney)
     ].join("\n");
   }
 
+  const powerType = getPowerOfAttorneyType(powerOfAttorney.type);
   return [
-    "PROCURAÇÃO",
+    powerType.title,
     "",
     qualification("OUTORGANTE", powerOfAttorney.grantor),
     "",

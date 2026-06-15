@@ -5,10 +5,10 @@ import OpenAI from "openai";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 import { supabaseAdmin } from "@/lib/supabase";
+import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import {
   getRequestIpHash,
   getRequestUserAgent,
-  hasValidMutationOrigin,
 } from "@/lib/lawyerOpportunities/opportunityServerUtils";
 import {
   isClientUuid,
@@ -75,6 +75,10 @@ function redatorJson(payload, status = 200) {
   });
 }
 
+function hasValidRedatorOrigin(request) {
+  return hasTrustedMutationOrigin(request, { allowMissingOrigin: false });
+}
+
 function readPermissions(value) {
   if (!value) return {};
   if (typeof value === "object") return value;
@@ -92,6 +96,27 @@ function normalizeRole(value) {
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
+}
+
+function normalizeLookupKey(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeDocumentType(value) {
+  const text = normalizeClientText(value, 80);
+  const key = normalizeLookupKey(text);
+  return [...DOCUMENT_TYPES].find((type) => normalizeLookupKey(type) === key) || text;
+}
+
+function normalizeTone(value) {
+  const text = normalizeClientText(value || "Formal", 40);
+  const key = normalizeLookupKey(text);
+  return [...TONES].find((tone) => normalizeLookupKey(tone) === key) || text;
 }
 
 function normalizePlan(profile) {
@@ -334,8 +359,8 @@ function serializeUsage(planLimits) {
 
 function validatePayload(body) {
   const requestId = String(body?.requestId || "");
-  const type = normalizeClientText(body?.type, 80);
-  const tone = normalizeClientText(body?.tone || "Formal", 40);
+  const type = normalizeDocumentType(body?.type);
+  const tone = normalizeTone(body?.tone);
   const clientId = String(body?.clientId || "");
   const clientName = normalizeClientText(body?.clientName, 160);
   const facts = normalizeLongText(body?.facts, 12000);
@@ -454,7 +479,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    if (!hasValidMutationOrigin(request)) {
+    if (!hasValidRedatorOrigin(request)) {
       return redatorJson(
         { success: false, message: "Origem da requisição não autorizada." },
         403,

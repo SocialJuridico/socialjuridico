@@ -51,7 +51,7 @@ async function initOneSignalOnce() {
           },
         },
         notifyButton: {
-          enable: true,
+          enable: false,
           size: "medium",
           theme: "default",
           position: "bottom-right",

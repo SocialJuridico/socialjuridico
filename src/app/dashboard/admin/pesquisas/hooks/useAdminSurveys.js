@@ -5,11 +5,12 @@ import toast from "react-hot-toast";
 import {
   CLIENT_QUESTIONS,
   LAWYER_QUESTIONS,
+  PLATFORM_UPDATE_QUESTIONS,
   SURVEY_TABS,
   getQuestionsByTab,
 } from "../config/surveyQuestions";
 
-const EMPTY_DATA = { advogados: [], clientes: [] };
+const EMPTY_DATA = { advogados: [], clientes: [], atualizacao: [] };
 
 function calculateAverage(item, questions) {
   if (!questions.length) return 0;
@@ -59,6 +60,7 @@ export function useAdminSurveys() {
       setData({
         advogados: payload.data?.advogados || [],
         clientes: payload.data?.clientes || [],
+        atualizacao: payload.data?.atualizacao || [],
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro ao carregar pesquisas.";
@@ -76,27 +78,38 @@ export function useAdminSurveys() {
   const stats = useMemo(() => {
     const lawyerAverage = calculateGroupAverage(data.advogados, LAWYER_QUESTIONS);
     const clientAverage = calculateGroupAverage(data.clientes, CLIENT_QUESTIONS);
-    const total = data.advogados.length + data.clientes.length;
+    const platformUpdateAverage = calculateGroupAverage(
+      data.atualizacao,
+      PLATFORM_UPDATE_QUESTIONS,
+    );
+    const total =
+      data.advogados.length + data.clientes.length + data.atualizacao.length;
     const overallAverage = total
       ? (
           lawyerAverage * data.advogados.length +
-          clientAverage * data.clientes.length
+          clientAverage * data.clientes.length +
+          platformUpdateAverage * data.atualizacao.length
         ) / total
       : 0;
 
     return {
       lawyerCount: data.advogados.length,
       clientCount: data.clientes.length,
+      platformUpdateCount: data.atualizacao.length,
       total,
       lawyerAverage,
       clientAverage,
+      platformUpdateAverage,
       overallAverage,
     };
   }, [data]);
 
-  const activeItems = activeTab === SURVEY_TABS.LAWYERS
-    ? data.advogados
-    : data.clientes;
+  const activeItems =
+    activeTab === SURVEY_TABS.LAWYERS
+      ? data.advogados
+      : activeTab === SURVEY_TABS.PLATFORM_UPDATE
+        ? data.atualizacao
+        : data.clientes;
   const activeQuestions = getQuestionsByTab(activeTab);
 
   const toggleExpanded = useCallback((id) => {

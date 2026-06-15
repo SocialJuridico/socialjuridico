@@ -38,7 +38,9 @@ export default function SurveysList({
   calculateAverage,
 }) {
   const cardRefs = useRef(new Map());
-  const isLawyerTab = tab === SURVEY_TABS.LAWYERS;
+  const isLawyerTab =
+    tab === SURVEY_TABS.LAWYERS ||
+    tab === SURVEY_TABS.PLATFORM_UPDATE;
 
   async function downloadCard(item, userName) {
     const card = cardRefs.current.get(item.id);

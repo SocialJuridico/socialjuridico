@@ -56,7 +56,7 @@
 @media (max-width: 767px) {
   .scrollToTopButton {
     right: 16px;
-    bottom: calc(88px + env(safe-area-inset-bottom));
+    bottom: calc(82px + env(safe-area-inset-bottom));
     width: 42px;
     height: 42px;
     border-radius: 12px;

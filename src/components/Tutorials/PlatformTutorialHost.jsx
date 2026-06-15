@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, HelpCircle, PlayCircle, X } from "lucide-react";
+import { BookOpen, HelpCircle, MessageCircle, PlayCircle, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import {
@@ -103,6 +103,27 @@ export default function PlatformTutorialHost({
               <div>
                 <span>Central de ajuda</span>
                 <strong>Tutoriais da plataforma</strong>
+                <div className={styles.supportBox}>
+                  <span>SUPORTE</span>
+                  <a
+                    className={styles.supportLink}
+                    href="https://wa.me/5515981657317?text=Ol%C3%A1%2C%20preciso%20de%20suporte%20na%20plataforma%20Social%20Jur%C3%ADdico."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MessageCircle size={14} aria-hidden="true" />
+                    WhatsApp (15) 98165-7317
+                  </a>
+                  <a
+                    className={styles.supportLink}
+                    href="https://wa.me/5515992653066?text=Ol%C3%A1%2C%20preciso%20de%20suporte%20na%20plataforma%20Social%20Jur%C3%ADdico."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MessageCircle size={14} aria-hidden="true" />
+                    WhatsApp (15) 99265-3066
+                  </a>
+                </div>
               </div>
               <button type="button" onClick={() => setLibraryOpen(false)} aria-label="Fechar tutoriais">
                 <X size={17} />

@@ -10,6 +10,7 @@ import {
   Coins,
   Gauge,
   Home,
+  Info,
   Loader2,
   MapPin,
   Radar,
@@ -98,6 +99,47 @@ function LoadingState() {
   );
 }
 
+const NOTICE_ICON = {
+  INFO: Info,
+  SUCCESS: Sparkles,
+  WARNING: AlertTriangle,
+  CRITICAL: AlertTriangle,
+};
+
+function PlatformNotices({ notices }) {
+  if (!notices?.length) return null;
+
+  return (
+    <section className={styles.platformNotices} aria-label="Avisos internos da plataforma">
+      {notices.map((notice) => {
+        const Icon = NOTICE_ICON[notice.severity] || Info;
+        return (
+          <article
+            key={notice.id}
+            className={`${styles.noticeCard} ${styles[`notice_${notice.severity}`] || ""}`}
+          >
+            <span className={styles.noticeIcon}><Icon size={18} /></span>
+            <div>
+              <small>Aviso da plataforma</small>
+              <h3>{notice.title}</h3>
+              <p>{notice.message}</p>
+            </div>
+            {notice.cta_url && notice.cta_label && (
+              <Link
+                href={notice.cta_url}
+                target={notice.cta_url.startsWith("/") ? undefined : "_blank"}
+                rel={notice.cta_url.startsWith("/") ? undefined : "noopener noreferrer"}
+              >
+                {notice.cta_label} <ArrowRight size={14} />
+              </Link>
+            )}
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
 export default function LawyerHomeDashboard() {
   const controller = useLawyerDashboardHome();
 
@@ -140,6 +182,8 @@ export default function LawyerHomeDashboard() {
               </article>
             </div>
           </section>
+
+          <PlatformNotices notices={controller.platformNotices} />
 
           {controller.error && (
             <section className={styles.errorNotice}>

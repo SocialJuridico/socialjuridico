@@ -91,6 +91,16 @@ export default function AdminPesquisasPage() {
         >
           Clientes ({state.data.clientes.length})
         </button>
+        <button
+          type="button"
+          className={`${styles.tabBtn} ${
+            state.activeTab === SURVEY_TABS.PLATFORM_UPDATE ? styles.active : ""
+          }`}
+          onClick={() => state.setActiveTab(SURVEY_TABS.PLATFORM_UPDATE)}
+          aria-pressed={state.activeTab === SURVEY_TABS.PLATFORM_UPDATE}
+        >
+          Atualizacao ({state.data.atualizacao.length})
+        </button>
       </nav>
 
       <SurveysList

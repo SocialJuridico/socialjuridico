@@ -332,6 +332,220 @@
   cursor: pointer;
 }
 
+.secondaryButton {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.035);
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.summaryGrid article {
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.summaryGrid strong {
+  display: block;
+  color: var(--color-gold);
+  font-size: 1.35rem;
+}
+
+.summaryGrid span {
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.68rem;
+  font-weight: 720;
+}
+
+.toggleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.7rem;
+  font-weight: 760;
+}
+
+.toggleRow input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--color-gold);
+}
+
+.listPanel {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: #111111;
+}
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 17px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.listHeader h2 {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+.listHeader button,
+.noticeActions button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.035);
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.emptyState {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 34px 18px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.72rem;
+}
+
+.emptyState svg {
+  color: var(--color-gold);
+}
+
+.noticeList {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.noticeCard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.noticeInfo {
+  min-width: 0;
+}
+
+.noticeInfo h3 {
+  margin: 8px 0 0;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.86rem;
+}
+
+.noticeInfo p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 0.69rem;
+  line-height: 1.5;
+}
+
+.noticeInfo dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.noticeInfo dl > div {
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.noticeInfo dt {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.noticeInfo dd {
+  margin: 3px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.64rem;
+}
+
+.statusBadge {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 24px;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 850;
+}
+
+.statusActive {
+  border-color: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.statusScheduled {
+  border-color: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.statusExpired,
+.statusInactive {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.noticeActions {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.noticeActions .dangerButton {
+  border-color: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+  background: rgba(127, 29, 29, 0.12);
+}
+
 .primaryButton:hover:not(:disabled) {
   filter: brightness(1.07);
 }
@@ -385,6 +599,22 @@
   }
 
   .primaryButton {
+    width: 100%;
+  }
+
+  .summaryGrid,
+  .noticeCard {
+    grid-template-columns: 1fr;
+  }
+
+  .listHeader,
+  .noticeActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .noticeActions button,
+  .secondaryButton {
     width: 100%;
   }
 }

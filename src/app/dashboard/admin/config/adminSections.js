@@ -51,7 +51,7 @@ export function createAdminSections(stats) {
       title: "Comunicação & Marketing",
       icon: Megaphone,
       cards: [
-        { title: "Push notifications", value: "Disparar alerta", href: "/dashboard/admin/push", icon: Megaphone, tone: ADMIN_CARD_TONES.blue },
+        { title: "Avisos internos", value: "Dashboard do advogado", href: "/dashboard/admin/push", icon: Megaphone, tone: ADMIN_CARD_TONES.blue },
         { title: "Minhas mensagens", value: "Recebidas", href: "/dashboard/admin/notificacoes", icon: Bell },
         { title: "Notificações geradas", value: stats.totalNotificacoes, href: "/dashboard/admin/comunicados", icon: Bell },
         { title: "Mensagens de casos", value: "Conversas", href: "/dashboard/admin/mensagens", icon: MessageSquare },

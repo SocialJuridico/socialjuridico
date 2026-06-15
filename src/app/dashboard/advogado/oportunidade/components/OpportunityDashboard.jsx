@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
-import PesquisaSatisfacaoPopup from "@/components/PesquisaSatisfacaoPopup/PesquisaSatisfacaoPopup";
 
 import LawyerDashboardShell from "../../components/LawyerDashboardShell";
 import styles from "../Oportunidade.module.css";
@@ -196,7 +195,6 @@ export default function OpportunityDashboard() {
       />
 
       <AdvogadoMesPopup />
-      <PesquisaSatisfacaoPopup />
     </LawyerDashboardShell>
   );
 }

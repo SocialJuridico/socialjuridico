@@ -3,8 +3,6 @@ import { Toaster } from "react-hot-toast";
 
 import Footer from "@/components/Footer";
 import ScrollToTop from "@/components/ScrollToTop";
-import OneSignalSetup from "@/components/PWA/OneSignalSetup";
-import PWAInstallPrompt from "@/components/PWA/PWAInstallPrompt";
 import AccessTracker from "@/components/AccessTracker";
 import CookieNotice from "@/components/CookieNotice";
 import GlobalJsonLd from "@/components/SEO/GlobalJsonLd";
@@ -119,8 +117,6 @@ export default function RootLayout({ children }) {
         <GlobalJsonLd />
         <AccessTracker />
 
-        <OneSignalSetup />
-
         <Toaster
           position="top-right"
           toastOptions={{
@@ -138,7 +134,6 @@ export default function RootLayout({ children }) {
 
         <Footer />
         <CookieNotice />
-        <PWAInstallPrompt />
         <ScrollToTop />
       </body>
     </html>

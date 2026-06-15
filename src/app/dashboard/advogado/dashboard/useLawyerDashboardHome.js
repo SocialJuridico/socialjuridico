@@ -34,6 +34,7 @@ export function useLawyerDashboardHome() {
   const [triageData, setTriageData] = useState(null);
   const [agendaData, setAgendaData] = useState(null);
   const [smartDocData, setSmartDocData] = useState(null);
+  const [platformNotices, setPlatformNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState([]);
@@ -51,6 +52,7 @@ export function useLawyerDashboardHome() {
       requestJson("/api/advogado/triagem"),
       requestJson("/api/advogado/agenda?page=1&pageSize=1"),
       requestJson("/api/advogado/smartdoc?page=1&pageSize=1&type=all&protection=all"),
+      requestJson("/api/advogado/avisos-internos"),
     ]);
 
     const values = results.map(settledValue);
@@ -101,6 +103,13 @@ export function useLawyerDashboardHome() {
           nextWarnings.push(`${label} sem métricas atualizadas.`);
         }
       }
+    }
+
+    const noticesResult = values[7];
+    if (noticesResult?.response?.ok && noticesResult.data?.success) {
+      setPlatformNotices(noticesResult.data.notices || []);
+    } else {
+      setPlatformNotices([]);
     }
 
     setWarnings(nextWarnings);
@@ -163,6 +172,7 @@ export function useLawyerDashboardHome() {
     report,
     radarItems: radar.data || [],
     radarTotal: Number(radar.pagination?.total || 0),
+    platformNotices,
     clientMetrics: clientsData?.metrics || {},
     usageItems,
     loading,

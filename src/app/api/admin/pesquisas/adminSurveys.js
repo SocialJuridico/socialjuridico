@@ -28,6 +28,19 @@ export const CLIENT_QUESTION_KEYS = [
   "q10_recomendacao",
 ];
 
+export const PLATFORM_UPDATE_QUESTION_KEYS = [
+  "q1_design",
+  "q2_facilidade_uso",
+  "q3_velocidade",
+  "q4_estabilidade",
+  "q5_seguranca",
+  "q6_qualidade_geral",
+  "q7_qualidade_ia",
+  "q8_cartao_digital",
+  "q9_organizacao_rotas",
+  "q10_confianca_recomendar",
+];
+
 export function json(payload, status = 200) {
   return NextResponse.json(payload, {
     status,
@@ -68,8 +81,11 @@ export async function fetchSurveyData(db, { includeUsers = true } = {}) {
   const clientSelect = includeUsers
     ? "*, clientes:user_id (name, email)"
     : "*";
+  const platformUpdateSelect = includeUsers
+    ? "*, advogados:user_id (name, email)"
+    : "*";
 
-  const [lawyersResult, clientsResult] = await Promise.all([
+  const [lawyersResult, clientsResult, platformUpdateResult] = await Promise.all([
     db
       .from("pesquisas_satisfacao_advogados")
       .select(lawyerSelect)
@@ -78,10 +94,18 @@ export async function fetchSurveyData(db, { includeUsers = true } = {}) {
       .from("pesquisas_satisfacao_clientes")
       .select(clientSelect)
       .order("created_at", { ascending: false }),
+    db
+      .from("pesquisas_atualizacao_plataforma_advogados")
+      .select(platformUpdateSelect)
+      .order("created_at", { ascending: false }),
   ]);
 
-  if (lawyersResult.error || clientsResult.error) {
-    const details = [lawyersResult.error?.message, clientsResult.error?.message]
+  if (lawyersResult.error || clientsResult.error || platformUpdateResult.error) {
+    const details = [
+      lawyersResult.error?.message,
+      clientsResult.error?.message,
+      platformUpdateResult.error?.message,
+    ]
       .filter(Boolean)
       .join(" | ");
     throw new Error(`Falha ao consultar pesquisas: ${details}`);
@@ -90,6 +114,7 @@ export async function fetchSurveyData(db, { includeUsers = true } = {}) {
   return {
     advogados: lawyersResult.data || [],
     clientes: clientsResult.data || [],
+    atualizacao: platformUpdateResult.data || [],
   };
 }
 

@@ -1,45 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { X, Gift } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Gift, X } from "lucide-react";
+
 import styles from "./PesquisaSatisfacaoPopup.module.css";
 
 export default function PesquisaSatisfacaoPopup() {
+  const pathname = usePathname();
   const [show, setShow] = useState(false);
-  console.log("[PesquisaSatisfacaoPopup] Componente renderizando no React...");
+  const isSurveyPage = pathname === "/dashboard/advogado/pesquisa-atualizacao";
 
   useEffect(() => {
-    console.log("[PesquisaSatisfacaoPopup] Montou o componente. Disparando API...");
+    let cancelled = false;
+
     async function checkEligibility() {
+      if (isSurveyPage) return;
+
       try {
-        const res = await fetch("/api/pesquisa/advogado");
-        console.log("[PesquisaSatisfacaoPopup] Resposta da API:", res.status);
-        if (res.ok) {
-          const data = await res.json();
-          console.log("[PesquisaSatisfacaoPopup] Dados da API:", data);
-          if (data.canEvaluate) {
-            setShow(true);
-          }
+        const response = await fetch("/api/pesquisa/advogado/atualizacao", {
+          cache: "no-store",
+        });
+        const data = await response.json().catch(() => null);
+
+        if (!cancelled && response.ok && data?.canEvaluate) {
+          setShow(true);
         }
-      } catch (err) {
-        console.error("[PesquisaSatisfacaoPopup] Erro ao verificar pesquisa:", err);
+      } catch (error) {
+        console.error("[PesquisaAtualizacaoPopup] Erro ao verificar pesquisa:", error);
       }
     }
 
-    checkEligibility();
-  }, []);
+    void checkEligibility();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSurveyPage]);
 
-  const handleClose = () => {
-    setShow(false);
-  };
+  useEffect(() => {
+    if (isSurveyPage) setShow(false);
+  }, [isSurveyPage]);
 
-  if (!show) return null;
+  if (!show || isSurveyPage) return null;
 
   return (
     <div className={styles.overlay}>
       <div className={styles.modal}>
-        <button className={styles.closeBtn} onClick={handleClose}>
+        <button
+          type="button"
+          className={styles.closeBtn}
+          onClick={() => setShow(false)}
+          aria-label="Fechar pesquisa"
+        >
           <X size={24} />
         </button>
 
@@ -47,17 +60,24 @@ export default function PesquisaSatisfacaoPopup() {
           <div className={styles.icon}>
             <Gift size={36} color="#0d0f12" />
           </div>
-          <h2 className={styles.title}>QUER GANHAR 4 JURIS?</h2>
+          <h2 className={styles.title}>AVALIE A ATUALIZACAO</h2>
         </div>
 
         <div className={styles.content}>
           <p className={styles.message}>
-            Então avalie a plataforma Social Juridico, e ganhe 4 juris agora mesmo.<br/><br/>
-            Sua opinião é fundamental para continuarmos melhorando!
+            Queremos saber como ficaram as novas telas, a IA, a velocidade, a
+            seguranca e o cartao digital interativo.
+            <br />
+            <br />
+            Responda a pesquisa e ganhe 4 Juris agora mesmo.
           </p>
-          
-          <Link href="/dashboard/advogado/avaliacao" className={styles.actionBtn}>
-            Avaliar Agora
+
+          <Link
+            href="/dashboard/advogado/pesquisa-atualizacao"
+            className={styles.actionBtn}
+            onClick={() => setShow(false)}
+          >
+            Responder Pesquisa
           </Link>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { Award, CheckCircle, Scale, Users } from "lucide-react";
+
 import SurveyStars from "./SurveyStars";
 import styles from "../Pesquisas.module.css";
 
@@ -22,28 +23,35 @@ export default function SurveysSummary({ stats }) {
   return (
     <section className={styles.summaryGrid} aria-label="Resumo das pesquisas">
       <SummaryCard
-        label="Média geral"
+        label="Media geral"
         value={stats.overallAverage.toFixed(1)}
         icon={Award}
         stars={stats.overallAverage}
         subtext="Consolidada"
       />
       <SummaryCard
-        label="Média dos advogados"
+        label="Media dos advogados"
         value={stats.lawyerAverage.toFixed(1)}
         icon={Scale}
         stars={stats.lawyerAverage}
         subtext={`${stats.lawyerCount} feedbacks`}
       />
       <SummaryCard
-        label="Média dos clientes"
+        label="Media dos clientes"
         value={stats.clientAverage.toFixed(1)}
         icon={CheckCircle}
         stars={stats.clientAverage}
         subtext={`${stats.clientCount} feedbacks`}
       />
       <SummaryCard
-        label="Total de avaliações"
+        label="Media da atualizacao"
+        value={stats.platformUpdateAverage.toFixed(1)}
+        icon={Award}
+        stars={stats.platformUpdateAverage}
+        subtext={`${stats.platformUpdateCount} feedbacks`}
+      />
+      <SummaryCard
+        label="Total de avaliacoes"
         value={stats.total}
         icon={Users}
         subtext="Registros recebidos"

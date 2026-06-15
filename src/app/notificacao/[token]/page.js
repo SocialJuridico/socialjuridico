@@ -5,6 +5,7 @@ import GeoTracker from "./GeoTracker"; // Vamos criar este componente cliente
 
 export default async function NotificacaoPage({ params }) {
   const { token } = await params;
+  const documentUrl = `/api/notificacao/${encodeURIComponent(token)}/arquivo`;
 
   console.log("Token recebido na rota:", token);
 
@@ -86,7 +87,7 @@ export default async function NotificacaoPage({ params }) {
             {notificacao.file_url ? (
               <div style={{ width: '100%', height: '500px', background: '#333', borderRadius: '6px', overflow: 'hidden' }}>
                 <iframe 
-                  src={`${notificacao.file_url}#toolbar=0`} 
+                  src={`${documentUrl}?preview=1#toolbar=0`} 
                   style={{ width: '100%', height: '100%', border: 'none' }}
                   title="Notificação PDF"
                 />
@@ -99,7 +100,7 @@ export default async function NotificacaoPage({ params }) {
 
             <div style={{ marginTop: '20px', textAlign: 'center' }}>
               <a 
-                href={notificacao.file_url} 
+                href={`${documentUrl}?download=1`} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 style={{ background: '#0070f3', color: '#fff', padding: '12px 24px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', display: 'inline-block' }}

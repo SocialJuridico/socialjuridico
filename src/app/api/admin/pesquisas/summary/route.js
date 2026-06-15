@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import {
   CLIENT_QUESTION_KEYS,
   LAWYER_QUESTION_KEYS,
+  PLATFORM_UPDATE_QUESTION_KEYS,
   calculateSurveyAverage,
   fetchSurveyData,
   json,
@@ -86,8 +87,17 @@ export async function POST() {
       "Cliente",
       CLIENT_QUESTION_KEYS,
     );
+    const platformUpdateFeedbacks = formatFeedbacks(
+      data.atualizacao || [],
+      "Atualizacao da plataforma",
+      PLATFORM_UPDATE_QUESTION_KEYS,
+    );
 
-    if (!lawyerFeedbacks.length && !clientFeedbacks.length) {
+    if (
+      !lawyerFeedbacks.length &&
+      !clientFeedbacks.length &&
+      !platformUpdateFeedbacks.length
+    ) {
       return json(
         {
           success: false,
@@ -109,8 +119,10 @@ export async function POST() {
           content: buildPrompt({
             totalAdvogados: data.advogados.length,
             totalClientes: data.clientes.length,
+            totalAtualizacao: data.atualizacao?.length || 0,
             feedbacksAdvogados: lawyerFeedbacks,
             feedbacksClientes: clientFeedbacks,
+            feedbacksAtualizacao: platformUpdateFeedbacks,
           }),
         },
       ],

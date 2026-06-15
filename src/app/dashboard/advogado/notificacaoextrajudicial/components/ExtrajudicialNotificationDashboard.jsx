@@ -25,6 +25,7 @@ import {
   Search,
   Send,
   ShieldCheck,
+  Sparkles,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -437,13 +438,34 @@ function NewNotificationModal({ controller }) {
 
           {controller.form.mode === "draft" ? (
             <label className={styles.fieldWide}>
-              <span>Conteúdo da notificação *</span>
+              <span className={styles.draftLabel}>
+                Conteúdo da notificação *
+                <button
+                  type="button"
+                  className={styles.aiDraftButton}
+                  onClick={controller.generateDraftWithAi}
+                  disabled={
+                    controller.generatingDraft ||
+                    controller.submitting ||
+                    controller.form.draftText.trim().length < 40
+                  }
+                  title="Gerar minuta com IA a partir dos fatos informados"
+                >
+                  {controller.generatingDraft ? (
+                    <Loader2 size={14} className={styles.spinner} aria-hidden="true" />
+                  ) : (
+                    <Sparkles size={14} aria-hidden="true" />
+                  )}
+                  {controller.generatingDraft ? "Gerando..." : "Gerar com IA"}
+                </button>
+              </span>
               <textarea
                 value={controller.form.draftText}
                 onChange={(event) =>
                   controller.updateField("draftText", event.target.value)
                 }
-                placeholder="Descreva os fatos, a obrigação, o prazo para cumprimento e as consequências jurídicas do não atendimento..."
+                placeholder="Descreva os fatos, a obrigação, o pedido, o prazo para cumprimento e as consequências desejadas. Depois clique em Gerar com IA para transformar em minuta formal."
+                disabled={controller.generatingDraft}
               />
               {controller.fieldErrors.draftText && (
                 <small>{controller.fieldErrors.draftText}</small>

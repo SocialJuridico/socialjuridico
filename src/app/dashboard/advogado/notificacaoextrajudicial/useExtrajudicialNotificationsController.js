@@ -82,6 +82,7 @@ export function useExtrajudicialNotifications() {
   const [file, setFile] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [generatingDraft, setGeneratingDraft] = useState(false);
   const fileInputRef = useRef(null);
   const [certificateId, setCertificateId] = useState("");
 
@@ -220,6 +221,69 @@ export function useExtrajudicialNotifications() {
       file: nextFile ? validateFile(nextFile) : "",
     }));
   }, []);
+
+  const generateDraftWithAi = useCallback(async () => {
+    const content = form.draftText.trim();
+    if (generatingDraft || submitting) return;
+    if (content.length < 40) {
+      setFieldErrors((current) => ({
+        ...current,
+        draftText:
+          "Descreva os fatos, o pedido e o prazo com pelo menos 40 caracteres para a IA gerar a minuta.",
+      }));
+      return;
+    }
+
+    setGeneratingDraft(true);
+    setFieldErrors((current) => ({ ...current, draftText: "" }));
+    try {
+      const selectedClient = clients.find((client) => client.id === form.clientId);
+      const response = await fetch("/api/advogado/notificacaoextrajudicial/gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tone: form.tone,
+          content,
+          clientName: selectedClient?.name || "",
+        }),
+      });
+      const data = await readJson(response);
+      if (response.status === 401) {
+        router.replace(
+          `/login?redirectTo=${encodeURIComponent("/dashboard/advogado/notificacaoextrajudicial")}`,
+        );
+        return;
+      }
+      if (response.status === 403 && data?.upgradeRequired) {
+        openPlansModal();
+      }
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Não foi possível gerar a minuta com IA.");
+      }
+
+      setForm((current) => ({
+        ...current,
+        mode: "draft",
+        draftText: data.draftText || current.draftText,
+      }));
+      toast.success("Minuta gerada com IA. Revise antes de enviar.");
+    } catch (generateError) {
+      toast.error(
+        generateError.message || "Não foi possível gerar a minuta com IA.",
+      );
+    } finally {
+      setGeneratingDraft(false);
+    }
+  }, [
+    clients,
+    form.clientId,
+    form.draftText,
+    form.tone,
+    generatingDraft,
+    openPlansModal,
+    router,
+    submitting,
+  ]);
 
   const validate = useCallback(() => {
     const errors = {};
@@ -390,6 +454,8 @@ export function useExtrajudicialNotifications() {
     fileInputRef,
     fieldErrors,
     submitting,
+    generatingDraft,
+    generateDraftWithAi,
     submit,
     copyText,
     copyTrackingLink,

@@ -9,6 +9,14 @@ describe("track click public destinations", () => {
     ).toBe(true);
   });
 
+  test("allows public document signature links without login", () => {
+    expect(
+      isPublicDestination(
+        "https://socialjuridico.com.br/assinatura/07e745f4-c23b-4a98-8710-44250902d058?role=client",
+      ),
+    ).toBe(true);
+  });
+
   test("keeps protected dashboard links behind login", () => {
     expect(
       isPublicDestination("https://socialjuridico.com.br/dashboard/cliente"),

@@ -3,7 +3,11 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
-import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
+import {
+  DEFAULT_PUBLIC_APP_ORIGIN,
+  hasTrustedMutationOrigin,
+  resolveStaticPublicAppOrigin,
+} from "@/lib/publicAppOrigin";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
@@ -202,6 +206,14 @@ export function verifySignatureOtp(signatureId, role, otp, party = {}) {
 }
 
 export function trustedSignatureSiteUrl() {
+  const production = String(process.env.NODE_ENV || "").toLowerCase() === "production";
+  if (production) {
+    return resolveStaticPublicAppOrigin({
+      ...process.env,
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL,
+    });
+  }
+
   for (const value of [
     process.env.NEXT_PUBLIC_SITE_URL,
     process.env.NEXT_PUBLIC_APP_URL,
@@ -214,7 +226,7 @@ export function trustedSignatureSiteUrl() {
       // Tenta a próxima configuração.
     }
   }
-  return "https://www.socialjuridico.com.br";
+  return DEFAULT_PUBLIC_APP_ORIGIN;
 }
 
 export function signatureStoragePrefix(lawyerId) {

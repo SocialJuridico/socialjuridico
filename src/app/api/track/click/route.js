@@ -24,6 +24,7 @@ export function isPublicDestination(value) {
         url.pathname.startsWith("/confirmar-email") ||
         url.pathname.startsWith("/atualizar-senha") ||
         url.pathname.startsWith("/notificacao/") ||
+        url.pathname.startsWith("/assinatura/") ||
         url.pathname.startsWith("/api/auth/confirm-email") ||
         url.pathname.startsWith("/login") ||
         url.pathname.startsWith("/cadastro")

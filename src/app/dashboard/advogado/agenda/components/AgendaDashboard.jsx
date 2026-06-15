@@ -12,6 +12,7 @@ import {
   CircleCheckBig,
   Clock3,
   Cloud,
+  Copy,
   FilterX,
   Loader2,
   Pencil,
@@ -19,6 +20,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Sparkles,
   Trash2,
   UserRound,
   X,
@@ -45,6 +47,14 @@ const URGENCY = {
   MEDIUM: { label: "Média", className: "urgencyMedium" },
   HIGH: { label: "Alta", className: "urgencyHigh" },
 };
+
+const AI_TASKS = [
+  { value: "meeting_summary", label: "Resumo para reunião" },
+  { value: "meeting_agenda", label: "Pauta de reunião" },
+  { value: "document_checklist", label: "Documentos necessários" },
+  { value: "follow_up_email", label: "Follow-up ao cliente" },
+  { value: "task_plan", label: "Plano de providências" },
+];
 
 function formatDate(value) {
   if (!value) return { date: "Data não informada", time: "" };
@@ -233,8 +243,8 @@ function AgendaModal({ controller }) {
     };
   }, [closeModal, modalOpen]);
 
+  const minimumDate = "2000-01-01T00:00";
   if (!modalOpen) return null;
-  const minimumDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
 
   return (
     <div
@@ -359,6 +369,57 @@ function AgendaModal({ controller }) {
               {controller.fieldErrors.description && <small>{controller.fieldErrors.description}</small>}
             </label>
           </div>
+
+          <section className={styles.aiBox} aria-label="Assistente IA da agenda">
+            <header>
+              <div>
+                <span><Sparkles size={14} aria-hidden="true" /> Assistente IA</span>
+                <strong>Apoio sob demanda para documentos, reuniões e providências</strong>
+              </div>
+              <div className={styles.aiControls}>
+                <select
+                  value={controller.aiTask}
+                  onChange={(event) => controller.setAiTask(event.target.value)}
+                  disabled={controller.aiLoading}
+                  aria-label="Tipo de apoio da IA"
+                >
+                  {AI_TASKS.map((task) => (
+                    <option key={task.value} value={task.value}>{task.label}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className={styles.secondaryAction}
+                  onClick={controller.generateAiSupport}
+                  disabled={controller.aiLoading || (!controller.form.title.trim() && !controller.form.description.trim())}
+                >
+                  {controller.aiLoading ? <Loader2 size={15} className={styles.spinner} /> : <Sparkles size={15} />}
+                  {controller.aiLoading ? "Gerando..." : "Gerar apoio"}
+                </button>
+              </div>
+            </header>
+            {controller.fieldErrors.ai && (
+              <small className={styles.aiError}>{controller.fieldErrors.ai}</small>
+            )}
+            {controller.aiResult ? (
+              <div className={styles.aiResult}>
+                <pre>{controller.aiResult}</pre>
+                <div>
+                  <button type="button" onClick={controller.copyAiResult}>
+                    <Copy size={14} /> Copiar
+                  </button>
+                  <button type="button" onClick={controller.insertAiResultInDescription}>
+                    <Plus size={14} /> Inserir na descrição
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p>
+                Preencha o título e o contexto do compromisso para gerar resumos,
+                pautas, checklists de documentos ou próximos passos.
+              </p>
+            )}
+          </section>
 
           <div className={styles.governanceNote}>
             <ShieldCheck size={17} aria-hidden="true" />

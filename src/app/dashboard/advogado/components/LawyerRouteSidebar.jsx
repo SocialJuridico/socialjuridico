@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import {
   BellRing,
   BookOpen,
@@ -31,6 +32,8 @@ import toast from "react-hot-toast";
 import { useLawyerSession } from "../LawyerSessionContext";
 import sidebarStyles from "./LawyerRouteSidebar.module.css";
 import styles from "./LawyerShell.module.css";
+
+const SIDEBAR_SCROLL_KEY = "sj:lawyer-sidebar-scroll";
 
 const DIRECT_ROUTES = {
   dashboard: { path: "/dashboard/advogado/dashboard", activeRoute: "dashboard" },
@@ -102,6 +105,7 @@ function getPermission(profile, item) {
 
 export default function LawyerRouteSidebar({ activeRoute }) {
   const router = useRouter();
+  const navScrollRef = useRef(null);
   const {
     profileData,
     isSidebarOpen,
@@ -118,11 +122,37 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     planType === "PRO" ||
     planType.startsWith("ENTERPRISE_");
 
+  useEffect(() => {
+    const element = navScrollRef.current;
+    if (!element) return undefined;
+
+    const savedScroll = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || 0);
+    if (Number.isFinite(savedScroll) && savedScroll > 0) {
+      element.scrollTop = savedScroll;
+    }
+
+    const saveScroll = () => {
+      sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(element.scrollTop));
+    };
+    element.addEventListener("scroll", saveScroll, { passive: true });
+    return () => {
+      saveScroll();
+      element.removeEventListener("scroll", saveScroll);
+    };
+  }, []);
+
+  function saveSidebarScroll() {
+    const element = navScrollRef.current;
+    if (!element) return;
+    sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(element.scrollTop));
+  }
+
   function closeSidebar() {
     setIsSidebarOpen(false);
   }
 
   function navigateTo(tab) {
+    saveSidebarScroll();
     closeSidebar();
     const directRoute = DIRECT_ROUTES[tab];
     if (directRoute) {
@@ -188,7 +218,7 @@ export default function LawyerRouteSidebar({ activeRoute }) {
         <Sparkles size={15} aria-hidden="true" /><span>Plano {hasPremium ? planType : "FREE"}</span>
       </button>
 
-      <div className={styles.navScroll}>
+      <div className={styles.navScroll} ref={navScrollRef}>
         <nav className={styles.navGroup} aria-label="Navegação principal"><span className={styles.navLabel}>Navegação</span>{PRIMARY_ITEMS.map((item) => renderItem(item))}</nav>
         <nav className={styles.navGroup} aria-label="Ferramentas profissionais"><span className={styles.navLabel}>Ferramentas profissionais</span>{PREMIUM_ITEMS.map((item) => renderItem(item, true))}</nav>
         <nav className={styles.navGroup} aria-label="Conta e suporte">

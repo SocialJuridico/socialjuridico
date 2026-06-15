@@ -56,3 +56,10 @@ export function deleteAgendaItem(itemId) {
     headers: { "X-Idempotency-Key": crypto.randomUUID() },
   });
 }
+
+export function generateAgendaAiSupport(payload) {
+  return agendaRequest("/api/advogado/agenda/assistente", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

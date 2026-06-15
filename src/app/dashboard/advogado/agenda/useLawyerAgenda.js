@@ -6,6 +6,7 @@ import toast from "react-hot-toast";
 import {
   createAgendaItem,
   deleteAgendaItem,
+  generateAgendaAiSupport,
   listAgendaItems,
   updateAgendaItem,
 } from "@/services/agendaService";
@@ -70,6 +71,9 @@ export function useLawyerAgenda() {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState("");
   const [completingId, setCompletingId] = useState("");
+  const [aiTask, setAiTask] = useState("meeting_summary");
+  const [aiResult, setAiResult] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (silent) setRefreshing(true);
@@ -122,6 +126,8 @@ export function useLawyerAgenda() {
     const end = new Date(start.getTime() + 60 * 60 * 1000);
     setEditingItem(null);
     setFieldErrors({});
+    setAiTask("meeting_summary");
+    setAiResult("");
     setForm({
       ...EMPTY_FORM,
       date: toLocalDateTime(start),
@@ -136,6 +142,8 @@ export function useLawyerAgenda() {
   const openEdit = useCallback((item) => {
     setEditingItem(item);
     setFieldErrors({});
+    setAiTask("meeting_summary");
+    setAiResult("");
     setForm({
       title: item.title || "",
       description: item.description || "",
@@ -161,6 +169,60 @@ export function useLawyerAgenda() {
     setForm((current) => ({ ...current, [field]: value }));
     setFieldErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
   }, []);
+
+  const generateAiSupport = useCallback(async () => {
+    if (aiLoading) return;
+    const selectedClient = clients.find((client) => client.id === form.clientId);
+    setAiLoading(true);
+    setFieldErrors((current) => ({ ...current, ai: undefined }));
+    try {
+      const data = await generateAgendaAiSupport({
+        task: aiTask,
+        title: form.title,
+        description: form.description,
+        date: form.date,
+        endDate: form.endDate,
+        type: form.type,
+        urgency: form.urgency,
+        clientName: selectedClient?.name || "",
+      });
+      setAiResult(data.result || "");
+      toast.success("Assistente IA gerou o conteúdo.");
+    } catch (requestError) {
+      if (requestError.status === 401) {
+        window.location.href = `/login?redirectTo=${encodeURIComponent("/dashboard/advogado/agenda")}`;
+        return;
+      }
+      setFieldErrors((current) => ({
+        ...current,
+        ai: requestError.message || "Não foi possível gerar o apoio da IA.",
+      }));
+      toast.error(requestError.message || "Não foi possível gerar o apoio da IA.");
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiLoading, aiTask, clients, form]);
+
+  const insertAiResultInDescription = useCallback(() => {
+    if (!aiResult.trim()) return;
+    setForm((current) => ({
+      ...current,
+      description: [current.description.trim(), aiResult.trim()]
+        .filter(Boolean)
+        .join("\n\n"),
+    }));
+    toast.success("Conteúdo da IA inserido na descrição.");
+  }, [aiResult]);
+
+  const copyAiResult = useCallback(async () => {
+    if (!aiResult.trim()) return;
+    try {
+      await navigator.clipboard.writeText(aiResult);
+      toast.success("Conteúdo da IA copiado.");
+    } catch {
+      toast.error("Não foi possível copiar o conteúdo.");
+    }
+  }, [aiResult]);
 
   const submit = useCallback(async (event) => {
     event.preventDefault();
@@ -279,6 +341,10 @@ export function useLawyerAgenda() {
     submitting,
     deletingId,
     completingId,
+    aiTask,
+    setAiTask,
+    aiResult,
+    aiLoading,
     hasActiveFilters,
     load,
     updateFilter,
@@ -287,6 +353,9 @@ export function useLawyerAgenda() {
     openEdit,
     closeModal,
     updateField,
+    generateAiSupport,
+    insertAiResultInDescription,
+    copyAiResult,
     submit,
     complete,
     remove,

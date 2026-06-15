@@ -10,6 +10,7 @@ import {
   recordSignatureAudit,
   requireDigitalSignatureAccess,
   serializeDashboardSignature,
+  sendSignatureInvitation,
   signatureJson,
   signatureServerFailure,
 } from "@/lib/digitalSignatures/signatureServer";
@@ -310,10 +311,59 @@ export async function POST(request) {
       },
     });
 
+    let invitationSent = false;
+    let invitationError = "";
+    try {
+      await sendSignatureInvitation({ signature: data, role: "client" });
+      invitationSent = true;
+
+      const sentAt = new Date().toISOString();
+      const updatedMetadata = {
+        ...metadata,
+        client: {
+          ...metadata.client,
+          invitation_last_sent_at: sentAt,
+        },
+        history: [
+          ...metadata.history,
+          {
+            event: "invitation_sent_client",
+            timestamp: sentAt,
+            details: "Convite de assinatura enviado automaticamente ao iniciar o processo.",
+          },
+        ],
+      };
+
+      const { error: invitationUpdateError } = await access.db
+        .from("assinaturas_digitais")
+        .update({ metadata: updatedMetadata, updated_at: sentAt })
+        .eq("id", data.id)
+        .eq("lawyer_id", access.user.id);
+      if (invitationUpdateError) throw invitationUpdateError;
+
+      data.metadata = updatedMetadata;
+      data.updated_at = sentAt;
+
+      await recordSignatureAudit(access, request, {
+        requestId: payload.requestId,
+        signatureId: data.id,
+        action: "SEND_INVITATION",
+        metadata: { role: "client", automatic: true },
+      });
+    } catch (sendError) {
+      invitationError =
+        sendError?.message || "Não foi possível enviar o convite automaticamente.";
+      console.error("[Advogado/Assinaturas][POST][Convite] Erro:", sendError);
+    }
+
     return signatureJson(
       {
         success: true,
-        message: "Processo de assinatura iniciado com segurança.",
+        message: invitationSent
+          ? "Processo de assinatura iniciado e convite enviado ao signatário."
+          : "Processo de assinatura iniciado, mas não foi possível enviar o convite automaticamente.",
+        invitationSent,
+        invitationError,
         data: serializeDashboardSignature(data),
       },
       201,

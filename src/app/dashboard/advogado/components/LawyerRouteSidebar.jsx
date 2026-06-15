@@ -76,14 +76,14 @@ const PRIMARY_ITEMS = [
 
 const PREMIUM_ITEMS = [
   { tab: "assinatura", label: "Assinatura Digital", icon: PenTool, permission: "ferr_assinatura" },
-  { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem" },
+  { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
   { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm" },
-  { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs" },
-  { tab: "blindagem", label: "Blindagem de Documentos", icon: Shield, permission: "ferr_blindagem" },
-  { tab: "redator", label: "Redator IA", icon: Sparkles, permission: "ferr_redator_ia", legalOnly: true },
-  { tab: "gerador-documentos", label: "Gerador de Documentos", icon: FilePenLine, permission: "ferr_redator_ia", legalOnly: true },
-  { tab: "agenda", label: "Agenda & Prazos", icon: Calendar, permission: "ferr_agenda" },
-  { tab: "triagem", label: "Triagem de Casos", icon: Search, permission: "ferr_triagem" },
+  { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs", ai: true },
+  { tab: "blindagem", label: "Blindagem de Documentos", icon: Shield, permission: "ferr_blindagem", ai: true },
+  { tab: "redator", label: "Redator IA", icon: Sparkles, permission: "ferr_redator_ia", legalOnly: true, ai: true },
+  { tab: "gerador-documentos", label: "Gerador de Documentos", icon: FilePenLine, permission: "ferr_redator_ia", legalOnly: true, ai: true },
+  { tab: "agenda", label: "Agenda & Prazos", icon: Calendar, permission: "ferr_agenda", ai: true },
+  { tab: "triagem", label: "Triagem de Casos", icon: Search, permission: "ferr_triagem", ai: true },
   { tab: "calculadora", label: "Calculadoras", icon: Calculator, permission: "ferr_calculadora", proOnly: true },
   { tab: "juris", label: "Jurisprudência", icon: BookOpen, permission: "ferr_jurisprudencia", legalOnly: true, proOnly: true },
 ];
@@ -192,7 +192,12 @@ export default function LawyerRouteSidebar({ activeRoute }) {
         aria-current={isActive ? "page" : undefined}
       >
         <Icon size={17} aria-hidden="true" />
-        <span>{item.label}</span>
+        <span className={styles.navText}>{item.label}</span>
+        {item.ai && (
+          <span className={styles.navAiBadge} title="Recurso com inteligência artificial">
+            IA
+          </span>
+        )}
         {item.tab === "minhas-mensagens" && unreadMessagesCount > 0 && (
           <span className={styles.navBadge}>{unreadMessagesCount}</span>
         )}

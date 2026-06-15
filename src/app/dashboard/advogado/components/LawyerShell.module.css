@@ -150,9 +150,29 @@
   color: #f5df93;
 }
 
+.navText {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .navItemDanger {
   margin-top: 8px;
   color: #fca5a5;
+}
+
+.navAiBadge {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border: 1px solid rgba(212, 175, 55, 0.34);
+  border-radius: 6px;
+  background: rgba(212, 175, 55, 0.13);
+  color: #f5df93;
+  font-size: 0.58rem;
+  font-weight: 850;
+  line-height: 1;
 }
 
 .navLock,

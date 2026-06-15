@@ -34,6 +34,8 @@
   position: absolute;
   right: 0;
   bottom: 64px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   width: min(360px, calc(100vw - 32px));
   max-height: 70vh;
   overflow: hidden;
@@ -117,10 +119,12 @@
 
 .tutorialList {
   display: flex;
-  max-height: 58vh;
+  min-height: 0;
+  max-height: none;
   flex-direction: column;
   gap: 7px;
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 12px;
 }
 
@@ -160,6 +164,8 @@
 }
 
 .feedback {
+  min-height: 0;
+  overflow: auto;
   padding: 22px;
   color: #aaa;
   text-align: center;
@@ -245,5 +251,6 @@
 
   .library {
     bottom: 60px;
+    max-height: min(74vh, calc(100dvh - 178px));
   }
 }

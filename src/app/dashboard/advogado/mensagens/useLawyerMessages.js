@@ -72,6 +72,7 @@ export function useLawyerMessages() {
   const inboxAbortRef = useRef(null);
   const threadAbortRef = useRef(null);
   const selectedRef = useRef(null);
+  const loadedThreadRef = useRef("");
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
@@ -291,11 +292,15 @@ export function useLawyerMessages() {
 
   useEffect(() => {
     if (!selectedConversation) {
+      loadedThreadRef.current = "";
       setMessages([]);
       return;
     }
 
-    void loadThread(selectedConversation);
+    const threadKey = selectedConversation.id;
+    const alreadyLoaded = loadedThreadRef.current === threadKey;
+    loadedThreadRef.current = threadKey;
+    void loadThread(selectedConversation, { silent: alreadyLoaded });
   }, [loadThread, selectedConversation]);
 
   useEffect(() => {

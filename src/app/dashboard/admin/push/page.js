@@ -9,12 +9,16 @@ import {
   CalendarClock,
   Edit3,
   Loader2,
+  Mail,
   Megaphone,
   Plus,
   Trash2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+import CommunicationForm from "./components/CommunicationForm";
+import { COMMUNICATION_CHANNELS } from "./config/communicationOptions";
+import { useAdminCommunication } from "./hooks/useAdminCommunication";
 import styles from "./Push.module.css";
 
 const EMPTY_FORM = {
@@ -69,6 +73,8 @@ function noticeStatus(notice) {
 }
 
 export default function AdminPushPage() {
+  const emailState = useAdminCommunication();
+  const [activeSection, setActiveSection] = useState("notices");
   const [notices, setNotices] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
@@ -208,213 +214,253 @@ export default function AdminPushPage() {
       </header>
 
       <div className={styles.contentShell}>
-        <section className={styles.summaryGrid} aria-label="Resumo dos avisos">
-          <article><strong>{summary.total}</strong><span>Total</span></article>
-          <article><strong>{summary.active}</strong><span>Publicados</span></article>
-          <article><strong>{summary.scheduled}</strong><span>Agendados</span></article>
-          <article><strong>{summary.expired}</strong><span>Expirados</span></article>
-        </section>
+        <nav className={styles.tabs} aria-label="Canais administrativos">
+          <button
+            type="button"
+            className={`${styles.tab} ${activeSection === "notices" ? styles.tabActive : ""}`}
+            onClick={() => setActiveSection("notices")}
+            aria-pressed={activeSection === "notices"}
+          >
+            <Megaphone size={16} /> Avisos internos
+          </button>
+          <button
+            type="button"
+            className={`${styles.tab} ${activeSection === "email" ? styles.tabActive : ""}`}
+            onClick={() => {
+              emailState.setActiveChannel(COMMUNICATION_CHANNELS.EMAIL);
+              setActiveSection("email");
+            }}
+            aria-pressed={activeSection === "email"}
+          >
+            <Mail size={16} /> E-mail
+          </button>
+        </nav>
 
-        <section className={styles.formCard}>
-          <header className={styles.formHeader}>
-            <span className={styles.formIcon}>
-              {editing ? <Edit3 size={19} /> : <Plus size={19} />}
-            </span>
-            <div>
-              <span className={styles.formEyebrow}>
-                {editing ? "Editar aviso" : "Novo aviso"}
-              </span>
-              <h2>{editing ? form.title : "Cadastrar comunicado interno"}</h2>
-              <p>O aviso aparece somente enquanto estiver ativo e dentro do periodo definido.</p>
-            </div>
-          </header>
+        {activeSection === "email" ? (
+          <CommunicationForm
+            channel={COMMUNICATION_CHANNELS.EMAIL}
+            form={emailState.activeForm}
+            options={emailState.activeOptions}
+            limits={emailState.activeLimits}
+            recipientType={emailState.activeRecipientType}
+            recipients={emailState.activeRecipients}
+            loadingRecipients={emailState.loadingRecipients}
+            sending={emailState.sending}
+            canSubmit={emailState.canSubmit}
+            onChange={emailState.updateActiveForm}
+            onSubmit={emailState.submit}
+          />
+        ) : (
+          <>
+            <section className={styles.summaryGrid} aria-label="Resumo dos avisos">
+              <article><strong>{summary.total}</strong><span>Total</span></article>
+              <article><strong>{summary.active}</strong><span>Publicados</span></article>
+              <article><strong>{summary.scheduled}</strong><span>Agendados</span></article>
+              <article><strong>{summary.expired}</strong><span>Expirados</span></article>
+            </section>
 
-          <form onSubmit={saveNotice}>
-            <div className={styles.formGrid}>
-              <div className={styles.formGroup}>
-                <label htmlFor="title">Titulo</label>
-                <input
-                  id="title"
-                  className={styles.input}
-                  value={form.title}
-                  maxLength={90}
-                  onChange={(event) => updateForm("title", event.target.value)}
-                  placeholder="Ex.: Nova atualização disponível"
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="severity">Tipo</label>
-                <select
-                  id="severity"
-                  className={styles.select}
-                  value={form.severity}
-                  onChange={(event) => updateForm("severity", event.target.value)}
-                >
-                  {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className={`${styles.formGroup} ${styles.fullWidth}`}>
-                <div className={styles.labelRow}>
-                  <label htmlFor="message">Mensagem</label>
-                  <span>{form.message.length}/700</span>
+            <section className={styles.formCard}>
+              <header className={styles.formHeader}>
+                <span className={styles.formIcon}>
+                  {editing ? <Edit3 size={19} /> : <Plus size={19} />}
+                </span>
+                <div>
+                  <span className={styles.formEyebrow}>
+                    {editing ? "Editar aviso" : "Novo aviso"}
+                  </span>
+                  <h2>{editing ? form.title : "Cadastrar comunicado interno"}</h2>
+                  <p>O aviso aparece somente enquanto estiver ativo e dentro do periodo definido.</p>
                 </div>
-                <textarea
-                  id="message"
-                  className={styles.textarea}
-                  value={form.message}
-                  maxLength={700}
-                  onChange={(event) => updateForm("message", event.target.value)}
-                  placeholder="Escreva o aviso que sera exibido aos advogados."
-                />
-              </div>
+              </header>
 
-              <div className={styles.formGroup}>
-                <label htmlFor="starts_at">Mostrar a partir de</label>
-                <input
-                  id="starts_at"
-                  className={styles.input}
-                  type="datetime-local"
-                  value={form.starts_at}
-                  onChange={(event) => updateForm("starts_at", event.target.value)}
-                />
-              </div>
+              <form onSubmit={saveNotice}>
+                <div className={styles.formGrid}>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="title">Titulo</label>
+                    <input
+                      id="title"
+                      className={styles.input}
+                      value={form.title}
+                      maxLength={90}
+                      onChange={(event) => updateForm("title", event.target.value)}
+                      placeholder="Ex.: Nova atualização disponível"
+                    />
+                  </div>
 
-              <div className={styles.formGroup}>
-                <label htmlFor="ends_at">Mostrar ate</label>
-                <input
-                  id="ends_at"
-                  className={styles.input}
-                  type="datetime-local"
-                  value={form.ends_at}
-                  onChange={(event) => updateForm("ends_at", event.target.value)}
-                  required
-                />
-              </div>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="severity">Tipo</label>
+                    <select
+                      id="severity"
+                      className={styles.select}
+                      value={form.severity}
+                      onChange={(event) => updateForm("severity", event.target.value)}
+                    >
+                      {Object.entries(SEVERITY_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div className={styles.formGroup}>
-                <label htmlFor="cta_label">Texto do botao opcional</label>
-                <input
-                  id="cta_label"
-                  className={styles.input}
-                  value={form.cta_label}
-                  maxLength={40}
-                  onChange={(event) => updateForm("cta_label", event.target.value)}
-                  placeholder="Ex.: Ver novidades"
-                />
-              </div>
+                  <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+                    <div className={styles.labelRow}>
+                      <label htmlFor="message">Mensagem</label>
+                      <span>{form.message.length}/700</span>
+                    </div>
+                    <textarea
+                      id="message"
+                      className={styles.textarea}
+                      value={form.message}
+                      maxLength={700}
+                      onChange={(event) => updateForm("message", event.target.value)}
+                      placeholder="Escreva o aviso que sera exibido aos advogados."
+                    />
+                  </div>
 
-              <div className={styles.formGroup}>
-                <label htmlFor="cta_url">Link do botao opcional</label>
-                <input
-                  id="cta_url"
-                  className={styles.input}
-                  value={form.cta_url}
-                  maxLength={300}
-                  onChange={(event) => updateForm("cta_url", event.target.value)}
-                  placeholder="/dashboard/advogado/..."
-                />
-              </div>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="starts_at">Mostrar a partir de</label>
+                    <input
+                      id="starts_at"
+                      className={styles.input}
+                      type="datetime-local"
+                      value={form.starts_at}
+                      onChange={(event) => updateForm("starts_at", event.target.value)}
+                    />
+                  </div>
 
-              <label className={`${styles.toggleRow} ${styles.fullWidth}`}>
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(event) => updateForm("is_active", event.target.checked)}
-                />
-                <span>Aviso ativo</span>
-              </label>
-            </div>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="ends_at">Mostrar ate</label>
+                    <input
+                      id="ends_at"
+                      className={styles.input}
+                      type="datetime-local"
+                      value={form.ends_at}
+                      onChange={(event) => updateForm("ends_at", event.target.value)}
+                      required
+                    />
+                  </div>
 
-            <footer className={styles.formFooter}>
-              <p>
-                Caso nao exista aviso ativo no periodo definido, nada sera
-                exibido no dashboard do advogado.
-              </p>
-              {editing && (
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={() => setForm(EMPTY_FORM)}
-                  disabled={saving}
-                >
-                  Cancelar edição
+                  <div className={styles.formGroup}>
+                    <label htmlFor="cta_label">Texto do botao opcional</label>
+                    <input
+                      id="cta_label"
+                      className={styles.input}
+                      value={form.cta_label}
+                      maxLength={40}
+                      onChange={(event) => updateForm("cta_label", event.target.value)}
+                      placeholder="Ex.: Ver novidades"
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label htmlFor="cta_url">Link do botao opcional</label>
+                    <input
+                      id="cta_url"
+                      className={styles.input}
+                      value={form.cta_url}
+                      maxLength={300}
+                      onChange={(event) => updateForm("cta_url", event.target.value)}
+                      placeholder="/dashboard/advogado/..."
+                    />
+                  </div>
+
+                  <label className={`${styles.toggleRow} ${styles.fullWidth}`}>
+                    <input
+                      type="checkbox"
+                      checked={form.is_active}
+                      onChange={(event) => updateForm("is_active", event.target.checked)}
+                    />
+                    <span>Aviso ativo</span>
+                  </label>
+                </div>
+
+                <footer className={styles.formFooter}>
+                  <p>
+                    Caso nao exista aviso ativo no periodo definido, nada sera
+                    exibido no dashboard do advogado.
+                  </p>
+                  {editing && (
+                    <button
+                      type="button"
+                      className={styles.secondaryButton}
+                      onClick={() => setForm(EMPTY_FORM)}
+                      disabled={saving}
+                    >
+                      Cancelar edição
+                    </button>
+                  )}
+                  <button type="submit" className={styles.primaryButton} disabled={saving}>
+                    {saving ? <Loader2 size={16} className={styles.spinning} /> : <Bell size={16} />}
+                    {editing ? "Salvar aviso" : "Cadastrar aviso"}
+                  </button>
+                </footer>
+              </form>
+            </section>
+
+            <section className={styles.listPanel}>
+              <header className={styles.listHeader}>
+                <div>
+                  <span className={styles.formEyebrow}>Avisos cadastrados</span>
+                  <h2>Publicações internas</h2>
+                </div>
+                <button type="button" onClick={loadNotices} disabled={loading}>
+                  {loading ? <Loader2 size={15} className={styles.spinning} /> : <CalendarClock size={15} />}
+                  Atualizar
                 </button>
+              </header>
+
+              {loading ? (
+                <div className={styles.emptyState}>
+                  <Loader2 size={22} className={styles.spinning} />
+                  <span>Carregando avisos...</span>
+                </div>
+              ) : notices.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <AlertTriangle size={22} />
+                  <span>Nenhum aviso interno cadastrado.</span>
+                </div>
+              ) : (
+                <div className={styles.noticeList}>
+                  {notices.map((notice) => {
+                    const status = noticeStatus(notice);
+                    const busy = busyId === notice.id;
+                    return (
+                      <article key={notice.id} className={styles.noticeCard}>
+                        <div className={styles.noticeInfo}>
+                          <span className={`${styles.statusBadge} ${status.className}`}>
+                            {status.label}
+                          </span>
+                          <h3>{notice.title}</h3>
+                          <p>{notice.message}</p>
+                          <dl>
+                            <div><dt>Tipo</dt><dd>{SEVERITY_LABELS[notice.severity] || notice.severity}</dd></div>
+                            <div><dt>Inicio</dt><dd>{formatDateTime(notice.starts_at)}</dd></div>
+                            <div><dt>Fim</dt><dd>{formatDateTime(notice.ends_at)}</dd></div>
+                          </dl>
+                        </div>
+                        <div className={styles.noticeActions}>
+                          <button type="button" onClick={() => editNotice(notice)} disabled={busy}>
+                            <Edit3 size={15} /> Editar
+                          </button>
+                          <button type="button" onClick={() => toggleNotice(notice)} disabled={busy}>
+                            {notice.is_active ? "Pausar" : "Ativar"}
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.dangerButton}
+                            onClick={() => deleteNotice(notice)}
+                            disabled={busy}
+                          >
+                            <Trash2 size={15} /> Apagar
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               )}
-              <button type="submit" className={styles.primaryButton} disabled={saving}>
-                {saving ? <Loader2 size={16} className={styles.spinning} /> : <Bell size={16} />}
-                {editing ? "Salvar aviso" : "Cadastrar aviso"}
-              </button>
-            </footer>
-          </form>
-        </section>
-
-        <section className={styles.listPanel}>
-          <header className={styles.listHeader}>
-            <div>
-              <span className={styles.formEyebrow}>Avisos cadastrados</span>
-              <h2>Publicações internas</h2>
-            </div>
-            <button type="button" onClick={loadNotices} disabled={loading}>
-              {loading ? <Loader2 size={15} className={styles.spinning} /> : <CalendarClock size={15} />}
-              Atualizar
-            </button>
-          </header>
-
-          {loading ? (
-            <div className={styles.emptyState}>
-              <Loader2 size={22} className={styles.spinning} />
-              <span>Carregando avisos...</span>
-            </div>
-          ) : notices.length === 0 ? (
-            <div className={styles.emptyState}>
-              <AlertTriangle size={22} />
-              <span>Nenhum aviso interno cadastrado.</span>
-            </div>
-          ) : (
-            <div className={styles.noticeList}>
-              {notices.map((notice) => {
-                const status = noticeStatus(notice);
-                const busy = busyId === notice.id;
-                return (
-                  <article key={notice.id} className={styles.noticeCard}>
-                    <div className={styles.noticeInfo}>
-                      <span className={`${styles.statusBadge} ${status.className}`}>
-                        {status.label}
-                      </span>
-                      <h3>{notice.title}</h3>
-                      <p>{notice.message}</p>
-                      <dl>
-                        <div><dt>Tipo</dt><dd>{SEVERITY_LABELS[notice.severity] || notice.severity}</dd></div>
-                        <div><dt>Inicio</dt><dd>{formatDateTime(notice.starts_at)}</dd></div>
-                        <div><dt>Fim</dt><dd>{formatDateTime(notice.ends_at)}</dd></div>
-                      </dl>
-                    </div>
-                    <div className={styles.noticeActions}>
-                      <button type="button" onClick={() => editNotice(notice)} disabled={busy}>
-                        <Edit3 size={15} /> Editar
-                      </button>
-                      <button type="button" onClick={() => toggleNotice(notice)} disabled={busy}>
-                        {notice.is_active ? "Pausar" : "Ativar"}
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.dangerButton}
-                        onClick={() => deleteNotice(notice)}
-                        disabled={busy}
-                      >
-                        <Trash2 size={15} /> Apagar
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
+            </section>
+          </>
+        )}
       </div>
     </main>
   );

@@ -72,7 +72,7 @@ function formatRecording(seconds) {
 
 export default function MessageThread({ controller }) {
   const fileInputRef = useRef(null);
-  const messagesEndRef = useRef(null);
+  const messagesAreaRef = useRef(null);
   const conversation = controller.selectedConversation;
 
   const groups = useMemo(() => {
@@ -92,7 +92,9 @@ export default function MessageThread({ controller }) {
   }, [controller.messages]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const area = messagesAreaRef.current;
+    if (!area) return;
+    area.scrollTo({ top: area.scrollHeight, behavior: "smooth" });
   }, [controller.messages, controller.selectedId]);
 
   if (!conversation) {
@@ -200,7 +202,7 @@ export default function MessageThread({ controller }) {
         A conversa é restrita aos participantes vinculados ao caso.
       </div>
 
-      <div className={styles.messagesArea}>
+      <div className={styles.messagesArea} ref={messagesAreaRef}>
         {controller.loadingThread ? (
           <div className={styles.threadLoading}>
             <Loader2 size={25} className={styles.spinner} aria-hidden="true" />
@@ -266,7 +268,6 @@ export default function MessageThread({ controller }) {
             </div>
           ))
         )}
-        <div ref={messagesEndRef} />
       </div>
 
       <footer className={styles.composer}>

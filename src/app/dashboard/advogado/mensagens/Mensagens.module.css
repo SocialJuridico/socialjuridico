@@ -1,8 +1,12 @@
 .page {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 16px;
   width: min(1360px, 100%);
+  height: calc(100dvh - 76px - clamp(36px, 6vw, 72px));
+  min-height: 0;
   margin: 0 auto;
+  overflow: hidden;
 }
 
 .summaryGrid {
@@ -80,9 +84,9 @@
 .messagingLayout {
   display: grid;
   grid-template-columns: minmax(310px, 0.72fr) minmax(0, 1.75fr);
-  min-height: 640px;
-  height: calc(100vh - 230px);
-  max-height: 860px;
+  min-height: 0;
+  height: auto;
+  max-height: none;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 19px;
@@ -93,6 +97,7 @@
 .conversationPanel {
   display: flex;
   min-width: 0;
+  min-height: 0;
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.07);
   background:
@@ -399,6 +404,7 @@
 
 .threadPanel {
   display: grid;
+  min-height: 0;
   min-width: 0;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   background:
@@ -546,6 +552,7 @@
 .messagesArea {
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 18px clamp(14px, 3vw, 28px);
   scroll-behavior: smooth;
   scrollbar-width: thin;
@@ -980,13 +987,13 @@
   }
 
   .messagingLayout {
-    height: calc(100vh - 300px);
     grid-template-columns: minmax(280px, 0.82fr) minmax(0, 1.5fr);
   }
 }
 
 @media (max-width: 820px) {
   .page {
+    height: calc(100dvh - 68px - 24px);
     gap: 12px;
   }
 
@@ -997,8 +1004,8 @@
   .messagingLayout {
     position: relative;
     display: block;
-    min-height: calc(100vh - 260px);
-    height: calc(100vh - 220px);
+    min-height: 0;
+    height: auto;
     max-height: none;
   }
 
@@ -1072,8 +1079,8 @@
   }
 
   .messagingLayout {
-    min-height: 620px;
-    height: calc(100vh - 205px);
+    min-height: 0;
+    height: auto;
     border-radius: 15px;
   }
 

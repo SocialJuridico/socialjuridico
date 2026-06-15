@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import {
   BellRing,
   BookOpen,
@@ -77,7 +77,7 @@ const PRIMARY_ITEMS = [
 const PREMIUM_ITEMS = [
   { tab: "assinatura", label: "Assinatura Digital", icon: PenTool, permission: "ferr_assinatura" },
   { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
-  { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm" },
+  { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm", ai: true },
   { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs", ai: true },
   { tab: "blindagem", label: "Blindagem de Documentos", icon: Shield, permission: "ferr_blindagem", ai: true },
   { tab: "redator", label: "Redator IA", icon: Sparkles, permission: "ferr_redator_ia", legalOnly: true, ai: true },
@@ -85,7 +85,7 @@ const PREMIUM_ITEMS = [
   { tab: "agenda", label: "Agenda & Prazos", icon: Calendar, permission: "ferr_agenda", ai: true },
   { tab: "triagem", label: "Triagem de Casos", icon: Search, permission: "ferr_triagem", ai: true },
   { tab: "calculadora", label: "Calculadoras", icon: Calculator, permission: "ferr_calculadora", proOnly: true },
-  { tab: "juris", label: "Jurisprudência", icon: BookOpen, permission: "ferr_jurisprudencia", legalOnly: true, proOnly: true },
+  { tab: "juris", label: "Jurisprudência", icon: BookOpen, permission: "ferr_jurisprudencia", legalOnly: true, proOnly: true, ai: true },
 ];
 
 const ACCOUNT_ITEMS = [
@@ -122,14 +122,34 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     planType === "PRO" ||
     planType.startsWith("ENTERPRISE_");
 
-  useEffect(() => {
-    const element = navScrollRef.current;
-    if (!element) return undefined;
-
+  const readSavedSidebarScroll = useCallback(() => {
     const savedScroll = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || 0);
+    return Number.isFinite(savedScroll) && savedScroll > 0 ? savedScroll : 0;
+  }, []);
+
+  const restoreSidebarScroll = useCallback(() => {
+    const element = navScrollRef.current;
+    if (!element) return;
+
+    const savedScroll = readSavedSidebarScroll();
     if (Number.isFinite(savedScroll) && savedScroll > 0) {
       element.scrollTop = savedScroll;
     }
+  }, [readSavedSidebarScroll]);
+
+  useLayoutEffect(() => {
+    restoreSidebarScroll();
+    const frame = requestAnimationFrame(restoreSidebarScroll);
+    const timer = window.setTimeout(restoreSidebarScroll, 90);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [activeRoute, hasPremium, planType, profileData?.escritorio_id, profileData?.nome_escritorio, restoreSidebarScroll]);
+
+  useEffect(() => {
+    const element = navScrollRef.current;
+    if (!element) return undefined;
 
     const saveScroll = () => {
       sessionStorage.setItem(SIDEBAR_SCROLL_KEY, String(element.scrollTop));
@@ -155,11 +175,12 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     saveSidebarScroll();
     closeSidebar();
     const directRoute = DIRECT_ROUTES[tab];
-    if (directRoute) {
-      router.push(directRoute.path);
-      return;
-    }
-    router.push(`/dashboard/advogado?legacy=1&tab=${encodeURIComponent(tab)}`);
+    const path = directRoute
+      ? directRoute.path
+      : `/dashboard/advogado?legacy=1&tab=${encodeURIComponent(tab)}`;
+    router.push(path);
+    requestAnimationFrame(restoreSidebarScroll);
+    window.setTimeout(restoreSidebarScroll, 120);
   }
 
   function navigatePremium(item) {

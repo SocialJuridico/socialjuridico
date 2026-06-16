@@ -5,6 +5,7 @@ import {
   ClipboardCheck,
   DollarSign,
   FileText,
+  FileSignature,
   Film,
   Image as ImageIcon,
   Mail,
@@ -76,6 +77,7 @@ export function createAdminSections(stats) {
       cards: [
         { title: "Relatórios de uso", value: "Métricas, PDF e histórico", href: "/dashboard/admin/relatorios", icon: FileText, tone: ADMIN_CARD_TONES.gold },
         { title: "Auditorias internas", value: "SOC 2, ISO, LGPD e segurança", href: "/dashboard/admin/auditorias", icon: ClipboardCheck, tone: ADMIN_CARD_TONES.cyan },
+        { title: "Assinaturas internas", value: "Atas, evidências e aprovações", href: "/dashboard/admin/assinaturas", icon: FileSignature, tone: ADMIN_CARD_TONES.gold },
         { title: "Funil de reengajamento", value: "Ver métricas e conversões", href: "/dashboard/admin/casos?tab=FUNNEL", icon: Mail, tone: ADMIN_CARD_TONES.gold },
       ],
     },

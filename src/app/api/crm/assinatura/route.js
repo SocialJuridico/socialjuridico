@@ -55,6 +55,42 @@ async function uniqueVerificationCode(db) {
   throw new Error("Não foi possível gerar um código de verificação.");
 }
 
+function serializeAdminValidationSignature(item) {
+  const payload = item.signature_payload || {};
+  const signedAt = item.signed_at || item.created_at;
+  return {
+    id: item.id,
+    document_name: item.document_title,
+    document_type: "documento interno",
+    verification_code: item.verification_code,
+    status: "signed",
+    original_hash: item.document_hash || null,
+    signed_hash: item.signature_hash || null,
+    metadata: {
+      lawyer: {
+        name: item.signer_name || payload.signer?.name || "Administrador",
+        email: "Hash registrado",
+        signed: true,
+        signed_at: signedAt,
+        ip: "Hash registrado",
+      },
+      client: {
+        name: "Social Juridico",
+        email: "governanca@socialjuridico.com.br",
+        signed: true,
+        signed_at: signedAt,
+        ip: "Nao aplicavel",
+      },
+      admin_signature: true,
+      statement: item.signature_statement,
+      document_path: item.document_path,
+      signature_hash: item.signature_hash,
+    },
+    created_at: item.created_at,
+    document_url: null,
+  };
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -78,10 +114,26 @@ export async function GET(request) {
         .maybeSingle();
       if (error) throw error;
       if (!data) {
-        return signatureJson(
-          { success: false, message: "Documento não encontrado." },
-          404,
-        );
+        const { data: adminSignature, error: adminError } = await supabaseAdmin
+          .from("admin_document_signatures")
+          .select(
+            "id, document_title, document_path, document_hash, signature_hash, signature_payload, signature_statement, verification_code, signer_name, status, signed_at, created_at",
+          )
+          .eq("verification_code", code)
+          .maybeSingle();
+        if (adminError && !["42P01", "PGRST205"].includes(adminError.code)) {
+          throw adminError;
+        }
+        if (!adminSignature) {
+          return signatureJson(
+            { success: false, message: "Documento não encontrado." },
+            404,
+          );
+        }
+        return signatureJson({
+          success: true,
+          data: serializeAdminValidationSignature(adminSignature),
+        });
       }
       return signatureJson({
         success: true,

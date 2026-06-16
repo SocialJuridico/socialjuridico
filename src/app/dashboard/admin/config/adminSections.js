@@ -2,6 +2,7 @@ import {
   Bell,
   BookOpen,
   Building,
+  ClipboardCheck,
   DollarSign,
   FileText,
   Film,
@@ -74,6 +75,7 @@ export function createAdminSections(stats) {
       icon: FileText,
       cards: [
         { title: "Relatórios de uso", value: "Métricas, PDF e histórico", href: "/dashboard/admin/relatorios", icon: FileText, tone: ADMIN_CARD_TONES.gold },
+        { title: "Auditorias internas", value: "SOC 2, ISO, LGPD e segurança", href: "/dashboard/admin/auditorias", icon: ClipboardCheck, tone: ADMIN_CARD_TONES.cyan },
         { title: "Funil de reengajamento", value: "Ver métricas e conversões", href: "/dashboard/admin/casos?tab=FUNNEL", icon: Mail, tone: ADMIN_CARD_TONES.gold },
       ],
     },

@@ -28,8 +28,10 @@ By approving this register, management confirms that the listed ISMS documents a
 
 | Name | Role | Decision | Date | Signature / approval evidence |
 |---|---|---|---|---|
-| Carlos Henrique | Security owner | Approved | 2026-06-16 | Electronic approval recorded in this register |
-| Carlos Henrique | Management representative / CEO | Approved | 2026-06-16 | Electronic approval recorded in this register |
+| Carlos Henrique | Security owner | Approved | 2026-06-16 | [Assinado digitalmente por Carlos Henrique — Security Owner] |
+| Carlos Henrique | Management representative / CEO | Approved | 2026-06-16 | [Assinado digitalmente por Carlos Henrique — CEO] |
+| Saulo Pavanello | Revisor técnico / Auditor | Aceito | 2026-06-16 | [Assinado digitalmente por Saulo Pavanello — Auditor] |
+
 
 ## Operating rule
 

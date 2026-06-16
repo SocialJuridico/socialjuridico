@@ -1,0 +1,13 @@
+{
+  "test_type": "DATABASE_RESTORE_SIMULATION",
+  "executed_at": "2026-06-16T19:37:17.305Z",
+  "responsible": "Carlos Henrique (CEO / Security Owner)",
+  "backup_reference_date": "2026-06-16T19:37:17.082Z",
+  "recovery_time_objective_target": "4 hours (RTO)",
+  "recovery_point_objective_target": "24 hours (RPO)",
+  "measured_recovery_time_ms": 596,
+  "records_restored": 3,
+  "data_loss": "0% (No data lost)",
+  "integrity_checksum_match": true,
+  "outcome": "SUCCESS"
+}

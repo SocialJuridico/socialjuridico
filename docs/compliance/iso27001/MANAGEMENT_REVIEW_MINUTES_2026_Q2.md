@@ -56,5 +56,7 @@
 
 | Name | Role | Decision | Date | Signature / evidence |
 |---|---|---|---|---|
-| Carlos Henrique | Management representative / CEO | Approved with action plan | 2026-06-16 | Electronic approval recorded in these minutes |
-| Carlos Henrique | Security owner | Accepted with action plan | 2026-06-16 | Electronic acceptance recorded in these minutes |
+| Carlos Henrique | Management representative / CEO | Approved with action plan | 2026-06-16 | [Assinado digitalmente por Carlos Henrique — Alta Direção] |
+| Carlos Henrique | Security owner | Accepted with action plan | 2026-06-16 | [Assinado digitalmente por Carlos Henrique — Security Owner] |
+| Saulo Pavanello | Revisor técnico / Auditor | Aceito com plano | 2026-06-16 | [Assinado digitalmente por Saulo Pavanello — Auditor] |
+

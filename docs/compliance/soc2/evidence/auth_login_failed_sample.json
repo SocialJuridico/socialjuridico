@@ -1,0 +1,21 @@
+{
+  "id": "fdc77c4d-ebd8-4308-81bc-ca01072707e6",
+  "created_at": "2026-06-16T19:29:48.297+00:00",
+  "event_type": "AUTH_LOGIN_FAILED",
+  "actor_id": null,
+  "actor_type": "UNKNOWN",
+  "actor_email_hash": "6b0b60817bcb1b3fa6aa1237d5dc55ac3df57268ce03cc814a10c13dca925234",
+  "target_user_id": null,
+  "target_type": "USER_ACCOUNT",
+  "target_email_hash": "6b0b60817bcb1b3fa6aa1237d5dc55ac3df57268ce03cc814a10c13dca925234",
+  "request_ip_hash": "1e331bae134abe70596b1f0973e6fbe1aacc0261a4ebf220ca11b6c6fdd605f7",
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) SOC2-Test-Agent",
+  "outcome": "FAILURE",
+  "status_code": 401,
+  "metadata": {
+    "context": "controlled_test_login_failed",
+    "reason_code": "INVALID_CREDENTIALS"
+  },
+  "retention_until": "2026-09-14T19:29:48.298+00:00",
+  "event_hash": "18147b84f1f6b4091541390d3b6c955eeecb5140898ed133f865dda1a1e93cee"
+}

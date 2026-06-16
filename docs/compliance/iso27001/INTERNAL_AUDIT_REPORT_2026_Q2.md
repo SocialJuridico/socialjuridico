@@ -59,6 +59,7 @@ The ISMS is approved for internal operation and suitable for investor due dilige
 
 | Name | Role | Decision | Date | Signature / evidence |
 |---|---|---|---|---|
-| Saulo Pavanello | Auditor / Software Engineer | Approved with action plan | 2026-06-16 | Audit execution recorded in this report |
-| Carlos Henrique | Security owner | Accepted with action plan | 2026-06-16 | Electronic acceptance recorded in this report |
-| Carlos Henrique | Management representative / CEO | Accepted with action plan | 2026-06-16 | Electronic acceptance recorded in this report |
+| Saulo Pavanello | Auditor / Software Engineer | Approved with action plan | 2026-06-16 | [Assinado digitalmente por Saulo Pavanello] |
+| Carlos Henrique | Security owner | Accepted with action plan | 2026-06-16 | [Assinado digitalmente por Carlos Henrique] |
+| Carlos Henrique | Management representative / CEO | Accepted with action plan | 2026-06-16 | [Assinado digitalmente por Carlos Henrique] |
+

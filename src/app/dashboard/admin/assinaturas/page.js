@@ -250,11 +250,18 @@ export default function AdminAssinaturasPage() {
                     {formatDateTime(selectedDocument.latest_signature.signed_at)}
                   </small>
                   <a
+                    href={`/api/admin/assinaturas/${selectedDocument.latest_signature.id}/download?format=pdf`}
+                    className={styles.downloadLink}
+                  >
+                    <Download size={15} />
+                    Baixar PDF certificado
+                  </a>
+                  <a
                     href={`/api/admin/assinaturas/${selectedDocument.latest_signature.id}/download`}
                     className={styles.downloadLink}
                   >
                     <Download size={15} />
-                    Baixar documento assinado
+                    Baixar evidencia tecnica
                   </a>
                 </div>
               )}
@@ -304,9 +311,13 @@ export default function AdminAssinaturasPage() {
                   </div>
                   <div className={styles.historyActions}>
                     <code>{signature.verification_code}</code>
+                    <a href={`/api/admin/assinaturas/${signature.id}/download?format=pdf`}>
+                      <Download size={14} />
+                      PDF
+                    </a>
                     <a href={`/api/admin/assinaturas/${signature.id}/download`}>
                       <Download size={14} />
-                      Baixar
+                      MD
                     </a>
                   </div>
                 </article>

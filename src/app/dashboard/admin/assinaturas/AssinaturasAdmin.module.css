@@ -311,6 +311,7 @@
 .downloadLink {
   min-height: 36px;
   margin-top: 12px;
+  margin-right: 8px;
   padding: 0 12px;
 }
 

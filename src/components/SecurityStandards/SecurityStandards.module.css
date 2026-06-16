@@ -1,0 +1,219 @@
+.section {
+  width: 100%;
+  padding: 96px 24px;
+  border-top: 1px solid rgba(212, 175, 55, 0.12);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.12);
+  color: var(--color-white);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.07), transparent 34%),
+    linear-gradient(180deg, var(--color-black-light) 0%, var(--color-black) 100%);
+}
+
+.container {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+}
+
+.header {
+  max-width: 880px;
+  margin: 0 auto 58px;
+  text-align: center;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 12px;
+  color: rgba(212, 175, 55, 0.78);
+  font-size: 0.7rem;
+  font-weight: 820;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-white);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  line-height: 1.16;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+.subtitle {
+  max-width: 760px;
+  margin: 22px auto 0;
+  color: rgba(224, 224, 224, 0.68);
+  font-size: 1.04rem;
+  line-height: 1.7;
+  text-wrap: balance;
+}
+
+.badges {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.badgeCard {
+  display: flex;
+  min-height: 238px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 24px 18px 22px;
+  border: 1px solid rgba(224, 224, 224, 0.08);
+  border-radius: 18px;
+  color: rgba(224, 224, 224, 0.88);
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.03),
+      rgba(255, 255, 255, 0.012)
+    );
+  text-align: center;
+  box-shadow:
+    0 18px 50px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 180ms ease;
+}
+
+.badgeCard:hover {
+  border-color: rgba(212, 175, 55, 0.25);
+  background: rgba(212, 175, 55, 0.035);
+  transform: translateY(-2px);
+}
+
+.badgeSvg {
+  width: 112px;
+  height: 112px;
+  color: rgba(224, 224, 224, 0.9);
+  overflow: visible;
+}
+
+.badgeText,
+.badgeNumber,
+.badgeNumberSmall {
+  fill: currentColor;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 900;
+}
+
+.badgeText {
+  font-size: 23px;
+  letter-spacing: -0.8px;
+}
+
+.badgeNumber {
+  font-size: 19px;
+}
+
+.badgeNumberSmall {
+  font-size: 17px;
+}
+
+.isoPlate {
+  fill: var(--color-black-light);
+  opacity: 0.96;
+}
+
+.isoText,
+.isoNumber {
+  fill: currentColor;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 900;
+}
+
+.isoText {
+  font-size: 20px;
+  letter-spacing: -0.7px;
+}
+
+.isoNumber {
+  font-size: 11px;
+}
+
+.badgeLabel {
+  display: block;
+  margin-top: 18px;
+  color: var(--color-white);
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.badgeCaption {
+  min-height: 18px;
+  margin-top: 5px;
+  color: rgba(224, 224, 224, 0.45);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.arrow {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24px;
+  color: var(--color-gold);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.disclaimer {
+  max-width: 860px;
+  margin: 26px auto 0;
+  color: rgba(224, 224, 224, 0.45);
+  font-size: 0.76rem;
+  line-height: 1.65;
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .badges {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 68px 16px;
+  }
+
+  .header {
+    margin-bottom: 36px;
+  }
+
+  .title {
+    font-size: clamp(2rem, 10vw, 3rem);
+  }
+
+  .subtitle {
+    font-size: 0.92rem;
+    line-height: 1.65;
+  }
+
+  .badges {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .badgeCard {
+    min-height: 230px;
+  }
+
+  .badgeSvg {
+    width: 112px;
+    height: 112px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badgeCard {
+    transition: none;
+  }
+}

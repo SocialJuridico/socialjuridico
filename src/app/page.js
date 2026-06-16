@@ -24,6 +24,7 @@ import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Features from "@/components/Features";
 import Differences from "@/components/Differences";
+import SecurityStandards from "@/components/SecurityStandards";
 import HowItWorks from "@/components/HowItWorks";
 import Community from "@/components/Community";
 import FAQ from "@/components/FAQ";
@@ -37,6 +38,7 @@ export default function Home() {
       <Hero />
       <Features />
       <Differences />
+      <SecurityStandards />
       <HowItWorks />
       <Community />
       <FAQ />

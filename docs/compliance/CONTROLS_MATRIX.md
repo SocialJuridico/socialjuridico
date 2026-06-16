@@ -26,6 +26,9 @@
 | AV-02 | Availability | Backups e restores sao testados periodicamente. | Pendente. | Planejado |
 | CONF-01 | Confidentiality | Dados juridicos e documentos possuem politica de retencao. | Politica publica + pendente interno. | Parcial |
 | CONF-02 | Confidentiality | Logs evitam dados sensiveis. | Revisao recomendada. | Planejado |
+| PRIV-01 | Privacy | PIMS ISO 27701 possui escopo, papeis e inventario inicial de PII. | `docs/compliance/iso27701/`. | Documentado inicial |
+| PRIV-02 | Privacy | Direitos dos titulares e purga LGPD possuem procedimento e trilha de auditoria. | `DATA_SUBJECT_RIGHTS_PROCEDURE.md`, `admin_account_deletion_audit_logs`, `security_audit_events`. | Implementado inicial |
+| PRIV-03 | Privacy | Incidentes de privacidade possuem procedimento especifico. | `PRIVACY_INCIDENT_PROCEDURE.md`. | Documentado |
 
 ## Status aceitos
 

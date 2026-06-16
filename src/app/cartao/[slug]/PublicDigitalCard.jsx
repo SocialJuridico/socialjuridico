@@ -130,6 +130,15 @@ export default function PublicDigitalCard({ card }) {
     return result;
   }, [card]);
 
+  const hasLegalNotificationLink = useMemo(
+    () =>
+      links.some((link) => {
+        const searchable = `${link.title || ""} ${link.subtitle || ""} ${link.href || ""}`.toLowerCase();
+        return searchable.includes("notificacao") || searchable.includes("notificação");
+      }),
+    [links],
+  );
+
   async function shareCard() {
     setSharing(true);
     try {
@@ -245,6 +254,19 @@ export default function PublicDigitalCard({ card }) {
         <a className={styles.saveContact} href={`/api/cartao/${encodeURIComponent(card.slug)}/vcard`}>
           <Download size={17} aria-hidden="true" /> Salvar contato no celular
         </a>
+
+        <div className={styles.privacyNotice}>
+          <strong>Privacidade e finalidade</strong>
+          <p>
+            {hasLegalNotificationLink
+              ? "Ao abrir este cartão ou acessar links de notificação extrajudicial, dados técnicos como IP, navegador e horário podem ser registrados para segurança, rastreabilidade e finalidade estritamente de citação jurídica."
+              : "Ao visualizar ou interagir com este cartão, a plataforma registra dados técnicos mínimos, como IP tratado em hash, navegador e horário, para segurança, métricas agregadas e prevenção de abuso."}
+          </p>
+          <span>
+            <a href="/privacidade" target="_blank" rel="noopener noreferrer">Política de Privacidade</a>
+            <a href="/termos" target="_blank" rel="noopener noreferrer">Termos de Uso</a>
+          </span>
+        </div>
 
         {card.showBrand && (
           <footer className={styles.brandFooter}>

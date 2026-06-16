@@ -7,8 +7,6 @@ export default async function NotificacaoPage({ params }) {
   const { token } = await params;
   const documentUrl = `/api/notificacao/${encodeURIComponent(token)}/arquivo`;
 
-  console.log("Token recebido na rota:", token);
-
   if (!token) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#121212', color: '#fff' }}>
@@ -74,6 +72,18 @@ export default async function NotificacaoPage({ params }) {
             </p>
             <p style={{ color: '#aaa', fontSize: '0.9rem' }}>
               Para garantir a conformidade e integridade do processo, solicitamos a permissão de localização.
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '20px', padding: '14px', background: 'rgba(0,230,118,0.08)', border: '1px solid rgba(0,230,118,0.22)', borderRadius: '8px' }}>
+            <p style={{ margin: '0 0 6px 0', color: '#00e676', fontWeight: 800, fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Aviso de privacidade e finalidade
+            </p>
+            <p style={{ margin: 0, color: '#cfcfcf', fontSize: '0.84rem', lineHeight: 1.55 }}>
+              A abertura deste link registra dados técnicos como IP, User-Agent, horário e, se autorizada, localização aproximada, exclusivamente para rastreabilidade, integridade da cadeia de custódia e finalidade de citação jurídica da notificação extrajudicial.
+            </p>
+            <p style={{ margin: '8px 0 0 0', color: '#8f8f8f', fontSize: '0.78rem' }}>
+              Consulte a <Link href="/privacidade" style={{ color: '#00e676' }}>Política de Privacidade</Link> e os <Link href="/termos" style={{ color: '#00e676' }}>Termos de Uso</Link>.
             </p>
           </div>
 

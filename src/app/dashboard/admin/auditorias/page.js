@@ -135,7 +135,7 @@ export default function AdminAuditoriasPage() {
                 Auditorias internas
               </h1>
               <p>
-                Execute verificações de SOC 2, ISO 27001, LGPD e segurança
+                Execute verificações de SOC 2, ISO 27001, ISO 27701, LGPD e segurança
                 técnica, registre os achados e gere um relatório PDF.
               </p>
             </div>

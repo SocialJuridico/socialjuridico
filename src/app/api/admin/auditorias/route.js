@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 
@@ -19,6 +21,13 @@ const AUDITS = [
     description: "Verifica evidencias iniciais do sistema de gestao de seguranca.",
     framework: "ISO/IEC 27001",
     criteria: ["Clausulas 4-10", "Anexo A"],
+  },
+  {
+    id: "iso27701-pims",
+    title: "ISO/IEC 27701 - PIMS",
+    description: "Verifica controles de privacidade, inventario PII, papeis e direitos dos titulares.",
+    framework: "ISO/IEC 27701",
+    criteria: ["PIMS", "PII Controller", "PII Processor"],
   },
   {
     id: "lgpd-privacy",
@@ -73,6 +82,15 @@ async function countRows(db, table) {
   return count || 0;
 }
 
+async function evidenceExists(relativePath) {
+  try {
+    await fs.access(path.join(process.cwd(), relativePath));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function result(id, title, status, evidence, recommendation = "") {
   return { id, title, status, evidence, recommendation };
 }
@@ -99,6 +117,42 @@ async function runAudit(auditId, auth) {
   const deletionAuditExists = await tableExists(db, "admin_account_deletion_audit_logs");
   const deletionRequestsExists = await tableExists(db, "solicitacoes_exclusao");
   const adminCount = await countRows(db, "admins");
+  const isoDocumentApprovalEvidence = await evidenceExists(
+    "docs/compliance/iso27001/DOCUMENT_APPROVAL_REGISTER.md",
+  );
+  const isoInternalAuditEvidence = await evidenceExists(
+    "docs/compliance/iso27001/INTERNAL_AUDIT_REPORT_2026_Q2.md",
+  );
+  const isoManagementReviewEvidence = await evidenceExists(
+    "docs/compliance/iso27001/MANAGEMENT_REVIEW_MINUTES_2026_Q2.md",
+  );
+  const isoMigrationEvidence = await evidenceExists(
+    "docs/compliance/iso27001/SECURITY_AUDIT_MIGRATION_EVIDENCE.md",
+  );
+  const soc2EvidencePackage = await evidenceExists(
+    "docs/compliance/soc2/SOC2_SECURITY_EVIDENCE_PACKAGE_2026_Q2.md",
+  );
+  const soc2LogRetentionEvidence = await evidenceExists(
+    "docs/compliance/soc2/LOG_RETENTION_EVIDENCE_2026_Q2.md",
+  );
+  const soc2LoginFailureEvidence = await evidenceExists(
+    "docs/compliance/soc2/LOGIN_FAILURE_TEST_2026_Q2.md",
+  );
+  const soc2ChangeApprovalEvidence = await evidenceExists(
+    "docs/compliance/soc2/CHANGE_APPROVAL_REGISTER_2026_Q2.md",
+  );
+  const soc2IncidentSimulationEvidence = await evidenceExists(
+    "docs/compliance/soc2/INCIDENT_SIMULATION_2026_Q2.md",
+  );
+  const soc2AdminReviewEvidence = await evidenceExists(
+    "docs/compliance/soc2/ADMIN_ACCESS_REVIEW_2026_Q2.md",
+  );
+  const soc2InactiveAccessEvidence = await evidenceExists(
+    "docs/compliance/soc2/INACTIVE_ACCESS_REMOVAL_EVIDENCE_2026_Q2.md",
+  );
+  const soc2BackupEvidence = await evidenceExists(
+    "docs/compliance/soc2/BACKUP_RESTORE_EVIDENCE_2026_Q2.md",
+  );
   const checks = [];
 
   if (auditId === "soc2-security") {
@@ -106,11 +160,13 @@ async function runAudit(auditId, auth) {
       result(
         "soc2-auth-audit",
         "Logs de autenticacao e falhas de login",
-        securityAuditExists ? "passed" : "failed",
+        securityAuditExists ? "passed" : soc2LoginFailureEvidence ? "warning" : "failed",
         securityAuditExists
           ? "Tabela security_audit_events disponivel para login, falhas e eventos sensiveis."
-          : "Tabela security_audit_events nao encontrada.",
-        "Aplicar o SQL docs/compliance/sql/20260616_soc2_security_audit_events.sql no Supabase.",
+          : soc2LoginFailureEvidence
+            ? "Procedimento de teste de falha de login existe; falta confirmar tabela/evento no banco."
+            : "Tabela security_audit_events nao encontrada.",
+        "Executar tentativa controlada de login invalido e anexar amostra anonimizada.",
       ),
       result(
         "soc2-admin-access",
@@ -124,16 +180,56 @@ async function runAudit(auditId, auth) {
       result(
         "soc2-log-retention",
         "Retencao de Auth, PostgREST e VPS por 90 dias",
-        "manual",
-        "Controle depende de evidencia externa do Supabase, Cloudflare/VPS ou provedor.",
+        soc2LogRetentionEvidence ? "manual" : "failed",
+        soc2LogRetentionEvidence
+          ? "Registro de evidencias criado; controle depende de prints/exports externos do Supabase, Cloudflare/VPS ou provedor."
+          : "Registro de evidencias de retencao nao encontrado.",
         "Anexar prints/exportacoes no registro de evidencias.",
       ),
       result(
         "soc2-change-management",
         "Politica de mudancas e resposta a incidentes",
-        "passed",
-        "Documentos de compliance criados em docs/compliance.",
+        soc2ChangeApprovalEvidence && soc2IncidentSimulationEvidence ? "passed" : "warning",
+        soc2ChangeApprovalEvidence && soc2IncidentSimulationEvidence
+          ? "Historico de mudancas, aprovacoes e incidente simulado registrados no pacote SOC 2 Q2."
+          : "Politicas existem, mas faltam registros operacionais de mudanca/incidente.",
         "Manter historico de releases, incidentes e aprovacoes.",
+      ),
+      result(
+        "soc2-admin-review",
+        "Revisao trimestral de administradores",
+        soc2AdminReviewEvidence ? "passed" : "warning",
+        soc2AdminReviewEvidence
+          ? "Revisao trimestral Q2 registrada em docs/compliance/soc2."
+          : "Revisao trimestral de administradores ainda nao registrada.",
+        "Executar e registrar revisoes de acesso a cada trimestre.",
+      ),
+      result(
+        "soc2-inactive-access",
+        "Remocao de acesso de usuario inativo",
+        soc2InactiveAccessEvidence ? "manual" : "warning",
+        soc2InactiveAccessEvidence
+          ? "Baseline Q2 registrado; anexar evidencia real quando houver usuario inativo removido."
+          : "Registro de remocao/baseline de acesso inativo nao encontrado.",
+        "Quando houver usuario inativo, remover acesso e anexar evento/screenshot anonimizado.",
+      ),
+      result(
+        "soc2-backup-restore",
+        "Backup e restauracao documentados",
+        soc2BackupEvidence ? "manual" : "warning",
+        soc2BackupEvidence
+          ? "Procedimento de backup/restore registrado; faltam evidencias externas de provedor ou teste de restauracao."
+          : "Documento de evidencia de backup/restore nao encontrado.",
+        "Anexar print do plano de backup Supabase e evidencia de simulacao/restauracao.",
+      ),
+      result(
+        "soc2-evidence-package",
+        "Pacote de evidencias SOC 2 Security",
+        soc2EvidencePackage ? "passed" : "failed",
+        soc2EvidencePackage
+          ? "Pacote de evidencias Q2 consolidado em docs/compliance/soc2."
+          : "Pacote de evidencias SOC 2 Security nao encontrado.",
+        "Manter o pacote atualizado durante o periodo de observacao.",
       ),
     );
   }
@@ -143,9 +239,11 @@ async function runAudit(auditId, auth) {
       result(
         "iso-scope-policy",
         "Escopo, politica e SoA do SGSI",
-        "passed",
-        "Kit documental inicial criado em docs/compliance/iso27001.",
-        "Aprovar formalmente antes de comunicar conformidade externa.",
+        isoDocumentApprovalEvidence ? "passed" : "failed",
+        isoDocumentApprovalEvidence
+          ? "Kit documental e registro de aprovacao formal existem."
+          : "Registro de aprovacao documental nao encontrado.",
+        "Manter o registro de aprovacao atualizado a cada revisao documental.",
       ),
       result(
         "iso-audit-trail",
@@ -153,22 +251,93 @@ async function runAudit(auditId, auth) {
         securityAuditExists ? "passed" : "failed",
         securityAuditExists
           ? "security_audit_events disponivel como evidencia tecnica."
-          : "security_audit_events ainda nao esta disponivel no banco.",
-        "Aplicar migration SQL e coletar amostra anonimizada.",
+          : isoMigrationEvidence
+            ? "Guia de migration e coleta de amostra existe, mas security_audit_events ainda nao esta disponivel no banco."
+            : "security_audit_events ainda nao esta disponivel no banco.",
+        "Aplicar o SQL no Supabase, verificar triggers e anexar amostra anonimizada.",
       ),
       result(
-        "iso-internal-audit",
-        "Auditoria interna planejada",
-        "passed",
-        "Checklist e template de auditoria interna estao em docs/compliance/iso27001.",
-        "Executar a primeira auditoria interna e registrar a ata.",
+        "iso-internal-audit-execution",
+        "Auditoria interna executada e registrada",
+        isoInternalAuditEvidence ? "passed" : "failed",
+        isoInternalAuditEvidence
+          ? "Relatorio de auditoria interna Q2 executado e registrado."
+          : "Relatorio de auditoria interna executada nao encontrado.",
+        "Manter relatorios de auditoria interna por ciclo trimestral/semestral.",
       ),
       result(
         "iso-management-review",
         "Analise critica da direcao",
+        isoManagementReviewEvidence ? "passed" : "failed",
+        isoManagementReviewEvidence
+          ? "Ata de analise critica Q2 registrada e aprovada com plano de acao."
+          : "Ata de analise critica nao encontrada.",
+        "Repetir a analise critica periodicamente e apos mudancas relevantes.",
+      ),
+    );
+  }
+
+  if (auditId === "iso27701-pims") {
+    checks.push(
+      result(
+        "pims-prerequisite",
+        "Dependencia da ISO/IEC 27001",
         "manual",
-        "Requer ata assinada ou registro formal da reuniao de analise critica.",
-        "Agendar revisao com responsavel do SGSI.",
+        "A ISO 27701 deve ser tratada como extensao do SGSI ISO 27001 e depende de certificacao/escopo ISO 27001 para certificacao formal.",
+        "Manter o PIMS como readiness ate a auditoria independente incluir ISO 27001 e ISO 27701.",
+      ),
+      result(
+        "pims-scope-inventory",
+        "Escopo PIMS e inventario de dados pessoais",
+        "passed",
+        "Kit inicial criado em docs/compliance/iso27701 com escopo e inventario PII.",
+        "Revisar o inventario trimestralmente e apos novas features.",
+      ),
+      result(
+        "pims-controller-processor",
+        "Papeis de controlador e operador/processador",
+        "passed",
+        "Responsabilidades documentadas em PRIVACY_ROLES_AND_RESPONSIBILITIES.md.",
+        "Vincular estes papeis aos termos de uso e contratos enterprise.",
+      ),
+      result(
+        "pims-data-subject-rights",
+        "Direitos dos titulares e solicitacoes LGPD",
+        deletionRequestsExists && deletionAuditExists ? "passed" : "warning",
+        deletionRequestsExists && deletionAuditExists
+          ? "Fluxo de solicitacoes e auditoria LGPD disponiveis."
+          : "Uma ou mais tabelas LGPD ainda nao foram confirmadas no banco.",
+        "Executar amostra controlada e anexar evidencia anonimizada.",
+      ),
+      result(
+        "pims-privacy-audit-events",
+        "Eventos de privacidade com trilha imutavel",
+        securityAuditExists ? "passed" : "failed",
+        securityAuditExists
+          ? "security_audit_events pronto para purga, login e eventos sensiveis."
+          : "Tabela security_audit_events ausente.",
+        "Aplicar SQL de auditoria e coletar amostra de LGPD_PURGE_COMPLETED.",
+      ),
+      result(
+        "pims-vendor-privacy",
+        "Operadores/processadores e contratos de privacidade",
+        "manual",
+        "Controle depende de evidencias contratuais com Supabase, Stripe, Resend, hospedagem e demais fornecedores.",
+        "Anexar DPA, termos ou clausulas de processamento de dados no registro de evidencias.",
+      ),
+      result(
+        "pims-contextual-notices",
+        "Avisos contextuais de privacidade",
+        "passed",
+        "Link na Bio/cartao digital e pagina de notificacao extrajudicial exibem finalidade do tratamento tecnico.",
+        "Revisar os textos sempre que novas coletas tecnicas forem adicionadas.",
+      ),
+      result(
+        "pims-office-session-segregation",
+        "Segregacao de dados corporativos por sessao de escritorio",
+        "passed",
+        "Cookie sj_escritorio_session e assinatura HMAC separam a sessao enterprise e reduzem risco de acesso cruzado.",
+        "Manter HttpOnly, SameSite e Secure em producao; revisar a expiracao periodicamente.",
       ),
     );
   }

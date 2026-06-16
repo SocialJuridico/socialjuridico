@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
+import { recordSecurityAuditEvent } from "@/lib/audit/securityAuditLog";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
@@ -133,6 +134,23 @@ export async function POST(request) {
       throw insertError;
     }
 
+    await recordSecurityAuditEvent({
+      db,
+      eventType: "OFFICE_STAFF_CREATED",
+      actorId: officeId,
+      actorType: "OFFICE",
+      targetUserId: newUserId,
+      targetType: cargo,
+      targetEmail: email,
+      request,
+      outcome: "SUCCESS",
+      statusCode: 201,
+      metadata: {
+        escritorio_id: officeId,
+        plan_type: newStaff.plan_type,
+      },
+    });
+
     return NextResponse.json({ success: true, message: `${cargo === "estagiario" ? "Estagiário" : "Advogado"} cadastrado e associado com sucesso!` });
   } catch (error) {
     console.error("Erro na API POST /api/escritorio/staff:", error);
@@ -158,7 +176,7 @@ export async function PUT(request) {
     // Certificar de que o funcionário pertence a este escritório
     const { data: lawyer, error: lawyerCheckError } = await db
       .from("advogados")
-      .select("id, escritorio_id")
+      .select("id, escritorio_id, cargo")
       .eq("id", lawyerId)
       .eq("escritorio_id", officeId)
       .single();
@@ -254,6 +272,23 @@ export async function PUT(request) {
       .single();
 
     if (updateError) throw updateError;
+
+    await recordSecurityAuditEvent({
+      db,
+      eventType: "OFFICE_STAFF_UPDATED",
+      actorId: officeId,
+      actorType: "OFFICE",
+      targetUserId: lawyerId,
+      targetType: lawyer?.cargo || "office_staff",
+      request,
+      outcome: "SUCCESS",
+      statusCode: 200,
+      metadata: {
+        escritorio_id: officeId,
+        action,
+        changed_fields: Object.keys(updates),
+      },
+    });
 
     return NextResponse.json({
       success: true,

@@ -6,6 +6,7 @@ import {
   signOfficeSessionValue,
 } from "@/lib/officeSession";
 import { hashPassword, isHashedPassword, verifyPassword } from "@/lib/passwordHash";
+import { recordSecurityAuditEvent } from "@/lib/audit/securityAuditLog";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
 
@@ -98,10 +99,42 @@ export async function POST(request) {
         password,
       });
       if (authError || !authData?.user) {
+        await recordSecurityAuditEvent({
+          db,
+          eventType: "OFFICE_LOGIN_FAILED",
+          actorType: "OFFICE_STAFF",
+          actorEmail: email,
+          targetUserId: staffMember.id,
+          targetType: staffMember.cargo || "office_staff",
+          targetEmail: email,
+          request,
+          outcome: "FAILURE",
+          statusCode: 401,
+          metadata: {
+            reason_code: authError?.code || "INVALID_STAFF_CREDENTIALS",
+            provider_status: authError?.status || null,
+          },
+        });
+
         return json({ success: false, message: "Senha incorreta ou credenciais inválidas." }, 401);
       }
       if (!authData.user.email_confirmed_at) {
         await supabase.auth.signOut();
+        await recordSecurityAuditEvent({
+          db,
+          eventType: "AUTH_LOGIN_BLOCKED_EMAIL_NOT_CONFIRMED",
+          actorId: authData.user.id,
+          actorType: "OFFICE_STAFF",
+          actorEmail: email,
+          targetUserId: staffMember.id,
+          targetType: staffMember.cargo || "office_staff",
+          targetEmail: email,
+          request,
+          outcome: "BLOCKED",
+          statusCode: 401,
+          metadata: { reason_code: "EMAIL_NOT_CONFIRMED" },
+        });
+
         return json(
           {
             success: false,
@@ -133,6 +166,24 @@ export async function POST(request) {
         }
         if (hasOabError) {
           await supabase.auth.signOut();
+          await recordSecurityAuditEvent({
+            db,
+            eventType: "AUTH_LOGIN_BLOCKED_OAB",
+            actorId: authData.user.id,
+            actorType: "OFFICE_STAFF",
+            actorEmail: email,
+            targetUserId: staffMember.id,
+            targetType: staffMember.cargo || "office_staff",
+            targetEmail: email,
+            request,
+            outcome: "BLOCKED",
+            statusCode: 403,
+            metadata: {
+              escritorio_id: staffMember.escritorio_id,
+              reason_code: "OAB_VERIFICATION_BLOCK",
+            },
+          });
+
           return json(
             {
               success: false,
@@ -169,6 +220,21 @@ export async function POST(request) {
           path: "/",
         },
       );
+      await recordSecurityAuditEvent({
+        db,
+        eventType: "OFFICE_LOGIN_SUCCESS",
+        actorId: authData.user.id,
+        actorType: "OFFICE_STAFF",
+        actorEmail: email,
+        targetUserId: staffMember.id,
+        targetType: staffMember.cargo || "office_staff",
+        targetEmail: email,
+        request,
+        outcome: "SUCCESS",
+        statusCode: 200,
+        metadata: { escritorio_id: staffMember.escritorio_id },
+      });
+
       return response;
     }
 
@@ -178,12 +244,39 @@ export async function POST(request) {
       .eq("email", email)
       .maybeSingle();
     if (officeError || !office) {
+      await recordSecurityAuditEvent({
+        db,
+        eventType: "OFFICE_LOGIN_FAILED",
+        actorType: "OFFICE",
+        actorEmail: email,
+        targetEmail: email,
+        request,
+        outcome: "FAILURE",
+        statusCode: 401,
+        metadata: { reason_code: "OFFICE_NOT_FOUND" },
+      });
+
       return json(
         { success: false, message: "Escritório não cadastrado ou credenciais incorretas." },
         401,
       );
     }
     if (!verifyPassword(password, office.senha)) {
+      await recordSecurityAuditEvent({
+        db,
+        eventType: "OFFICE_LOGIN_FAILED",
+        actorId: office.id,
+        actorType: "OFFICE",
+        actorEmail: email,
+        targetUserId: office.id,
+        targetType: "OFFICE",
+        targetEmail: email,
+        request,
+        outcome: "FAILURE",
+        statusCode: 401,
+        metadata: { reason_code: "INVALID_OFFICE_PASSWORD" },
+      });
+
       return json({ success: false, message: "Senha incorreta para este escritório." }, 401);
     }
 
@@ -201,7 +294,23 @@ export async function POST(request) {
       }
     }
 
-    return createOfficeSessionResponse(office);
+    const response = createOfficeSessionResponse(office);
+    await recordSecurityAuditEvent({
+      db,
+      eventType: "OFFICE_LOGIN_SUCCESS",
+      actorId: office.id,
+      actorType: "OFFICE",
+      actorEmail: office.email,
+      targetUserId: office.id,
+      targetType: "OFFICE",
+      targetEmail: office.email,
+      request,
+      outcome: "SUCCESS",
+      statusCode: 200,
+      metadata: { plano: office.plano },
+    });
+
+    return response;
   } catch (error) {
     console.error("[Login Escritório] Erro:", error);
     return json({ success: false, message: "Erro interno no servidor." }, 500);

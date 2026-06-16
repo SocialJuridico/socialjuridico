@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
+import { recordSecurityAuditEvent } from "@/lib/audit/securityAuditLog";
 import { NextResponse } from "next/server";
 
 // ── RATE LIMITING ──
@@ -47,6 +48,7 @@ export async function POST(request) {
 
   try {
     const { email, password } = await request.json();
+    const normalizedEmail = email?.trim().toLowerCase();
     if (!email || !password) {
       return NextResponse.json(
         { success: false, message: "Email e senha são obrigatórios." },
@@ -59,7 +61,7 @@ export async function POST(request) {
     // 1. Autenticar no Supabase Auth
     let { data: authData, error: authError } =
       await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password,
       });
 
@@ -81,6 +83,17 @@ export async function POST(request) {
         authError.message?.toLowerCase().includes("email_not_confirmed") ||
         authError.code === "email_not_confirmed")
     ) {
+      await recordSecurityAuditEvent({
+        eventType: "AUTH_LOGIN_BLOCKED_EMAIL_NOT_CONFIRMED",
+        actorType: "UNKNOWN",
+        actorEmail: normalizedEmail,
+        targetEmail: normalizedEmail,
+        request,
+        outcome: "BLOCKED",
+        statusCode: 401,
+        metadata: { reason_code: "EMAIL_NOT_CONFIRMED" },
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -108,7 +121,7 @@ export async function POST(request) {
         const { data } = await db
           .from(table)
           .select("id, name, role")
-          .eq("email", email.trim().toLowerCase())
+          .eq("email", normalizedEmail)
           .maybeSingle();
         if (data) {
           existingProfile = { ...data, table };
@@ -121,7 +134,7 @@ export async function POST(request) {
         const { data: syncData, error: syncError } =
           await supabaseAdmin.auth.admin.createUser({
             id: existingProfile.id,
-            email: email.trim().toLowerCase(),
+            email: normalizedEmail,
             password: LEGACY_DEFAULT_PASSWORD,
             email_confirm: true,
             user_metadata: {
@@ -157,7 +170,7 @@ export async function POST(request) {
         // Tentar logar novamente após o sync
         const { data: retryData, error: retryError } =
           await supabase.auth.signInWithPassword({
-            email: email.trim().toLowerCase(),
+            email: normalizedEmail,
             password,
           });
 
@@ -174,6 +187,20 @@ export async function POST(request) {
         errorMessage: authError.message,
         status: authError.status,
       });
+      await recordSecurityAuditEvent({
+        eventType: "AUTH_LOGIN_FAILED",
+        actorType: "UNKNOWN",
+        actorEmail: normalizedEmail,
+        targetEmail: normalizedEmail,
+        request,
+        outcome: "FAILURE",
+        statusCode: 401,
+        metadata: {
+          reason_code: authError.code || "INVALID_CREDENTIALS",
+          provider_status: authError.status || null,
+        },
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -188,6 +215,18 @@ export async function POST(request) {
     // BLOQUEIO ADICIONAL: Mesmo que o Supabase permita o login, nós verificamos se o email foi confirmado
     if (!user.email_confirmed_at) {
       await supabase.auth.signOut();
+      await recordSecurityAuditEvent({
+        eventType: "AUTH_LOGIN_BLOCKED_EMAIL_NOT_CONFIRMED",
+        actorId: user.id,
+        actorType: "UNKNOWN",
+        actorEmail: normalizedEmail,
+        targetUserId: user.id,
+        targetEmail: normalizedEmail,
+        request,
+        outcome: "BLOCKED",
+        statusCode: 401,
+        metadata: { reason_code: "EMAIL_NOT_CONFIRMED_AFTER_AUTH" },
+      });
 
       return NextResponse.json(
         {
@@ -222,6 +261,24 @@ export async function POST(request) {
     // Bloquear membros de escritório no login individual
     if (profile && profile.escritorio_id) {
       await supabase.auth.signOut(); // Revoga a sessão
+      await recordSecurityAuditEvent({
+        db,
+        eventType: "AUTH_LOGIN_BLOCKED_OFFICE_MEMBER",
+        actorId: user.id,
+        actorType: profile.role || "LAWYER",
+        actorEmail: normalizedEmail,
+        targetUserId: user.id,
+        targetType: profile.cargo || "office_member",
+        targetEmail: normalizedEmail,
+        request,
+        outcome: "BLOCKED",
+        statusCode: 403,
+        metadata: {
+          escritorio_id: profile.escritorio_id,
+          reason_code: "OFFICE_MEMBER_INDIVIDUAL_LOGIN",
+        },
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -259,6 +316,24 @@ export async function POST(request) {
 
       if (isError) {
         await supabase.auth.signOut(); // Revoga a sessão
+        await recordSecurityAuditEvent({
+          db,
+          eventType: "AUTH_LOGIN_BLOCKED_OAB",
+          actorId: user.id,
+          actorType: "LAWYER",
+          actorEmail: normalizedEmail,
+          targetUserId: user.id,
+          targetType: "LAWYER",
+          targetEmail: normalizedEmail,
+          request,
+          outcome: "BLOCKED",
+          statusCode: 403,
+          metadata: {
+            oab_verification_status: "ERROR",
+            reason_code: "OAB_VERIFICATION_BLOCK",
+          },
+        });
+
         return NextResponse.json(
           {
             success: false,
@@ -311,6 +386,24 @@ export async function POST(request) {
       sameSite: "lax",
       maxAge: 4 * 60 * 60,
       path: "/",
+    });
+
+    await recordSecurityAuditEvent({
+      db,
+      eventType: "AUTH_LOGIN_SUCCESS",
+      actorId: user.id,
+      actorType: profile?.role || "CLIENT",
+      actorEmail: normalizedEmail,
+      targetUserId: user.id,
+      targetType: profile?.role || "CLIENT",
+      targetEmail: normalizedEmail,
+      request,
+      outcome: "SUCCESS",
+      statusCode: 200,
+      metadata: {
+        profile_role: profile?.role || "CLIENT",
+        cargo: profile?.cargo || null,
+      },
     });
 
     return res;

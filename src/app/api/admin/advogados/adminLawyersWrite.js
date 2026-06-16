@@ -3,6 +3,7 @@ import {
   jurisCreditadoTemplate,
 } from "@/lib/emailTemplates";
 import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
+import { recordSecurityAuditEvent } from "@/lib/audit/securityAuditLog";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
 import { forgotPasswordAction } from "@/app/actions/passwordActions";
@@ -171,6 +172,25 @@ export async function deleteAdminLawyer(request) {
       (query) => query.eq("id", lawyerId),
       "Falha ao excluir perfil do advogado",
     );
+
+    await recordSecurityAuditEvent({
+      db,
+      eventType: lawyer.escritorio_id
+        ? "OFFICE_STAFF_REMOVED"
+        : "ADMIN_LAWYER_REMOVED",
+      actorId: access.auth.admin.id,
+      actorType: "ADMIN",
+      targetUserId: lawyerId,
+      targetType: lawyer.cargo || "LAWYER",
+      targetEmail: lawyer.email,
+      request,
+      outcome: "SUCCESS",
+      statusCode: 200,
+      metadata: {
+        escritorio_id: lawyer.escritorio_id || null,
+        auth_user_already_missing: authUserAlreadyMissing,
+      },
+    });
 
     return json({
       success: true,

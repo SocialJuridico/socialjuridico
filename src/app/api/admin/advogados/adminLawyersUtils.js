@@ -73,7 +73,7 @@ export async function getLawyerOrNull(db, lawyerId) {
   const { data, error } = await db
     .from("advogados")
     .select(
-      "id, name, email, oab, estado, is_premium, premium_expires_at, balance, oab_verification_status, plan_type",
+      "id, name, email, oab, estado, is_premium, premium_expires_at, balance, oab_verification_status, plan_type, cargo, escritorio_id",
     )
     .eq("id", lawyerId)
     .maybeSingle();

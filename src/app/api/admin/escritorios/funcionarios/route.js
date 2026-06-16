@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 
 import { forgotPasswordAction } from "@/app/actions/passwordActions";
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
+import { recordSecurityAuditEvent } from "@/lib/audit/securityAuditLog";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
@@ -80,7 +81,7 @@ async function requireAdmin() {
     };
   }
 
-  return { ok: true, db: supabaseAdmin };
+  return { ok: true, auth, db: supabaseAdmin };
 }
 
 async function getOfficeOrNull(db, officeId) {
@@ -283,6 +284,25 @@ export async function POST(request) {
         resetResult?.message,
       );
     }
+
+    await recordSecurityAuditEvent({
+      db: access.db,
+      eventType: "OFFICE_STAFF_CREATED",
+      actorId: access.auth.admin.id,
+      actorType: "ADMIN",
+      targetUserId: createdUserId,
+      targetType: role,
+      targetEmail: email,
+      request,
+      outcome: "SUCCESS",
+      statusCode: 201,
+      metadata: {
+        escritorio_id: officeId,
+        created_by: "admin_panel",
+        invite_email_sent: resetResult?.success === true,
+        plan_type: newStaff.plan_type,
+      },
+    });
 
     return json(
       {

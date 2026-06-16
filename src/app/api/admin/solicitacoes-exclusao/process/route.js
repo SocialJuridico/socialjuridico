@@ -6,6 +6,7 @@ import {
   normalizeDecisionReason,
   registerDeletionAudit,
 } from "@/lib/lgpd/accountDeletionServer";
+import { recordSecurityAuditEvent } from "@/lib/audit/securityAuditLog";
 import { sendDeletionCompletionEmail } from "@/lib/lgpd/deletionEmail";
 
 import {
@@ -224,6 +225,25 @@ export async function POST(request) {
       );
     }
 
+    await recordSecurityAuditEvent({
+      db: access.db,
+      eventType: "LGPD_PURGE_COMPLETED",
+      actorId: access.auth.admin.id,
+      actorType: "ADMIN",
+      targetUserId: processingRow.subject_user_ref || processingRow.user_id || null,
+      targetType: processingRow.profile_type || requestRow.profile_type,
+      request,
+      outcome: "SUCCESS",
+      statusCode: 200,
+      metadata: {
+        deletion_request_id: requestId,
+        subject_email_hash: requestRow.subject_email_hash,
+        auth_already_missing: result.authAlreadyMissing,
+        subscription_cancelled: result.subscription.cancelled,
+        retention_note: result.retentionNote,
+      },
+    });
+
     try {
       const emailResult = await sendDeletionCompletionEmail({
         email:
@@ -301,6 +321,24 @@ export async function POST(request) {
           failureError.message,
         );
       }
+
+      await recordSecurityAuditEvent({
+        db: access.db,
+        eventType: "LGPD_PURGE_FAILED",
+        actorId: access.auth.admin.id,
+        actorType: "ADMIN",
+        targetUserId:
+          processingRow.subject_user_ref || processingRow.user_id || null,
+        targetType: processingRow.profile_type,
+        request,
+        outcome: "FAILURE",
+        statusCode: Number(error?.status || 500),
+        metadata: {
+          deletion_request_id: processingRow.id,
+          subject_email_hash: processingRow.subject_email_hash,
+          reason_code: errorCode,
+        },
+      });
     }
 
     return safeErrorResponse(

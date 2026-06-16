@@ -19,6 +19,9 @@
 | SEC-10 | Security | Mudancas passam por registro e validacao. | `CHANGE_MANAGEMENT.md`. | Documentado |
 | SEC-11 | Security | Fornecedores criticos sao inventariados. | `VENDOR_AND_ASSET_REGISTER.md`. | Documentado inicial |
 | SEC-12 | Security | Evidencias de auditoria sao registradas. | `EVIDENCE_REGISTER.md`. | Documentado |
+| SEC-13 | Security | Falhas de login e eventos sensiveis geram trilha de auditoria append-only. | `security_audit_events`, `src/lib/audit/securityAuditLog.js`. | Implementado inicial |
+| SEC-14 | Security | Logs de Auth, PostgREST e VPS devem ser retidos por no minimo 90 dias. | `AUDIT_LOG_RETENTION_POLICY.md` + evidencias externas pendentes. | Parcial |
+| SEC-15 | Security | Purga LGPD e remocao administrativa geram evento com timestamp e correlacao. | `admin_account_deletion_audit_logs`, `security_audit_events`. | Implementado inicial |
 | AV-01 | Availability | Disponibilidade e recuperacao possuem RTO/RPO. | Pendente. | Planejado |
 | AV-02 | Availability | Backups e restores sao testados periodicamente. | Pendente. | Planejado |
 | CONF-01 | Confidentiality | Dados juridicos e documentos possuem politica de retencao. | Politica publica + pendente interno. | Parcial |
@@ -31,4 +34,3 @@
 - Documentado: politica/processo criado, ainda sem historico operacional.
 - Parcial: existe em parte, mas precisa refinamento.
 - Planejado: controle ainda deve ser implementado.
-

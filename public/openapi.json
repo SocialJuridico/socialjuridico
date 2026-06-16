@@ -92,10 +92,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/PublicLawyer"
-                  }
+                  "$ref": "#/components/schemas/PublicLawyersResponse"
                 }
               }
             }
@@ -172,6 +169,21 @@
         },
         "additionalProperties": true
       },
+      "PublicLawyersResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicLawyer"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "PublicLawyer": {
         "type": "object",
         "properties": {
@@ -197,6 +209,9 @@
             "type": "number",
             "nullable": true
           },
+          "total_ratings": {
+            "type": "number"
+          },
           "verified": {
             "type": "boolean",
             "nullable": true
@@ -207,9 +222,29 @@
               "type": "string"
             },
             "nullable": true
+          },
+          "consulta": {
+            "type": "string",
+            "nullable": true
+          },
+          "tempo": {
+            "type": "string",
+            "nullable": true
+          },
+          "valor": {
+            "type": "string",
+            "nullable": true
+          },
+          "nome_escritorio": {
+            "type": "string",
+            "nullable": true
+          },
+          "logo_escritorio": {
+            "type": "string",
+            "nullable": true
           }
         },
-        "additionalProperties": true
+        "additionalProperties": false
       }
     }
   }

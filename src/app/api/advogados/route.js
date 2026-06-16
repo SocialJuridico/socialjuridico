@@ -2,6 +2,25 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { formatStoredOAB } from "@/lib/oab";
 import { NextResponse } from "next/server";
 
+function toPublicLawyer(lawyer, officeMap) {
+  return {
+    id: lawyer.id,
+    name: lawyer.name,
+    avatar: lawyer.avatar || null,
+    oab: formatStoredOAB(lawyer.oab, lawyer.estado),
+    estado: lawyer.estado || null,
+    avg_rating: lawyer.avg_rating ?? null,
+    total_ratings: lawyer.total_ratings ?? 0,
+    verified: Boolean(lawyer.verified),
+    specialties: Array.isArray(lawyer.specialties) ? lawyer.specialties : [],
+    consulta: lawyer.consulta || null,
+    tempo: lawyer.tempo || null,
+    valor: lawyer.valor || null,
+    nome_escritorio: officeMap[lawyer.escritorio_id]?.nome || null,
+    logo_escritorio: officeMap[lawyer.escritorio_id]?.logo_url || null,
+  };
+}
+
 export async function GET() {
   try {
     const { data, error } = await supabaseAdmin
@@ -31,12 +50,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      data: (data || []).map((lawyer) => ({
-        ...lawyer,
-        oab: formatStoredOAB(lawyer.oab, lawyer.estado),
-        nome_escritorio: officeMap[lawyer.escritorio_id]?.nome || null,
-        logo_escritorio: officeMap[lawyer.escritorio_id]?.logo_url || null,
-      })),
+      data: (data || []).map((lawyer) => toPublicLawyer(lawyer, officeMap)),
     });
   } catch (error) {
     console.error("Erro na API de Advogados:", error);

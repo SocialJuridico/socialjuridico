@@ -1,0 +1,216 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Social Juridico API",
+    "description": "Especificacao inicial da API publica do Social Juridico para validacao automatizada de seguranca. Rotas privadas exigem autenticacao e nao estao completamente descritas neste arquivo inicial.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://socialjuridico.com.br",
+      "description": "Producao"
+    },
+    {
+      "url": "https://www.socialjuridico.com.br",
+      "description": "Producao com www"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Publico",
+      "description": "Endpoints publicos ou semi-publicos"
+    }
+  ],
+  "paths": {
+    "/api/contato": {
+      "post": {
+        "tags": ["Publico"],
+        "summary": "Enviar mensagem de contato",
+        "description": "Recebe mensagens enviadas pelo formulario publico de contato.",
+        "operationId": "sendContactMessage",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactRequest"
+              },
+              "example": {
+                "name": "Usuario Teste",
+                "email": "usuario@example.com",
+                "phone": "(15) 99999-9999",
+                "subject": "suporte",
+                "message": "Mensagem de teste para validacao da API.",
+                "website": ""
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mensagem recebida ou processada com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BasicResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Payload invalido ou campos obrigatorios ausentes.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BasicResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Limite de requisicoes excedido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BasicResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/advogados": {
+      "get": {
+        "tags": ["Publico"],
+        "summary": "Listar advogados publicos",
+        "description": "Retorna dados publicos de advogados disponiveis para exibicao na plataforma.",
+        "operationId": "listPublicLawyers",
+        "responses": {
+          "200": {
+            "description": "Lista retornada com sucesso.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicLawyer"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno ao consultar advogados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BasicResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ContactRequest": {
+        "type": "object",
+        "required": ["name", "email", "subject", "message"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 160
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 30
+          },
+          "subject": {
+            "type": "string",
+            "enum": [
+              "suporte",
+              "cadastro",
+              "financeiro",
+              "advogado",
+              "privacidade",
+              "exclusao",
+              "parceria",
+              "seguranca",
+              "outro"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 4000
+          },
+          "website": {
+            "type": "string",
+            "description": "Campo honeypot usado contra automacao indevida."
+          }
+        },
+        "additionalProperties": false
+      },
+      "BasicResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "PublicLawyer": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string",
+            "nullable": true
+          },
+          "oab": {
+            "type": "string",
+            "nullable": true
+          },
+          "estado": {
+            "type": "string",
+            "nullable": true
+          },
+          "avg_rating": {
+            "type": "number",
+            "nullable": true
+          },
+          "verified": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "specialties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

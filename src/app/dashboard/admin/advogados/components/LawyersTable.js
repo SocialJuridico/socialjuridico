@@ -10,6 +10,7 @@ import {
 import {
   formatDate,
   formatDateTime,
+  formatOabDisplay,
   getActivityStatus,
   getOabStatus,
   getPlanStatus,
@@ -126,7 +127,7 @@ export default function LawyersTable({ lawyers, busyId, onOpen }) {
                   </td>
                   <td>
                     <div className={styles.oabCell}>
-                      <strong>{lawyer.oab ? `${lawyer.oab}/${lawyer.estado || ""}` : "Não informada"}</strong>
+                      <strong>{formatOabDisplay(lawyer)}</strong>
                       <StatusBadge status={oab} />
                     </div>
                   </td>
@@ -172,7 +173,7 @@ export default function LawyersTable({ lawyers, busyId, onOpen }) {
               </div>
 
               <dl className={styles.mobileDetails}>
-                <div><dt>OAB</dt><dd>{lawyer.oab ? `${lawyer.oab}/${lawyer.estado || ""}` : "Não informada"}</dd></div>
+                <div><dt>OAB</dt><dd>{formatOabDisplay(lawyer)}</dd></div>
                 <div><dt>Telefone</dt><dd>{lawyer.phone || "Não informado"}</dd></div>
                 <div><dt>Juris</dt><dd>{lawyer.balance || 0}</dd></div>
                 <div><dt>Último acesso</dt><dd>{lawyer.last_sign_in_at ? formatDateTime(lawyer.last_sign_in_at) : "Nunca acessou"}</dd></div>

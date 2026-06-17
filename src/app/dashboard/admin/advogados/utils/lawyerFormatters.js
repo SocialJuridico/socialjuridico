@@ -46,6 +46,22 @@ export function getOabStatus(lawyer) {
   return { label: "Pendente", tone: "warning" };
 }
 
+export function formatOabDisplay(lawyer) {
+  const rawOab = String(lawyer?.oab || "").trim();
+  const state = String(lawyer?.estado || "").trim().toUpperCase();
+
+  if (!rawOab) return "NÃ£o informada";
+
+  const compactOab = rawOab.replace(/\s+/g, "").toUpperCase();
+  const alreadyHasState =
+    Boolean(state) &&
+    (compactOab.startsWith(state) || compactOab.endsWith(`/${state}`));
+
+  if (alreadyHasState || !state) return rawOab;
+
+  return `${rawOab}/${state}`;
+}
+
 export function getPlanType(lawyer) {
   if (lawyer?.plan_type) return lawyer.plan_type;
   return lawyer?.is_premium ? "PRO" : "FREE";

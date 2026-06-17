@@ -1,4 +1,4 @@
-import { formatDate, getOabStatus } from "../utils/lawyerFormatters";
+import { formatDate, formatOabDisplay, getOabStatus } from "../utils/lawyerFormatters";
 
 export async function generateLawyersReport(lawyers) {
   const { default: jsPDF } = await import("jspdf");
@@ -67,7 +67,7 @@ export async function generateLawyersReport(lawyers) {
     body: lawyers.map((lawyer) => [
       lawyer.name || "-",
       lawyer.email || "-",
-      lawyer.oab ? `${lawyer.oab}/${lawyer.estado || ""}` : "-",
+      formatOabDisplay(lawyer),
       getOabStatus(lawyer).label,
       lawyer.plan_type || (lawyer.is_premium ? "PRO" : "FREE"),
       String(lawyer.balance || 0),

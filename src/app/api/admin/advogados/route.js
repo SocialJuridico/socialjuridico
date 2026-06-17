@@ -5,9 +5,27 @@ import {
 } from "./adminLawyersWrite";
 import { getAdminLawyers } from "./adminLawyersRead";
 import { isValidUuid, json, requireAdmin } from "./adminLawyersUtils";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function isMissingAuthUser(error) {
+  if (!error) return false;
+
+  const message = String(error?.message || "").toLowerCase();
+  const code = String(error?.code || "").toLowerCase();
+  const status = Number(error?.status || error?.statusCode || 0);
+
+  return (
+    status === 404 ||
+    code === "user_not_found" ||
+    code === "not_found" ||
+    message.includes("user not found") ||
+    message.includes("usuario nao encontrado") ||
+    message.includes("usuário não encontrado")
+  );
+}
 
 export async function GET() {
   return getAdminLawyers();
@@ -36,9 +54,9 @@ export async function DELETE(request) {
       .select("id", { count: "exact", head: true })
       .eq("advogado_id", lawyerId);
 
-    if (ledgerError || Number(count || 0) === 0) {
-      return primaryResponse;
-    }
+    const financialLedgerEntriesPreserved = ledgerError
+      ? 0
+      : Number(count || 0);
 
     const normalizedId = lawyerId.replace(/-/g, "");
     const { data, error } = await access.db
@@ -52,6 +70,7 @@ export async function DELETE(request) {
         oab: `EXCLUIDO-${normalizedId.slice(0, 12).toUpperCase()}`,
         specialties: null,
         verified: false,
+        oab_verification_status: "ERROR",
         is_premium: false,
         premium_expires_at: null,
         plan_type: "FREE",
@@ -62,6 +81,25 @@ export async function DELETE(request) {
       .select("id")
       .maybeSingle();
 
+    if (!error && !data) {
+      const { data: remainingLawyer, error: lookupError } = await access.db
+        .from("advogados")
+        .select("id")
+        .eq("id", lawyerId)
+        .maybeSingle();
+
+      if (!lookupError && !remainingLawyer) {
+        return json({
+          success: true,
+          message: "Advogado removido com sucesso.",
+          data: {
+            lawyerId,
+            alreadyRemoved: true,
+          },
+        });
+      }
+    }
+
     if (error || !data) {
       console.error(
         "[Admin/Advogados][DELETE] Falha no fallback de anonimização:",
@@ -70,12 +108,25 @@ export async function DELETE(request) {
       return primaryResponse;
     }
 
+    const { error: authDeleteError } =
+      await supabaseAdmin.auth.admin.deleteUser(lawyerId);
+
+    const authUserAlreadyMissing = isMissingAuthUser(authDeleteError);
+
+    if (authDeleteError && !authUserAlreadyMissing) {
+      console.error(
+        "[Admin/Advogados][DELETE] Perfil anonimizado, mas falha ao remover acesso no Auth:",
+        authDeleteError,
+      );
+    }
+
     console.info(
       "[Admin/Advogados][DELETE] Perfil anonimizado com ledger preservado",
       {
         lawyerId,
         adminId: access.auth.admin.id,
-        financialLedgerEntriesPreserved: Number(count || 0),
+        authUserAlreadyMissing,
+        financialLedgerEntriesPreserved,
       },
     );
 
@@ -86,7 +137,8 @@ export async function DELETE(request) {
       data: {
         lawyerId,
         anonymized: true,
-        financialLedgerEntriesPreserved: Number(count || 0),
+        authUserAlreadyMissing,
+        financialLedgerEntriesPreserved,
       },
     });
   } catch (fallbackError) {

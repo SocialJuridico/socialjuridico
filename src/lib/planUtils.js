@@ -28,11 +28,35 @@ export const PLAN_LIMITS = {
   },
 };
 
+export function isPremiumPlanCurrentlyActive(profile = {}) {
+  if (profile.is_premium !== true) return false;
+
+  const rawPlanType = String(profile.plan_type || "FREE").toUpperCase();
+  if (rawPlanType.startsWith("ENTERPRISE_")) return true;
+
+  const hasPaidPlan = rawPlanType === "START" || rawPlanType === "PRO" || rawPlanType === "FREE";
+  if (!hasPaidPlan) return false;
+
+  if (!profile.premium_expires_at) return false;
+  const expiresAt = new Date(profile.premium_expires_at);
+  if (Number.isNaN(expiresAt.getTime())) return false;
+
+  return expiresAt.getTime() > Date.now();
+}
+
+export function getEffectivePlanType(profile = {}) {
+  const rawPlanType = String(profile.plan_type || "FREE").toUpperCase();
+  if (rawPlanType.startsWith("ENTERPRISE_")) return rawPlanType;
+  if (!isPremiumPlanCurrentlyActive(profile)) return "FREE";
+  if (rawPlanType === "FREE") return "PRO";
+  return PLAN_LIMITS[rawPlanType] ? rawPlanType : "FREE";
+}
+
 export async function getUserPlanLimits(supabaseDb, userId) {
   let { data: user, error } = await supabaseDb
     .from("advogados")
     .select(
-      "plan_type, is_premium, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb",
+      "plan_type, is_premium, premium_expires_at, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb",
     )
     .eq("id", userId)
     .maybeSingle();
@@ -100,17 +124,14 @@ export async function getUserPlanLimits(supabaseDb, userId) {
 
   if (!user) return null;
 
-  // Garantir retrocompatibilidade: quem já era premium vira PRO implicitamente
-  let planType = String(user.plan_type || "FREE").toUpperCase();
-  if (user.is_premium && planType === "FREE") {
-    planType = "PRO";
-  }
+  // O plano efetivo considera a data de expiracao, nao apenas o booleano legado.
+  const planType = getEffectivePlanType(user);
 
   const baseLimits = PLAN_LIMITS[planType] || PLAN_LIMITS.FREE;
 
   return {
     planType,
-    isLegacyPro: user.is_premium,
+    isLegacyPro: isPremiumPlanCurrentlyActive(user),
 
     // CRM
     maxCrmClients: baseLimits.crm_clients,

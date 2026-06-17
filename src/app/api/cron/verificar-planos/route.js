@@ -1,20 +1,170 @@
-import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
+
 import { sendPushNotification } from "@/lib/pushNotifications";
+import { supabaseAdmin } from "@/lib/supabase";
 
-export async function GET(req) {
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function isAuthorizedCronRequest(request, expectedSecret) {
+  const { searchParams } = new URL(request.url);
+  const querySecret = searchParams.get("secret");
+  const headerSecret = request.headers.get("x-cron-secret");
+  const authorization = request.headers.get("authorization");
+
+  return (
+    querySecret === expectedSecret ||
+    headerSecret === expectedSecret ||
+    authorization === `Bearer ${expectedSecret}`
+  );
+}
+
+function parseDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function daysUntil(expiresAt, now) {
+  return Math.ceil((expiresAt.getTime() - now.getTime()) / 86_400_000);
+}
+
+async function notifyPlanExpired(db, lawyer, nowStr) {
+  await db.from("notificacoes").insert([
+    {
+      id: crypto.randomUUID(),
+      user_id: lawyer.id,
+      titulo: "Assinatura expirada",
+      mensagem: `Prezado(a) Dr(a), sua assinatura do plano ${lawyer.plan_type} expirou. Renove agora para reativar o acesso as ferramentas premium.`,
+      tipo: "PLANO_EXPIRADO",
+      meta: JSON.stringify({
+        expired: true,
+        expired_at: lawyer.premium_expires_at,
+      }),
+      lida: false,
+      created_at: nowStr,
+    },
+  ]);
+
   try {
-    const { searchParams } = new URL(req.url);
-    const secret = searchParams.get("secret");
-    const expectedSecret = process.env.CRON_SECRET || "socialjuridico_cron_secret_2026";
+    await sendPushNotification({
+      userIds: [lawyer.id],
+      title: "Assinatura expirada",
+      message: `Sua assinatura do plano ${lawyer.plan_type} expirou. Renove agora para reativar seu acesso.`,
+      url: "/dashboard/advogado",
+    });
+  } catch (error) {
+    console.error(
+      `[cron/verificar-planos] Erro push notification expiracao para ${lawyer.id}:`,
+      error,
+    );
+  }
+}
 
-    if (secret !== expectedSecret && req.headers.get("x-cron-secret") !== expectedSecret) {
-      return NextResponse.json({ success: false, message: "Não autorizado" }, { status: 401 });
+function warningMessage(lawyer, daysRemaining) {
+  if (daysRemaining === 3) {
+    return {
+      title: "Seu plano expira em 3 dias",
+      message: `Prezado(a) ${lawyer.name || "Dr(a)"}, sua assinatura do plano ${lawyer.plan_type} expira em 3 dias. Renove agora para nao perder o acesso as funcionalidades exclusivas.`,
+    };
+  }
+
+  if (daysRemaining === 2) {
+    return {
+      title: "Seu plano expira em 2 dias",
+      message: `Prezado(a) ${lawyer.name || "Dr(a)"}, sua assinatura do plano ${lawyer.plan_type} expira em 2 dias. Evite a interrupcao no atendimento de novos casos.`,
+    };
+  }
+
+  return {
+    title: "Ultimo dia de assinatura",
+    message: `Prezado(a) ${lawyer.name || "Dr(a)"}, hoje e o ultimo dia da sua assinatura do plano ${lawyer.plan_type}. Renove imediatamente para garantir seu acesso.`,
+  };
+}
+
+async function alreadySentWarning(db, lawyerId, daysRemaining, expiresAtIso) {
+  const { data, error } = await db
+    .from("notificacoes")
+    .select("meta")
+    .eq("user_id", lawyerId)
+    .eq("tipo", "PLANO_EXPIRANDO");
+
+  if (error) throw error;
+
+  return (data || []).some((item) => {
+    try {
+      const meta = typeof item.meta === "string" ? JSON.parse(item.meta) : item.meta;
+      return (
+        Number(meta?.days_remaining) === daysRemaining &&
+        meta?.expires_at === expiresAtIso
+      );
+    } catch {
+      return false;
+    }
+  });
+}
+
+async function notifyPlanExpiring(db, lawyer, daysRemaining, nowStr) {
+  const alreadySent = await alreadySentWarning(
+    db,
+    lawyer.id,
+    daysRemaining,
+    lawyer.premium_expires_at,
+  );
+
+  if (alreadySent) {
+    return false;
+  }
+
+  const { title, message } = warningMessage(lawyer, daysRemaining);
+  const { error } = await db.from("notificacoes").insert([
+    {
+      id: crypto.randomUUID(),
+      user_id: lawyer.id,
+      titulo: title,
+      mensagem: message,
+      tipo: "PLANO_EXPIRANDO",
+      meta: JSON.stringify({
+        days_remaining: daysRemaining,
+        expires_at: lawyer.premium_expires_at,
+      }),
+      lida: false,
+      created_at: nowStr,
+    },
+  ]);
+
+  if (error) throw error;
+
+  await sendPushNotification({
+    userIds: [lawyer.id],
+    title,
+    message,
+    url: "/dashboard/advogado",
+  });
+
+  return true;
+}
+
+export async function GET(request) {
+  try {
+    const expectedSecret =
+      process.env.CRON_SECRET || "socialjuridico_cron_secret_2026";
+
+    if (!isAuthorizedCronRequest(request, expectedSecret)) {
+      return NextResponse.json(
+        { success: false, message: "Nao autorizado" },
+        { status: 401 },
+      );
     }
 
     const db = supabaseAdmin;
+    if (!db) {
+      return NextResponse.json(
+        { success: false, message: "Cliente administrativo indisponivel." },
+        { status: 503 },
+      );
+    }
 
-    // Buscar advogados premium com data de expiração cadastrada
     const { data: premiumLawyers, error: fetchError } = await db
       .from("advogados")
       .select("id, name, email, is_premium, premium_expires_at, plan_type")
@@ -22,161 +172,87 @@ export async function GET(req) {
       .not("premium_expires_at", "is", null);
 
     if (fetchError) {
-      console.error("[cron/verificar-planos] Erro ao buscar advogados premium:", fetchError);
       throw fetchError;
     }
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+    const now = new Date();
+    const nowStr = now.toISOString();
     let processedCount = 0;
+    let expiredCount = 0;
     let notifiedCount = 0;
+    let invalidExpirationCount = 0;
 
-    for (const lawyer of (premiumLawyers || [])) {
-      processedCount++;
-      const expiresAt = new Date(lawyer.premium_expires_at);
-      expiresAt.setHours(0, 0, 0, 0);
+    for (const lawyer of premiumLawyers || []) {
+      processedCount += 1;
 
-      // Cálculo da diferença em dias (arredondado)
-      const diffTime = expiresAt.getTime() - today.getTime();
-      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      const expiresAt = parseDate(lawyer.premium_expires_at);
+      if (!expiresAt) {
+        invalidExpirationCount += 1;
+        console.warn(
+          `[cron/verificar-planos] Data invalida para advogado ${lawyer.id}: ${lawyer.premium_expires_at}`,
+        );
+        continue;
+      }
 
-      // 1. O plano expirou (data no passado)
-      if (diffDays < 0) {
+      if (expiresAt.getTime() <= now.getTime()) {
         const { error: downgradeError } = await db
           .from("advogados")
           .update({
             is_premium: false,
             plan_type: "FREE",
-            premium_expires_at: null
+            premium_expires_at: null,
           })
           .eq("id", lawyer.id);
 
         if (downgradeError) {
-          console.error(`[cron/verificar-planos] Erro ao expirar plano do advogado ${lawyer.id}:`, downgradeError);
+          console.error(
+            `[cron/verificar-planos] Erro ao expirar plano do advogado ${lawyer.id}:`,
+            downgradeError,
+          );
           continue;
         }
 
-        // Criar notificação de expiração no banco
-        const nowStr = new Date().toISOString();
-        await db.from("notificacoes").insert([{
-          id: crypto.randomUUID(),
-          user_id: lawyer.id,
-          titulo: "Assinatura Expirada 🚨",
-          mensagem: `Prezado(a) Dr(a), sua assinatura do plano ${lawyer.plan_type} expirou. Renove agora para reativar o acesso às ferramentas premium.`,
-          tipo: "PLANO_EXPIRADO",
-          meta: JSON.stringify({ expired: true }),
-          lida: false,
-          created_at: nowStr
-        }]);
-
-        // Enviar push notification
-        try {
-          await sendPushNotification({
-            userIds: [lawyer.id],
-            title: "Assinatura Expirada 🚨",
-            message: `Sua assinatura do plano ${lawyer.plan_type} expirou. Renove agora para reativar seu acesso.`,
-            url: "/dashboard/advogado"
-          });
-        } catch (pushErr) {
-          console.error(`[cron/verificar-planos] Erro push notification expiração para ${lawyer.id}:`, pushErr);
-        }
-
-        console.log(`[cron/verificar-planos] Plano do advogado ${lawyer.name} (${lawyer.id}) expirado.`);
+        expiredCount += 1;
+        await notifyPlanExpired(db, lawyer, nowStr);
         continue;
       }
 
-      // 2. Verificamos se está nos marcos: 3 dias, 2 dias ou último dia (1 ou 0 dias restantes)
-      if (diffDays !== 3 && diffDays !== 2 && diffDays !== 1 && diffDays !== 0) {
-        continue;
-      }
-
-      // Normaliza diffDays para 1, 2 ou 3
+      const diffDays = daysUntil(expiresAt, now);
       const daysRemaining = diffDays === 0 ? 1 : diffDays;
 
-      // Buscar se já notificamos sobre essa expiração específica
-      const { data: sentNotifs, error: searchError } = await db
-        .from("notificacoes")
-        .select("meta")
-        .eq("user_id", lawyer.id)
-        .eq("tipo", "PLANO_EXPIRANDO");
-
-      if (searchError) {
-        console.error(`[cron/verificar-planos] Erro ao buscar notificações existentes para o advogado ${lawyer.id}:`, searchError);
+      if (![1, 2, 3].includes(daysRemaining)) {
         continue;
       }
 
-      const alreadyNotified = (sentNotifs || []).some(n => {
-        try {
-          const meta = typeof n.meta === 'string' ? JSON.parse(n.meta) : n.meta;
-          return meta && meta.days_remaining === daysRemaining;
-        } catch {
-          return false;
-        }
-      });
-
-      if (alreadyNotified) {
-        console.log(`[cron/verificar-planos] Advogado ${lawyer.name} (${lawyer.id}) já foi notificado sobre expiração de ${daysRemaining} dia(s).`);
-        continue;
+      try {
+        const sent = await notifyPlanExpiring(
+          db,
+          lawyer,
+          daysRemaining,
+          nowStr,
+        );
+        if (sent) notifiedCount += 1;
+      } catch (error) {
+        console.error(
+          `[cron/verificar-planos] Erro ao notificar advogado ${lawyer.id}:`,
+          error,
+        );
       }
-
-      // Definir títulos e mensagens baseados nos dias restantes
-      let title = "";
-      let message = "";
-
-      if (daysRemaining === 3) {
-        title = "Seu plano expira em 3 dias ⏳";
-        message = `Prezado(a) ${lawyer.name || 'Dr(a)'}, sua assinatura do plano ${lawyer.plan_type} expira em 3 dias. Renove agora para não perder o acesso às funcionalidades exclusivas.`;
-      } else if (daysRemaining === 2) {
-        title = "Seu plano expira em 2 dias ⏳";
-        message = `Prezado(a) ${lawyer.name || 'Dr(a)'}, sua assinatura do plano ${lawyer.plan_type} expira em 2 dias. Evite a interrupção no atendimento de novos casos.`;
-      } else {
-        title = "Último dia de assinatura! 🚨";
-        message = `Prezado(a) ${lawyer.name || 'Dr(a)'}, hoje é o último dia da sua assinatura do plano ${lawyer.plan_type}. Renove imediatamente para garantir seu acesso.`;
-      }
-
-      // Inserir notificação no banco de dados
-      const nowStr = new Date().toISOString();
-      const { error: insertError } = await db.from("notificacoes").insert([{
-        id: crypto.randomUUID(),
-        user_id: lawyer.id,
-        titulo: title,
-        mensagem: message,
-        tipo: "PLANO_EXPIRANDO",
-        meta: JSON.stringify({ days_remaining: daysRemaining }),
-        lida: false,
-        created_at: nowStr
-      }]);
-
-      if (insertError) {
-        console.error(`[cron/verificar-planos] Erro ao criar notificação de banco para ${lawyer.id}:`, insertError);
-        continue;
-      }
-
-      // Enviar notificação push
-      await sendPushNotification({
-        userIds: [lawyer.id],
-        title: title,
-        message: message,
-        url: "/dashboard/advogado"
-      });
-
-      notifiedCount++;
-      console.log(`[cron/verificar-planos] Advogado ${lawyer.name} (${lawyer.id}) notificado com sucesso: ${daysRemaining} dia(s) restante(s).`);
     }
 
     return NextResponse.json({
       success: true,
       processed: processedCount,
+      expired: expiredCount,
       notified: notifiedCount,
-      message: "Verificação de expiração concluída com sucesso."
+      invalidExpiration: invalidExpirationCount,
+      message: "Verificacao de expiracao concluida com sucesso.",
     });
-
   } catch (error) {
     console.error("Erro na API GET /api/cron/verificar-planos:", error);
     return NextResponse.json(
       { success: false, message: error.message || "Erro interno no servidor" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

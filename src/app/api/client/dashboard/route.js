@@ -4,6 +4,7 @@ import {
   safeClientError,
 } from "@/lib/clientDashboard/clientServer";
 import { formatStoredOAB } from "@/lib/oab";
+import { isPremiumPlanCurrentlyActive } from "@/lib/planUtils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -133,7 +134,7 @@ async function loadInterests(db, cases) {
   if (lawyerIds.length) {
     const { data: lawyers, error: lawyerError } = await db
       .from("advogados")
-      .select("id, name, avatar, oab, estado, is_premium")
+      .select("id, name, avatar, oab, estado, is_premium, premium_expires_at, plan_type")
       .in("id", lawyerIds);
 
     if (lawyerError) {
@@ -159,7 +160,7 @@ async function loadInterests(db, cases) {
       lawyersById[item.lawyer_id]?.oab,
       lawyersById[item.lawyer_id]?.estado,
     ),
-    lawyer_is_premium: lawyersById[item.lawyer_id]?.is_premium === true,
+    lawyer_is_premium: isPremiumPlanCurrentlyActive(lawyersById[item.lawyer_id]),
     caso_titulo: casesById[item.case_id]?.titulo || "Caso",
     caso_area: casesById[item.case_id]?.area_atuacao || "",
     caso_status: casesById[item.case_id]?.status || "ABERTO",
@@ -170,10 +171,9 @@ async function loadLawyers(db) {
   const { data, error } = await db
     .from("advogados")
     .select(
-      "id, name, avatar, bio, oab, estado, avg_rating, total_ratings, specialties, is_premium, consulta, tempo, valor, oab_verification_status, escritorio_id, cargo",
+      "id, name, avatar, bio, oab, estado, avg_rating, total_ratings, specialties, is_premium, premium_expires_at, plan_type, consulta, tempo, valor, oab_verification_status, escritorio_id, cargo",
     )
     .neq("oab_verification_status", "ERROR")
-    .order("is_premium", { ascending: false })
     .order("name", { ascending: true })
     .limit(500);
 
@@ -208,12 +208,20 @@ async function loadLawyers(db) {
     );
   }
 
-  return visibleLawyers.map((lawyer) => ({
-    ...lawyer,
-    oab: formatStoredOAB(lawyer.oab, lawyer.estado),
-    nome_escritorio: officesById[lawyer.escritorio_id]?.nome || null,
-    logo_escritorio: officesById[lawyer.escritorio_id]?.logo_url || null,
-  }));
+  return visibleLawyers
+    .map((lawyer) => ({
+      ...lawyer,
+      is_premium: isPremiumPlanCurrentlyActive(lawyer),
+      oab: formatStoredOAB(lawyer.oab, lawyer.estado),
+      nome_escritorio: officesById[lawyer.escritorio_id]?.nome || null,
+      logo_escritorio: officesById[lawyer.escritorio_id]?.logo_url || null,
+    }))
+    .sort((a, b) => {
+      if (a.is_premium !== b.is_premium) {
+        return Number(b.is_premium) - Number(a.is_premium);
+      }
+      return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR");
+    });
 }
 
 async function loadNotifications(db, userId) {

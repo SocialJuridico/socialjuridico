@@ -1,8 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { formatStoredOAB } from "@/lib/oab";
+import { isPremiumPlanCurrentlyActive } from "@/lib/planUtils";
 import { NextResponse } from "next/server";
 
 function toPublicLawyer(lawyer, officeMap) {
+  const isPremium = isPremiumPlanCurrentlyActive(lawyer);
+
   return {
     id: lawyer.id,
     name: lawyer.name,
@@ -16,6 +19,7 @@ function toPublicLawyer(lawyer, officeMap) {
     consulta: lawyer.consulta || null,
     tempo: lawyer.tempo || null,
     valor: lawyer.valor || null,
+    is_premium: isPremium,
     nome_escritorio: officeMap[lawyer.escritorio_id]?.nome || null,
     logo_escritorio: officeMap[lawyer.escritorio_id]?.logo_url || null,
   };
@@ -26,9 +30,8 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("advogados")
       .select(
-        "id, name, avatar, oab, estado, avg_rating, total_ratings, verified, specialties, is_premium, consulta, tempo, valor, oab_verification_status, escritorio_id, cargo",
+        "id, name, avatar, oab, estado, avg_rating, total_ratings, verified, specialties, is_premium, premium_expires_at, plan_type, consulta, tempo, valor, oab_verification_status, escritorio_id, cargo",
       )
-      .order("is_premium", { ascending: false })
       .order("name", { ascending: true });
 
     if (error) throw error;
@@ -48,9 +51,16 @@ export async function GET() {
       }
     }
 
+    const lawyers = (data || []).sort((a, b) => {
+      const premiumA = isPremiumPlanCurrentlyActive(a) ? 1 : 0;
+      const premiumB = isPremiumPlanCurrentlyActive(b) ? 1 : 0;
+      if (premiumA !== premiumB) return premiumB - premiumA;
+      return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR");
+    });
+
     return NextResponse.json({
       success: true,
-      data: (data || []).map((lawyer) => toPublicLawyer(lawyer, officeMap)),
+      data: lawyers.map((lawyer) => toPublicLawyer(lawyer, officeMap)),
     });
   } catch (error) {
     console.error("Erro na API de Advogados:", error);

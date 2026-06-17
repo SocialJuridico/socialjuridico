@@ -7,6 +7,7 @@ import {
   safeClientError,
   validateClientMutationOrigin,
 } from "@/lib/clientDashboard/clientServer";
+import { isPremiumPlanCurrentlyActive } from "@/lib/planUtils";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export async function POST(request) {
       await Promise.all([
         access.db
           .from("advogados")
-          .select("id, name, is_premium, oab_verification_status")
+          .select("id, name, is_premium, premium_expires_at, plan_type, oab_verification_status")
           .eq("id", lawyerId)
           .maybeSingle(),
         access.db
@@ -54,7 +55,7 @@ export async function POST(request) {
         404,
       );
     }
-    if (!lawyer.is_premium || lawyer.oab_verification_status === "ERROR") {
+    if (!isPremiumPlanCurrentlyActive(lawyer) || lawyer.oab_verification_status === "ERROR") {
       return clientJson(
         {
           success: false,

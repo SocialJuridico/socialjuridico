@@ -7,6 +7,7 @@ import {
 } from "@/lib/clientDashboard/clientServer";
 import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 import { formatStoredOAB } from "@/lib/oab";
+import { isPremiumPlanCurrentlyActive } from "@/lib/planUtils";
 
 import { runInterestSideEffects } from "./interestSideEffects";
 
@@ -170,7 +171,7 @@ export async function GET(request) {
     if (lawyerIds.length) {
       const { data: lawyers, error: lawyerError } = await access.db
         .from("advogados")
-        .select("id, name, avatar, oab, estado, is_premium")
+        .select("id, name, avatar, oab, estado, is_premium, premium_expires_at, plan_type")
         .in("id", lawyerIds);
 
       if (lawyerError) {
@@ -192,7 +193,7 @@ export async function GET(request) {
         lawyer_name: lawyer.name || "Advogado",
         lawyer_avatar: lawyer.avatar || null,
         lawyer_oab: formatStoredOAB(lawyer.oab, lawyer.estado),
-        lawyer_is_premium: lawyer.is_premium === true,
+        lawyer_is_premium: isPremiumPlanCurrentlyActive(lawyer),
         caso_titulo: caseItem.titulo || "Caso",
         caso_area: caseItem.area_atuacao || "",
         caso_status: caseItem.status || "ABERTO",

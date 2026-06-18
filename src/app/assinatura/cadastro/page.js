@@ -40,6 +40,7 @@ export default function SignatureSignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [status, setStatus] = useState({ type: "idle", message: "" });
   const [registeredEmail, setRegisteredEmail] = useState("");
+  const [existingAccountActivation, setExistingAccountActivation] = useState(false);
 
   function updateField(event) {
     const { name, value, type, checked } = event.target;
@@ -100,6 +101,7 @@ export default function SignatureSignupPage() {
       }
 
       setRegisteredEmail(form.email.trim().toLowerCase());
+      setExistingAccountActivation(data.existingAccount === true);
       setStatus({ type: "success", message: data.message || "Conta criada com sucesso." });
     } catch {
       setStatus({ type: "error", message: "Não foi possível conectar ao servidor. Tente novamente." });
@@ -116,12 +118,12 @@ export default function SignatureSignupPage() {
             <span><Scale size={23} /></span> Social Jurídico <strong>Assinatura</strong>
           </Link>
           <div className={styles.successIcon}><CheckCircle2 size={42} /></div>
-          <h1>Confirme seu e-mail</h1>
-          <p>Enviamos o link de ativação para:</p>
+          <h1>{existingAccountActivation ? "Verifique seu e-mail" : "Confirme seu e-mail"}</h1>
+          <p>{existingAccountActivation ? "Enviamos um link seguro de ativação para:" : "Enviamos o link de ativação para:"}</p>
           <strong className={styles.registeredEmail}>{registeredEmail}</strong>
-          <p className={styles.mutedText}>Depois da confirmação, você poderá entrar e usar seus 3 documentos gratuitos do mês.</p>
-          <Link href="/assinatura/entrar" className={styles.primaryButton}>Ir para o login <ArrowRight size={18} /></Link>
-          <button type="button" className={styles.textButton} onClick={() => { setRegisteredEmail(""); setStatus({ type: "idle", message: "" }); }}>Corrigir o e-mail</button>
+          <p className={styles.mutedText}>{existingAccountActivation ? "Abra o link recebido para confirmar sua identidade e concluir a ativação do produto de assinatura." : "Depois da confirmação, você poderá entrar e usar seus 3 documentos gratuitos do mês."}</p>
+          <Link href={existingAccountActivation ? "/assinatura" : "/assinatura/entrar"} className={styles.primaryButton}>{existingAccountActivation ? "Voltar para Assinatura" : "Ir para o login"} <ArrowRight size={18} /></Link>
+          <button type="button" className={styles.textButton} onClick={() => { setRegisteredEmail(""); setExistingAccountActivation(false); setStatus({ type: "idle", message: "" }); }}>Corrigir o e-mail</button>
         </section>
       </div>
     );

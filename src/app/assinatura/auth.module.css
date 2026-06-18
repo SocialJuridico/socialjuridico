@@ -55,10 +55,12 @@
 .loginSeal { display: grid; width: 42px; height: 42px; place-items: center; margin-bottom: 20px; border: 1px solid rgba(212,175,55,.3); border-radius: 6px; color: #efd874; background: rgba(212,175,55,.06); }
 .inlineAction { display: inline-flex; align-self: flex-start; align-items: center; gap: 7px; border: 0; color: #efd874; background: transparent; font-size: .72rem; font-weight: 780; cursor: pointer; }
 .authLoading { display: grid; min-height: 100vh; place-items: center; color: #d4af37; background: #0b0c0e; }
-.successPanel { width: min(100% - 32px, 520px); margin: auto; padding: 48px; border-top: 4px solid #d4af37; color: #f5f5f3; background: #131518; text-align: center; }
+.successPanel { position: relative; width: min(calc(100% - 48px), 640px); grid-column: 1 / -1; place-self: center; overflow: hidden; padding: 58px 64px 52px; border: 1px solid rgba(255,255,255,.08); border-top: 4px solid #d4af37; border-radius: 0 0 12px 12px; color: #f5f5f3; background: radial-gradient(circle at 50% 0, rgba(212,175,55,.1), transparent 34%), #131518; box-shadow: 0 28px 80px rgba(0,0,0,.38); text-align: center; }
+.successPanel::before { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px); background-size: 44px 44px; content: ""; mask-image: linear-gradient(to bottom, black, transparent 72%); pointer-events: none; }
+.successPanel > * { position: relative; z-index: 1; }
 .successPanel .brand { justify-content: center; }
-.successIcon { display: grid; width: 72px; height: 72px; place-items: center; margin: 48px auto 22px; border: 1px solid rgba(54,202,132,.28); border-radius: 50%; color: #36ca84; background: rgba(54,202,132,.06); }
-.successPanel h1 { font-size: 2rem; }
+.successIcon { display: grid; width: 76px; height: 76px; place-items: center; margin: 46px auto 24px; border: 1px solid rgba(54,202,132,.34); border-radius: 50%; color: #36ca84; background: rgba(54,202,132,.08); box-shadow: 0 0 0 10px rgba(54,202,132,.025); }
+.successPanel h1 { font-size: clamp(2rem, 4vw, 2.55rem); line-height: 1.08; }
 .successPanel > p { margin-top: 12px; color: rgba(255,255,255,.55); font-size: .82rem; line-height: 1.6; }
 .registeredEmail { display: block; margin-top: 9px; color: #efd874; font-size: .95rem; overflow-wrap: anywhere; }
 .successPanel .primaryButton { margin-top: 28px; }
@@ -79,7 +81,8 @@
   .mobileBrand { margin-bottom: 38px; font-size: .84rem; }
   .fieldsRow { grid-template-columns: 1fr; }
   .formWrap h2 { font-size: 2.15rem; }
-  .successPanel { padding: 38px 22px; }
+  .successPanel { width: min(calc(100% - 28px), 640px); padding: 38px 22px 34px; border-radius: 0 0 9px 9px; }
+  .successIcon { margin-top: 38px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 
 import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import { supabaseAdmin } from "@/lib/supabase";
-import { createClient } from "@/lib/supabaseServer";
+import { createSignatureClient } from "@/lib/signatureSupabaseServer";
 import {
   isValidSignatureEmail,
   normalizeSignatureEmail,
   normalizeSignatureName,
   normalizeSignaturePhone,
   provisionSignatureAccount,
+  sendExistingSignatureActivationEmail,
   sendSignatureConfirmationEmail,
   validateSignaturePassword,
 } from "@/lib/signatureAuth";
@@ -90,15 +91,26 @@ export async function POST(request) {
       const alreadyExists = createError.status === 422 || /already|registered|exists/i.test(createError.message || "");
       if (!alreadyExists) throw createError;
 
-      const supabase = createClient();
+      const supabase = createSignatureClient();
       const { data: existingAuth, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
       if (signInError || !existingAuth?.user) {
+        try {
+          await sendExistingSignatureActivationEmail({ admin: supabaseAdmin, email, name });
+        } catch (emailError) {
+          console.error("[Signature signup] Falha no link para conta existente:", emailError);
+          return json({
+            success: false,
+            message: "Não foi possível enviar o link de ativação agora. Tente novamente em alguns minutos.",
+          }, 503);
+        }
+
         return json({
-          success: false,
-          code: "ACCOUNT_ALREADY_EXISTS",
-          message: "Este e-mail já possui uma conta. Entre com a senha atual para ativar o módulo de assinatura.",
-        }, 409);
+          success: true,
+          requiresConfirmation: true,
+          existingAccount: true,
+          message: "Este e-mail já faz parte do ecossistema. Enviamos um link seguro para ativar o produto de assinatura.",
+        });
       }
 
       if (!existingAuth.user.email_confirmed_at) {
@@ -155,4 +167,3 @@ export async function POST(request) {
     return json({ success: false, message: "Não foi possível criar sua conta agora." }, 500);
   }
 }
-

@@ -14,7 +14,7 @@ export default function SignatureLogoutButton() {
     if (loading) return;
     setLoading(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/assinatura/auth/logout", { method: "POST" });
     } finally {
       router.replace("/assinatura/entrar");
       router.refresh();
@@ -28,4 +28,3 @@ export default function SignatureLogoutButton() {
     </button>
   );
 }
-

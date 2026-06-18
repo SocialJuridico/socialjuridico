@@ -6,6 +6,7 @@ const PROTECTED_ROUTES = ["/dashboard", "/chat", "/admin", "/assinatura/app"];
 const AUTH_ROUTES = ["/login", "/cadastro", "/assinatura/entrar"];
 const LAWYER_ROOT = "/dashboard/advogado";
 const LAWYER_HOME = "/dashboard/advogado/oportunidade";
+const SIGNATURE_AUTH_COOKIE_NAME = "sj-signature-auth";
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
@@ -13,6 +14,7 @@ export async function middleware(request) {
     pathname.startsWith(route),
   );
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  const isSignatureRoute = pathname.startsWith("/assinatura/");
 
   if (!isProtected && !isAuthRoute) {
     return NextResponse.next();
@@ -33,7 +35,7 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
-  if (isAuthRoute && escritorioSession) {
+  if (isAuthRoute && !isSignatureRoute && escritorioSession) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard/escritorio";
     return NextResponse.redirect(url);
@@ -47,6 +49,16 @@ export async function middleware(request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      ...(isSignatureRoute
+        ? {
+            cookieOptions: {
+              name: SIGNATURE_AUTH_COOKIE_NAME,
+              path: "/",
+              sameSite: "lax",
+              secure: process.env.NODE_ENV === "production",
+            },
+          }
+        : {}),
       cookies: {
         getAll() {
           return request.cookies.getAll();
@@ -106,7 +118,9 @@ export async function middleware(request) {
       }
     }
 
-    const loginTimeCookie = request.cookies.get("sj_login_time");
+    const loginTimeCookie = request.cookies.get(
+      isSignatureRoute ? "sj_signature_login_time" : "sj_login_time",
+    );
     if (loginTimeCookie?.value) {
       try {
         const decoded = JSON.parse(
@@ -119,11 +133,13 @@ export async function middleware(request) {
         if (hoursElapsed >= 4) {
           await supabase.auth.signOut();
           const url = request.nextUrl.clone();
-          url.pathname = "/login";
+          url.pathname = isSignatureRoute ? "/assinatura/entrar" : "/login";
           url.search = "";
           url.searchParams.set("expired", "true");
           const expiredResponse = NextResponse.redirect(url);
-          expiredResponse.cookies.delete("sj_login_time");
+          expiredResponse.cookies.delete(
+            isSignatureRoute ? "sj_signature_login_time" : "sj_login_time",
+          );
           return expiredResponse;
         }
       } catch {
@@ -143,14 +159,12 @@ export async function middleware(request) {
     }
   }
 
-  if (isAuthRoute && isAuthenticated) {
+  if (isAuthRoute && !isSignatureRoute && isAuthenticated) {
     const role = user.user_metadata?.role || "CLIENT";
     const url = request.nextUrl.clone();
     url.search = "";
 
-    if (pathname.startsWith("/assinatura/entrar")) {
-      url.pathname = "/assinatura/app";
-    } else if (role === "SIGNATURE_CUSTOMER") {
+    if (role === "SIGNATURE_CUSTOMER") {
       url.pathname = "/assinatura/app";
     } else if (role === "ADMIN") url.pathname = "/dashboard/admin";
     else if (role === "LAWYER") url.pathname = LAWYER_HOME;

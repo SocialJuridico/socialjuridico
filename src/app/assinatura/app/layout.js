@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { createClient } from "@/lib/supabaseServer";
+import { createSignatureClient } from "@/lib/signatureSupabaseServer";
 import { privateRobots } from "@/lib/seo";
 
 export const metadata = {
@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 export default async function SignatureAppLayout({ children }) {
-  const supabase = createClient();
+  const supabase = createSignatureClient();
   const { data: authData } = await supabase.auth.getUser();
 
   if (!authData?.user) redirect("/assinatura/entrar");
@@ -34,4 +34,3 @@ export default async function SignatureAppLayout({ children }) {
 
   return children;
 }
-

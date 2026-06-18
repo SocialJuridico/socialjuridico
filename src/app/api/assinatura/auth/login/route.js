@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import { supabaseAdmin } from "@/lib/supabase";
-import { createClient } from "@/lib/supabaseServer";
+import { createSignatureClient } from "@/lib/signatureSupabaseServer";
 import { isValidSignatureEmail, normalizeSignatureEmail } from "@/lib/signatureAuth";
 import {
   enforceSignatureAuthRateLimit,
@@ -47,7 +47,7 @@ export async function POST(request) {
       return json({ success: false, message: "Informe e-mail e senha válidos." }, 400);
     }
 
-    const supabase = createClient();
+    const supabase = createSignatureClient();
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error || !data?.user) {
@@ -75,12 +75,15 @@ export async function POST(request) {
     if (accountError) throw accountError;
 
     if (!account) {
-      await supabase.auth.signOut();
       return json({
         success: false,
-        code: "SIGNATURE_ACCOUNT_REQUIRED",
-        message: "Sua conta existe, mas o módulo de assinatura ainda não foi ativado.",
-      }, 403);
+        code: "SIGNATURE_ACTIVATION_REQUIRED",
+        message: "Credenciais confirmadas. Ative gratuitamente o produto de assinatura para continuar.",
+        activation: {
+          email: data.user.email,
+          suggestedName: String(data.user.user_metadata?.full_name || "").trim().slice(0, 120),
+        },
+      }, 409);
     }
 
     if (account.status !== "ACTIVE") {
@@ -115,7 +118,7 @@ export async function POST(request) {
     });
 
     response.cookies.set(
-      "sj_login_time",
+      "sj_signature_login_time",
       Buffer.from(JSON.stringify({ loginAt: new Date().toISOString(), userId: data.user.id })).toString("base64"),
       {
         httpOnly: true,
@@ -132,4 +135,3 @@ export async function POST(request) {
     return json({ success: false, message: "Não foi possível acessar sua conta agora." }, 500);
   }
 }
-

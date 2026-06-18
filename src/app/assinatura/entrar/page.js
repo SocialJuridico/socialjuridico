@@ -36,6 +36,13 @@ function SignatureLoginContent() {
     return { type: "idle", message: "" };
   });
   const [errorCode, setErrorCode] = useState("");
+  const [activation, setActivation] = useState(null);
+  const [activationForm, setActivationForm] = useState({
+    name: "",
+    phone: "",
+    termsAccepted: false,
+    privacyAccepted: false,
+  });
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -59,11 +66,57 @@ function SignatureLoginContent() {
 
       if (!response.ok || !data?.success) {
         setErrorCode(data?.code || "");
+        if (data?.code === "SIGNATURE_ACTIVATION_REQUIRED" && data?.activation) {
+          setActivation(data.activation);
+          setActivationForm((current) => ({
+            ...current,
+            name: data.activation.suggestedName || "",
+          }));
+        }
         setStatus({ type: "error", message: data?.message || "Não foi possível entrar." });
         return;
       }
 
       setStatus({ type: "success", message: "Acesso confirmado. Redirecionando..." });
+      window.setTimeout(() => router.push(data.redirectTo || "/assinatura/app"), 500);
+    } catch {
+      setStatus({ type: "error", message: "Não foi possível conectar ao servidor." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function activateSignatureProduct(event) {
+    event.preventDefault();
+    if (loading) return;
+
+    if (activationForm.name.trim().length < 3) {
+      setStatus({ type: "error", message: "Informe seu nome completo." });
+      return;
+    }
+
+    if (!activationForm.termsAccepted || !activationForm.privacyAccepted) {
+      setStatus({ type: "error", message: "Aceite os Termos de Uso e a Política de Privacidade." });
+      return;
+    }
+
+    setLoading(true);
+    setStatus({ type: "idle", message: "" });
+
+    try {
+      const response = await fetch("/api/assinatura/auth/ativar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(activationForm),
+      });
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        setStatus({ type: "error", message: data?.message || "Não foi possível ativar o produto." });
+        return;
+      }
+
+      setStatus({ type: "success", message: "Produto ativado. Redirecionando..." });
       window.setTimeout(() => router.push(data.redirectTo || "/assinatura/app"), 500);
     } catch {
       setStatus({ type: "error", message: "Não foi possível conectar ao servidor." });
@@ -115,6 +168,31 @@ function SignatureLoginContent() {
           <h2>Acesse sua conta.</h2>
           <p className={styles.formIntro}>Use suas credenciais do produto de assinatura ou a conta já existente no Social Jurídico.</p>
 
+          {activation ? (
+          <form onSubmit={activateSignatureProduct} className={styles.form} noValidate>
+            <div className={styles.activationNotice}>
+              <FileCheck2 size={20} />
+              <div><strong>Conta do ecossistema reconhecida</strong><span>{activation.email}</span></div>
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="signature-activation-name">Nome completo</label>
+              <div className={styles.inputWrap}><BadgeCheck size={18} /><input id="signature-activation-name" autoComplete="name" maxLength={120} value={activationForm.name} onChange={(event) => setActivationForm((current) => ({ ...current, name: event.target.value }))} placeholder="Seu nome completo" disabled={loading} /></div>
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="signature-activation-phone">WhatsApp <span>opcional</span></label>
+              <div className={styles.inputWrap}><FileCheck2 size={18} /><input id="signature-activation-phone" type="tel" autoComplete="tel" maxLength={30} value={activationForm.phone} onChange={(event) => setActivationForm((current) => ({ ...current, phone: event.target.value }))} placeholder="(15) 99999-9999" disabled={loading} /></div>
+            </div>
+            <div className={styles.consents}>
+              <label><input type="checkbox" checked={activationForm.termsAccepted} onChange={(event) => setActivationForm((current) => ({ ...current, termsAccepted: event.target.checked }))} /><span>Aceito os <Link href="/termos" target="_blank">Termos de Uso</Link> do produto.</span></label>
+              <label><input type="checkbox" checked={activationForm.privacyAccepted} onChange={(event) => setActivationForm((current) => ({ ...current, privacyAccepted: event.target.checked }))} /><span>Li e aceito a <Link href="/privacidade" target="_blank">Política de Privacidade</Link>.</span></label>
+            </div>
+
+            {status.type !== "idle" && <div className={`${styles.status} ${status.type === "error" ? styles.statusError : styles.statusSuccess}`} role={status.type === "error" ? "alert" : "status"}>{status.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}<span>{status.message}</span></div>}
+
+            <button type="submit" className={styles.primaryButton} disabled={loading}>{loading ? <><Loader2 size={18} className={styles.spin} /> Ativando...</> : <>Ativar produto gratuitamente <ArrowRight size={18} /></>}</button>
+            <button type="button" className={styles.textButton} onClick={() => { setActivation(null); setStatus({ type: "idle", message: "" }); setPassword(""); }}>Entrar com outra conta</button>
+          </form>
+          ) : (
           <form onSubmit={handleSubmit} className={styles.form} noValidate>
             <div className={styles.field}>
               <label htmlFor="signature-login-email">E-mail</label>
@@ -128,10 +206,9 @@ function SignatureLoginContent() {
             {status.type !== "idle" && <div className={`${styles.status} ${status.type === "error" ? styles.statusError : styles.statusSuccess}`} role={status.type === "error" ? "alert" : "status"}>{status.type === "error" ? <AlertCircle size={18} /> : <CheckCircle2 size={18} />}<span>{status.message}</span></div>}
 
             {errorCode === "EMAIL_NOT_CONFIRMED" && <button type="button" className={styles.inlineAction} onClick={resendConfirmation} disabled={resending}>{resending ? <Loader2 size={16} className={styles.spin} /> : <Mail size={16} />} Reenviar confirmação</button>}
-            {errorCode === "SIGNATURE_ACCOUNT_REQUIRED" && <Link href="/assinatura/cadastro" className={styles.inlineAction}><FileCheck2 size={16} /> Ativar gratuitamente</Link>}
-
             <button type="submit" className={styles.primaryButton} disabled={loading}>{loading ? <><Loader2 size={18} className={styles.spin} /> Entrando...</> : <>Entrar na plataforma <ArrowRight size={18} /></>}</button>
           </form>
+          )}
 
           <p className={styles.switchAuth}>Ainda não possui uma conta? <Link href="/assinatura/cadastro">Comece gratuitamente</Link></p>
         </div>
@@ -143,4 +220,3 @@ function SignatureLoginContent() {
 export default function SignatureLoginPage() {
   return <Suspense fallback={<div className={styles.authLoading}><Loader2 size={32} className={styles.spin} /></div>}><SignatureLoginContent /></Suspense>;
 }
-

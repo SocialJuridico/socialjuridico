@@ -17,6 +17,10 @@ describe("signature SaaS accounts migration", () => {
     expect(sql).toContain("create table if not exists public.signature_organization_members");
     expect(sql).toContain("create table if not exists public.signature_subscriptions");
     expect(sql).toContain("create table if not exists public.signature_usage_periods");
+    expect(sql).toContain("create table if not exists public.signature_envelopes");
+    expect(sql).toContain("create table if not exists public.signature_documents");
+    expect(sql).toContain("create table if not exists public.signature_recipients");
+    expect(sql).toContain("create table if not exists public.signature_evidence_events");
   });
 
   test("enables RLS and restricts mutations to the backend", () => {
@@ -25,6 +29,9 @@ describe("signature SaaS accounts migration", () => {
     expect(sql).toContain("revoke all on table public.signature_accounts from anon, authenticated");
     expect(sql).toContain("grant select, insert, update, delete on table public.signature_accounts to service_role");
     expect(sql).toContain("signature_organizations_read_member");
+    expect(sql).toContain("signature_envelopes_read_member");
+    expect(sql).toContain("signature_documents_read_member");
+    expect(sql).toContain("signature_recipients_read_member");
   });
 
   test("encodes the commercial limits", () => {
@@ -41,5 +48,6 @@ describe("signature SaaS accounts migration", () => {
     expect(sql).toContain("signature_account_audit_logs is append-only");
     expect(sql).toContain("grant execute on function public.provision_signature_account");
     expect(sql).toContain("owner_user_id uuid not null references auth.users(id) on delete cascade");
+    expect(sql).toContain("signature_evidence_events is append-only");
   });
 });

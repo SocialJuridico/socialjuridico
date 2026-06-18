@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
-import { createClient } from "@/lib/supabaseServer";
+import { createSignatureClient } from "@/lib/signatureSupabaseServer";
 
 export async function GET(request) {
   const url = new URL(request.url);
@@ -15,13 +15,18 @@ export async function GET(request) {
   }
 
   try {
-    const supabase = createClient();
+    const supabase = createSignatureClient();
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
 
     if (error) {
       console.error("[Signature confirmation] Erro:", error.message);
       target.searchParams.set("erro", "link-expirado");
       return NextResponse.redirect(target);
+    }
+
+    if (type === "magiclink") {
+      const activationTarget = new URL("/assinatura/ativar", resolvePublicAppOrigin(request));
+      return NextResponse.redirect(activationTarget);
     }
 
     await supabase.auth.signOut();
@@ -33,4 +38,3 @@ export async function GET(request) {
     return NextResponse.redirect(target);
   }
 }
-

@@ -66,6 +66,30 @@ function confirmationEmailHtml({ name, confirmationUrl }) {
   </html>`;
 }
 
+function existingAccountActivationEmailHtml({ name, confirmationUrl }) {
+  const safeName = escapeHtml(name || "usuário");
+  const safeUrl = escapeHtml(confirmationUrl);
+
+  return `<!doctype html>
+  <html lang="pt-BR">
+    <head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Ative o produto de assinatura</title></head>
+    <body style="margin:0;padding:28px;background:#0b0c0e;color:#f5f5f3;font-family:Arial,sans-serif">
+      <div style="max-width:620px;margin:0 auto;border:1px solid #3d3520;background:#111317">
+        <div style="border-top:6px solid #d4af37;padding:34px">
+          <p style="margin:0 0 24px;color:#efd874;font-size:13px;font-weight:bold;text-transform:uppercase">Social Jurídico Assinatura</p>
+          <h1 style="margin:0 0 20px;font-size:28px;line-height:1.2">Ative o produto de assinatura</h1>
+          <p style="color:#c8c8c5;font-size:16px;line-height:1.65">Olá, <strong>${safeName}</strong>.</p>
+          <p style="color:#c8c8c5;font-size:16px;line-height:1.65">Este e-mail já pertence a uma identidade do ecossistema Social Jurídico. Confirme que ele é seu para criar uma conta separada no produto de assinatura.</p>
+          <div style="margin:32px 0;text-align:center">
+            <a href="${safeUrl}" style="display:inline-block;padding:15px 26px;border-radius:6px;color:#111;background:#d4af37;text-decoration:none;font-weight:bold">Confirmar e ativar</a>
+          </div>
+          <p style="margin:0;color:#888;font-size:13px;line-height:1.55">A confirmação não concede ao produto de assinatura acesso aos seus dados da plataforma jurídica. Se você não solicitou a ativação, ignore esta mensagem.</p>
+        </div>
+      </div>
+    </body>
+  </html>`;
+}
+
 export async function sendSignatureConfirmationEmail({ admin, email, name }) {
   const origin = resolveStaticPublicAppOrigin();
   const { data, error } = await admin.auth.admin.generateLink({
@@ -93,6 +117,33 @@ export async function sendSignatureConfirmationEmail({ admin, email, name }) {
   if (emailError) throw emailError;
 }
 
+export async function sendExistingSignatureActivationEmail({ admin, email, name }) {
+  const origin = resolveStaticPublicAppOrigin();
+  const { data, error } = await admin.auth.admin.generateLink({
+    type: "magiclink",
+    email,
+    options: { redirectTo: `${origin}/assinatura/ativar` },
+  });
+
+  if (error) throw error;
+
+  const tokenHash = data?.properties?.hashed_token;
+  if (!tokenHash) throw new Error("Token de ativação não foi gerado.");
+
+  const confirmationUrl = new URL("/api/assinatura/auth/confirmar", origin);
+  confirmationUrl.searchParams.set("token_hash", tokenHash);
+  confirmationUrl.searchParams.set("type", "magiclink");
+
+  const { error: emailError } = await resend.emails.send({
+    from: RESEND_FROM,
+    to: email,
+    subject: "Ative sua conta no Social Jurídico Assinatura",
+    html: existingAccountActivationEmailHtml({ name, confirmationUrl: confirmationUrl.toString() }),
+  });
+
+  if (emailError) throw emailError;
+}
+
 export async function provisionSignatureAccount(admin, { userId, email, name, phone }) {
   const { data, error } = await admin.rpc("provision_signature_account", {
     p_user_id: userId,
@@ -104,4 +155,3 @@ export async function provisionSignatureAccount(admin, { userId, email, name, ph
   if (error) throw error;
   return data;
 }
-

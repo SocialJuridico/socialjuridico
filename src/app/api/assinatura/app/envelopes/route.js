@@ -55,7 +55,7 @@ async function listEnvelopes(access) {
   const { data, error } = await access.db
     .from("signature_envelopes")
     .select(
-      "id, title, document_type, message, status, verification_code, expires_at, sent_at, completed_at, created_at, updated_at, signature_recipients(id, name, email, role, signing_order, status, completed_at), signature_documents(id, original_name, size_bytes, sha256)",
+      "id, title, document_type, message, status, verification_code, expires_at, sent_at, completed_at, created_at, updated_at, signature_recipients(id, name, email, role, signing_order, status, completed_at), signature_documents(id, document_kind, original_name, size_bytes, sha256)",
     )
     .eq("organization_id", access.organizationId)
     .order("created_at", { ascending: false })

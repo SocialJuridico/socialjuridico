@@ -1,0 +1,277 @@
+.portal { --gold:#d4af37; --gold-soft:#efd874; min-height:100vh; padding-bottom:50px; color:#f4f4f1; background:#090b0d; }
+.topbar { display:flex; min-height:70px; align-items:center; justify-content:space-between; gap:20px; padding:0 max(22px,calc((100vw - 1280px)/2)); border-top:4px solid var(--gold); border-bottom:1px solid rgba(255,255,255,.08); background:#0d0f12; }
+.brand { display:flex; align-items:center; gap:10px; }
+.brand > span { display:grid; width:36px; height:36px; place-items:center; border-radius:6px; color:#151515; background:var(--gold); }
+.brand > div { display:flex; flex-direction:column; gap:2px; }
+.brand strong { font-size:.78rem; }
+.brand small { color:var(--gold-soft); font-size:.52rem; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+.secure { display:flex; align-items:center; gap:6px; color:#68d6a6; font-size:.62rem; }
+.heading { display:flex; width:min(100% - 44px,1280px); align-items:flex-end; justify-content:space-between; gap:28px; margin:0 auto; padding:40px 0 28px; }
+.heading > div:first-child > span { color:var(--gold-soft); font-size:.58rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.heading h1 { max-width:850px; margin-top:7px; font-size:clamp(1.8rem,4vw,3rem); line-height:1.08; }
+.heading p { margin-top:8px; color:rgba(255,255,255,.44); font-size:.7rem; }
+.headingCode { display:flex; min-width:190px; flex-direction:column; gap:5px; padding:13px 15px; border:1px solid rgba(212,175,55,.18); border-radius:6px; background:rgba(212,175,55,.035); }
+.headingCode small { color:rgba(255,255,255,.35); font-size:.52rem; }
+.headingCode strong { color:var(--gold-soft); font-family:monospace; font-size:.72rem; letter-spacing:.04em; }
+.contentGrid { display:grid; width:min(100% - 44px,1280px); grid-template-columns:minmax(0,1fr) 370px; gap:14px; margin:0 auto; }
+.documentPanel,.actionPanel { border:1px solid rgba(255,255,255,.09); border-radius:7px; background:#111417; }
+.documentPanel { min-width:0; overflow:hidden; }
+.documentPanel > header { display:flex; min-height:56px; align-items:center; justify-content:space-between; gap:15px; padding:0 16px; border-bottom:1px solid rgba(255,255,255,.08); }
+.documentPanel > header > div,.documentPanel > header > a { display:flex; align-items:center; gap:8px; }
+.documentPanel > header > div { min-width:0; color:rgba(255,255,255,.7); font-size:.65rem; }
+.documentPanel > header > div span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.documentPanel > header > a { flex-shrink:0; color:var(--gold-soft); font-size:.6rem; font-weight:750; }
+.documentPanel iframe { display:block; width:100%; height:min(72vh,790px); border:0; background:#25272a; }
+.documentPanel > footer { display:flex; align-items:center; gap:6px; min-height:45px; padding:0 15px; color:rgba(255,255,255,.3); font-size:.5rem; }
+.documentPanel code { overflow:hidden; color:rgba(255,255,255,.48); text-overflow:ellipsis; white-space:nowrap; }
+.actionPanel { align-self:start; padding:20px; }
+.identityCard { display:flex; align-items:center; gap:11px; padding-bottom:17px; border-bottom:1px solid rgba(255,255,255,.08); }
+.identityCard > span { display:grid; width:40px; height:40px; place-items:center; border-radius:50%; color:#151515; background:#d8c47f; }
+.identityCard > div { display:flex; min-width:0; flex-direction:column; gap:3px; }
+.identityCard small { color:rgba(255,255,255,.32); font-size:.5rem; }
+.identityCard strong { overflow:hidden; font-size:.7rem; text-overflow:ellipsis; white-space:nowrap; }
+.identityCard p { color:rgba(255,255,255,.4); font-size:.55rem; }
+.signingCard,.completedCard,.readOnlyCard,.unavailableCard { margin-top:20px; }
+.stepLabel { color:var(--gold-soft); font-size:.52rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.signingCard h2,.completedCard h2,.readOnlyCard h2,.unavailableCard h2 { margin-top:6px; font-size:1.15rem; }
+.signingCard > p,.completedCard p,.readOnlyCard p,.unavailableCard p { margin-top:9px; color:rgba(255,255,255,.44); font-size:.63rem; line-height:1.65; }
+.primaryButton { display:flex; width:100%; min-height:45px; align-items:center; justify-content:center; gap:8px; margin-top:18px; border:0; border-radius:5px; color:#151515; background:var(--gold); font:inherit; font-size:.65rem; font-weight:800; cursor:pointer; }
+.primaryButton:disabled { cursor:not-allowed; opacity:.48; }
+.signingCard form { margin-top:18px; }
+.signingCard form > label:first-child > span { display:block; margin-bottom:7px; color:rgba(255,255,255,.65); font-size:.58rem; font-weight:700; }
+.signingCard form > label:first-child > div { display:grid; min-height:47px; grid-template-columns:40px 1fr; align-items:center; border:1px solid rgba(255,255,255,.13); border-radius:5px; color:rgba(255,255,255,.36); background:#0b0d10; }
+.signingCard form > label:first-child svg { justify-self:end; }
+.signingCard input[type="text"],.signingCard input:not([type]) { height:45px; border:0; outline:0; padding:0 11px; color:#fff; background:transparent; font-size:1rem; letter-spacing:.2em; }
+.acceptance { display:flex; align-items:flex-start; gap:9px; margin-top:15px; color:rgba(255,255,255,.46); font-size:.56rem; line-height:1.55; }
+.acceptance input { width:16px; height:16px; flex-shrink:0; accent-color:var(--gold); }
+.resendButton { display:block; margin:11px auto 0; border:0; color:rgba(255,255,255,.45); background:transparent; font-size:.55rem; text-decoration:underline; cursor:pointer; }
+.completedCard,.readOnlyCard,.unavailableCard { padding:20px; border:1px solid rgba(81,212,154,.2); border-radius:6px; color:#64d8a3; background:rgba(81,212,154,.04); text-align:center; }
+.completedCard a { display:flex; min-height:42px; align-items:center; justify-content:center; gap:7px; margin-top:16px; border-radius:5px; color:#151515; background:var(--gold); font-size:.6rem; font-weight:800; }
+.completedCard span { display:block; margin-top:14px; color:rgba(255,255,255,.4); font-size:.55rem; line-height:1.5; }
+.readOnlyCard { border-color:rgba(212,175,55,.2); color:var(--gold-soft); background:rgba(212,175,55,.04); }
+.unavailableCard { border-color:rgba(230,105,105,.2); color:#eb8585; background:rgba(230,105,105,.04); }
+.successMessage,.errorMessage { display:flex; align-items:flex-start; gap:7px; margin-top:14px; padding:10px; border:1px solid; border-radius:5px; font-size:.56rem; line-height:1.45; }
+.successMessage { border-color:rgba(81,212,154,.24); color:#72d9aa; background:rgba(81,212,154,.04); }
+.errorMessage { border-color:rgba(230,105,105,.24); color:#eb8585; background:rgba(230,105,105,.04); }
+.details { display:flex; flex-direction:column; gap:9px; margin-top:20px; padding-top:16px; border-top:1px solid rgba(255,255,255,.08); }
+.details div { display:flex; justify-content:space-between; gap:15px; }
+.details dt,.details dd { font-size:.52rem; }
+.details dt { color:rgba(255,255,255,.3); }
+.details dd { color:rgba(255,255,255,.55); text-align:right; }
+.footer { display:flex; width:min(100% - 44px,1280px); align-items:center; justify-content:center; gap:7px; margin:22px auto 0; color:rgba(255,255,255,.3); font-size:.52rem; text-align:center; }
+.loading,.errorPage { display:grid; min-height:100vh; place-content:center; justify-items:center; gap:13px; padding:30px; color:var(--gold,#d4af37); background:#090b0d; text-align:center; }
+.loading span,.errorPage p { color:rgba(255,255,255,.45); font-size:.65rem; }
+.errorPage h1 { color:#fff; }
+.errorPage a { color:#efd874; font-size:.62rem; }
+.spin { animation:spin 800ms linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+@media (max-width:900px) { .contentGrid { grid-template-columns:1fr; } .actionPanel { width:100%; } .documentPanel iframe { height:60vh; } }
+@media (max-width:620px) { .topbar { padding-inline:16px; } .secure { display:none; } .heading { width:calc(100% - 30px); align-items:flex-start; flex-direction:column; padding-top:28px; } .headingCode { width:100%; } .contentGrid { width:calc(100% - 30px); } .documentPanel iframe { height:54vh; } .actionPanel { padding:17px; } .footer { width:calc(100% - 30px); } }
+@media (prefers-reduced-motion:reduce) { .spin { animation:none; } }
+
+/* PDF Visualizer Styles */
+.pdfContainer {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  background: #25272a;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 10px;
+}
+
+.pdfLoader {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 15, 18, 0.95);
+  color: var(--gold);
+  z-index: 10;
+  gap: 12px;
+}
+
+.pdfLoader span {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.pdfCanvasContainer {
+  position: relative;
+  max-width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pdfCanvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+/* Draggable Signature Stamp Styles (Gov.br style) */
+.draggableStamp {
+  position: absolute;
+  width: 240px;
+  height: 65px;
+  background: #ffffff;
+  border: 1.5px solid var(--gold);
+  border-radius: 4px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  cursor: grab;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  padding: 5px 8px;
+  z-index: 50;
+  transform: translate(0, 0);
+  transition: box-shadow 0.2s, transform 0.2s;
+  box-sizing: border-box;
+}
+
+.draggableStamp:active, .dragging {
+  cursor: grabbing;
+  box-shadow: 0 8px 30px rgba(212, 175, 55, 0.45);
+  transform: scale(1.02);
+  border-color: var(--gold-soft);
+}
+
+.stampLogoImg {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.stampTextContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+  line-height: 1.15;
+}
+
+.stampHeader {
+  font-size: 6px;
+  font-weight: 800;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stampSignerName {
+  font-size: 8px;
+  font-weight: 800;
+  color: #111417;
+  margin: 1px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 175px;
+}
+
+.stampDate {
+  font-size: 6.5px;
+  color: #555;
+  font-weight: normal;
+  margin: 1px 0;
+}
+
+.stampValidationInfo {
+  font-size: 6px;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.stampTooltip {
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(13, 15, 18, 0.95);
+  color: #fff;
+  font-size: 9px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.draggableStamp:hover .stampTooltip {
+  opacity: 1;
+}
+
+/* Controls and Info */
+.pdfFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pdfControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.pageBtn {
+  background: #1a1e24;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f4f4f1;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: #252a32;
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pageIndicator {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 700;
+}
+
+.stampWarning {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px dashed rgba(212, 175, 55, 0.3);
+  border-radius: 6px;
+}
+
+.stampWarning p {
+  margin: 0;
+  color: var(--gold-soft);
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+

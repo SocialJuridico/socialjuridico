@@ -1,5 +1,5 @@
-import { resend } from "@/lib/resend";
 import { resolveStaticPublicAppOrigin } from "@/lib/publicAppOrigin";
+import { getSignatureResend } from "@/lib/signatureResend";
 
 const RESEND_FROM = "Social Jurídico Assinatura <contato@socialjuridico.com.br>";
 
@@ -107,7 +107,7 @@ export async function sendSignatureConfirmationEmail({ admin, email, name }) {
   confirmationUrl.searchParams.set("token_hash", tokenHash);
   confirmationUrl.searchParams.set("type", "signup");
 
-  const { error: emailError } = await resend.emails.send({
+  const { error: emailError } = await getSignatureResend().emails.send({
     from: RESEND_FROM,
     to: email,
     subject: "Confirme sua conta no Social Jurídico Assinatura",
@@ -134,7 +134,7 @@ export async function sendExistingSignatureActivationEmail({ admin, email, name 
   confirmationUrl.searchParams.set("token_hash", tokenHash);
   confirmationUrl.searchParams.set("type", "magiclink");
 
-  const { error: emailError } = await resend.emails.send({
+  const { error: emailError } = await getSignatureResend().emails.send({
     from: RESEND_FROM,
     to: email,
     subject: "Ative sua conta no Social Jurídico Assinatura",

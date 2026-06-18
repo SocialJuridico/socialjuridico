@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   BadgeCheck,
+  BellRing,
   Check,
   CheckCircle2,
   Clock3,
@@ -16,10 +17,12 @@ import {
   Scale,
   ScanSearch,
   ShieldCheck,
+  Sparkles,
   UsersRound,
 } from "lucide-react";
 
 import { SITE_URL } from "@/lib/seo";
+import SecurityStandards from "@/components/SecurityStandards";
 import styles from "./page.module.css";
 
 const pageUrl = `${SITE_URL}/assinatura`;
@@ -93,9 +96,9 @@ const benefits = [
     text: "Organize assinaturas de clientes, parceiros e equipes no mesmo fluxo.",
   },
   {
-    icon: LockKeyhole,
-    title: "Acesso protegido",
-    text: "Convites individuais e autenticação adicional para reduzir acessos indevidos.",
+    icon: Sparkles,
+    title: "Criação assistida por IA",
+    text: "Elabore minutas jurídicas, termos e contratos inteligentes diretamente na plataforma.",
   },
 ];
 
@@ -107,6 +110,8 @@ const plans = [
     period: "/mês",
     documents: "3 documentos por mês",
     certificates: "Fluxo completo de assinatura",
+    aiGenerations: "Sem criação por IA",
+    notifications: "Sem notificações extrajudiciais",
     action: "Comece gratuitamente",
     featured: true,
   },
@@ -117,6 +122,8 @@ const plans = [
     period: "/mês",
     documents: "10 documentos por mês",
     certificates: "10 certificados de blindagem",
+    aiGenerations: "2 criações com IA por mês",
+    notifications: "2 notificações extrajudiciais",
     action: "Escolher Essencial",
   },
   {
@@ -126,6 +133,8 @@ const plans = [
     period: "/mês",
     documents: "50 documentos por mês",
     certificates: "50 certificados de blindagem",
+    aiGenerations: "5 criações com IA por mês",
+    notifications: "5 notificações extrajudiciais",
     action: "Escolher Profissional",
   },
   {
@@ -135,6 +144,8 @@ const plans = [
     period: "/mês",
     documents: "100 documentos por mês",
     certificates: "100 certificados de blindagem",
+    aiGenerations: "10 criações com IA por mês",
+    notifications: "10 notificações extrajudiciais",
     action: "Escolher Negócios",
   },
 ];
@@ -245,19 +256,18 @@ export default function AssinaturaLandingPage() {
         <section className={styles.hero} aria-labelledby="signature-hero-title">
           <div className={styles.heroInner}>
             <div className={styles.heroCopy}>
-              <div className={styles.eyebrow}>
-                <ShieldCheck size={16} aria-hidden="true" />
-                Confiança para acordos que importam
-              </div>
+              {/* <div className={styles.eyebrow}>
+                <Sparkles size={14} aria-hidden="true" />
+                Elabore minutas jurídicas com Inteligência Artificial
+              </div> */}
 
               <h1 id="signature-hero-title">
-                Assine documentos online com <span>evidências em cada etapa.</span>
+                Elabore documentos com IA e <span>assine online com segurança.</span>
               </h1>
 
               <p className={styles.heroText}>
-                Envie, acompanhe e valide assinaturas eletrônicas em um fluxo
-                simples, protegido e construído para preservar a cadeia de
-                custódia do documento.
+                Gere contratos e minutas sob medida com o auxílio de nossa inteligência artificial especializada, envie para assinatura 
+                e acompanhe cada etapa em um fluxo seguro e auditável com cadeia de custódia.
               </p>
 
               <div className={styles.heroActions}>
@@ -271,6 +281,7 @@ export default function AssinaturaLandingPage() {
               </div>
 
               <ul className={styles.trustList} aria-label="Benefícios principais">
+                <li><Sparkles size={14} aria-hidden="true" /> Criação com IA</li>
                 <li><Check size={15} aria-hidden="true" /> Sem instalação</li>
                 <li><Check size={15} aria-hidden="true" /> Fluxo pelo navegador</li>
                 <li><Check size={15} aria-hidden="true" /> Auditoria rastreável</li>
@@ -445,6 +456,8 @@ export default function AssinaturaLandingPage() {
                 <ul>
                   <li><CheckCircle2 size={17} /> {plan.documents}</li>
                   <li><ShieldCheck size={17} /> {plan.certificates}</li>
+                  <li><Sparkles size={17} style={{ color: "var(--gold-soft)" }} /> {plan.aiGenerations}</li>
+                  <li><BellRing size={17} /> {plan.notifications}</li>
                   <li><Clock3 size={17} /> Trilha de auditoria</li>
                   <li><ScanSearch size={17} /> Validação do documento</li>
                 </ul>
@@ -464,8 +477,8 @@ export default function AssinaturaLandingPage() {
               <div className={styles.extraPlanIcon}><PackageCheck size={24} /></div>
               <div>
                 <span>Uso sem limites</span>
-                <h3>Documentos + certificados ilimitados</h3>
-                <p>Para operações que precisam assinar e blindar documentos sem limite mensal.</p>
+                <h3>Plano Ilimitado</h3>
+                <p>Documentos, certificados de blindagem, notificações extrajudiciais e gerações com IA sem limites mensais.</p>
               </div>
               <div className={styles.extraPrice}><strong>R$ 300</strong><span>/mês</span></div>
               <Link href="/contato?assunto=assinatura-ilimitada" className={styles.secondaryAction}>Escolher ilimitado</Link>
@@ -492,6 +505,8 @@ export default function AssinaturaLandingPage() {
           </div>
           <Link href="/validar" className={styles.secondaryAction}>Validar um documento <ArrowRight size={18} /></Link>
         </section>
+
+        <SecurityStandards />
 
         <section id="duvidas" className={styles.faqSection} aria-labelledby="faq-title">
           <div className={styles.sectionIntro}>

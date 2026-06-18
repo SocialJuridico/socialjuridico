@@ -22,7 +22,10 @@ export default function ValidarClient() {
     const formattedCode = code.toUpperCase().trim();
 
     try {
-      const res = await fetch(`/api/crm/assinatura?code=${formattedCode}`);
+      const endpoint = formattedCode.startsWith("SJA-")
+        ? `/api/assinatura/validar?code=${encodeURIComponent(formattedCode)}`
+        : `/api/crm/assinatura?code=${encodeURIComponent(formattedCode)}`;
+      const res = await fetch(endpoint);
       const data = await res.json();
 
       if (data.success && data.data) {
@@ -93,7 +96,7 @@ export default function ValidarClient() {
               <span>Validar</span>
             </button>
           </div>
-          <p className={styles.helpText}>Digite o código único de 12 caracteres (incluindo o prefixo "SJ-") localizado no rodapé do documento assinado.</p>
+          <p className={styles.helpText}>Digite o código de validação com o prefixo <strong>SJ-</strong> ou <strong>SJA-</strong> localizado no documento assinado.</p>
         </form>
 
         {error && (
@@ -160,6 +163,25 @@ export default function ValidarClient() {
             </div>
 
             <div className={styles.signersList}>
+              {Array.isArray(meta.participants) ? meta.participants.map((participant, index) => (
+                <div className={styles.signerCard} key={`${participant.email}-${index}`}>
+                  <div className={styles.signerHeader}>
+                    <div className={styles.signerAvatar}>{participant.role === "APPROVER" ? "APR" : participant.role === "COPY" ? "CC" : "SIG"}</div>
+                    <div>
+                      <h5 className={styles.signerName}>{participant.name}</h5>
+                      <p className={styles.signerRole}>{participant.role === "APPROVER" ? "Aprovador(a)" : participant.role === "COPY" ? "Cópia para conhecimento" : "Signatário(a)"}</p>
+                    </div>
+                    <div style={{ marginLeft: 'auto' }}>
+                      {participant.signed ? <span className={styles.badgeSigned}>{participant.role === "COPY" ? "Documento visualizado" : "Assinatura Confirmada"}</span> : <span className={styles.badgePending}>Assinatura Pendente</span>}
+                    </div>
+                  </div>
+                  <div className={styles.signerMeta}>
+                    <div className={styles.metaRow}><Mail size={14} /> <span>Email: {participant.email}</span></div>
+                    {participant.signed_at && <div className={styles.metaRow}><Calendar size={14} /> <span>Concluído em: {formatDate(participant.signed_at)}</span></div>}
+                    <div className={styles.metaRow}><Info size={14} /> <span>Método: {participant.method}</span></div>
+                  </div>
+                </div>
+              )) : <>
               {/* Signatário 1: Advogado */}
               <div className={styles.signerCard}>
                 <div className={styles.signerHeader}>
@@ -221,6 +243,7 @@ export default function ValidarClient() {
                   </div>
                 )}
               </div>
+              </>}
             </div>
 
             {/* Detalhes de Criptografia e Hashes */}

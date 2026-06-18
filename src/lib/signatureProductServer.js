@@ -130,9 +130,23 @@ export function serializeSignatureEnvelope(envelope) {
     })),
     documents: documents.map((document) => ({
       id: document.id,
+      kind: document.document_kind || "ORIGINAL",
       name: document.original_name,
       size: Number(document.size_bytes || 0),
       sha256: document.sha256,
     })),
   };
+}
+
+export async function loadSignatureEnvelope(db, organizationId, envelopeId) {
+  const { data, error } = await db
+    .from("signature_envelopes")
+    .select(
+      "id, title, document_type, message, status, verification_code, expires_at, sent_at, completed_at, created_at, updated_at, signature_recipients(id, name, email, role, signing_order, status, completed_at), signature_documents(id, document_kind, original_name, size_bytes, sha256)",
+    )
+    .eq("organization_id", organizationId)
+    .eq("id", envelopeId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? serializeSignatureEnvelope(data) : null;
 }

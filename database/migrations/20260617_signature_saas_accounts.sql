@@ -416,7 +416,43 @@ for each statement execute function public.prevent_signature_account_audit_mutat
 
 drop trigger if exists trg_prevent_signature_evidence_mutation
   on public.signature_evidence_events;
+drop trigger if exists trg_prevent_signature_evidence_truncate
+  on public.signature_evidence_events;
+
 create or replace function public.prevent_signature_evidence_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if TG_OP = 'UPDATE' 
+     and old.id = new.id 
+     and old.organization_id = new.organization_id 
+     and old.actor_user_id is not distinct from new.actor_user_id
+     and old.recipient_id is not distinct from new.recipient_id
+     and old.event_type = new.event_type
+     and old.outcome = new.outcome
+     and old.ip_hash is not distinct from new.ip_hash
+     and old.user_agent is not distinct from new.user_agent
+     and old.payload = new.payload
+     and old.created_at = new.created_at
+     and old.envelope_id is not null 
+     and new.envelope_id is null then
+    return new;
+  end if;
+
+  raise exception 'signature_evidence_events is append-only';
+end;
+$$;
+
+revoke all on function public.prevent_signature_evidence_mutation() from public;
+
+create trigger trg_prevent_signature_evidence_mutation
+before update or delete on public.signature_evidence_events
+for each row execute function public.prevent_signature_evidence_mutation();
+
+create or replace function public.prevent_signature_evidence_truncate()
 returns trigger
 language plpgsql
 security definer
@@ -427,11 +463,11 @@ begin
 end;
 $$;
 
-revoke all on function public.prevent_signature_evidence_mutation() from public;
+revoke all on function public.prevent_signature_evidence_truncate() from public;
 
-create trigger trg_prevent_signature_evidence_mutation
-before update or delete or truncate on public.signature_evidence_events
-for each statement execute function public.prevent_signature_evidence_mutation();
+create trigger trg_prevent_signature_evidence_truncate
+before truncate on public.signature_evidence_events
+for each statement execute function public.prevent_signature_evidence_truncate();
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

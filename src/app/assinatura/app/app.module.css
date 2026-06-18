@@ -184,8 +184,8 @@
 .codeButton { display: inline-flex; align-items: center; gap: 5px; border: 0; color: rgba(255,255,255,.4); background: transparent; font-family: var(--font-geist-mono); font-size: .54rem; cursor: pointer; white-space: nowrap; }
 .codeButton:hover { color: var(--gold-soft); }
 .rowActions { display: flex; justify-content: flex-end; gap: 4px; }
-.rowActions button { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid transparent; border-radius: 4px; color: rgba(255,255,255,.35); background: transparent; cursor: pointer; }
-.rowActions button:hover:not(:disabled) { color: #fff; border-color: var(--line); background: rgba(255,255,255,.035); }
+.rowActions button, .rowActions a { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid transparent; border-radius: 4px; color: rgba(255,255,255,.35); background: transparent; cursor: pointer; }
+.rowActions button:hover:not(:disabled), .rowActions a:hover { color: #fff; border-color: var(--line); background: rgba(255,255,255,.035); }
 .rowActions button:disabled { cursor: default; opacity: .4; }
 
 .emptyState { display: flex; min-height: 310px; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; }
@@ -209,8 +209,8 @@
 .currentPlanIdentity > div, .currentRenewal { display: flex; flex-direction: column; gap: 4px; }
 .currentPlanIdentity small, .currentRenewal span, .currentUsage span { color: rgba(255,255,255,.4); font-size: .56rem; }
 .currentPlanIdentity strong { font-size: .9rem; }
-.currentUsage > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.currentUsage > div:first-child strong { color: var(--gold-soft); font-size: .7rem; }
+.currentUsageRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.currentUsageRow strong { color: var(--gold-soft); font-size: .7rem; }
 .currentUsage .bigUsageTrack { margin-top: 10px; }
 .currentUsage p { margin-top: 8px; color: rgba(255,255,255,.38); font-size: .56rem; }
 .currentRenewal { min-width: 120px; padding-left: 24px; border-left: 1px solid var(--line); }
@@ -358,3 +358,304 @@
 @media (prefers-reduced-motion: reduce) {
   .sidebar { transition: none; }
 }
+
+.rowActions .signButton {
+  color: var(--gold-soft);
+}
+
+.rowActions .signButton:hover:not(:disabled) {
+  color: #fff;
+  border-color: rgba(212, 175, 55, 0.4);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+/* AI Creator Styles */
+.aiBlockAlert {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  border: 1px dashed rgba(212, 175, 55, 0.25);
+  border-radius: 7px;
+  background: rgba(212, 175, 55, 0.02);
+  text-align: center;
+  margin-top: 20px;
+}
+
+.aiBlockAlert svg {
+  color: var(--gold);
+  margin-bottom: 18px;
+}
+
+.aiBlockAlert h2 {
+  font-size: 1.25rem;
+  margin-bottom: 10px;
+  color: #fff;
+}
+
+.aiBlockAlert p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  max-width: 440px;
+  margin-bottom: 24px;
+  line-height: 1.55;
+}
+
+.aiCreatorContainer {
+  margin-top: 24px;
+}
+
+.aiCreatorHeader {
+  margin-bottom: 24px;
+}
+
+.aiHeadline span {
+  color: var(--gold-soft);
+  font-size: 0.59rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aiHeadline h2 {
+  margin-top: 5px;
+  font-size: 1.25rem;
+}
+
+.aiHeadline p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  max-width: 700px;
+  line-height: 1.5;
+}
+
+.aiPromptForm {
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.aiFormGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.aiFormGrid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.aiFormGrid label > span {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.61rem;
+  font-weight: 680;
+}
+
+.aiFormGrid input, .aiFormGrid textarea, .aiFormFields input, .aiFormFields select, .aiRecipientsList input, .aiRecipientsList select, .aiMessageField textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  outline: 0;
+  color: #fff;
+  background: #0d0f12;
+  font: inherit;
+  font-size: 0.67rem;
+}
+
+.aiFormGrid input, .aiFormFields input, .aiFormFields select, .aiRecipientsList input, .aiRecipientsList select {
+  height: 42px;
+  padding: 0 11px;
+}
+
+.aiFormGrid textarea {
+  padding: 11px;
+  resize: vertical;
+}
+
+.aiFormGrid input:focus, .aiFormGrid textarea:focus, .aiFormFields input:focus, .aiFormFields select:focus, .aiRecipientsList input:focus, .aiRecipientsList select:focus, .aiMessageField textarea:focus {
+  border-color: rgba(212, 175, 55, 0.58);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+}
+
+.aiQuotaMeter {
+  margin-top: 14px;
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+
+.aiQuotaMeter strong {
+  color: var(--gold-soft);
+}
+
+.aiError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 15px;
+  padding: 11px 12px;
+  border: 1px solid rgba(225, 99, 99, 0.25);
+  border-radius: 5px;
+  color: #ed8a8a;
+  background: rgba(225, 99, 99, 0.055);
+  font-size: 0.62rem;
+}
+
+.aiEditorFlow {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 16px;
+}
+
+.editorPane, .recipientsPane {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.paneTitle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.paneTitle strong {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.paneTitle span {
+  font-size: 0.58rem;
+  color: var(--muted);
+}
+
+.aiTextareaEditor {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  outline: 0;
+  color: #fff;
+  background: #0d0f12;
+  font-family: var(--font-geist-mono, monospace);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.aiTextareaEditor:focus {
+  border-color: rgba(212, 175, 55, 0.58);
+}
+
+.editorActions {
+  margin-top: 12px;
+}
+
+.aiFormFields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.aiFormFields label, .aiRecipientsList label, .aiMessageField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.aiFormFields label > span, .aiRecipientsList label > span, .aiMessageField > span {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.61rem;
+  font-weight: 680;
+}
+
+.aiRecipientsSection {
+  margin-top: 14px;
+  margin-bottom: 16px;
+}
+
+.aiRecipientsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.aiRecipientsHeader > span {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.aiRecipientsHeader button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  color: var(--gold-soft);
+  background: transparent;
+  font-size: 0.58rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.aiRecipientsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.aiRecipientRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.8fr 32px;
+  align-items: end;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #0d0f11;
+}
+
+.aiRemoveRecipient {
+  display: grid;
+  width: 32px;
+  height: 42px;
+  place-items: center;
+  border: 0;
+  color: rgba(255, 255, 255, 0.3);
+  background: transparent;
+  cursor: pointer;
+}
+
+.aiRemoveRecipient:hover:not(:disabled) {
+  color: #e17878;
+}
+
+.aiRemoveRecipient:disabled {
+  opacity: 0.2;
+}
+
+.aiMessageField textarea {
+  padding: 8px;
+  resize: none;
+}
+
+@media (max-width: 1024px) {
+  .aiEditorFlow {
+    grid-template-columns: 1fr;
+  }
+}
+
+

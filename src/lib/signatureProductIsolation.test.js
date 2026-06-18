@@ -75,4 +75,24 @@ describe("signature product authentication boundary", () => {
     expect(dashboard).toContain("mwd2623-assinaturas-ilimitadas");
     expect(dashboard).toContain("eir2319-certificado-blindagem");
   });
+
+  test("keeps the signing flow inside the signature product boundary", () => {
+    const signingSources = [
+      "src/lib/signatureSigningServer.js",
+      "src/lib/signatureSigningEmail.js",
+      "src/app/api/assinatura/app/envelopes/[id]/send/route.js",
+      "src/app/api/assinatura/public/[token]/route.js",
+      "src/app/api/assinatura/public/[token]/otp/route.js",
+      "src/app/api/assinatura/public/[token]/assinar/route.js",
+    ].map(read).join("\n");
+    const signatureResend = read("src/lib/signatureResend.js");
+
+    for (const table of ["advogados", "clientes", "admins", "escritorios", "assinaturas_digitais"]) {
+      expect(signingSources).not.toMatch(new RegExp(`\\.from\\([\"']${table}[\"']\\)`));
+    }
+    expect(signingSources).toContain("signature_recipients");
+    expect(signingSources).toContain("signature_evidence_events");
+    expect(signatureResend).toContain("new Resend");
+    expect(signingSources).not.toContain('@/lib/resend');
+  });
 });

@@ -14,6 +14,12 @@ const routes = [
     priority: 0.9,
   },
   {
+    path: "/assinatura",
+    lastModified: "2026-06-17",
+    changeFrequency: "weekly",
+    priority: 0.9,
+  },
+  {
     path: "/sobre",
     lastModified: "2026-06-08",
     changeFrequency: "monthly",

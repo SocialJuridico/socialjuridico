@@ -83,7 +83,8 @@
 .usageTrack { margin-top: 11px; }
 .usageTrack i, .bigUsageTrack i { display: block; height: 100%; border-radius: inherit; background: var(--gold); }
 .sidebarPlan p { margin-top: 8px; color: rgba(255,255,255,.32); font-size: .55rem; }
-.sidebarPlan a { display: flex; align-items: center; gap: 5px; margin-top: 11px; color: var(--gold-soft); font-size: .59rem; font-weight: 720; }
+.openPlansButton { display: flex; align-items: center; gap: 5px; border: 0; color: var(--gold-soft); background: transparent; font: inherit; font-weight: 720; cursor: pointer; }
+.sidebarPlan .openPlansButton { margin-top: 11px; padding: 0; font-size: .59rem; }
 
 .sidebarUser { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 9px; min-height: 66px; padding: 10px 14px; border-top: 1px solid var(--line); }
 .sidebarUser > span { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: #171717; background: #d8c47f; font-size: .62rem; font-weight: 850; }
@@ -138,7 +139,7 @@
 .bigUsageTrack { height: 7px; margin-top: 18px; }
 .planOverview footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 18px; }
 .planOverview footer span { color: rgba(255,255,255,.3); font-size: .58rem; }
-.planOverview footer a { display: flex; align-items: center; gap: 5px; color: var(--gold-soft); font-size: .6rem; font-weight: 720; }
+.planOverview footer .openPlansButton { padding: 0; font-size: .6rem; }
 .quickActions header { margin-bottom: 15px; }
 .quickActions button, .quickActions a { display: grid; width: 100%; min-height: 69px; grid-template-columns: 38px 1fr auto; align-items: center; gap: 11px; padding: 0 11px; border: 0; border-top: 1px solid rgba(255,255,255,.065); color: #fff; background: transparent; text-align: left; cursor: pointer; }
 .quickActions button:disabled { cursor: not-allowed; opacity: .48; }
@@ -200,6 +201,50 @@
 .modalHeader span { color: var(--gold-soft); font-size: .56rem; font-weight: 800; text-transform: uppercase; }
 .modalHeader h2 { margin-top: 5px; font-size: 1.15rem; }
 .modalClose { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 5px; color: rgba(255,255,255,.55); background: transparent; cursor: pointer; }
+.plansModal { width: min(100%, 1080px); }
+.plansBody { padding: 24px; }
+.currentPlanSummary { display: grid; grid-template-columns: .8fr 1.4fr auto; align-items: center; gap: 28px; padding: 20px; border: 1px solid rgba(212,175,55,.22); border-radius: 7px; background: linear-gradient(115deg, rgba(212,175,55,.085), rgba(212,175,55,.02)); }
+.currentPlanIdentity { display: flex; align-items: center; gap: 12px; }
+.currentPlanIdentity > span { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 6px; color: #171717; background: var(--gold); }
+.currentPlanIdentity > div, .currentRenewal { display: flex; flex-direction: column; gap: 4px; }
+.currentPlanIdentity small, .currentRenewal span, .currentUsage span { color: rgba(255,255,255,.4); font-size: .56rem; }
+.currentPlanIdentity strong { font-size: .9rem; }
+.currentUsage > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.currentUsage > div:first-child strong { color: var(--gold-soft); font-size: .7rem; }
+.currentUsage .bigUsageTrack { margin-top: 10px; }
+.currentUsage p { margin-top: 8px; color: rgba(255,255,255,.38); font-size: .56rem; }
+.currentRenewal { min-width: 120px; padding-left: 24px; border-left: 1px solid var(--line); }
+.currentRenewal strong { font-size: .68rem; }
+.planCatalogHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-top: 28px; }
+.planCatalogHeading > div > span { color: var(--gold-soft); font-size: .56rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.planCatalogHeading h3 { margin-top: 5px; font-size: 1.05rem; }
+.planCatalogHeading > p { max-width: 390px; color: rgba(255,255,255,.35); font-size: .58rem; line-height: 1.55; text-align: right; }
+.planCards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.planCard { position: relative; display: flex; min-height: 250px; flex-direction: column; padding: 17px; border: 1px solid var(--line); border-radius: 6px; background: #0e1114; }
+.planCardFeatured { border-color: rgba(212,175,55,.34); background: linear-gradient(155deg, rgba(212,175,55,.07), #0e1114 48%); }
+.planCardCurrent { box-shadow: inset 0 3px 0 var(--gold); }
+.planCard header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.planCard header span { color: var(--gold-soft); font-size: .5rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.planCard header h4 { margin-top: 4px; font-size: .82rem; }
+.planCard header > svg { color: #58d69b; }
+.planLimit { display: flex; align-items: baseline; gap: 5px; margin-top: 20px; font-size: 1.65rem; }
+.planLimit small { color: rgba(255,255,255,.38); font-size: .53rem; font-weight: 500; }
+.planCard > p { margin-top: 8px; color: rgba(255,255,255,.4); font-size: .57rem; line-height: 1.5; }
+.planCard ul { display: flex; flex-direction: column; gap: 7px; margin: 15px 0 18px; padding: 0; list-style: none; }
+.planCard li { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,.5); font-size: .54rem; }
+.planCard li svg { flex-shrink: 0; color: var(--gold-soft); }
+.planCard > button, .planCard > a { display: flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; margin-top: auto; border: 1px solid rgba(212,175,55,.25); border-radius: 5px; color: var(--gold-soft); background: rgba(212,175,55,.045); font: inherit; font-size: .59rem; font-weight: 750; }
+.planCard > a { cursor: pointer; transition: border-color 160ms ease, background-color 160ms ease; }
+.planCard > a:hover { border-color: rgba(212,175,55,.55); background: rgba(212,175,55,.1); }
+.planCard > button:disabled { border-color: var(--line); color: rgba(255,255,255,.3); background: rgba(255,255,255,.025); cursor: not-allowed; }
+.addOnCard { display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 14px; margin-top: 12px; padding: 16px 18px; border: 1px solid rgba(81,212,154,.2); border-radius: 6px; background: rgba(81,212,154,.035); }
+.addOnCard > span { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 6px; color: #72d9aa; background: rgba(81,212,154,.1); }
+.addOnCard > div { min-width: 0; }
+.addOnCard small { color: #72d9aa; font-size: .5rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.addOnCard h3 { margin-top: 3px; font-size: .76rem; }
+.addOnCard p { margin-top: 4px; color: rgba(255,255,255,.38); font-size: .55rem; }
+.addOnCard > a { display: flex; min-height: 38px; align-items: center; justify-content: center; gap: 7px; padding: 0 13px; border: 1px solid rgba(81,212,154,.28); border-radius: 5px; color: #8ce1b9; font-size: .57rem; font-weight: 750; }
+.addOnCard > a:hover { border-color: rgba(81,212,154,.52); background: rgba(81,212,154,.07); }
 .stepper { display: grid; grid-template-columns: 1fr 70px 1fr; align-items: center; max-width: 560px; margin: 24px auto 0; padding: 0 20px; }
 .stepper > div { display: flex; align-items: center; gap: 9px; color: rgba(255,255,255,.3); }
 .stepper > div > span { display: grid; width: 28px; height: 28px; flex-shrink: 0; place-items: center; border: 1px solid var(--line); border-radius: 50%; font-size: .6rem; }
@@ -267,6 +312,9 @@
   .panelHeader { align-items: flex-start; flex-direction: column; }
   .filters { width: 100%; }
   .filters label { min-width: 0; flex: 1; }
+  .currentPlanSummary { grid-template-columns: 1fr 1.4fr; }
+  .currentRenewal { grid-column: 1 / -1; padding: 14px 0 0; border-top: 1px solid var(--line); border-left: 0; }
+  .planCards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 620px) {
@@ -291,6 +339,14 @@
   .recipientIntro { align-items: flex-start; }
   .recipientIntro > div { max-width: 60%; }
   .toast { right: 16px; bottom: 16px; left: 16px; justify-content: center; }
+  .plansBody { padding: 17px; }
+  .currentPlanSummary { grid-template-columns: 1fr; gap: 18px; }
+  .currentRenewal { grid-column: auto; }
+  .planCatalogHeading { align-items: flex-start; flex-direction: column; gap: 9px; }
+  .planCatalogHeading > p { text-align: left; }
+  .planCards { grid-template-columns: 1fr; }
+  .addOnCard { grid-template-columns: 42px 1fr; }
+  .addOnCard > a { grid-column: 1 / -1; width: 100%; }
 }
 
 @media (max-width: 430px) {

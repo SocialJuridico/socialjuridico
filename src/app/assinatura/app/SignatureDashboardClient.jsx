@@ -13,6 +13,8 @@ import {
   ChevronDown,
   Clock3,
   Copy,
+  CreditCard,
+  Crown,
   FileCheck2,
   FileClock,
   FilePlus2,
@@ -46,6 +48,16 @@ const PLAN_LABELS = {
   BUSINESS: "Negócios",
   UNLIMITED: "Ilimitado",
 };
+
+const PLAN_OPTIONS = [
+  { code: "FREE", name: "Gratuito", limit: 3, description: "Para começar e conhecer o produto.", featured: false },
+  { code: "ESSENTIAL", name: "Essencial", limit: 10, description: "Para rotinas com poucos documentos.", featured: false, checkoutUrl: "https://loja.infinitepay.io/carlos-henrique-1o7/ndi7446-essencial-assinaturas" },
+  { code: "PROFESSIONAL", name: "Profissional", limit: 50, description: "Mais volume para equipes em crescimento.", featured: true, checkoutUrl: "https://loja.infinitepay.io/carlos-henrique-1o7/ebw4403-profissional-assinaturas" },
+  { code: "BUSINESS", name: "Negócios", limit: 100, description: "Operações com demanda recorrente.", featured: false, checkoutUrl: "https://loja.infinitepay.io/carlos-henrique-1o7/tnh4256-negocios" },
+  { code: "UNLIMITED", name: "Ilimitado", limit: null, description: "Para operações de alto volume.", featured: false, checkoutUrl: "https://loja.infinitepay.io/carlos-henrique-1o7/mwd2623-assinaturas-ilimitadas" },
+];
+
+const BLINDAGEM_CHECKOUT_URL = "https://loja.infinitepay.io/carlos-henrique-1o7/eir2319-certificado-blindagem";
 
 const STATUS = {
   DRAFT: { label: "Rascunho", icon: FileClock, className: "statusDraft" },
@@ -96,6 +108,96 @@ function StatusBadge({ status }) {
     <span className={`${styles.status} ${styles[config.className]}`}>
       <Icon size={13} /> {config.label}
     </span>
+  );
+}
+
+function PlansModal({ open, onClose, subscription, usage }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const documentsLimit = subscription.documents_limit;
+  const documentsUsed = Number(usage.documents_used || 0);
+  const remaining = documentsLimit === null ? null : Math.max(0, documentsLimit - documentsUsed);
+  const usagePercent = documentsLimit ? Math.min(100, (documentsUsed / documentsLimit) * 100) : 0;
+
+  return (
+    <div className={styles.modalBackdrop} onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className={`${styles.modal} ${styles.plansModal}`} role="dialog" aria-modal="true" aria-labelledby="plans-modal-title">
+        <header className={styles.modalHeader}>
+          <div>
+            <span>Planos e limites</span>
+            <h2 id="plans-modal-title">Escolha o espaço ideal para seus documentos</h2>
+          </div>
+          <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Fechar"><X size={20} /></button>
+        </header>
+
+        <div className={styles.plansBody}>
+          <section className={styles.currentPlanSummary} aria-label="Resumo do plano atual">
+            <div className={styles.currentPlanIdentity}>
+              <span><Crown size={20} /></span>
+              <div><small>Seu plano atual</small><strong>{PLAN_LABELS[subscription.plan_code] || "Gratuito"}</strong></div>
+            </div>
+            <div className={styles.currentUsage}>
+              <div><span>Documentos utilizados</span><strong>{documentsLimit === null ? `${documentsUsed} de ∞` : `${documentsUsed} de ${documentsLimit}`}</strong></div>
+              <div className={styles.bigUsageTrack}><i style={{ width: `${usagePercent}%` }} /></div>
+              <p>{remaining === null ? "Uso mensal sem limite de documentos." : `${remaining} documento${remaining === 1 ? "" : "s"} disponível${remaining === 1 ? "" : "is"} neste ciclo.`}</p>
+            </div>
+            <div className={styles.currentRenewal}><span>Próxima renovação</span><strong>{formatDate(subscription.current_period_end)}</strong></div>
+          </section>
+
+          <div className={styles.planCatalogHeading}>
+            <div><span>Opções disponíveis</span><h3>Aumente seu limite mensal</h3></div>
+            <p>A compra é concluída com segurança no checkout oficial da InfinitePay.</p>
+          </div>
+
+          <section className={styles.planCards} aria-label="Planos disponíveis">
+            {PLAN_OPTIONS.map((plan) => {
+              const isCurrent = subscription.plan_code === plan.code;
+              return (
+                <article key={plan.code} className={`${styles.planCard} ${plan.featured ? styles.planCardFeatured : ""} ${isCurrent ? styles.planCardCurrent : ""}`}>
+                  <header>
+                    <div><span>{plan.featured ? "Mais escolhido" : isCurrent ? "Plano atual" : "Plano"}</span><h4>{plan.name}</h4></div>
+                    {isCurrent && <CheckCircle2 size={19} />}
+                  </header>
+                  <strong className={styles.planLimit}>{plan.limit === null ? "Ilimitado" : plan.limit}<small>{plan.limit === null ? " documentos por mês" : ` documento${plan.limit === 1 ? "" : "s"} por mês`}</small></strong>
+                  <p>{plan.description}</p>
+                  <ul>
+                    <li><Check size={14} /> Documentos e signatários organizados</li>
+                    <li><Check size={14} /> Evidências e validação incluídas</li>
+                  </ul>
+                  {isCurrent ? (
+                    <button type="button" disabled>Plano atual</button>
+                  ) : plan.checkoutUrl ? (
+                    <a href={plan.checkoutUrl} target="_blank" rel="noopener noreferrer"><CreditCard size={15} /> Comprar plano</a>
+                  ) : (
+                    <button type="button" disabled>Plano gratuito</button>
+                  )}
+                </article>
+              );
+            })}
+          </section>
+
+          <section className={styles.addOnCard} aria-label="Adicional de certificado de blindagem">
+            <span><ShieldCheck size={22} /></span>
+            <div><small>Adicional avulso</small><h3>Certificado de Blindagem</h3><p>Adicione uma camada complementar de proteção e certificação ao documento.</p></div>
+            <a href={BLINDAGEM_CHECKOUT_URL} target="_blank" rel="noopener noreferrer">Comprar certificado <ArrowRight size={15} /></a>
+          </section>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -309,6 +411,7 @@ export default function SignatureDashboardClient({
   const [activeView, setActiveView] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [plansModalOpen, setPlansModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [deletingId, setDeletingId] = useState(null);
@@ -377,7 +480,7 @@ export default function SignatureDashboardClient({
           {navItems.map(({ id, label, icon: Icon, count }) => <button key={id} type="button" className={activeView === id ? styles.navActive : ""} onClick={() => { setActiveView(id); setSidebarOpen(false); }}><Icon size={18} /><span>{label}</span>{typeof count === "number" && <small>{count}</small>}</button>)}
           <Link href="/validar"><QrCode size={18} /><span>Validar documento</span></Link>
           <span className={styles.navLabel}>Conta</span>
-          <Link href="/assinatura#planos"><Gauge size={18} /><span>Planos e limites</span></Link>
+          <button type="button" onClick={() => { setPlansModalOpen(true); setSidebarOpen(false); }}><Gauge size={18} /><span>Planos e limites</span></button>
           <button type="button" disabled><UsersRound size={18} /><span>Equipe</span><em>Em breve</em></button>
           <button type="button" disabled><Settings size={18} /><span>Configurações</span></button>
         </nav>
@@ -386,7 +489,7 @@ export default function SignatureDashboardClient({
           <div><span>Plano {PLAN_LABELS[subscription.plan_code] || "Gratuito"}</span><strong>{documentsLimit === null ? "Ilimitado" : `${documentsUsed} de ${documentsLimit}`}</strong></div>
           <div className={styles.usageTrack}><i style={{ width: `${usagePercent}%` }} /></div>
           <p>{documentsLimit === null ? "Documentos sem limite mensal" : `${Math.max(0, documentsLimit - documentsUsed)} documentos disponíveis`}</p>
-          <Link href="/assinatura#planos">Ver planos <ArrowRight size={14} /></Link>
+          <button type="button" className={styles.openPlansButton} onClick={() => setPlansModalOpen(true)}>Ver planos <ArrowRight size={14} /></button>
         </div>
 
         <div className={styles.sidebarUser}>
@@ -427,7 +530,7 @@ export default function SignatureDashboardClient({
                   <header><div><span>Uso mensal</span><h2>Plano {PLAN_LABELS[subscription.plan_code] || "Gratuito"}</h2></div><Gauge size={22} /></header>
                   <div className={styles.planNumbers}><strong>{documentsUsed}</strong><span>de {documentsLimit ?? "∞"} documentos</span></div>
                   <div className={styles.bigUsageTrack}><i style={{ width: `${usagePercent}%` }} /></div>
-                  <footer><span>Renova em {formatDate(subscription.current_period_end)}</span><Link href="/assinatura#planos">Aumentar limite <ArrowRight size={14} /></Link></footer>
+                  <footer><span>Renova em {formatDate(subscription.current_period_end)}</span><button type="button" className={styles.openPlansButton} onClick={() => setPlansModalOpen(true)}>Aumentar limite <ArrowRight size={14} /></button></footer>
                 </div>
                 <div className={styles.quickActions}>
                   <header><span>Acesso rápido</span><h2>Continue seu trabalho</h2></header>
@@ -459,6 +562,7 @@ export default function SignatureDashboardClient({
       </div>
 
       {notice && <div className={styles.toast} role="status"><CheckCircle2 size={17} /> {notice}</div>}
+      <PlansModal open={plansModalOpen} onClose={() => setPlansModalOpen(false)} subscription={subscription} usage={usage} />
       <DraftModal open={modalOpen} onClose={() => setModalOpen(false)} onCreated={(item) => { setEnvelopes((current) => [item, ...current]); setActiveView("documents"); setNotice("Rascunho salvo com segurança."); window.setTimeout(() => setNotice(""), 2200); }} />
     </div>
   );

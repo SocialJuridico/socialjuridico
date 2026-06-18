@@ -61,4 +61,18 @@ describe("signature product authentication boundary", () => {
     expect(logoutButton).toContain('/api/assinatura/auth/logout');
     expect(logoutButton).not.toContain('/api/auth/logout');
   });
+
+  test("opens the internal plan modal from every dashboard plan action", () => {
+    const dashboard = read("src/app/assinatura/app/SignatureDashboardClient.jsx");
+
+    expect(dashboard).toContain("function PlansModal");
+    expect(dashboard).toContain("setPlansModalOpen(true)");
+    expect(dashboard).toContain("PLAN_OPTIONS.map");
+    expect(dashboard).not.toContain('href="/assinatura#planos"');
+    expect(dashboard).toContain("ndi7446-essencial-assinaturas");
+    expect(dashboard).toContain("ebw4403-profissional-assinaturas");
+    expect(dashboard).toContain("tnh4256-negocios");
+    expect(dashboard).toContain("mwd2623-assinaturas-ilimitadas");
+    expect(dashboard).toContain("eir2319-certificado-blindagem");
+  });
 });

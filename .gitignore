@@ -13,6 +13,14 @@
 /scripts
 /mobile
 /database
+!/database/
+/database/*
+!/database/migrations/
+/database/migrations/*
+!/database/migrations/20260617_signature_saas_accounts.sql
+!/database/migrations/__tests__/
+/database/migrations/__tests__/*
+!/database/migrations/__tests__/signatureSaasAccountsMigration.test.js
 /Legado
 /scratch
 

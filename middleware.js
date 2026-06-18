@@ -2,8 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
-const PROTECTED_ROUTES = ["/dashboard", "/chat", "/admin"];
-const AUTH_ROUTES = ["/login", "/cadastro"];
+const PROTECTED_ROUTES = ["/dashboard", "/chat", "/admin", "/assinatura/app"];
+const AUTH_ROUTES = ["/login", "/cadastro", "/assinatura/entrar"];
 const LAWYER_ROOT = "/dashboard/advogado";
 const LAWYER_HOME = "/dashboard/advogado/oportunidade";
 
@@ -75,7 +75,9 @@ export async function middleware(request) {
   if (isProtected && !isAuthenticated) {
     const url = request.nextUrl.clone();
     const redirectTarget = `${pathname}${request.nextUrl.search}`;
-    url.pathname = "/login";
+    url.pathname = pathname.startsWith("/assinatura/app")
+      ? "/assinatura/entrar"
+      : "/login";
     url.search = "";
     url.searchParams.set("redirectTo", redirectTarget);
     return NextResponse.redirect(url);
@@ -84,7 +86,7 @@ export async function middleware(request) {
   if (isProtected && isAuthenticated) {
     const role = user.user_metadata?.role || "CLIENT";
 
-    if (role === "LAWYER") {
+    if (role === "LAWYER" && !pathname.startsWith("/assinatura/app")) {
       const db = supabaseAdmin || supabase;
       const { data: profile } = await db
         .from("advogados")
@@ -146,7 +148,11 @@ export async function middleware(request) {
     const url = request.nextUrl.clone();
     url.search = "";
 
-    if (role === "ADMIN") url.pathname = "/dashboard/admin";
+    if (pathname.startsWith("/assinatura/entrar")) {
+      url.pathname = "/assinatura/app";
+    } else if (role === "SIGNATURE_CUSTOMER") {
+      url.pathname = "/assinatura/app";
+    } else if (role === "ADMIN") url.pathname = "/dashboard/admin";
     else if (role === "LAWYER") url.pathname = LAWYER_HOME;
     else url.pathname = "/dashboard/cliente";
 
@@ -163,6 +169,8 @@ export const config = {
     "/dashboard/:path*",
     "/chat/:path*",
     "/admin/:path*",
+    "/assinatura/app/:path*",
+    "/assinatura/entrar",
     "/login",
     "/cadastro",
   ],

@@ -212,6 +212,20 @@ export async function POST(request) {
 
     const user = authData.user;
 
+    if (user.user_metadata?.role === "SIGNATURE_CUSTOMER") {
+      await supabase.auth.signOut();
+      return NextResponse.json(
+        {
+          success: false,
+          code: "USE_SIGNATURE_LOGIN",
+          message:
+            "Esta conta pertence ao Social Jurídico Assinatura. Utilize a página de acesso do produto.",
+          redirectTo: "/assinatura/entrar",
+        },
+        { status: 403 },
+      );
+    }
+
     // BLOQUEIO ADICIONAL: Mesmo que o Supabase permita o login, nós verificamos se o email foi confirmado
     if (!user.email_confirmed_at) {
       await supabase.auth.signOut();

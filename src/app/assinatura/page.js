@@ -229,10 +229,15 @@ export default function AssinaturaLandingPage() {
             <Link href="#duvidas">Dúvidas</Link>
           </nav>
 
-          <Link href="/contato?assunto=assinatura" className={styles.headerAction}>
-            Comece gratuitamente
-            <ArrowRight size={17} aria-hidden="true" />
-          </Link>
+          <div className={styles.headerActions}>
+            <Link href="/assinatura/entrar" className={styles.loginAction}>
+              Entrar
+            </Link>
+            <Link href="/assinatura/cadastro" className={styles.headerAction}>
+              Comece gratuitamente
+              <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -256,7 +261,7 @@ export default function AssinaturaLandingPage() {
               </p>
 
               <div className={styles.heroActions}>
-                <Link href="/contato?assunto=assinatura" className={styles.primaryAction}>
+                <Link href="/assinatura/cadastro" className={styles.primaryAction}>
                   Comece gratuitamente
                   <ArrowRight size={19} aria-hidden="true" />
                 </Link>
@@ -444,7 +449,7 @@ export default function AssinaturaLandingPage() {
                   <li><ScanSearch size={17} /> Validação do documento</li>
                 </ul>
                 <Link
-                  href={`/contato?assunto=assinatura-${plan.name.toLowerCase()}`}
+                  href={plan.featured ? "/assinatura/cadastro" : `/contato?assunto=assinatura-${plan.name.toLowerCase()}`}
                   className={plan.featured ? styles.primaryAction : styles.planAction}
                 >
                   {plan.action}
@@ -509,7 +514,7 @@ export default function AssinaturaLandingPage() {
             <h2 id="final-cta-title">Documentos importantes merecem um processo à altura.</h2>
             <p>Crie sua conta e assine até 3 documentos por mês gratuitamente.</p>
           </div>
-          <Link href="/contato?assunto=assinatura" className={styles.primaryAction}>
+          <Link href="/assinatura/cadastro" className={styles.primaryAction}>
             Comece gratuitamente <ArrowRight size={19} />
           </Link>
         </section>

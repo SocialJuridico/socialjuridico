@@ -1,0 +1,1022 @@
+--- a/src/app/dashboard/advogado/processos/Processos.module.css	2026-06-19 12:47:23.873127230 +0000
++++ b/src/app/dashboard/advogado/processos/Processos.module.css	2026-06-19 12:47:23.882807001 +0000
+@@ -1,483 +1,752 @@
+ .page {
+-  display: flex;
+-  flex-direction: column;
+-  gap: 24px;
+-}
+-
+-.hero,
+-.panel,
+-.card {
+-  border: 1px solid rgba(148, 163, 184, 0.22);
+-  border-radius: 28px;
+-  background: rgba(255, 255, 255, 0.96);
+-  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.08);
++  display: grid;
++  gap: 20px;
++  width: 100%;
++  max-width: 1500px;
++  margin: 0 auto;
++  color: #f8fafc;
+ }
+ 
+ .hero {
++  position: relative;
++  overflow: hidden;
+   display: grid;
+-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+-  gap: 22px;
+-  padding: 28px;
+-  align-items: center;
++  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.58fr);
++  align-items: end;
++  gap: 30px;
++  padding: clamp(24px, 4vw, 42px);
++  border: 1px solid rgba(212, 175, 55, 0.2);
++  border-radius: 24px;
++  background:
++    radial-gradient(circle at 86% 18%, rgba(212, 175, 55, 0.18), transparent 34%),
++    linear-gradient(145deg, rgba(24, 24, 27, 0.98), rgba(8, 8, 10, 0.98));
++  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.26);
++}
++
++.hero::after {
++  content: "";
++  position: absolute;
++  right: -80px;
++  bottom: -110px;
++  width: 300px;
++  height: 300px;
++  border: 1px solid rgba(212, 175, 55, 0.12);
++  border-radius: 50%;
++  box-shadow:
++    0 0 0 40px rgba(212, 175, 55, 0.025),
++    0 0 0 82px rgba(212, 175, 55, 0.015);
++  pointer-events: none;
++}
++
++.hero > div,
++.searchBox {
++  position: relative;
++  z-index: 1;
+ }
+ 
+ .eyebrow,
+-.modalHeader span,
+-.panelHeader span {
++.modalHeader > div > span,
++.panelHeader > div:first-child > span,
++.card > header span,
++.partyForm h4 {
+   display: inline-flex;
+   align-items: center;
+   gap: 8px;
+-  color: #8a1f2d;
+-  font-size: 0.78rem;
++  color: #d8b86a;
++  font-size: 0.76rem;
+   font-weight: 800;
+   letter-spacing: 0.08em;
+   text-transform: uppercase;
+ }
+ 
++.eyebrow {
++  margin-bottom: 14px;
++}
++
+ .hero h1 {
+-  margin: 14px 0 12px;
+-  font-size: clamp(2rem, 4vw, 3.35rem);
+-  line-height: 1;
+-  color: #101827;
++  max-width: 760px;
++  margin: 0;
++  font-size: clamp(1.8rem, 4vw, 3.1rem);
++  line-height: 1.05;
++  letter-spacing: -0.045em;
+ }
+ 
+ .hero h1 span {
+-  color: #8a1f2d;
++  color: #d6b45b;
+ }
+ 
+-.hero p,
+-.panelHeader p {
+-  margin: 0;
+-  color: #64748b;
++.hero p {
++  max-width: 760px;
++  margin: 16px 0 0;
++  color: #a1a1aa;
++  font-size: clamp(0.93rem, 1.6vw, 1.05rem);
+   line-height: 1.7;
+ }
+ 
+ .searchBox {
+-  padding: 20px;
+-  border-radius: 24px;
+-  background: linear-gradient(135deg, #111827, #4c0f1a);
+-  color: #fff;
+-  display: flex;
+-  flex-direction: column;
+-  gap: 14px;
++  display: grid;
++  gap: 12px;
++  padding: 17px;
++  border: 1px solid rgba(255, 255, 255, 0.08);
++  border-radius: 18px;
++  background: linear-gradient(145deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018));
++  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+ }
+ 
+ .searchBox label,
+ .fullLabel,
+ .formGrid label {
+-  display: flex;
+-  flex-direction: column;
+-  gap: 8px;
+-  font-weight: 700;
++  display: grid;
++  gap: 7px;
++  min-width: 0;
++}
++
++.searchBox label > span,
++.fullLabel > span,
++.formGrid label > span {
++  color: #c9c9cf;
++  font-size: 0.74rem;
++  font-weight: 750;
+ }
+ 
+ .searchBox input,
+-.fullLabel select,
+-.formGrid input,
+ .formGrid select,
+ .formGrid textarea {
+   width: 100%;
+-  border: 1px solid rgba(148, 163, 184, 0.35);
+-  border-radius: 16px;
+-  padding: 13px 14px;
++  border: 1px solid rgba(255, 255, 255, 0.1);
++  outline: 0;
++  background: #141419;
++  color: #f4f4f5;
+   font: inherit;
+-  background: #fff;
+-  color: #111827;
+-  outline: none;
++}
++
++.searchBox input,
++.fullLabel select,
++.formGrid input,
++.formGrid select {
++  min-height: 42px;
++  padding: 0 12px;
++  border-radius: 10px;
++  font-size: 0.82rem;
++}
++
++.formGrid textarea {
++  min-height: 105px;
++  padding: 12px;
++  resize: vertical;
++  border-radius: 10px;
++  font-size: 0.82rem;
++}
++
++.searchBox input::placeholder,
++.formGrid input::placeholder,
++.formGrid textarea::placeholder {
++  color: #71717a;
++}
++
++.searchBox input:focus,
++.fullLabel select:focus,
++.formGrid input:focus,
++.formGrid select:focus,
++.formGrid textarea:focus {
++  border-color: rgba(212, 175, 55, 0.58);
++  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.08);
+ }
+ 
+ .searchBox button,
+-.panelHeader button,
+-.processCard button,
++.processCard footer button,
+ .modalFooter button,
+-.pagination button {
+-  border: 0;
+-  border-radius: 16px;
+-  padding: 12px 16px;
+-  font-weight: 800;
++.panelHeader button,
++.pagination button,
++.state button {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+-  gap: 8px;
++  gap: 7px;
++  border-radius: 10px;
++  font-weight: 800;
+   cursor: pointer;
+ }
+ 
+ .searchBox button,
+-.modalFooter button:last-child,
+-.processCard button {
+-  color: #fff;
+-  background: linear-gradient(135deg, #8a1f2d, #b91c1c);
++.modalFooter button:last-child {
++  min-height: 43px;
++  padding: 0 15px;
++  border: 0;
++  background: linear-gradient(135deg, #e1c067, #b98b35);
++  color: #17130a;
++  box-shadow: 0 10px 28px rgba(185, 139, 53, 0.18);
++}
++
++.searchBox button:disabled,
++.modalFooter button:disabled,
++.processCard footer button:disabled,
++.panelHeader button:disabled,
++.pagination button:disabled {
++  cursor: not-allowed;
++  opacity: 0.55;
+ }
+ 
+ .panel {
+-  padding: 24px;
++  overflow: hidden;
++  border: 1px solid rgba(255, 255, 255, 0.07);
++  border-radius: 20px;
++  background: rgba(12, 12, 15, 0.92);
+ }
+ 
+ .panelHeader {
+   display: flex;
+-  justify-content: space-between;
+   align-items: center;
+-  gap: 16px;
+-  margin-bottom: 20px;
++  justify-content: space-between;
++  gap: 20px;
++  padding: 20px 22px;
++  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
++}
++
++.panelHeader h2,
++.modalHeader h2,
++.card h3 {
++  margin: 5px 0 0;
+ }
+ 
+ .panelHeader h2 {
+-  margin: 4px 0 0;
+-  color: #101827;
++  color: #f8fafc;
++  font-size: 1.18rem;
+ }
+ 
+ .panelHeader button {
+-  background: #f8fafc;
+-  color: #334155;
+-  border: 1px solid rgba(148, 163, 184, 0.3);
++  min-height: 40px;
++  padding: 0 12px;
++  border: 1px solid rgba(255, 255, 255, 0.1);
++  background: rgba(255, 255, 255, 0.035);
++  color: #d4d4d8;
+ }
+ 
+ .processGrid {
+   display: grid;
+-  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+-  gap: 16px;
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++  gap: 14px;
++  padding: 18px;
+ }
+ 
+ .processCard {
+-  border: 1px solid rgba(148, 163, 184, 0.24);
+-  border-radius: 22px;
+-  padding: 18px;
+-  background: #fff;
+-  display: flex;
+-  flex-direction: column;
+-  gap: 16px;
++  display: grid;
++  gap: 15px;
++  min-width: 0;
++  padding: 17px;
++  border: 1px solid rgba(255, 255, 255, 0.07);
++  border-radius: 15px;
++  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.012));
++  transition: border-color 0.2s ease, transform 0.2s ease;
+ }
+ 
+-.processCard header {
+-  display: flex;
+-  gap: 12px;
+-  align-items: center;
++.processCard:hover {
++  transform: translateY(-2px);
++  border-color: rgba(212, 175, 55, 0.23);
++}
++
++.processCard > header {
++  display: grid;
++  grid-template-columns: 42px minmax(0, 1fr);
++  align-items: start;
++  gap: 10px;
+ }
+ 
+ .processCard header > span {
+   display: grid;
++  width: 42px;
++  height: 42px;
+   place-items: center;
+-  width: 44px;
+-  height: 44px;
+-  border-radius: 16px;
+-  background: #fff1f2;
+-  color: #8a1f2d;
++  border-radius: 12px;
++  background: linear-gradient(135deg, #d9b85e, #9d7125);
++  color: #17130a;
+ }
+ 
+ .processCard h3 {
++  overflow: hidden;
+   margin: 0;
+-  color: #111827;
++  color: #f4f4f5;
++  font-size: 0.94rem;
++  line-height: 1.35;
++  text-overflow: ellipsis;
++  white-space: nowrap;
+ }
+ 
+-.processCard p,
+-.processCard small,
+-.processCard dd {
+-  color: #64748b;
++.processCard header p {
++  overflow: hidden;
++  margin: 4px 0 0;
++  color: #81818b;
++  font-size: 0.7rem;
++  text-overflow: ellipsis;
++  white-space: nowrap;
+ }
+ 
+ .processCard dl,
+ .metaGrid {
+   display: grid;
+-  gap: 10px;
++  gap: 1px;
++  overflow: hidden;
+   margin: 0;
++  border: 1px solid rgba(255, 255, 255, 0.055);
++  border-radius: 10px;
++  background: rgba(255, 255, 255, 0.055);
+ }
+ 
+-.processCard dl div,
+-.metaGrid div {
+-  display: flex;
+-  justify-content: space-between;
+-  gap: 12px;
+-  border-bottom: 1px solid rgba(226, 232, 240, 0.75);
+-  padding-bottom: 8px;
++.processCard dl > div,
++.metaGrid > div {
++  min-width: 0;
++  padding: 11px;
++  background: #101014;
+ }
+ 
+ .processCard dt,
+ .metaGrid dt {
+-  color: #64748b;
+-  font-size: 0.82rem;
+-  font-weight: 700;
++  color: #71717a;
++  font-size: 0.62rem;
++  font-weight: 800;
++  text-transform: uppercase;
+ }
+ 
+ .processCard dd,
+ .metaGrid dd {
+-  margin: 0;
+-  text-align: right;
+-  color: #111827;
+-  font-weight: 800;
++  overflow-wrap: anywhere;
++  margin: 5px 0 0;
++  color: #d4d4d8;
++  font-size: 0.75rem;
++  line-height: 1.45;
+ }
+ 
+-.processCard footer {
++.processCard > footer {
+   display: flex;
++  align-items: flex-end;
+   justify-content: space-between;
+-  align-items: center;
+   gap: 12px;
++  padding-top: 3px;
++}
++
++.processCard footer small {
++  color: #71717a;
++  font-size: 0.65rem;
++  font-weight: 750;
++}
++
++.processCard footer button,
++.state button {
++  min-height: 34px;
++  padding: 0 10px;
++  border: 1px solid rgba(212, 175, 55, 0.22);
++  background: rgba(212, 175, 55, 0.08);
++  color: #ddc06f;
++  font-size: 0.68rem;
++}
++
++.pagination {
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  gap: 10px;
++  padding: 14px 20px;
++  border-top: 1px solid rgba(255, 255, 255, 0.06);
++  color: #8e8e98;
++  font-size: 0.75rem;
++}
++
++.pagination button {
++  width: 32px;
++  height: 32px;
++  border: 1px solid rgba(255, 255, 255, 0.09);
++  background: rgba(255, 255, 255, 0.03);
++  color: #fff;
++}
++
++.pagination strong {
++  color: #d4d4d8;
++  font-size: 0.74rem;
+ }
+ 
+ .state {
+-  min-height: 220px;
+   display: grid;
++  min-height: 300px;
+   place-items: center;
+   align-content: center;
+-  gap: 10px;
+-  color: #64748b;
++  gap: 9px;
++  padding: 36px;
++  color: #8d8d97;
+   text-align: center;
+ }
+ 
+-.errorState {
+-  color: #b91c1c;
++.state > svg {
++  color: #c5a65a;
+ }
+ 
+-.spin {
+-  animation: spin 0.8s linear infinite;
++.state strong {
++  color: #f4f4f5;
+ }
+ 
++.state span {
++  max-width: 480px;
++  font-size: 0.82rem;
++  line-height: 1.6;
++}
++
++.errorState > svg,
++.errorState strong {
++  color: #fb7185;
++}
++
++.spin {
++
+ .backdrop {
+   position: fixed;
++  z-index: 1600;
+   inset: 0;
+-  z-index: 80;
+-  background: rgba(15, 23, 42, 0.72);
+-  backdrop-filter: blur(7px);
+   display: grid;
++  overflow-y: auto;
+   place-items: center;
+-  padding: 18px;
++  padding: 24px;
++  background: rgba(0, 0, 0, 0.78);
++  backdrop-filter: blur(10px);
+ }
+ 
+ .previewModal,
+ .folderModal {
+-  width: min(1120px, 96vw);
+-  max-height: 92vh;
++  display: grid;
++  grid-template-rows: auto minmax(0, 1fr) auto;
++  width: min(1180px, 100%);
++  max-height: calc(100vh - 48px);
+   overflow: hidden;
+-  border-radius: 28px;
+-  background: #f8fafc;
+-  display: flex;
+-  flex-direction: column;
+-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28);
++  border: 1px solid rgba(212, 175, 55, 0.2);
++  border-radius: 22px;
++  background: #0b0b0f;
++  box-shadow: 0 35px 100px rgba(0, 0, 0, 0.65);
+ }
+ 
+ .folderModal {
+-  width: min(980px, 96vw);
++  grid-template-rows: auto minmax(0, 1fr);
+ }
+ 
+-.modalHeader,
+-.modalFooter {
+-  padding: 22px 24px;
+-  background: #fff;
+-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
++.modalHeader {
+   display: flex;
++  align-items: flex-start;
+   justify-content: space-between;
+-  align-items: center;
+-  gap: 16px;
++  gap: 20px;
++  padding: 23px 24px 19px;
++  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
++  background: linear-gradient(145deg, rgba(212, 175, 55, 0.06), transparent);
+ }
+ 
+ .modalHeader h2 {
+-  margin: 6px 0;
+-  color: #111827;
++  color: #fff;
++  font-size: 1.35rem;
+ }
+ 
+ .modalHeader p {
+-  margin: 0;
+-  color: #64748b;
++  margin: 6px 0 0;
++  color: #8f8f99;
++  font-size: 0.8rem;
+ }
+ 
+-.modalHeader button {
+-  border: 0;
+-  background: #f1f5f9;
+-  border-radius: 14px;
+-  padding: 10px;
++.modalHeader > button {
++  display: grid;
++  width: 36px;
++  height: 36px;
++  place-items: center;
++  border: 1px solid rgba(255, 255, 255, 0.08);
++  border-radius: 9px;
++  background: rgba(255, 255, 255, 0.035);
++  color: #d4d4d8;
+   cursor: pointer;
+ }
+ 
+ .previewBody,
+ .folderGrid {
+-  padding: 22px;
+-  overflow: auto;
++  overflow-y: auto;
++  padding: 18px;
++}
++
++.previewBody,
++.folderGrid {
+   display: grid;
+-  gap: 18px;
++  gap: 15px;
+ }
+ 
+-.card {
+-  padding: 20px;
++.folderGrid {
++  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.75fr);
++  align-content: start;
+ }
+ 
+-.card header,
+-.card h3 {
+-  margin: 0 0 14px;
+-  color: #111827;
++.card,
++.warningBox {
++  border: 1px solid rgba(255, 255, 255, 0.07);
++  border-radius: 14px;
++  background: rgba(255, 255, 255, 0.022);
+ }
+ 
+-.card header h3 {
++.card {
++  display: grid;
++  gap: 15px;
++  padding: 17px;
++}
++
++.card > header,
++.card h3 {
+   display: flex;
+   align-items: center;
+   gap: 8px;
++  margin: 0;
++  color: #f4f4f5;
++  font-size: 1rem;
++}
++
++.card > header svg,
++.card h3 svg {
++  color: #d8b86a;
+ }
+ 
+ .tags {
+   display: flex;
+   flex-wrap: wrap;
+-  gap: 8px;
+-  margin-top: 14px;
++  gap: 7px;
+ }
+ 
+ .tags span {
+-  padding: 7px 10px;
++  display: inline-flex;
++  align-items: center;
++  min-height: 27px;
++  padding: 0 10px;
++  border: 1px solid rgba(212, 175, 55, 0.16);
+   border-radius: 999px;
+-  background: #f1f5f9;
+-  color: #334155;
+-  font-size: 0.82rem;
++  background: rgba(212, 175, 55, 0.07);
++  color: #ddc06f;
++  font-size: 0.68rem;
+   font-weight: 800;
+ }
+ 
+-.warningBox,
+-.inlineAlert {
+-  border: 1px solid rgba(245, 158, 11, 0.32);
+-  background: #fffbeb;
+-  color: #92400e;
+-  border-radius: 20px;
+-  padding: 16px;
+-}
+-
+ .warningBox {
+   display: flex;
+-  gap: 12px;
++  align-items: flex-start;
++  gap: 11px;
++  padding: 13px 14px;
++  border-color: rgba(249, 115, 22, 0.18);
++  background: rgba(249, 115, 22, 0.055);
++  color: #fb923c;
++}
++
++.warningBox strong {
++  display: block;
++  color: #f4f4f5;
++  font-size: 0.78rem;
++  margin-bottom: 4px;
+ }
+ 
+ .warningBox p {
+-  margin: 6px 0 0;
++  margin: 3px 0 0;
++  color: #c8c8d0;
++  font-size: 0.73rem;
++  line-height: 1.55;
+ }
+ 
+ .aiSummary {
+-  color: #334155;
+-  line-height: 1.75;
++  min-height: 120px;
++  margin: 0;
++  padding: 14px;
++  border-radius: 10px;
++  background: rgba(212, 175, 55, 0.035);
++  color: #d4d4d8;
++  font-size: 0.78rem;
++  line-height: 1.7;
+   white-space: pre-wrap;
+ }
+ 
++.inlineAlert,
++.emptyCompact {
++  padding: 12px;
++  border-radius: 10px;
++  background: rgba(251, 113, 133, 0.08);
++  color: #fb7185;
++  font-size: 0.76rem;
++  line-height: 1.55;
++}
++
++.emptyCompact {
++  background: rgba(255, 255, 255, 0.03);
++  color: #8f8f99;
++  text-align: center;
++}
++
+ .clientModeGrid {
+   display: grid;
+-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
++  grid-template-columns: repeat(3, minmax(0, 1fr));
+   gap: 10px;
+-  margin: 16px 0;
+ }
+ 
+ .clientModeGrid label {
+-  border: 1px solid rgba(148, 163, 184, 0.32);
+-  border-radius: 16px;
+-  padding: 12px;
+   display: flex;
+-  gap: 8px;
+   align-items: center;
++  gap: 8px;
++  min-height: 44px;
++  padding: 0 12px;
++  border: 1px solid rgba(255, 255, 255, 0.08);
++  border-radius: 10px;
++  background: rgba(255, 255, 255, 0.03);
++  color: #d4d4d8;
++  font-size: 0.75rem;
++  font-weight: 800;
+   cursor: pointer;
+ }
+ 
++.clientModeGrid input {
++  accent-color: #d8b86a;
++}
++
+ .optionActive {
+-  border-color: rgba(138, 31, 45, 0.55) !important;
+-  background: #fff1f2;
++  border-color: rgba(212, 175, 55, 0.28) !important;
++  background: rgba(212, 175, 55, 0.08) !important;
++  color: #ddc06f !important;
+ }
+ 
+ .partyForm {
+-  margin-top: 16px;
+-  padding-top: 16px;
+-  border-top: 1px dashed rgba(148, 163, 184, 0.45);
++  display: grid;
++  gap: 13px;
++  padding: 14px;
++  border: 1px solid rgba(255, 255, 255, 0.06);
++  border-radius: 12px;
++  background: rgba(255, 255, 255, 0.018);
+ }
+ 
+ .partyForm h4 {
+-  margin: 0 0 12px;
+-  color: #111827;
++  margin: 0;
++  font-size: 0.68rem;
+ }
+ 
+ .formGrid {
+   display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+-  gap: 12px;
++  gap: 14px;
+ }
+ 
+ .fieldWide {
+   grid-column: 1 / -1;
+ }
+ 
+-.formGrid textarea {
+-  min-height: 90px;
+-  resize: vertical;
+-}
+-
+ .movements,
+ .partiesList {
+   display: grid;
+-  gap: 10px;
+-}
+ 
+ .movements article,
+ .partiesList article {
+-  border: 1px solid rgba(226, 232, 240, 0.9);
+-  border-radius: 16px;
++  display: grid;
++  gap: 5px;
+   padding: 12px;
+-  background: #fff;
++  border: 1px solid rgba(255, 255, 255, 0.055);
++  border-radius: 10px;
++  background: #101014;
+ }
+ 
+ .movements strong,
+ .partiesList strong {
+-  display: block;
+-  color: #111827;
++  color: #f4f4f5;
++  font-size: 0.78rem;
+ }
+ 
+ .movements p,
+ .partiesList span {
+-  margin: 4px 0 0;
+-  color: #64748b;
+-  line-height: 1.55;
+-}
+-
+-.emptyCompact {
+-  border: 1px dashed rgba(148, 163, 184, 0.45);
+-  border-radius: 16px;
+-  padding: 18px;
+-  color: #64748b;
+-  text-align: center;
++  margin: 0;
++  color: #a1a1aa;
++  font-size: 0.75rem;
++  line-height: 1.6;
+ }
+ 
+ .modalFooter {
+-  border-bottom: 0;
+-  border-top: 1px solid rgba(226, 232, 240, 0.9);
++  display: flex;
+   justify-content: flex-end;
++  gap: 10px;
++  padding: 16px 24px 20px;
++  border-top: 1px solid rgba(255, 255, 255, 0.07);
++  background: rgba(255, 255, 255, 0.015);
+ }
+ 
+-.modalFooter button:first-child {
+-  background: #f1f5f9;
+-  color: #334155;
++.modalFooter button {
++  min-height: 42px;
++  padding: 0 16px;
+ }
+ 
+-.pagination {
+-  margin-top: 18px;
+-  display: flex;
+-  justify-content: center;
+-  align-items: center;
+-  gap: 12px;
++.modalFooter button:first-child {
++  border: 1px solid rgba(255, 255, 255, 0.1);
++  background: rgba(255, 255, 255, 0.035);
++  color: #d4d4d8;
+ }
+ 
+-.pagination button {
+-  background: #f8fafc;
+-  color: #334155;
+-  border: 1px solid rgba(148, 163, 184, 0.3);
++@keyframes spin {
++  }
+ }
+ 
+-@keyframes spin {
+-  to {
+-    transform: rotate(360deg);
++@media (max-width: 1180px) {
++  .processGrid {
++    grid-template-columns: repeat(2, minmax(0, 1fr));
+   }
+ }
+ 
+-@media (max-width: 860px) {
+-  .hero {
++@media (max-width: 920px) {
++  .hero,
++  .folderGrid {
+     grid-template-columns: 1fr;
+   }
+ 
++  .clientModeGrid {
++    grid-template-columns: 1fr;
++  }
++}
++
++@media (max-width: 720px) {
++  .page {
++    gap: 14px;
++  }
++
++  .hero,
+   .panelHeader,
+-  .processCard footer,
+-  .modalHeader {
++  .processCard > footer,
++  .modalHeader,
++  .modalFooter {
+     align-items: stretch;
++  }
++
++  .hero,
++  .panelHeader,
++  .modalHeader,
++  .modalFooter {
+     flex-direction: column;
+   }
+ 
++  .hero {
++    padding: 22px;
++  }
++
++  .processGrid,
+   .formGrid {
+     grid-template-columns: 1fr;
+   }
+-}
+\ No newline at end of file
++  .processGrid,
++  .previewBody,
++  .folderGrid {
++    padding: 14px;
++  }
++
++  .backdrop {
++    padding: 12px;
++  }
++
++  .previewModal,
++  .folderModal {
++    max-height: calc(100vh - 24px);
++    border-radius: 18px;
++  }
++
++  .modalFooter {
++    padding: 14px;
++  }
++
++  .modalFooter button {
++    width: 100%;
++  }
++}
+
+
+diff --git a/src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx b/src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx
+--- a/src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx
++++ b/src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx
+@@ -51,6 +51,7 @@ const DIRECT_ROUTES = {
+   notificacao: { path: "/dashboard/advogado/notificacaoextrajudicial", activeRoute: "notificacaoextrajudicial" },
+   agenda: { path: "/dashboard/advogado/agenda", activeRoute: "agenda" },
+   crm: { path: "/dashboard/advogado/meusclientes", activeRoute: "meusclientes" },
++  processos: { path: "/dashboard/advogado/processos", activeRoute: "processos" },
+   docs: { path: "/dashboard/advogado/smartdoc", activeRoute: "smartdoc" },
+   blindagem: { path: "/dashboard/advogado/blindagemdedocumentos", activeRoute: "blindagemdedocumentos" },
+   redator: { path: "/dashboard/advogado/redator-ia", activeRoute: "redator-ia" },
+@@ -80,6 +81,7 @@ const PREMIUM_ITEMS = [
+   { tab: "assinatura", label: "Assinatura Digital", icon: PenTool, permission: "ferr_assinatura" },
+   { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
+   { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm", ai: true },
++  { tab: "processos", label: "Processos DataJud", icon: Briefcase, permission: "ferr_crm", ai: true },
+   { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs", ai: true },
+   { tab: "blindagem", label: "Blindagem de Documentos", icon: Shield, permission: "ferr_blindagem", ai: true },
+   { tab: "redator", label: "Redator IA", icon: Sparkles, permission: "ferr_redator_ia", legalOnly: true, ai: true },
+
+diff --git a/src/lib/platformTutorials/tutorialRoutes.js b/src/lib/platformTutorials/tutorialRoutes.js
+--- a/src/lib/platformTutorials/tutorialRoutes.js
++++ b/src/lib/platformTutorials/tutorialRoutes.js
+@@ -25,6 +25,7 @@ export const TUTORIAL_ROUTE_REGISTRY = Object.freeze([
+   { key: "LAWYER_EXTRAJUDICIAL", audience: "LAWYER", label: "Advogado · Notificação Extrajudicial", path: "/dashboard/advogado/notificacaoextrajudicial", legacyTab: "notificacao" },
+   { key: "LAWYER_AGENDA", audience: "LAWYER", label: "Advogado · Agenda e prazos", path: "/dashboard/advogado/agenda", legacyTab: "agenda" },
+   { key: "LAWYER_CRM", audience: "LAWYER", label: "Advogado · CRM", path: "/dashboard/advogado/meusclientes", legacyTab: "crm" },
++  { key: "LAWYER_PROCESSES", audience: "LAWYER", label: "Advogado · Processos DataJud", path: "/dashboard/advogado/processos", legacyTab: "processos" },
+   { key: "LAWYER_SMARTDOC", audience: "LAWYER", label: "Advogado · IA Smart Docs", path: "/dashboard/advogado/smartdoc", legacyTab: "docs" },
+   { key: "LAWYER_DOCUMENT_PROTECTION", audience: "LAWYER", label: "Advogado · Blindagem", path: "/dashboard/advogado/blindagemdedocumentos", legacyTab: "blindagem" },
+   { key: "LAWYER_WRITER", audience: "LAWYER", label: "Advogado · Redator IA", path: "/dashboard/advogado/redator-ia", legacyTab: "redator" },

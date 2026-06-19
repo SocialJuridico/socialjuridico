@@ -72,12 +72,12 @@ const PRIMARY_ITEMS = [
   { tab: "quero-site", label: "Quero um Site", icon: MonitorSmartphone },
   { tab: "meus-casos", label: "Meus Casos", icon: Briefcase },
   { tab: "declarei-interesse", label: "Declarei Interesse", icon: Check },
-  { tab: "anuncios-PREPOSTOS", label: "AnÃºncios de ServiÃ§os", icon: Zap },
+  { tab: "anuncios-PREPOSTOS", label: "Anúncios de Serviços", icon: Zap },
 ];
 
 const PREMIUM_ITEMS = [
   { tab: "assinatura", label: "Assinatura Digital", icon: PenTool, permission: "ferr_assinatura" },
-  { tab: "notificacao", label: "NotificaÃ§Ã£o Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
+  { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
   { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm", ai: true },
   { tab: "processos", label: "Processos DataJud", icon: Briefcase, permission: "ferr_crm", ai: true },
   { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs", ai: true },

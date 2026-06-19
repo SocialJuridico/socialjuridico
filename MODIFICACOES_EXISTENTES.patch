@@ -1,0 +1,22 @@
+diff --git a/src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx b/src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx
+--- a/src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx
++++ b/src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx
+@@
+   agenda: { path: "/dashboard/advogado/agenda", activeRoute: "agenda" },
+   crm: { path: "/dashboard/advogado/meusclientes", activeRoute: "meusclientes" },
++  processos: { path: "/dashboard/advogado/processos", activeRoute: "processos" },
+   docs: { path: "/dashboard/advogado/smartdoc", activeRoute: "smartdoc" },
+@@
+   { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
+   { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm", ai: true },
++  { tab: "processos", label: "Processos DataJud", icon: Briefcase, permission: "ferr_crm", ai: true },
+   { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs", ai: true },
+
+diff --git a/src/lib/platformTutorials/tutorialRoutes.js b/src/lib/platformTutorials/tutorialRoutes.js
+--- a/src/lib/platformTutorials/tutorialRoutes.js
++++ b/src/lib/platformTutorials/tutorialRoutes.js
+@@
+   { key: "LAWYER_AGENDA", audience: "LAWYER", label: "Advogado · Agenda e prazos", path: "/dashboard/advogado/agenda", legacyTab: "agenda" },
+   { key: "LAWYER_CRM", audience: "LAWYER", label: "Advogado · CRM", path: "/dashboard/advogado/meusclientes", legacyTab: "crm" },
++  { key: "LAWYER_PROCESSES", audience: "LAWYER", label: "Advogado · Processos DataJud", path: "/dashboard/advogado/processos", legacyTab: "processos" },
+   { key: "LAWYER_SMARTDOC", audience: "LAWYER", label: "Advogado · IA Smart Docs", path: "/dashboard/advogado/smartdoc", legacyTab: "docs" },

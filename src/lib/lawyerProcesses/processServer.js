@@ -8,6 +8,7 @@ import {
   scopeClientQuery,
 } from "@/lib/lawyerClients/clientServer";
 import { normalizeClientDigits } from "@/lib/lawyerClients/clientValidation";
+import { presentLawyerProcessMovement } from "./movementPresentation";
 import {
   formatProcessNumber,
   normalizePartyPayload,
@@ -245,27 +246,18 @@ function pickExternalRegistro(externalPayload = {}) {
 }
 
 function serializeMovimento(item = {}, index = 0) {
-  const data =
-    item.data ||
-    item.data_hora ||
-    item.dataHora ||
-    item.timestamp ||
-    item.created_at ||
-    item.createdAt ||
-    null;
-  const descricao =
-    item.descricao ||
-    item.texto ||
-    item.movimento ||
-    item.nome ||
-    item.titulo ||
-    JSON.stringify(item).slice(0, 2000);
+  const presentation = presentLawyerProcessMovement(item);
+  const description = [presentation.title, presentation.detail].filter(Boolean).join(" — ");
+  const parsedDate = presentation.date ? new Date(presentation.date) : null;
+  const movementDate = parsedDate && !Number.isNaN(parsedDate.getTime())
+    ? parsedDate.toISOString()
+    : null;
 
   return {
     id: crypto.randomUUID(),
-    movement_date: data ? new Date(data).toISOString() : null,
-    description: normalizeProcessText(descricao, 3000),
-    movement_type: normalizeProcessText(item.tipo || item.type || item.codigo || "", 120) || null,
+    movement_date: movementDate,
+    description: normalizeProcessText(description, 3000),
+    movement_type: normalizeProcessText(presentation.code, 120) || null,
     sort_order: index + 1,
     raw_payload: item,
     created_at: new Date().toISOString(),

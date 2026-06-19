@@ -7,9 +7,12 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Clock3,
   FileText,
   FolderOpen,
   Gavel,
+  Hash,
+  Landmark,
   Loader2,
   RefreshCw,
   Search,
@@ -21,8 +24,43 @@ import {
 } from "lucide-react";
 
 import LawyerDashboardShell from "../../components/LawyerDashboardShell";
+import {
+  formatMovementDateTime,
+  presentLawyerProcessMovement,
+} from "@/lib/lawyerProcesses/movementPresentation";
 import styles from "../Processos.module.css";
 import { formatCnj, formatDate, useLawyerProcesses } from "../hooks/useLawyerProcesses";
+
+function MovementTimeline({ items, limit }) {
+  const visibleItems = typeof limit === "number" ? items.slice(0, limit) : items;
+
+  return (
+    <div className={styles.movements}>
+      {visibleItems.map((item, index) => {
+        const movement = presentLawyerProcessMovement(item);
+        const when = formatMovementDateTime(movement.date);
+        return (
+          <article key={`${movement.date || "sem-data"}-${movement.code || index}-${index}`}>
+            <div className={styles.movementMarker}><span /></div>
+            <div className={styles.movementBody}>
+              <header className={styles.movementHeader}>
+                <strong>{movement.title}</strong>
+                <time dateTime={movement.date || undefined}><Clock3 size={13} /> {when.date}{when.time ? ` às ${when.time}` : ""}</time>
+              </header>
+              {movement.detail && <p>{movement.detail}</p>}
+              {(movement.courtName || movement.code) && (
+                <div className={styles.movementMeta}>
+                  {movement.courtName && <span><Landmark size={13} /> {movement.courtName}{movement.courtCode ? ` · ${movement.courtCode}` : ""}</span>}
+                  {movement.code && <span><Hash size={13} /> Código {movement.code}</span>}
+                </div>
+              )}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
 
 function ProcessMetaGrid({ data }) {
   const capa = data?.capa || {};
@@ -270,19 +308,7 @@ function ProcessPreviewModal({ controller }) {
               </h3>
             </header>
             {controller.movements.length ? (
-              <div className={styles.movements}>
-                {controller.movements.slice(0, 8).map((movement, index) => (
-                  <article key={`${movement.data || movement.dataHora || index}`}>
-                    <strong>{formatDate(movement.data || movement.dataHora || movement.data_hora)}</strong>
-                    <p>
-                      {movement.descricao ||
-                        movement.texto ||
-                        movement.movimento ||
-                        JSON.stringify(movement).slice(0, 220)}
-                    </p>
-                  </article>
-                ))}
-              </div>
+              <MovementTimeline items={controller.movements} limit={8} />
             ) : (
               <div className={styles.emptyCompact}>Nenhuma movimentação retornada.</div>
             )}
@@ -377,14 +403,7 @@ function ProcessFolderModal({ controller }) {
 
             <section className={styles.card}>
               <h3>Movimentações</h3>
-              <div className={styles.movements}>
-                {(data?.movements || []).map((movement) => (
-                  <article key={movement.id}>
-                    <strong>{formatDate(movement.movement_date)}</strong>
-                    <p>{movement.description}</p>
-                  </article>
-                ))}
-              </div>
+              <MovementTimeline items={data?.movements || []} />
             </section>
 
             {(data?.warnings || []).length > 0 && (

@@ -1,4 +1,19 @@
-﻿.page {
+# Hotfix Social Jurídico — Processos DataJud
+# Execute na raiz do projeto:
+# powershell -ExecutionPolicy Bypass -File .\fix_processos_modal_menu.ps1
+
+$ErrorActionPreference = "Stop"
+
+$cssPath = "src/app/dashboard/advogado/processos/Processos.module.css"
+$sidebarPath = "src/app/dashboard/advogado/components/LawyerRouteSidebar.jsx"
+$tutorialPath = "src/lib/platformTutorials/tutorialRoutes.js"
+
+if (!(Test-Path $cssPath)) {
+  throw "Arquivo não encontrado: $cssPath"
+}
+
+$css = @'
+.page {
   display: grid;
   gap: 20px;
   width: 100%;
@@ -611,6 +626,7 @@
   gap: 10px;
 }
 
+.movements article,
 .partiesList article {
   display: grid;
   gap: 5px;
@@ -620,109 +636,19 @@
   background: #101014;
 }
 
+.movements strong,
 .partiesList strong {
   color: #f4f4f5;
   font-size: 0.78rem;
 }
 
+.movements p,
 .partiesList span {
   margin: 0;
   color: #a1a1aa;
   font-size: 0.75rem;
   line-height: 1.6;
 }
-
-.movements article {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  gap: 12px;
-  padding: 15px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.055);
-  border-radius: 10px;
-  background: linear-gradient(115deg, rgba(212, 175, 55, 0.035), transparent 34%), #101014;
-}
-
-.movementMarker {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  padding-top: 5px;
-}
-
-.movementMarker span {
-  position: relative;
-  z-index: 1;
-  width: 9px;
-  height: 9px;
-  border: 2px solid #d4af37;
-  border-radius: 50%;
-  background: #101014;
-  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.08);
-}
-
-.movementMarker::after {
-  position: absolute;
-  top: 16px;
-  bottom: -26px;
-  width: 1px;
-  background: rgba(212, 175, 55, 0.16);
-  content: "";
-}
-
-.movements article:last-child .movementMarker::after { display: none; }
-
-.movementBody { min-width: 0; }
-
-.movementHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-}
-
-.movementHeader strong {
-  color: #f4f4f5;
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-.movementHeader time {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 5px;
-  color: #a1a1aa;
-  font-size: 0.62rem;
-  white-space: nowrap;
-}
-
-.movementBody > p {
-  margin: 7px 0 0;
-  color: #a1a1aa;
-  font-size: 0.72rem;
-  line-height: 1.6;
-}
-
-.movementMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 10px;
-}
-
-.movementMeta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 999px;
-  color: #b5b5bc;
-  background: rgba(255, 255, 255, 0.025);
-  font-size: 0.58rem;
-}
-
-.movementMeta svg { color: #d4af37; }
 
 .modalFooter {
   display: flex;
@@ -778,7 +704,42 @@
   }
   .modalFooter { padding: 14px; }
   .modalFooter button { width: 100%; }
-  .movementHeader { flex-direction: column; gap: 5px; }
-  .movementHeader time { white-space: normal; }
 }
 
+'@
+
+Set-Content -Path $cssPath -Value $css -Encoding UTF8
+
+if (Test-Path $sidebarPath) {
+  $sidebar = Get-Content -Path $sidebarPath -Raw
+
+  if ($sidebar -notmatch 'activeRoute:\s*"processos"') {
+    $sidebar = $sidebar -replace 'crm:\s*\{\s*path:\s*"/dashboard/advogado/meusclientes",\s*activeRoute:\s*"meusclientes"\s*\},\s*\r?\n\s*docs:', 'crm: { path: "/dashboard/advogado/meusclientes", activeRoute: "meusclientes" },' + "`r`n" + '  processos: { path: "/dashboard/advogado/processos", activeRoute: "processos" },' + "`r`n" + '  docs:'
+  }
+
+  if ($sidebar -notmatch 'tab:\s*"processos"') {
+    $sidebar = $sidebar -replace '\{\s*tab:\s*"crm",\s*label:\s*"Meus Clientes \(CRM\)",\s*icon:\s*Users,\s*permission:\s*"ferr_crm",\s*ai:\s*true\s*\},\s*\r?\n\s*\{\s*tab:\s*"docs"', '{ tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm", ai: true },' + "`r`n" + '  { tab: "processos", label: "Processos DataJud", icon: Briefcase, permission: "ferr_crm", ai: true },' + "`r`n" + '  { tab: "docs"'
+  }
+
+  Set-Content -Path $sidebarPath -Value $sidebar -Encoding UTF8
+} else {
+  Write-Warning "Arquivo de menu não encontrado: $sidebarPath"
+}
+
+if (Test-Path $tutorialPath) {
+  $tutorial = Get-Content -Path $tutorialPath -Raw
+
+  if ($tutorial -notmatch 'LAWYER_PROCESSES') {
+    $tutorial = $tutorial -replace '\{\s*key:\s*"LAWYER_CRM",\s*audience:\s*"LAWYER",\s*label:\s*"Advogado · CRM",\s*path:\s*"/dashboard/advogado/meusclientes",\s*legacyTab:\s*"crm"\s*\},\s*\r?\n\s*\{\s*key:\s*"LAWYER_SMARTDOC"', '{ key: "LAWYER_CRM", audience: "LAWYER", label: "Advogado · CRM", path: "/dashboard/advogado/meusclientes", legacyTab: "crm" },' + "`r`n" + '  { key: "LAWYER_PROCESSES", audience: "LAWYER", label: "Advogado · Processos DataJud", path: "/dashboard/advogado/processos", legacyTab: "processos" },' + "`r`n" + '  { key: "LAWYER_SMARTDOC"'
+  }
+
+  Set-Content -Path $tutorialPath -Value $tutorial -Encoding UTF8
+} else {
+  Write-Warning "Arquivo de tutoriais não encontrado: $tutorialPath"
+}
+
+if (Test-Path "processos_menu_visual_hotfix.patch") {
+  Remove-Item "processos_menu_visual_hotfix.patch" -Force
+}
+
+Write-Host "Hotfix aplicado: modal de processos corrigido e menu atualizado." -ForegroundColor Green

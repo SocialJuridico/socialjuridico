@@ -355,6 +355,10 @@ function DraftModal({ open, onClose, onCreated, account }) {
 
   async function submit(event) {
     event.preventDefault();
+    if (step === 1) {
+      advance();
+      return;
+    }
     const recipientsValid = draft.recipients.every(
       (recipient) =>
         recipient.name.trim().length >= 2 &&
@@ -461,8 +465,25 @@ function DraftModal({ open, onClose, onCreated, account }) {
           </div>
 
           <footer className={styles.modalFooter}>
-            {step === 2 ? <button type="button" className={styles.secondaryButton} onClick={() => { setStep(1); setError(""); }} disabled={submitting}><ArrowLeft size={17} /> Voltar</button> : <button type="button" className={styles.secondaryButton} onClick={onClose}>Cancelar</button>}
-            {step === 1 ? <button type="button" className={styles.primaryButton} onClick={advance}>Continuar <ArrowRight size={17} /></button> : <button type="submit" className={styles.primaryButton} disabled={submitting}>{submitting ? <Loader2 size={17} className={styles.spin} /> : <Archive size={17} />}{submitting ? "Salvando..." : "Salvar rascunho"}</button>}
+            {step === 2 ? (
+              <button key="btn-back" type="button" className={styles.secondaryButton} onClick={() => { setStep(1); setError(""); }} disabled={submitting}>
+                <ArrowLeft size={17} /> Voltar
+              </button>
+            ) : (
+              <button key="btn-cancel" type="button" className={styles.secondaryButton} onClick={onClose}>
+                Cancelar
+              </button>
+            )}
+            {step === 1 ? (
+              <button key="btn-continue" type="button" className={styles.primaryButton} onClick={advance}>
+                Continuar <ArrowRight size={17} />
+              </button>
+            ) : (
+              <button key="btn-submit" type="submit" className={styles.primaryButton} disabled={submitting}>
+                {submitting ? <Loader2 size={17} className={styles.spin} /> : <Archive size={17} />}
+                {submitting ? "Salvando..." : "Salvar rascunho"}
+              </button>
+            )}
           </footer>
         </form>
       </section>
@@ -1499,6 +1520,63 @@ function ExtrajudicialNotificationsView({ account, subscription, usage, onNotifi
   );
 }
 
+function ConfirmModal({ open, title, message, confirmText, cancelText, onConfirm, onClose, severity = "info" }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className={styles.modalBackdrop} onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+      <section className={styles.modal} style={{ maxWidth: "450px" }} role="dialog" aria-modal="true">
+        <header className={styles.modalHeader} style={{ minHeight: "60px", padding: "14px 20px" }}>
+          <div>
+            <h3 style={{ fontSize: "1rem", color: severity === "danger" ? "#e17878" : "var(--gold-soft)" }}>{title}</h3>
+          </div>
+          <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Fechar"><X size={18} /></button>
+        </header>
+        <div className={styles.modalBody} style={{ padding: "20px", fontSize: "0.76rem", color: "rgba(255, 255, 255, 0.7)", lineHeight: "1.5" }}>
+          <p>{message}</p>
+        </div>
+        <footer className={styles.modalFooter} style={{ padding: "12px 20px", gap: "10px" }}>
+          {cancelText !== null && (
+            <button type="button" className={styles.secondaryButton} style={{ minHeight: "36px", padding: "0 14px" }} onClick={onClose}>
+              {cancelText || "Cancelar"}
+            </button>
+          )}
+          <button
+            type="button"
+            className={styles.primaryButton}
+            style={{
+              minHeight: "36px",
+              padding: "0 14px",
+              backgroundColor: severity === "danger" ? "#e17878" : "var(--gold)",
+              color: severity === "danger" ? "#fff" : "#151515"
+            }}
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+          >
+            {confirmText || "Confirmar"}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 export default function SignatureDashboardClient({
   account,
   organization,
@@ -1519,6 +1597,16 @@ export default function SignatureDashboardClient({
   const [sendingId, setSendingId] = useState(null);
   const [signingId, setSigningId] = useState(null);
   const [notice, setNotice] = useState("");
+  const [confirmState, setConfirmState] = useState({
+    open: false,
+    title: "",
+    message: "",
+    confirmText: "",
+    cancelText: "",
+    severity: "info",
+    onConfirm: () => {},
+    onClose: () => {},
+  });
 
   const metrics = useMemo(() => ({
     total: envelopes.length,
@@ -1548,54 +1636,106 @@ export default function SignatureDashboardClient({
   }
 
   async function deleteDraft(item) {
-    if (!window.confirm(`Excluir o rascunho “${item.title}”?`)) return;
-    setDeletingId(item.id);
-    try {
-      const response = await fetch(`/api/assinatura/app/envelopes?id=${encodeURIComponent(item.id)}`, { method: "DELETE" });
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.success) throw new Error(data?.message || "Não foi possível excluir.");
-      setEnvelopes((current) => current.filter((envelope) => envelope.id !== item.id));
-    } catch (error) {
-      setNotice(error.message || "Não foi possível excluir o rascunho.");
-    } finally {
-      setDeletingId(null);
-    }
+    setConfirmState({
+      open: true,
+      title: "Excluir Rascunho",
+      message: `Deseja realmente excluir o rascunho “${item.title}”? Esta ação não pode ser desfeita.`,
+      confirmText: "Excluir",
+      cancelText: "Voltar",
+      severity: "danger",
+      onConfirm: async () => {
+        setDeletingId(item.id);
+        try {
+          const response = await fetch(`/api/assinatura/app/envelopes?id=${encodeURIComponent(item.id)}`, { method: "DELETE" });
+          const data = await response.json().catch(() => null);
+          if (!response.ok || !data?.success) throw new Error(data?.message || "Não foi possível excluir.");
+          setEnvelopes((current) => current.filter((envelope) => envelope.id !== item.id));
+        } catch (error) {
+          setNotice(error.message || "Não foi possível excluir o rascunho.");
+        } finally {
+          setDeletingId(null);
+        }
+      }
+    });
   }
 
   async function sendEnvelope(item) {
     const pending = item.recipients.filter((recipient) => !["COMPLETED", "DECLINED"].includes(recipient.status));
     const firstSend = item.status === "DRAFT";
-    const confirmation = firstSend
-      ? `Enviar “${item.title}” para ${pending.length} destinatário${pending.length === 1 ? "" : "s"}? O envio consumirá 1 documento da franquia mensal.`
-      : `Reenviar os convites pendentes de “${item.title}”?`;
-    if (!window.confirm(confirmation)) return;
+    const title = firstSend ? "Enviar para Assinatura" : "Reenviar Convites";
+    const message = firstSend
+      ? `Deseja enviar “${item.title}” para ${pending.length} destinatário${pending.length === 1 ? "" : "s"}? O envio consumirá 1 documento da franquia mensal.`
+      : `Deseja reenviar os convites pendentes de “${item.title}”?`;
 
-    setSendingId(item.id);
-    setNotice("");
-    try {
-      const response = await fetch(`/api/assinatura/app/envelopes/${encodeURIComponent(item.id)}/send`, {
-        method: "POST",
-      });
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.success) {
-        if (data?.code === "DOCUMENT_LIMIT_REACHED") setPlansModalOpen(true);
-        throw new Error(data?.message || "Não foi possível enviar o envelope.");
-      }
+    setConfirmState({
+      open: true,
+      title,
+      message,
+      confirmText: firstSend ? "Enviar" : "Reenviar",
+      cancelText: "Cancelar",
+      severity: "info",
+      onConfirm: async () => {
+        setSendingId(item.id);
+        setNotice("");
+        try {
+          const response = await fetch(`/api/assinatura/app/envelopes/${encodeURIComponent(item.id)}/send`, {
+            method: "POST",
+          });
+          const data = await response.json().catch(() => null);
+          if (!response.ok || !data?.success) {
+            if (data?.code === "DOCUMENT_LIMIT_REACHED") setPlansModalOpen(true);
+            throw new Error(data?.message || "Não foi possível enviar o envelope.");
+          }
 
-      setEnvelopes((current) => current.map((envelope) => envelope.id === item.id ? data.data : envelope));
-      if (data.firstSend) {
-        setCurrentUsage((current) => ({
-          ...current,
-          documents_used: Number(current.documents_used || 0) + 1,
-        }));
+          setEnvelopes((current) => current.map((envelope) => envelope.id === item.id ? data.data : envelope));
+          if (data.firstSend) {
+            setCurrentUsage((current) => ({
+              ...current,
+              documents_used: Number(current.documents_used || 0) + 1,
+            }));
+          }
+
+          const userEmail = account?.email?.toLowerCase().trim();
+          const updatedEnvelope = data.data;
+          const selfRecipient = updatedEnvelope.recipients.find(
+            (recipient) => recipient.email.toLowerCase().trim() === userEmail
+          );
+          const canSignNow =
+            ["SENT", "IN_PROGRESS"].includes(updatedEnvelope.status) &&
+            selfRecipient &&
+            ["SIGNER", "APPROVER"].includes(selfRecipient.role) &&
+            !["COMPLETED", "DECLINED"].includes(selfRecipient.status);
+
+          if (canSignNow) {
+            setTimeout(() => {
+              setConfirmState({
+                open: true,
+                title: "Assinar Documento",
+                message: "Envelope enviado com sucesso! Deseja assinar este documento agora?",
+                confirmText: "Assinar agora",
+                cancelText: "Mais tarde",
+                severity: "info",
+                onConfirm: () => {
+                  signEnvelope(updatedEnvelope);
+                },
+                onClose: () => {
+                  setNotice(data.message || "Convites enviados por e-mail.");
+                  window.setTimeout(() => setNotice(""), 4200);
+                }
+              });
+            }, 300);
+            return;
+          }
+
+          setNotice(data.message || "Convites enviados por e-mail.");
+          window.setTimeout(() => setNotice(""), 4200);
+        } catch (sendError) {
+          setNotice(sendError.message || "Não foi possível enviar o envelope.");
+        } finally {
+          setSendingId(null);
+        }
       }
-      setNotice(data.message || "Convites enviados por e-mail.");
-      window.setTimeout(() => setNotice(""), 4200);
-    } catch (sendError) {
-      setNotice(sendError.message || "Não foi possível enviar o envelope.");
-    } finally {
-      setSendingId(null);
-    }
+    });
   }
 
   async function signEnvelope(item) {
@@ -1877,7 +2017,7 @@ export default function SignatureDashboardClient({
                         selfRecipient &&
                         ["SIGNER", "APPROVER"].includes(selfRecipient.role) &&
                         !["COMPLETED", "DECLINED"].includes(selfRecipient.status);
-
+ 
                       return (
                         <tr key={item.id}>
                           <td>
@@ -1921,16 +2061,24 @@ export default function SignatureDashboardClient({
                                 <button
                                   type="button"
                                   onClick={() => signEnvelope(item)}
-                                  disabled={signingId === item.id}
+                                  disabled={signingId === item.id || sendingId === item.id}
                                   title="Assinar documento"
-                                  className={styles.signButton}
+                                  className={styles.primaryRowAction}
                                 >
-                                  {signingId === item.id ? <Loader2 size={16} className={styles.spin} /> : <FileSignature size={16} />}
+                                  {signingId === item.id || sendingId === item.id ? <Loader2 size={13} className={styles.spin} /> : <FileSignature size={13} />}
+                                  <span>Assinar</span>
                                 </button>
                               )}
                               {item.status === "DRAFT" && (
-                                <button type="button" onClick={() => sendEnvelope(item)} disabled={sendingId === item.id} title="Enviar para assinatura">
-                                  {sendingId === item.id ? <Loader2 size={16} className={styles.spin} /> : <Send size={16} />}
+                                <button
+                                  type="button"
+                                  onClick={() => sendEnvelope(item)}
+                                  disabled={sendingId === item.id}
+                                  title="Enviar para assinatura"
+                                  className={styles.primaryRowAction}
+                                >
+                                  {sendingId === item.id ? <Loader2 size={13} className={styles.spin} /> : <Send size={13} />}
+                                  <span>Enviar</span>
                                 </button>
                               )}
                               {["SENT", "IN_PROGRESS"].includes(item.status) && item.recipients.some((recipient) => !["COMPLETED", "DECLINED"].includes(recipient.status)) && (
@@ -1960,6 +2108,19 @@ export default function SignatureDashboardClient({
       {notice && <div className={styles.toast} role="status"><CheckCircle2 size={17} /> {notice}</div>}
       <PlansModal open={plansModalOpen} onClose={() => setPlansModalOpen(false)} subscription={subscription} usage={currentUsage} />
       <DraftModal open={modalOpen} account={account} onClose={() => setModalOpen(false)} onCreated={(item) => { setEnvelopes((current) => [item, ...current]); setActiveView("documents"); setNotice("Rascunho salvo com segurança."); window.setTimeout(() => setNotice(""), 2200); }} />
+      <ConfirmModal
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmText={confirmState.confirmText}
+        cancelText={confirmState.cancelText}
+        severity={confirmState.severity}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => {
+          if (confirmState.onClose) confirmState.onClose();
+          setConfirmState((prev) => ({ ...prev, open: false }));
+        }}
+      />
     </div>
   );
 }

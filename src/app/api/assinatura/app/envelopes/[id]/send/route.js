@@ -94,14 +94,17 @@ export async function POST(request, { params }) {
     const origin = resolvePublicAppOrigin(request);
     const evidence = getSignatureProductRequestEvidence(request);
     const deliveries = await Promise.allSettled(
-      invitations.map((item) =>
-        sendSignatureInvitationEmail({
+      invitations.map((item) => {
+        if (item.recipient.email.toLowerCase().trim() === access.account.email.toLowerCase().trim()) {
+          return Promise.resolve({ success: true, skipped: true });
+        }
+        return sendSignatureInvitationEmail({
           recipient: item.recipient,
           envelope,
           organizationName: organization.name,
           signingUrl: `${origin}/assinar/${encodeURIComponent(item.token)}`,
-        }),
-      ),
+        });
+      }),
     );
 
     const evidenceRows = deliveries.map((delivery, index) => ({

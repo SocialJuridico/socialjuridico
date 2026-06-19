@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 import {
   AlertTriangle,
   BookOpenText,
@@ -24,6 +26,7 @@ import {
 } from "lucide-react";
 
 import LawyerDashboardShell from "../../components/LawyerDashboardShell";
+import { useLawyerSession } from "../../LawyerSessionContext";
 import {
   formatMovementDateTime,
   presentLawyerProcessMovement,
@@ -339,12 +342,15 @@ function ProcessFolderModal({ controller }) {
     <div className={styles.backdrop}>
       <section className={styles.folderModal} role="dialog" aria-modal="true">
         <header className={styles.modalHeader}>
-          <div>
-            <span>
-              <FolderOpen size={15} /> Pasta processual digital
+          <div className={styles.folderTitleContainer}>
+            <span className={styles.folderIcon}>
+              <FolderOpen size={16} />
             </span>
-            <h2>{process ? formatCnj(process.numeroCnj) : "Carregando processo..."}</h2>
-            <p>{process?.clientName || "Cliente vinculado ao CRM"}</p>
+            <div>
+              <small className={styles.folderEyebrow}>Pasta processual digital</small>
+              <h2>{process ? formatCnj(process.numeroCnj) : "Carregando processo..."}</h2>
+              <p className={styles.folderClientName}>{process?.clientName || "Cliente vinculado ao CRM"}</p>
+            </div>
           </div>
           <button
             type="button"
@@ -358,65 +364,98 @@ function ProcessFolderModal({ controller }) {
         {controller.folderLoading ? (
           <div className={styles.state}>
             <Loader2 size={30} className={styles.spin} />
-            <strong>Montando pasta...</strong>
+            <strong>Montando pasta processual...</strong>
           </div>
         ) : (
-          <div className={styles.folderGrid}>
-            <section className={styles.card}>
-              <h3>Capa</h3>
-              <ProcessMetaGrid
-                data={{
-                  numero_cnj: process?.numeroCnj,
-                  tribunal: { nome: process?.tribunalNome },
-                  capa: {
-                    classe: process?.classe,
-                    sistema: process?.sistema,
-                    formato: process?.formato,
-                    orgao_julgador: process?.orgaoJulgador,
-                    data_ajuizamento: process?.dataAjuizamento,
-                    data_ultima_atualizacao: process?.dataUltimaAtualizacao,
-                  },
-                }}
-              />
-            </section>
+          <div className={styles.folderColumns}>
+            <div className={styles.folderColumnLeft}>
+              <section className={styles.card}>
+                <header>
+                  <Landmark size={18} />
+                  <h3>Capa do processo</h3>
+                </header>
+                <ProcessMetaGrid
+                  data={{
+                    numero_cnj: process?.numeroCnj,
+                    tribunal: { nome: process?.tribunalNome },
+                    capa: {
+                      classe: process?.classe,
+                      sistema: process?.sistema,
+                      formato: process?.formato,
+                      orgao_julgador: process?.orgaoJulgador,
+                      data_ajuizamento: process?.dataAjuizamento,
+                      data_ultima_atualizacao: process?.dataUltimaAtualizacao,
+                    },
+                  }}
+                />
+              </section>
 
-            <section className={styles.card}>
-              <h3>Resumo da IA</h3>
-              <p className={styles.aiSummary}>{process?.resumoIa || "Resumo não disponível."}</p>
-            </section>
-
-            <section className={styles.card}>
-              <h3>Partes</h3>
-              <div className={styles.partiesList}>
-                {(data?.parties || []).map((party) => (
-                  <article key={party.id}>
-                    <strong>{party.name}</strong>
-                    <span>
-                      {party.role || "Parte"} · {party.party_type || "não informado"}
-                      {party.is_client ? " · Cliente CRM" : ""}
-                      {party.is_opposing_party ? " · Parte contrária" : ""}
-                    </span>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className={styles.card}>
-              <h3>Movimentações</h3>
-              <MovementTimeline items={data?.movements || []} />
-            </section>
-
-            {(data?.warnings || []).length > 0 && (
-              <section className={styles.warningBox}>
-                <AlertTriangle size={19} />
-                <div>
-                  <strong>Avisos</strong>
-                  {data.warnings.map((warning) => (
-                    <p key={warning.id}>{warning.message}</p>
+              <section className={styles.card}>
+                <header>
+                  <Users size={18} />
+                  <h3>Partes envolvidas</h3>
+                </header>
+                <div className={styles.partiesList}>
+                  {(data?.parties || []).map((party) => (
+                    <article key={party.id} className={styles.partyCard}>
+                      <div className={styles.partyInfo}>
+                        <strong>{party.name}</strong>
+                        <span className={styles.partySubtitle}>
+                          {party.party_type || "Tipo não informado"}
+                        </span>
+                      </div>
+                      <div className={styles.partyBadges}>
+                        <span className={`${styles.partyBadge} ${styles.partyRole}`}>
+                          {party.role || "Parte"}
+                        </span>
+                        {party.is_client && (
+                          <span className={`${styles.partyBadge} ${styles.partyClient}`}>
+                            Cliente CRM
+                          </span>
+                        )}
+                        {party.is_opposing_party && (
+                          <span className={`${styles.partyBadge} ${styles.partyOpposing}`}>
+                            Parte contrária
+                          </span>
+                        )}
+                      </div>
+                    </article>
                   ))}
                 </div>
               </section>
-            )}
+            </div>
+
+            <div className={styles.folderColumnRight}>
+              <section className={`${styles.card} ${styles.aiSummaryCard}`}>
+                <header>
+                  <Sparkles size={18} />
+                  <h3>Resumo estruturado por IA</h3>
+                </header>
+                <p className={styles.aiSummary}>{process?.resumoIa || "Resumo não disponível."}</p>
+              </section>
+
+              <section className={styles.card}>
+                <header>
+                  <BookOpenText size={18} />
+                  <h3>Movimentações recentes</h3>
+                </header>
+                <div className={styles.movementsScrollable}>
+                  <MovementTimeline items={data?.movements || []} />
+                </div>
+              </section>
+
+              {(data?.warnings || []).length > 0 && (
+                <section className={styles.warningBox}>
+                  <AlertTriangle size={19} />
+                  <div>
+                    <strong>Avisos</strong>
+                    {data.warnings.map((warning) => (
+                      <p key={warning.id}>{warning.message}</p>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
           </div>
         )}
       </section>
@@ -424,8 +463,52 @@ function ProcessFolderModal({ controller }) {
   );
 }
 
+function Notice({ title, message, action }) {
+  return (
+    <section className={styles.notice}>
+      <AlertTriangle size={22} />
+      <div>
+        <h2>{title}</h2>
+        <p>{message}</p>
+      </div>
+      {action}
+    </section>
+  );
+}
+
 export default function LawyerProcessesDashboard() {
+  const session = useLawyerSession();
   const controller = useLawyerProcesses();
+
+  const planType = String(session.profileData?.plan_type || "FREE").toUpperCase();
+  const isPro = planType === "PRO";
+
+  useEffect(() => {
+    if (!isPro) {
+      session.openPlansModal();
+    }
+  }, [isPro, session]);
+
+  if (!isPro) {
+    return (
+      <LawyerDashboardShell
+        activeRoute="processos"
+        title="Processos"
+        subtitle="Importação DataJud/CNJ vinculada ao CRM"
+        icon={Gavel}
+      >
+        <Notice
+          title="Acesso exclusivo PRO"
+          message="A importação de processos via DataJud está disponível para o Plano PRO."
+          action={
+            <button type="button" onClick={session.openPlansModal}>
+              Ver planos
+            </button>
+          }
+        />
+      </LawyerDashboardShell>
+    );
+  }
 
   return (
     <LawyerDashboardShell

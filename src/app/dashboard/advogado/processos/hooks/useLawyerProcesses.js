@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { useLawyerSession } from "../../LawyerSessionContext";
 
 function createRequestId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -55,12 +56,15 @@ function normalizeParty(item = {}) {
 }
 
 export function useLawyerProcesses() {
+  const session = useLawyerSession();
+  const { openPlansModal } = session;
   const [items, setItems] = useState([]);
   const [clients, setClients] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pageSize: 12, total: 0, totalPages: 1 });
   const [loading, setLoading] = useState(true);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [permissions, setPermissions] = useState({ canUse: true });
   const [cnj, setCnj] = useState("");
   const [searching, setSearching] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -85,9 +89,15 @@ export function useLawyerProcesses() {
         cache: "no-store",
       });
       const data = await readJson(response);
+      if (response.status === 403 && data?.upgradeRequired) {
+        setPermissions({ canUse: false });
+        openPlansModal();
+        throw new Error(data.message);
+      }
       if (!response.ok || !data?.success) {
         throw new Error(data?.message || "Não foi possível carregar os processos.");
       }
+      setPermissions({ canUse: true });
       setItems(data.data || []);
       setPagination(data.pagination || { page, pageSize: 12, total: 0, totalPages: 1 });
     } catch (loadError) {
@@ -95,7 +105,7 @@ export function useLawyerProcesses() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [openPlansModal]);
 
   const loadClients = useCallback(async () => {
     setClientsLoading(true);
@@ -158,6 +168,10 @@ export function useLawyerProcesses() {
         body: JSON.stringify({ numeroProcesso: numero, requestId: createRequestId() }),
       });
       const data = await readJson(response);
+      if (response.status === 403 && data?.upgradeRequired) {
+        openPlansModal();
+        throw new Error(data.message);
+      }
       if (!response.ok || !data?.success) {
         throw new Error(data?.message || "Não foi possível buscar o processo.");
       }
@@ -221,6 +235,10 @@ export function useLawyerProcesses() {
         body: JSON.stringify(buildDownloadPayload()),
       });
       const data = await readJson(response);
+      if (response.status === 403 && data?.upgradeRequired) {
+        openPlansModal();
+        throw new Error(data.message);
+      }
       if (!response.ok || !data?.success) {
         throw new Error(data?.message || "Não foi possível importar o processo.");
       }
@@ -237,13 +255,17 @@ export function useLawyerProcesses() {
     }
   }
 
-  async function openFolder(processId) {
+  const openFolder = useCallback(async (processId) => {
     setFolderOpen(true);
     setFolderLoading(true);
     setFolder(null);
     try {
       const response = await fetch(`/api/advogado/processos/${processId}`, { cache: "no-store" });
       const data = await readJson(response);
+      if (response.status === 403 && data?.upgradeRequired) {
+        openPlansModal();
+        throw new Error(data.message);
+      }
       if (!response.ok || !data?.success) {
         throw new Error(data?.message || "Não foi possível abrir a pasta do processo.");
       }
@@ -254,7 +276,23 @@ export function useLawyerProcesses() {
     } finally {
       setFolderLoading(false);
     }
-  }
+  }, [openPlansModal]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const openId = params.get("open");
+      if (openId) {
+        const newParams = new URLSearchParams(window.location.search);
+        newParams.delete("open");
+        const newSearch = newParams.toString();
+        const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ""}`;
+        window.history.replaceState(null, "", newUrl);
+
+        void openFolder(openId);
+      }
+    }
+  }, [openFolder]);
 
   return {
     items,
@@ -266,6 +304,7 @@ export function useLawyerProcesses() {
     cnj,
     setCnj,
     searching,
+    permissions,
     preview,
     previewData,
     parties,

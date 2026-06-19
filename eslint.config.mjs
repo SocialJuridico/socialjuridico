@@ -19,6 +19,7 @@ const eslintConfig = defineConfig([
   {
     files: [
       "src/app/dashboard/advogado/notificacaoextrajudicial/components/ExtrajudicialNotificationDashboard.jsx",
+      "src/app/dashboard/advogado/meusclientes/components/LawyerClientsExperience.jsx",
     ],
     rules: {
       // O controlador entrega a referência do input nativo junto das ações do

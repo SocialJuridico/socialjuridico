@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request) {
   try {
-    const access = await requireLawyerClientAccess(request);
+    const access = await requireLawyerClientAccess(request, { requirePro: true });
     if (!access.ok) return access.response;
 
     const { searchParams } = new URL(request.url);

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import {
@@ -79,7 +79,7 @@ const PREMIUM_ITEMS = [
   { tab: "assinatura", label: "Assinatura Digital", icon: PenTool, permission: "ferr_assinatura" },
   { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
   { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm", ai: true },
-  { tab: "processos", label: "Processos DataJud", icon: Briefcase, permission: "ferr_crm", ai: true },
+  { tab: "processos", label: "Processos DataJud", icon: Briefcase, permission: "ferr_crm", proOnly: true, ai: true },
   { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs", ai: true },
   { tab: "blindagem", label: "Blindagem de Documentos", icon: Shield, permission: "ferr_blindagem", ai: true },
   { tab: "redator", label: "Redator IA", icon: Sparkles, permission: "ferr_redator_ia", legalOnly: true, ai: true },
@@ -91,10 +91,10 @@ const PREMIUM_ITEMS = [
 ];
 
 const ACCOUNT_ITEMS = [
-  { tab: "cartao-visitas", label: "CartÃ£o Digital", icon: User },
+  { tab: "cartao-visitas", label: "Cartão Digital", icon: User },
   { tab: "perfil", label: "Meu Perfil", icon: User },
-  { tab: "comunicacao", label: "ComunicaÃ§Ã£o Interna", icon: MessageSquare },
-  { tab: "documentacao", label: "DocumentaÃ§Ã£o", icon: BookOpen },
+  { tab: "comunicacao", label: "Comunicação Interna", icon: MessageSquare },
+  { tab: "documentacao", label: "Documentação", icon: BookOpen },
 ];
 
 function getPermission(profile, item) {

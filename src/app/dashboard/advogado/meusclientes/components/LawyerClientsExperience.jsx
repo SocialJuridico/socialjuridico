@@ -18,6 +18,7 @@ import {
   FileKey2,
   FileText,
   FolderOpen,
+  Gavel,
   Infinity as InfinityIcon,
   Info,
   Loader2,
@@ -989,7 +990,11 @@ function CasesTab({ controller }) {
           controller.dossier.cases.map((item) => (
             <article key={item.id}>
               <span className={styles.caseIcon}>
-                <BriefcaseBusiness size={18} />
+                {item.isProcess ? (
+                  <Gavel size={18} />
+                ) : (
+                  <BriefcaseBusiness size={18} />
+                )}
               </span>
               <div>
                 <strong>{item.titulo}</strong>
@@ -999,9 +1004,15 @@ function CasesTab({ controller }) {
                 </span>
               </div>
               <StatusBadge status={item.status} />
-              <a href="/dashboard/advogado/mensagens">
-                Abrir mensagens <ExternalLink size={13} />
-              </a>
+              {item.isProcess ? (
+                <a href={`/dashboard/advogado/processos?open=${item.id}`}>
+                  Abrir pasta <ExternalLink size={13} />
+                </a>
+              ) : (
+                <a href="/dashboard/advogado/mensagens">
+                  Abrir mensagens <ExternalLink size={13} />
+                </a>
+              )}
             </article>
           ))
         ) : (

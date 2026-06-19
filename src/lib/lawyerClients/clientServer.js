@@ -102,6 +102,20 @@ export async function requireLawyerClientAccess(request, options = {}) {
     };
   }
 
+  if (options.requirePro === true && planType !== "PRO") {
+    return {
+      ok: false,
+      response: clientJson(
+        {
+          success: false,
+          upgradeRequired: true,
+          message: "Esta ferramenta está disponível somente no Plano PRO.",
+        },
+        403,
+      ),
+    };
+  }
+
   const permissions = readPermissions(profile.permissoes);
   if (profile.cargo === "estagiario" && !Boolean(permissions.ferr_crm)) {
     return {

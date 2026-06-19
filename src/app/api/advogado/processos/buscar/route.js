@@ -22,7 +22,7 @@ export async function POST(request) {
       );
     }
 
-    const access = await requireLawyerClientAccess(request);
+    const access = await requireLawyerClientAccess(request, { requirePro: true });
     if (!access.ok) return access.response;
 
     const validation = validateSearchPayload(await request.json());

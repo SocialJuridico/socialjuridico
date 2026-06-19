@@ -47,6 +47,27 @@ async function findAssociatedCases(access, client) {
   return data || [];
 }
 
+function formatProcessCnj(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length !== 20) return value || "";
+  return `${digits.slice(0, 7)}-${digits.slice(7, 9)}.${digits.slice(9, 13)}.${digits.slice(13, 14)}.${digits.slice(14, 16)}.${digits.slice(16)}`;
+}
+
+async function findAssociatedProcesses(access, client) {
+  const { data, error } = await access.db
+    .from("lawyer_processes")
+    .select("id, numero_cnj, classe, orgao_julgador, created_at, lawyer_id")
+    .eq("client_id", client.id)
+    .eq("lawyer_id", client.lawyer_id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) {
+    console.error("[findAssociatedProcesses] Erro:", error);
+    return [];
+  }
+  return data || [];
+}
+
 export async function GET(request, context) {
   try {
     const access = await requireLawyerClientAccess(request);
@@ -61,7 +82,7 @@ export async function GET(request, context) {
       );
     }
 
-    const [interactions, finance, documents, cases] = await Promise.all([
+    const [interactions, finance, documents, casesData, processesData] = await Promise.all([
       access.db
         .from("crm_interactions")
         .select("id, lawyer_id, client_id, content, type, created_at")
@@ -85,11 +106,32 @@ export async function GET(request, context) {
         .order("created_at", { ascending: false })
         .limit(100),
       findAssociatedCases(access, client),
+      findAssociatedProcesses(access, client),
     ]);
 
     for (const result of [interactions, finance, documents]) {
       if (result.error) throw result.error;
     }
+
+    const cases = [
+      ...(casesData || []).map((c) => ({
+        id: c.id,
+        titulo: c.titulo,
+        area_atuacao: c.area_atuacao,
+        status: c.status,
+        created_at: c.created_at,
+        isProcess: false,
+      })),
+      ...(processesData || []).map((p) => ({
+        id: p.id,
+        titulo: `Processo: ${formatProcessCnj(p.numero_cnj)}`,
+        area_atuacao: p.classe || "Processo Importado",
+        status: "Processo",
+        created_at: p.created_at,
+        isProcess: true,
+        numeroCnj: p.numero_cnj,
+      })),
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     const memberMap = new Map(access.members.map((member) => [member.id, member]));
     return clientJson({

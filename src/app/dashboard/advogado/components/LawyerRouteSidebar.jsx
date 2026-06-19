@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import {
@@ -72,12 +72,12 @@ const PRIMARY_ITEMS = [
   { tab: "quero-site", label: "Quero um Site", icon: MonitorSmartphone },
   { tab: "meus-casos", label: "Meus Casos", icon: Briefcase },
   { tab: "declarei-interesse", label: "Declarei Interesse", icon: Check },
-  { tab: "anuncios-PREPOSTOS", label: "Anúncios de Serviços", icon: Zap },
+  { tab: "anuncios-PREPOSTOS", label: "AnÃºncios de ServiÃ§os", icon: Zap },
 ];
 
 const PREMIUM_ITEMS = [
   { tab: "assinatura", label: "Assinatura Digital", icon: PenTool, permission: "ferr_assinatura" },
-  { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
+  { tab: "notificacao", label: "NotificaÃ§Ã£o Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
   { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm", ai: true },
   { tab: "processos", label: "Processos DataJud", icon: Briefcase, permission: "ferr_crm", ai: true },
   { tab: "docs", label: "IA Smart Docs", icon: FileText, permission: "ferr_smart_docs", ai: true },
@@ -87,14 +87,14 @@ const PREMIUM_ITEMS = [
   { tab: "agenda", label: "Agenda & Prazos", icon: Calendar, permission: "ferr_agenda", ai: true },
   { tab: "triagem", label: "Triagem de Casos", icon: Search, permission: "ferr_triagem", ai: true },
   { tab: "calculadora", label: "Calculadoras", icon: Calculator, permission: "ferr_calculadora", proOnly: true },
-  { tab: "juris", label: "Jurisprudência", icon: BookOpen, permission: "ferr_jurisprudencia", legalOnly: true, proOnly: true, ai: true },
+  { tab: "juris", label: "JurisprudÃªncia", icon: BookOpen, permission: "ferr_jurisprudencia", legalOnly: true, proOnly: true, ai: true },
 ];
 
 const ACCOUNT_ITEMS = [
-  { tab: "cartao-visitas", label: "Cartão Digital", icon: User },
+  { tab: "cartao-visitas", label: "CartÃ£o Digital", icon: User },
   { tab: "perfil", label: "Meu Perfil", icon: User },
-  { tab: "comunicacao", label: "Comunicação Interna", icon: MessageSquare },
-  { tab: "documentacao", label: "Documentação", icon: BookOpen },
+  { tab: "comunicacao", label: "ComunicaÃ§Ã£o Interna", icon: MessageSquare },
+  { tab: "documentacao", label: "DocumentaÃ§Ã£o", icon: BookOpen },
 ];
 
 function getPermission(profile, item) {
@@ -189,8 +189,8 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     if (!getPermission(profileData, item)) {
       toast.error(
         profileData?.cargo === "secretaria" && item.legalOnly
-          ? "Acesso restrito para este perfil do escritório."
-          : "Recurso bloqueado pelas permissões do escritório.",
+          ? "Acesso restrito para este perfil do escritÃ³rio."
+          : "Recurso bloqueado pelas permissÃµes do escritÃ³rio.",
       );
       return;
     }
@@ -217,7 +217,7 @@ export default function LawyerRouteSidebar({ activeRoute }) {
         <Icon size={17} aria-hidden="true" />
         <span className={styles.navText}>{item.label}</span>
         {item.ai && (
-          <span className={styles.navAiBadge} title="Recurso com inteligência artificial">
+          <span className={styles.navAiBadge} title="Recurso com inteligÃªncia artificial">
             IA
           </span>
         )}
@@ -232,9 +232,9 @@ export default function LawyerRouteSidebar({ activeRoute }) {
   }
 
   return (
-    <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarOpen : ""}`} aria-label="Navegação do advogado">
+    <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarOpen : ""}`} aria-label="NavegaÃ§Ã£o do advogado">
       <header className={styles.brand}>
-        <div className={styles.brandText}><strong>Social Jurídico</strong><span>Área do advogado</span></div>
+        <div className={styles.brandText}><strong>Social JurÃ­dico</strong><span>Ãrea do advogado</span></div>
         <button type="button" className={styles.closeSidebar} onClick={closeSidebar} aria-label="Fechar menu"><X size={19} aria-hidden="true" /></button>
       </header>
 
@@ -242,12 +242,12 @@ export default function LawyerRouteSidebar({ activeRoute }) {
         <div className={styles.workspaceBadge} title={profileData.nome_escritorio}><Users size={15} aria-hidden="true" /><span>{profileData.nome_escritorio}</span></div>
       )}
 
-      <button type="button" className={`${styles.planBadge} ${sidebarStyles.planTrigger}`} onClick={openPlansModal} title="Ver planos disponíveis">
+      <button type="button" className={`${styles.planBadge} ${sidebarStyles.planTrigger}`} onClick={openPlansModal} title="Ver planos disponÃ­veis">
         <Sparkles size={15} aria-hidden="true" /><span>Plano {hasPremium ? planType : "FREE"}</span>
       </button>
 
       <div className={styles.navScroll} ref={navScrollRef}>
-        <nav className={styles.navGroup} aria-label="Navegação principal"><span className={styles.navLabel}>Navegação</span>{PRIMARY_ITEMS.map((item) => renderItem(item))}</nav>
+        <nav className={styles.navGroup} aria-label="NavegaÃ§Ã£o principal"><span className={styles.navLabel}>NavegaÃ§Ã£o</span>{PRIMARY_ITEMS.map((item) => renderItem(item))}</nav>
         <nav className={styles.navGroup} aria-label="Ferramentas profissionais"><span className={styles.navLabel}>Ferramentas profissionais</span>{PREMIUM_ITEMS.map((item) => renderItem(item, true))}</nav>
         <nav className={styles.navGroup} aria-label="Conta e suporte">
           <span className={styles.navLabel}>Conta e suporte</span>
@@ -258,3 +258,4 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     </aside>
   );
 }
+

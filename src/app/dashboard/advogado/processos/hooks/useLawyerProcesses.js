@@ -80,6 +80,7 @@ export function useLawyerProcesses() {
     ...EMPTY_MANUAL_PARTY,
     tipo: "pessoa_juridica",
   });
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async (page = 1) => {
     setLoading(true);
@@ -294,6 +295,54 @@ export function useLawyerProcesses() {
     }
   }, [openFolder]);
 
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [processIdToDelete, setProcessIdToDelete] = useState(null);
+
+  const requestDeleteProcess = useCallback((processId) => {
+    setProcessIdToDelete(processId);
+    setDeleteConfirmOpen(true);
+  }, []);
+
+  const cancelDeleteProcess = useCallback(() => {
+    setProcessIdToDelete(null);
+    setDeleteConfirmOpen(false);
+  }, []);
+
+  const confirmDeleteProcess = useCallback(async () => {
+    if (!processIdToDelete) return false;
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/advogado/processos/${processIdToDelete}`, {
+        method: "DELETE",
+      });
+      const data = await readJson(response);
+      if (response.status === 403 && data?.upgradeRequired) {
+        openPlansModal();
+        throw new Error(data.message);
+      }
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Não foi possível excluir o processo.");
+      }
+      toast.success(data.message || "Processo excluído com sucesso.");
+      
+      if (folder?.process?.id === processIdToDelete) {
+        setFolderOpen(false);
+        setFolder(null);
+      }
+
+      setItems((prev) => prev.filter((item) => item.id !== processIdToDelete));
+      await load(pagination.page);
+      setDeleteConfirmOpen(false);
+      setProcessIdToDelete(null);
+      return true;
+    } catch (err) {
+      toast.error(err.message || "Não foi possível excluir o processo.");
+      return false;
+    } finally {
+      setDeleting(false);
+    }
+  }, [processIdToDelete, load, pagination.page, folder, openPlansModal]);
+
   return {
     items,
     clients,
@@ -331,5 +380,10 @@ export function useLawyerProcesses() {
     folderLoading,
     folder,
     openFolder,
+    deleting,
+    deleteConfirmOpen,
+    requestDeleteProcess,
+    cancelDeleteProcess,
+    confirmDeleteProcess,
   };
 }

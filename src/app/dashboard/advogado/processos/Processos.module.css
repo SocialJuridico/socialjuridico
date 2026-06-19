@@ -967,3 +967,95 @@
   }
 }
 
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: #f87171 !important;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #fca5a5 !important;
+}
+
+.modalHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modalDeleteBtn {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: #f87171 !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modalDeleteBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+  color: #fca5a5 !important;
+}
+
+.confirmModal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(500px, 100%);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 22px;
+  background: #0b0b0f;
+  box-shadow: 0 35px 100px rgba(0, 0, 0, 0.65);
+}
+
+.confirmBody {
+  padding: 24px;
+  color: #d4d4d8;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.confirmHighlight {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  font-size: 0.82rem;
+}
+
+.dangerConfirmBtn {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ef4444, #b91c1c) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 28px rgba(239, 68, 68, 0.18) !important;
+}
+
+.dangerConfirmBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f87171, #dc2626) !important;
+}
+

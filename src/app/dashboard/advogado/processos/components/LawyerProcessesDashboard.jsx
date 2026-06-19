@@ -20,6 +20,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Trash2,
   UserRound,
   Users,
   X,
@@ -352,13 +353,26 @@ function ProcessFolderModal({ controller }) {
               <p className={styles.folderClientName}>{process?.clientName || "Cliente vinculado ao CRM"}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => controller.setFolderOpen(false)}
-            aria-label="Fechar"
-          >
-            <X size={20} />
-          </button>
+          <div className={styles.modalHeaderActions}>
+            {process && (
+              <button
+                type="button"
+                className={styles.modalDeleteBtn}
+                onClick={() => controller.requestDeleteProcess(process.id)}
+                disabled={controller.deleting}
+                title="Excluir processo"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => controller.setFolderOpen(false)}
+              aria-label="Fechar"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </header>
 
         {controller.folderLoading ? (
@@ -476,6 +490,53 @@ function Notice({ title, message, action }) {
   );
 }
 
+function DeleteConfirmModal({ controller }) {
+  if (!controller.deleteConfirmOpen) return null;
+
+  return (
+    <div className={styles.backdrop}>
+      <section className={styles.confirmModal} role="dialog" aria-modal="true">
+        <header className={styles.modalHeader}>
+          <div className={styles.folderTitleContainer}>
+            <span className={styles.folderIcon} style={{ color: "#f87171", background: "rgba(239, 68, 68, 0.1)" }}>
+              <AlertTriangle size={16} />
+            </span>
+            <div>
+              <small className={styles.folderEyebrow} style={{ color: "#f87171" }}>Ação irreversível</small>
+              <h2>Excluir Processo</h2>
+            </div>
+          </div>
+          <button type="button" onClick={controller.cancelDeleteProcess} aria-label="Fechar">
+            <X size={20} />
+          </button>
+        </header>
+
+        <div className={styles.confirmBody}>
+          <p>Tem certeza que deseja apagar este processo do sistema?</p>
+          <p className={styles.confirmHighlight}>
+            Esta ação removerá permanentemente o processo do CRM e todos os seus dados vinculados (avisos, movimentações e partes).
+          </p>
+        </div>
+
+        <footer className={styles.modalFooter}>
+          <button type="button" onClick={controller.cancelDeleteProcess} disabled={controller.deleting}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className={styles.dangerConfirmBtn}
+            onClick={controller.confirmDeleteProcess}
+            disabled={controller.deleting}
+          >
+            {controller.deleting ? <Loader2 size={17} className={styles.spin} /> : <Trash2 size={17} />}
+            {controller.deleting ? "Excluindo..." : "Sim, excluir"}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
 export default function LawyerProcessesDashboard() {
   const session = useLawyerSession();
   const controller = useLawyerProcesses();
@@ -484,10 +545,26 @@ export default function LawyerProcessesDashboard() {
   const isPro = planType === "PRO";
 
   useEffect(() => {
-    if (!isPro) {
+    if (!session.loadingProfile && !isPro) {
       session.openPlansModal();
     }
-  }, [isPro, session]);
+  }, [isPro, session.loadingProfile, session]);
+
+  if (session.loadingProfile) {
+    return (
+      <LawyerDashboardShell
+        activeRoute="processos"
+        title="Processos"
+        subtitle="Importação DataJud/CNJ vinculada ao CRM"
+        icon={Gavel}
+      >
+        <div className={styles.state}>
+          <Loader2 size={30} className={styles.spin} />
+          <strong>Carregando dados da sessão...</strong>
+        </div>
+      </LawyerDashboardShell>
+    );
+  }
 
   if (!isPro) {
     return (
@@ -602,11 +679,22 @@ export default function LawyerProcessesDashboard() {
                       <dd>{item.orgaoJulgador || "—"}</dd>
                     </div>
                   </dl>
-                  <footer>
+                   <footer>
                     <small>Importado em {formatDate(item.createdAt)}</small>
-                    <button type="button" onClick={() => controller.openFolder(item.id)}>
-                      Abrir pasta <FolderOpen size={15} />
-                    </button>
+                    <div className={styles.cardActions}>
+                      <button
+                        type="button"
+                        className={styles.deleteBtn}
+                        onClick={() => controller.requestDeleteProcess(item.id)}
+                        disabled={controller.deleting}
+                        title="Excluir processo"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                      <button type="button" onClick={() => controller.openFolder(item.id)}>
+                        Abrir pasta <FolderOpen size={15} />
+                      </button>
+                    </div>
                   </footer>
                 </article>
               ))}
@@ -639,6 +727,7 @@ export default function LawyerProcessesDashboard() {
 
       <ProcessPreviewModal controller={controller} />
       <ProcessFolderModal controller={controller} />
+      <DeleteConfirmModal controller={controller} />
     </LawyerDashboardShell>
   );
 }

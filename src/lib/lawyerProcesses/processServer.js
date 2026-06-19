@@ -227,12 +227,16 @@ export async function resolveProcessClient(access, request, payload) {
 
   if (error) throw error;
 
-  await recordClientAudit(access, request, {
-    requestId,
-    clientId,
-    action: "CREATE_CLIENT_FROM_PROCESS",
-    metadata: { numero_cnj: payload.numeroProcesso },
-  });
+  try {
+    await recordClientAudit(access, request, {
+      requestId,
+      clientId,
+      action: "CREATE_CLIENT",
+      metadata: { numero_cnj: payload.numeroProcesso, source: "process_import" },
+    });
+  } catch (auditError) {
+    console.warn("[resolveProcessClient][Audit] Falha ao registrar log de criação de cliente:", auditError);
+  }
 
   return { client: data, created: true, source: "created" };
 }
@@ -446,17 +450,22 @@ export async function saveLocalProcessFromExternal(access, request, payload, ext
     },
   ]);
 
-  await recordClientAudit(access, request, {
-    requestId: payload.requestId,
-    clientId: client.id,
-    action: "IMPORT_PROCESS_DATAJUD",
-    metadata: {
-      process_id: processId,
-      numero_cnj: numeroCnj,
-      client_source: clientSource,
-      client_created: clientCreated,
-    },
-  });
+  try {
+    await recordClientAudit(access, request, {
+      requestId: payload.requestId,
+      clientId: client.id,
+      action: "UPDATE_CLIENT",
+      metadata: {
+        process_id: processId,
+        numero_cnj: numeroCnj,
+        client_source: clientSource,
+        client_created: clientCreated,
+        action_detail: "IMPORT_PROCESS_DATAJUD",
+      },
+    });
+  } catch (auditError) {
+    console.warn("[saveLocalProcessFromExternal][Audit] Falha ao registrar log de importação de processo:", auditError);
+  }
 
   return {
     process: savedProcess,

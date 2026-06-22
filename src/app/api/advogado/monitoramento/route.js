@@ -167,67 +167,8 @@ export async function POST(request) {
           if (external.ok && external.payload?.success) {
             rawList = external.payload.data || external.payload.processos || [];
             console.log(`[OAB/Monitoramento][Background] Found ${rawList.length} processes. Storing up to 20...`);
-          } else if (process.env.ENABLE_MONITORAMENTO_MOCKS === "true") {
-            console.warn("[OAB/Monitoramento][Background] External API returned maintenance page or HTML. Falling back to test mock processes...");
-            rawList = [
-              {
-                numero_cnj: `5001234-56.2026.8.21.0001`,
-                capa: {
-                  classe: "Procedimento Comum Cível",
-                  orgao_julgador: "1ª Vara Cível de Porto Alegre",
-                  sistema: "eproc",
-                  formato: "Eletrônico",
-                  data_ajuizamento: "2026-03-10T14:30:00Z"
-                },
-                tribunal: { nome: "Tribunal de Justiça do Rio Grande do Sul", codigo: "TJRS", alias_datajud: "TJRS" },
-                partes: [
-                  { nome: "João da Silva", polo: "Ativo", tipo_parte: "Autor", documento: "12345678909" },
-                  { nome: "Banco do Brasil S/A", polo: "Passivo", tipo_parte: "Réu", documento: "00000000000191" }
-                ],
-                ultimas_movimentacoes: [
-                  { data: "2026-06-20T10:00:00Z", titulo: "Decisão Proferida", detalhe: "Deferida a antecipação de tutela pleiteada." },
-                  { data: "2026-06-15T14:30:00Z", titulo: "Petição Inicial Protocolada", detalhe: "Ajuizada ação ordinária cível." }
-                ]
-              },
-              {
-                numero_cnj: `5007890-12.2025.8.21.0001`,
-                capa: {
-                  classe: "Ação Monitória",
-                  orgao_julgador: "4ª Vara Cível de Porto Alegre",
-                  sistema: "eproc",
-                  formato: "Eletrônico",
-                  data_ajuizamento: "2025-11-05T09:15:00Z"
-                },
-                tribunal: { nome: "Tribunal de Justiça do Rio Grande do Sul", codigo: "TJRS", alias_datajud: "TJRS" },
-                partes: [
-                  { nome: "Maria de Souza", polo: "Ativo", tipo_parte: "Autor", documento: "98765432100" },
-                  { nome: "Comércio de Roupas Ltda", polo: "Passivo", tipo_parte: "Réu", documento: "11222333000144" }
-                ],
-                ultimas_movimentacoes: [
-                  { data: "2026-05-18T16:00:00Z", titulo: "Expedição de Mandado", detalhe: "Mandado de citação expedido com sucesso." }
-                ]
-              },
-              {
-                numero_cnj: `5012345-67.2026.8.21.0001`,
-                capa: {
-                  classe: "Execução de Título Extrajudicial",
-                  orgao_julgador: "12ª Vara Cível de Porto Alegre",
-                  sistema: "eproc",
-                  formato: "Eletrônico",
-                  data_ajuizamento: "2026-01-20T11:00:00Z"
-                },
-                tribunal: { nome: "Tribunal de Justiça do Rio Grande do Sul", codigo: "TJRS", alias_datajud: "TJRS" },
-                partes: [
-                  { nome: "Condomínio Edifício Solar", polo: "Ativo", tipo_parte: "Autor", documento: "01020304000105" },
-                  { nome: "Carlos Eduardo Santos", polo: "Passivo", tipo_parte: "Réu", documento: "44455566677" }
-                ],
-                ultimas_movimentacoes: [
-                  { data: "2026-06-12T13:10:00Z", titulo: "Petição de Acordo", detalhe: "Partes protocolam petição conjunta de acordo." }
-                ]
-              }
-            ];
           } else {
-            console.warn("[OAB/Monitoramento][Background] External API search failed and mocks are disabled.");
+            console.warn("[OAB/Monitoramento][Background] A consulta de processos na API externa falhou ou retornou erro.");
           }
 
           // Limit to 20 processes

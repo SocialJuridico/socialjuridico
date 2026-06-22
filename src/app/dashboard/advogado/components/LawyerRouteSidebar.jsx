@@ -89,7 +89,7 @@ const PREMIUM_ITEMS = [
   { tab: "agenda", label: "Agenda & Prazos", icon: Calendar, permission: "ferr_agenda", ai: true },
   { tab: "triagem", label: "Triagem de Casos", icon: Search, permission: "ferr_triagem", ai: true },
   { tab: "calculadora", label: "Calculadoras", icon: Calculator, permission: "ferr_calculadora", proOnly: true },
-  { tab: "juris", label: "JurisprudÃªncia", icon: BookOpen, permission: "ferr_jurisprudencia", legalOnly: true, proOnly: true, ai: true },
+  { tab: "juris", label: "Jurisprudência", icon: BookOpen, permission: "ferr_jurisprudencia", legalOnly: true, proOnly: true, ai: true },
 ];
 
 const ACCOUNT_ITEMS = [
@@ -234,9 +234,9 @@ export default function LawyerRouteSidebar({ activeRoute }) {
   }
 
   return (
-    <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarOpen : ""}`} aria-label="NavegaÃ§Ã£o do advogado">
+    <aside className={`${styles.sidebar} ${isSidebarOpen ? styles.sidebarOpen : ""}`} aria-label="Navegação do advogado">
       <header className={styles.brand}>
-        <div className={styles.brandText}><strong>Social JurÃ­dico</strong><span>Ãrea do advogado</span></div>
+        <div className={styles.brandText}><strong>Social Jurídico</strong><span>Área do advogado</span></div>
         <button type="button" className={styles.closeSidebar} onClick={closeSidebar} aria-label="Fechar menu"><X size={19} aria-hidden="true" /></button>
       </header>
 

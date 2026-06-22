@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabaseServer";
+﻿import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -173,7 +173,7 @@ export async function POST(request) {
         Responda EXCLUSIVAMENTE em formato JSON: {"type": "Tipo", "tags": ["tag1", "tag2", "tag3"]}`;
 
         const completion = await openai.chat.completions.create({
-          model: "gpt-4o",
+          model: "gemini-2.5-flash",
           messages: [
             {
               role: "system",

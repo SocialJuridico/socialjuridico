@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabaseServer";
+﻿import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
@@ -34,7 +34,7 @@ export async function POST(request) {
       const base64Image = buffer.toString("base64");
 
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gemini-2.5-flash",
         messages: [
           {
             role: "user",

@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+﻿import OpenAI from "openai";
 import {
   CLIENT_QUESTION_KEYS,
   LAWYER_QUESTION_KEYS,
@@ -108,7 +108,7 @@ export async function POST() {
     }
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gemini-2.5-flash",
       messages: [
         {
           role: "system",

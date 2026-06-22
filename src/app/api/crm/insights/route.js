@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabaseServer";
+﻿import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -90,7 +90,7 @@ ${JSON.stringify(context, null, 2)}
 RESPONDA APENAS O INSIGHT, sem introduções.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gemini-2.5-flash",
       messages: [
         { role: "system", content: "Você é um assistente jurídico experiente." },
         { role: "user", content: prompt }

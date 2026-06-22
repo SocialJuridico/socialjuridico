@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+﻿import OpenAI from "openai";
 import { PDFDocument } from "pdf-lib";
 
 import {
@@ -8,7 +8,7 @@ import {
 } from "./contentValidation";
 
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
   : null;
 
 export const MAX_DOCUMENTATION_PDF_BYTES = 30 * 1024 * 1024;
@@ -150,7 +150,7 @@ export async function analyzeDocumentationPdfVisual({
   }
 
   const response = await openai.responses.create({
-    model: "gpt-4o-mini",
+    model: "gemini-2.5-flash",
     input: [
       {
         role: "user",
@@ -186,7 +186,7 @@ export async function analyzeDocumentationPdfVisual({
       normalizeFileTitle(fileName) ||
       "Apresentação",
     subtitle: normalizePlatformText(parsed.subtitle, 260),
-    model: "gpt-4o-mini-file-input",
+    model: "gemini-2.5-flash",
   };
 }
 
@@ -283,7 +283,7 @@ export async function generateDocumentationFromPdf({ fileName, pages }) {
   }
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: "gemini-2.5-flash",
     response_format: { type: "json_object" },
     temperature: 0.1,
     messages: [
@@ -328,6 +328,6 @@ export async function generateDocumentationFromPdf({ fileName, pages }) {
     summary: normalizePlatformText(parsed.summary, 1200),
     contentType: allowedTypes.has(contentType) ? contentType : "ARTICLE",
     contentSchema: schema,
-    model: "gpt-4o-mini",
+    model: "gemini-2.5-flash",
   };
 }

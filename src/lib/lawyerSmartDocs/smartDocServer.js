@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+﻿import crypto from "node:crypto";
 
 import OpenAI from "openai";
 
@@ -12,7 +12,7 @@ import { isClientUuid, normalizeClientText } from "@/lib/lawyerClients/clientVal
 import { parseSmartDocLegacyStoragePath } from "./smartDocValidation";
 
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
   : null;
 
 const SMARTDOC_PLANS = new Set([
@@ -286,7 +286,7 @@ export async function classifySmartDocument(fileName) {
   if (!openai) return { type: "Outros", tags: ["Documento"] };
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gemini-2.5-flash",
       messages: [
         {
           role: "system",

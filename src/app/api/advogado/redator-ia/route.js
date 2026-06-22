@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+﻿import crypto from "node:crypto";
 
 import OpenAI from "openai";
 
@@ -62,7 +62,7 @@ const ELIGIBLE_PLANS = new Set([
 ]);
 
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
   : null;
 
 function redatorJson(payload, status = 200) {
@@ -537,7 +537,7 @@ export async function POST(request) {
     let completion;
     try {
       completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gemini-2.5-flash",
         messages: [
           {
             role: "system",

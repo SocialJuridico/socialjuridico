@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+﻿import OpenAI from "openai";
 
 import {
   clientFailure,
@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
   : null;
 
 export async function POST(request, context) {
@@ -95,7 +95,7 @@ export async function POST(request, context) {
     };
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gemini-2.5-flash",
       messages: [
         {
           role: "system",
@@ -119,7 +119,7 @@ export async function POST(request, context) {
       requestId: body.requestId,
       clientId: client.id,
       action: "GENERATE_INSIGHT",
-      metadata: { model: "gpt-4o-mini" },
+      metadata: { model: "gemini-2.5-flash" },
     });
 
     return clientJson({ success: true, insight });

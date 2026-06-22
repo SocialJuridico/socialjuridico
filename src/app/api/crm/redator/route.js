@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabaseServer";
+﻿import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -187,7 +187,7 @@ export async function POST(request) {
     Gere apenas o texto da minuta finalizada.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         {

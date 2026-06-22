@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "@/lib/supabase";
+﻿import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -206,7 +206,7 @@ O parecer deve conter as seguintes seções estruturadas:
 4. 💡 **Recomendações Estratégicas da IA** (Mínimo 3 conselhos contábeis ou de otimização de custos customizados para a realidade dos lançamentos deste mês).`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }

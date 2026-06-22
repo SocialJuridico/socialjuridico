@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+﻿import OpenAI from "openai";
 import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import {
   requireSignatureProductAccess,
@@ -17,7 +17,7 @@ const PLAN_AI_LIMITS = {
 };
 
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
   : null;
 
 export async function POST(request) {
@@ -77,7 +77,7 @@ export async function POST(request) {
 
     // Call OpenAI
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gemini-2.5-flash",
       messages: [
         {
           role: "system",

@@ -10,6 +10,8 @@
     "test": "jest --config jest.config.js"
   },
   "dependencies": {
+    "@babel/runtime": "^8.0.0",
+    "@google/genai": "^2.9.0",
     "@jitsi/react-sdk": "^1.4.4",
     "@stripe/react-stripe-js": "^6.6.0",
     "@stripe/stripe-js": "^9.8.0",

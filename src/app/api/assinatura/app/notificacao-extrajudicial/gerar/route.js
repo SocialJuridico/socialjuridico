@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+﻿import OpenAI from "openai";
 import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import {
   requireSignatureProductAccess,
@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
   : null;
 
 const TONE_LABELS = Object.freeze({
@@ -100,7 +100,7 @@ export async function POST(request) {
     const authorName = account?.full_name || "";
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gemini-2.5-flash",
       messages: [
         {
           role: "system",

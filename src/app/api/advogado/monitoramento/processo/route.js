@@ -5,6 +5,7 @@ import {
   requireLawyerClientAccess,
 } from "@/lib/lawyerClients/clientServer";
 import {
+  callExternalProcessApi,
   saveLocalProcessFromExternal,
   serializeProcessListItem,
 } from "@/lib/lawyerProcesses/processServer";
@@ -82,6 +83,24 @@ export async function POST(request) {
         .eq("id", id);
 
       if (updateError) throw updateError;
+
+      // Sincroniza o monitoramento do processo individual na API processual externa
+      try {
+        console.log(`[OAB/Monitoramento/Processo] Sincronizando monitoramento do CNJ ${oabProcess.numero_cnj} na API externa. Ativo: ${targetMonitored}`);
+        const external = await callExternalProcessApi("/api/plataformas/monitoramentos", {
+          tipo: "cnj",
+          type: "cnj",
+          numero_cnj: oabProcess.numero_cnj,
+          plataforma_ref: access.profile.id,
+          ativo: targetMonitored
+        });
+
+        if (!external.ok || !external.payload?.success) {
+          console.warn("[OAB/Monitoramento/Processo] Erro ao registrar monitoramento na API externa:", external.payload);
+        }
+      } catch (monitorError) {
+        console.error("[OAB/Monitoramento/Processo] Erro de rede ao sincronizar monitoramento na API externa:", monitorError);
+      }
 
       return clientJson({
         success: true,

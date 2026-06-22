@@ -1308,4 +1308,172 @@ export function radarLoteCasosTemplate({ oportunidades, lawyerName }) {
 </html>`;
 }
 
+/**
+ * Template de notificação para movimentações processuais ou citações OAB
+ */
+export function monitoramentoProcessualTemplate({ lawyerName, tipoEvento, numeroCnj, detalhes, dataEvento, oabInfo }) {
+  const dashboardUrl = "https://socialjuridico.com.br/dashboard/advogado/monitoramento";
+  
+  let headerTitle = "⚖️ EVENTO DE MONITORAMENTO";
+  let subtitleText = "ATUALIZAÇÃO PROCESSUAL DETECTADA";
+  let colorTheme = "#d4af37"; // gold
+  let colorGradient = "linear-gradient(135deg, #d4af37 0%, #b8962e 50%, #a07928 100%)";
+  let emoji = "🔔";
+
+  if (tipoEvento === "oab_citation" || tipoEvento === "oab") {
+    headerTitle = "⚖️ NOVA CITAÇÃO DETECTADA";
+    subtitleText = "MONITORAMENTO DE DIÁRIO OFICIAL";
+    emoji = "⚖️";
+  } else if (tipoEvento === "process_movement" || tipoEvento === "cnj") {
+    headerTitle = "🔔 NOVA MOVIMENTAÇÃO DETECTADA";
+    subtitleText = "MONITORAMENTO DE CNJ INDIVIDUAL";
+    emoji = "📈";
+  } else if (tipoEvento === "monitoring_failed") {
+    headerTitle = "⚠️ ALERTA DE MONITORAMENTO";
+    subtitleText = "FALHA DE ATUALIZAÇÃO NO PROCESSO";
+    colorTheme = "#e74c3c"; // red/orange
+    colorGradient = "linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)";
+    emoji = "⚠️";
+  }
+
+  // Format date nicely if possible
+  let dateFormatted = dataEvento;
+  try {
+    if (dataEvento) {
+      const d = new Date(dataEvento);
+      if (!isNaN(d.getTime())) {
+        dateFormatted = d.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+    }
+  } catch (e) {}
+
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #08090b; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #08090b; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background: linear-gradient(145deg, #0d0f14 0%, #12151c 100%); border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.3); overflow: hidden; max-width: 600px;">
+          
+          <!-- HEADER -->
+          <tr>
+            <td style="background: ${colorGradient}; padding: 32px 40px; text-align: center;">
+              <h1 style="margin: 0; color: ${tipoEvento === "monitoring_failed" ? "#ffffff" : "#0d0f12"}; font-size: 20px; font-weight: 800; letter-spacing: 1px;">${headerTitle}</h1>
+              <p style="margin: 6px 0 0; color: ${tipoEvento === "monitoring_failed" ? "rgba(255,255,255,0.8)" : "rgba(13, 15, 18, 0.7)"}; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">${subtitleText}</p>
+            </td>
+          </tr>
+
+          <!-- SAUDAÇÃO -->
+          <tr>
+            <td style="padding: 36px 40px 16px;">
+              <p style="margin: 0; color: #ffffff; font-size: 17px; line-height: 1.6;">
+                Olá, Dr(a). <strong style="color: #d4af37;">${lawyerName}</strong>!
+              </p>
+              <p style="margin: 12px 0 0; color: rgba(255, 255, 255, 0.75); font-size: 15px; line-height: 1.7;">
+                Identificamos uma nova atualização no seu painel de monitoramento processual:
+              </p>
+            </td>
+          </tr>
+
+          <!-- CARD DE DETALHES -->
+          <tr>
+            <td style="padding: 8px 40px 24px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, rgba(212, 175, 55, 0.03) 100%); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 12px; overflow: hidden;">
+                
+                <!-- Info Grid -->
+                <tr>
+                  <td style="padding: 24px 24px 16px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      ${numeroCnj ? `
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <p style="margin: 0 0 2px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">🔢 Processo (CNJ)</p>
+                          <p style="margin: 0; color: #ffffff; font-size: 15px; font-weight: 700;">${numeroCnj}</p>
+                        </td>
+                      </tr>
+                      ` : ""}
+                      
+                      ${oabInfo ? `
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <p style="margin: 0 0 2px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">⚖️ OAB Monitorada</p>
+                          <p style="margin: 0; color: #d4af37; font-size: 15px; font-weight: 700;">${oabInfo}</p>
+                        </td>
+                      </tr>
+                      ` : ""}
+
+                      ${dateFormatted ? `
+                      <tr>
+                        <td style="padding-bottom: 12px;">
+                          <p style="margin: 0 0 2px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">📅 Data do Evento</p>
+                          <p style="margin: 0; color: rgba(255,255,255,0.85); font-size: 14px;">${dateFormatted}</p>
+                        </td>
+                      </tr>
+                      ` : ""}
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Divider -->
+                <tr>
+                  <td style="padding: 0 24px;">
+                    <div style="border-top: 1px solid rgba(212, 175, 55, 0.15);"></div>
+                  </td>
+                </tr>
+
+                <!-- Detalhes do Evento -->
+                <tr>
+                  <td style="padding: 16px 24px 24px;">
+                    <p style="margin: 0 0 6px; color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">📝 Conteúdo / Descrição</p>
+                    <div style="margin: 0; color: rgba(255, 255, 255, 0.9); font-size: 14.5px; line-height: 1.6; white-space: pre-line; background-color: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; border-left: 3px solid ${colorTheme};">
+                      ${detalhes || "Nenhum detalhe adicional fornecido."}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- BOTÃO CTA -->
+          <tr>
+            <td style="padding: 8px 40px 16px; text-align: center;">
+              <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #b8962e 100%); color: #0d0f12; padding: 16px 40px; border-radius: 10px; text-decoration: none; font-weight: 800; font-size: 15px; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);">
+                Ver Monitoramento no Painel
+              </a>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td style="background-color: rgba(0,0,0,0.3); padding: 24px 40px; border-top: 1px solid rgba(212, 175, 55, 0.1);">
+              <p style="margin: 0; color: rgba(255,255,255,0.35); font-size: 12px; text-align: center; line-height: 1.6;">
+                Social Jurídico — Conectando o direito ao futuro.<br>
+                <a href="https://socialjuridico.com.br" style="color: rgba(212, 175, 55, 0.5); text-decoration: none;">socialjuridico.com.br</a>
+              </p>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.2); font-size: 11px; text-align: center;">
+                Este é um e-mail automático enviado pelo seu assistente de monitoramento do Social Jurídico.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+
 

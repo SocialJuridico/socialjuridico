@@ -69,7 +69,7 @@ export default function MonitoramentoDashboard() {
 
     try {
       setLoading(true);
-      const res = await fetch("/api/advogado/monitoramento");
+      const res = await fetch("/api/advogado/monitoramento", { cache: "no-store" });
       const json = await res.json();
 
       if (json.success) {
@@ -100,7 +100,7 @@ export default function MonitoramentoDashboard() {
   // Load CRM clients for dropdown selection
   const loadCrmClients = async () => {
     try {
-      const res = await fetch("/api/advogado/clientes?pageSize=100");
+      const res = await fetch("/api/advogado/clientes?pageSize=100", { cache: "no-store" });
       const json = await res.json();
       if (json.success) {
         setCrmClients(json.data || []);

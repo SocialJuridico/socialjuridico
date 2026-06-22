@@ -224,7 +224,7 @@
 
 .metricsGrid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
 }
 
@@ -232,6 +232,7 @@
   display: grid;
   gap: 10px;
   padding: 14px;
+  align-content: start;
 }
 
 .metricsGrid strong {
@@ -240,7 +241,11 @@
 }
 
 .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: fit-content;
+  white-space: nowrap;
   border-radius: 999px;
   padding: 6px 10px;
   background: rgba(255, 255, 255, 0.08);

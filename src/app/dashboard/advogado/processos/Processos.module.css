@@ -538,6 +538,66 @@
   white-space: pre-wrap;
 }
 
+.aiSummaryFallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 150px;
+  padding: 20px;
+  border: 1px dashed rgba(212, 175, 55, 0.25);
+  border-radius: 12px;
+  background: rgba(212, 175, 55, 0.015);
+  text-align: center;
+}
+
+.aiSummaryEmpty {
+  margin: 0;
+  color: #a1a1aa;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.aiSummaryGenerating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #d8b86a;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.aiSummaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  border-radius: 10px;
+  background: rgba(212, 175, 55, 0.08);
+  color: #d8b86a;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.aiSummaryBtn:hover {
+  background: rgba(212, 175, 55, 0.16);
+  border-color: rgba(212, 175, 55, 0.6);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+  transform: translateY(-1px);
+}
+
+.aiSummaryBtn:active {
+  transform: translateY(0);
+}
+
+
 .inlineAlert,
 .emptyCompact {
   padding: 12px;

@@ -445,7 +445,28 @@ function ProcessFolderModal({ controller }) {
                   <Sparkles size={18} />
                   <h3>Resumo estruturado por IA</h3>
                 </header>
-                <p className={styles.aiSummary}>{process?.resumoIa || "Resumo não disponível."}</p>
+                {process?.resumoIa ? (
+                  <p className={styles.aiSummary}>{process.resumoIa}</p>
+                ) : (
+                  <div className={styles.aiSummaryFallback}>
+                    <p className={styles.aiSummaryEmpty}>Resumo inteligente ainda não disponível para este processo.</p>
+                    {controller.generatingSummary ? (
+                      <div className={styles.aiSummaryGenerating}>
+                        <Loader2 size={16} className={styles.spin} />
+                        <span>Gerando resumo com inteligência artificial...</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles.aiSummaryBtn}
+                        onClick={() => controller.generateSummary(process.id)}
+                      >
+                        <Sparkles size={14} />
+                        Gerar Resumo com IA
+                      </button>
+                    )}
+                  </div>
+                )}
               </section>
 
               <section className={styles.card}>

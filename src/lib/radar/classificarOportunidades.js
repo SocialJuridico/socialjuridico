@@ -18,7 +18,7 @@ export async function classificarOportunidades(oportunidadesBrutas) {
     );
 
     return oportunidadesBrutas.map((item) => {
-      const trecho = String(
+      const trecho = cleanHtml(
         item.texto_publico || item.trecho_publico || "",
       ).substring(0, 500);
 
@@ -51,7 +51,7 @@ export async function classificarOportunidades(oportunidadesBrutas) {
       dominio: item.raw_fonte || null,
       url: item.url_original,
       titulo: item.titulo || "",
-      texto: String(
+      texto: cleanHtml(
         item.texto_publico || item.trecho_publico || "",
       ).substring(0, 900),
     }));
@@ -114,7 +114,7 @@ Formato:
       const aiResult = results.find(
         (result) => Number(result?.index) === index,
       ) || {};
-      const trecho = String(
+      const trecho = cleanHtml(
         aiResult.trecho_publico ||
           item.texto_publico ||
           item.trecho_publico ||
@@ -155,7 +155,7 @@ Formato:
       categoria: "Não classificada",
       fonte: item.fonte || "Internet",
       url_original: item.url_original || "",
-      trecho_publico: String(
+      trecho_publico: cleanHtml(
         item.texto_publico || item.trecho_publico || "",
       ).substring(0, 500),
       cidade: item.cidade || null,
@@ -178,4 +178,17 @@ function mapearFonteTipo(fonte, urlOriginal) {
   if (value.includes("twitter") || value.includes("x.com")) return "X";
   if (value.includes("jusbrasil")) return "JusBrasil";
   return "Outros";
+}
+
+function cleanHtml(value) {
+  if (!value) return "";
+  return String(value)
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

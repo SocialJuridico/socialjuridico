@@ -81,6 +81,7 @@ export function useLawyerProcesses() {
     tipo: "pessoa_juridica",
   });
   const [deleting, setDeleting] = useState(false);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
 
   const load = useCallback(async (page = 1) => {
     setLoading(true);
@@ -343,6 +344,49 @@ export function useLawyerProcesses() {
     }
   }, [processIdToDelete, load, pagination.page, folder, openPlansModal]);
 
+  const generateSummary = useCallback(async (processId) => {
+    if (!processId) return;
+    setGeneratingSummary(true);
+    try {
+      const response = await fetch(`/api/advogado/processos/${processId}/resumo`, {
+        method: "POST",
+      });
+      const data = await readJson(response);
+      if (response.status === 403 && data?.upgradeRequired) {
+        openPlansModal();
+        throw new Error(data.message);
+      }
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Não foi possível gerar o resumo.");
+      }
+      
+      toast.success("Resumo gerado com sucesso!");
+      
+      setFolder((prev) => {
+        if (prev && prev.process && prev.process.id === processId) {
+          return {
+            ...prev,
+            process: {
+              ...prev.process,
+              resumoIa: data.resumoIa,
+            },
+          };
+        }
+        return prev;
+      });
+
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === processId ? { ...item, resumoIa: data.resumoIa } : item
+        )
+      );
+    } catch (err) {
+      toast.error(err.message || "Erro ao gerar o resumo do processo.");
+    } finally {
+      setGeneratingSummary(false);
+    }
+  }, [openPlansModal]);
+
   return {
     items,
     clients,
@@ -385,5 +429,7 @@ export function useLawyerProcesses() {
     requestDeleteProcess,
     cancelDeleteProcess,
     confirmDeleteProcess,
+    generatingSummary,
+    generateSummary,
   };
 }

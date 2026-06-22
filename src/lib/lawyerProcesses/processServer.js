@@ -16,6 +16,7 @@ import {
   normalizeProcessText,
   partyToCrmPayload,
 } from "./processValidation";
+import { generateProcessSummary } from "./processSummaryAi";
 
 const PROCESS_TABLE = "lawyer_processes";
 const PARTIES_TABLE = "lawyer_process_parties";
@@ -306,6 +307,32 @@ export async function saveLocalProcessFromExternal(access, request, payload, ext
   const now = new Date().toISOString();
   const processId = crypto.randomUUID();
 
+  let resumoIa = processData.resumo_ia || null;
+  let resumoIaGerado = Boolean(processData.resumo_ia_gerado);
+
+  if (!resumoIa && process.env.OPENAI_API_KEY) {
+    try {
+      const partiesForSummary = extractParties(processData).map((item) => normalizePartyPayload(item));
+      const movementsForSummary = (Array.isArray(processData.ultimas_movimentacoes) ? processData.ultimas_movimentacoes : []).map((m, idx) => serializeMovimento(m, idx));
+      const generated = await generateProcessSummary(
+        {
+          numero_cnj: numeroCnj,
+          classe: capa.classe,
+          orgao_julgador: capa.orgao_julgador,
+          tribunal_nome: tribunal.nome,
+        },
+        movementsForSummary,
+        partiesForSummary
+      );
+      if (generated) {
+        resumoIa = generated;
+        resumoIaGerado = true;
+      }
+    } catch (aiError) {
+      console.error("[saveLocalProcessFromExternal][AI Summary] Falha:", aiError);
+    }
+  }
+
   const processRow = {
     id: processId,
     request_id: payload.requestId,
@@ -327,8 +354,8 @@ export async function saveLocalProcessFromExternal(access, request, payload, ext
     data_ultima_atualizacao: capa.data_ultima_atualizacao || null,
     nivel_sigilo: capa.nivel_sigilo ?? null,
     assuntos: Array.isArray(capa.assuntos) ? capa.assuntos : [],
-    resumo_ia: processData.resumo_ia || null,
-    resumo_ia_gerado: Boolean(processData.resumo_ia_gerado),
+    resumo_ia: resumoIa,
+    resumo_ia_gerado: resumoIaGerado,
     raw_payload: externalPayload,
     external_registro_id: registro?.id || null,
     cliente_nome_snapshot: client.name,

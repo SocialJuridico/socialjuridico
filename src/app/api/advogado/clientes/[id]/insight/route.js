@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 
 import {
   clientFailure,
@@ -108,7 +108,6 @@ export async function POST(request, context) {
         },
       ],
       temperature: 0.35,
-      max_tokens: 220,
     });
     const insight = String(completion.choices[0]?.message?.content || "").trim();
     if (!insight) throw new Error("A IA não retornou um insight válido.");

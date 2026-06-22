@@ -1,4 +1,5 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import { PDFDocument } from "pdf-lib";
 
 import {
@@ -9,6 +10,10 @@ import {
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
+  : null;
+
+const googleAI = process.env.OPENAI_API_KEY
+  ? new GoogleGenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
 export const MAX_DOCUMENTATION_PDF_BYTES = 30 * 1024 * 1024;
@@ -143,35 +148,31 @@ export async function analyzeDocumentationPdfVisual({
   pageCount,
   pageInfo,
 }) {
-  if (!openai) {
+  if (!googleAI) {
     const error = new Error("Serviço de IA temporariamente indisponível.");
     error.status = 503;
     throw error;
   }
 
-  const response = await openai.responses.create({
+  const base64Data = buffer.toString("base64");
+  const prompt = buildVisualClassificationPrompt({ fileName, pageCount, pageInfo });
+
+  const response = await googleAI.models.generateContent({
     model: "gemini-2.5-flash",
-    input: [
+    contents: [
       {
-        role: "user",
-        content: [
-          {
-            type: "input_file",
-            filename: normalizePlatformText(fileName, 180) || "documentacao.pdf",
-            file_data: `data:application/pdf;base64,${buffer.toString("base64")}`,
-          },
-          {
-            type: "input_text",
-            text: buildVisualClassificationPrompt({ fileName, pageCount, pageInfo }),
-          },
-        ],
+        inlineData: {
+          data: base64Data,
+          mimeType: "application/pdf",
+        },
       },
+      prompt,
     ],
   });
 
   let parsed;
   try {
-    parsed = JSON.parse(response.output_text || "{}");
+    parsed = JSON.parse(response.text || "{}");
   } catch {
     const error = new Error("A IA retornou uma classificação visual inválida.");
     error.status = 422;

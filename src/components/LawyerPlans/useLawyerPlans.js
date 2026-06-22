@@ -62,10 +62,11 @@ async function validateCouponCode(code, promotional = false) {
 
 function hasExpectedIntroPrice(plan, coupon) {
   const pricing = applyCouponToPrice(plan.prices.MONTHLY, "MONTHLY", coupon);
-  return Math.abs(pricing.total - 10.99) <= 0.01;
+  const expected = plan.id === "PRO" ? 39.99 : 10.99;
+  return Math.abs(pricing.total - expected) <= 0.01;
 }
 
-export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
+export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
   const [billingCycle, setBillingCycle] = useState("MONTHLY");
   const [couponCode, setCouponCode] = useState("");
   const [coupon, setCoupon] = useState(null);
@@ -96,6 +97,10 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
 
           const preview = getIntroPromotionCoupon(plan.id);
           if (!preview?.code) return [plan.id, null];
+
+          if (plan.id === "PRO") {
+            return [plan.id, preview];
+          }
 
           try {
             const validated = await validateCouponCode(preview.code, true);
@@ -211,6 +216,27 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
         return;
       }
 
+      if (planCard.id === "PRO") {
+        let redirectUrl = "";
+        if (billingCycle === "AVULSO") {
+          redirectUrl = "https://loja.infinitepay.io/carlos-henrique-1o7/hsr7194-plano-pro-avulso";
+        } else if (billingCycle === "ANNUAL") {
+          redirectUrl = "https://invoice.infinitepay.io/plans/carlos-henrique-1o7/34RALUKLYU";
+        } else if (billingCycle === "MONTHLY") {
+          if (planCard.introEligible) {
+            redirectUrl = "https://loja.infinitepay.io/carlos-henrique-1o7/igf9756-plano-pro-promocional-30-dias";
+          } else {
+            redirectUrl = "https://invoice.infinitepay.io/plans/carlos-henrique-1o7/sZW30KJ8H5";
+          }
+        }
+
+        if (redirectUrl) {
+          window.open(redirectUrl, "_blank", "noopener,noreferrer");
+          onClose?.();
+        }
+        return;
+      }
+
       setSelectingPlan(planCard.id);
       try {
         let checkoutCoupon = coupon;
@@ -269,7 +295,7 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
         setSelectingPlan(null);
       }
     },
-    [billingCycle, coupon, onSelectPlan, profilePending, selectingPlan],
+    [billingCycle, coupon, onSelectPlan, onClose, profilePending, selectingPlan],
   );
 
   return {

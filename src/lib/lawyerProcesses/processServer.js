@@ -242,7 +242,13 @@ export async function resolveProcessClient(access, request, payload) {
 }
 
 function pickProcessData(externalPayload = {}) {
-  return externalPayload.data?.processo || externalPayload.data || externalPayload.processo || {};
+  // Standard DataJud API format: data.processo or data or processo
+  if (externalPayload.data?.processo) return externalPayload.data.processo;
+  if (externalPayload.data)           return externalPayload.data;
+  if (externalPayload.processo)       return externalPayload.processo;
+  // OAB monitoring metadata format: capa/partes/tribunal at root level
+  if (externalPayload.capa || externalPayload.partes || externalPayload.tribunal) return externalPayload;
+  return {};
 }
 
 function pickExternalRegistro(externalPayload = {}) {

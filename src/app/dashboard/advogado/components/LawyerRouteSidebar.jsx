@@ -46,6 +46,7 @@ const DIRECT_ROUTES = {
   "anuncios-PREPOSTOS": { path: "/dashboard/advogado/anuncioseservicos", activeRoute: "anuncioseservicos" },
   "anuncios-DILIGENCIAS": { path: "/dashboard/advogado/anuncioseservicos?categoria=DILIGENCIAS", activeRoute: "anuncioseservicos" },
   "anuncios-OUTROS": { path: "/dashboard/advogado/anuncioseservicos?categoria=OUTROS", activeRoute: "anuncioseservicos" },
+  "monitoramento-oab": { path: "/dashboard/advogado/monitoramento", activeRoute: "monitoramento" },
   assinatura: { path: "/dashboard/advogado/assinaturadigital", activeRoute: "assinaturadigital" },
   notificacao: { path: "/dashboard/advogado/notificacaoextrajudicial", activeRoute: "notificacaoextrajudicial" },
   agenda: { path: "/dashboard/advogado/agenda", activeRoute: "agenda" },
@@ -76,6 +77,7 @@ const PRIMARY_ITEMS = [
 ];
 
 const PREMIUM_ITEMS = [
+  { tab: "monitoramento-oab", label: "Monitoramento de OAB", icon: MonitorSmartphone, permission: "ferr_crm", proOnly: true, ai: true },
   { tab: "assinatura", label: "Assinatura Digital", icon: PenTool, permission: "ferr_assinatura" },
   { tab: "notificacao", label: "Notificação Extrajudicial", icon: BellRing, permission: "ferr_blindagem", ai: true },
   { tab: "crm", label: "Meus Clientes (CRM)", icon: Users, permission: "ferr_crm", ai: true },

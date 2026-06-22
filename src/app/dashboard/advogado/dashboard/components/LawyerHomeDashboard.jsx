@@ -13,6 +13,7 @@ import {
   Info,
   Loader2,
   MapPin,
+  MonitorSmartphone,
   Radar,
   RefreshCw,
   Scale,
@@ -168,6 +169,9 @@ export default function LawyerHomeDashboard() {
                 </Link>
                 <Link href="/dashboard/advogado/geradordedocumentos">
                   Gerar documento <FileShortcutIcon />
+                </Link>
+                <Link href="/dashboard/advogado/monitoramento">
+                  Monitorar OAB <MonitorSmartphone size={16} />
                 </Link>
               </div>
             </div>

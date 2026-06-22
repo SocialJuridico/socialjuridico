@@ -26,6 +26,7 @@ import {
   Lock,
   Eye,
   PenTool,
+  MonitorSmartphone,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -246,6 +247,28 @@ export default function Sidebar() {
           )}
 
           <div className={styles.navGroupLabel}>Ferramentas Premium</div>
+          <div
+            className={`${styles.navItem} ${activeTab === "monitoramento-oab" ? styles.activeNavItem : ""}`}
+            onClick={() => {
+              if (profileData?.plan_type !== "PRO") {
+                setShowProModal(true);
+              } else {
+                handleTabChange("monitoramento-oab");
+              }
+            }}
+          >
+            <MonitorSmartphone size={18} /> <span>Monitoramento de OAB</span>
+            {profileData?.plan_type !== "PRO" && (
+              <Lock
+                size={12}
+                style={{
+                  marginLeft: "auto",
+                  opacity: 0.5,
+                  color: "currentColor",
+                }}
+              />
+            )}
+          </div>
           <div
             className={`${styles.navItem} ${activeTab === "assinatura" ? styles.activeNavItem : ""}`}
             onClick={() => handleTabClick("assinatura", hasAssinaturaAccess)}

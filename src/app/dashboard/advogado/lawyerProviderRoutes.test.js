@@ -12,6 +12,8 @@ describe("usesLawyerSessionProvider", () => {
     expect(usesLawyerSessionProvider("/dashboard/advogado/agenda/compromisso/123")).toBe(true);
     expect(usesLawyerSessionProvider("/dashboard/advogado/cartaodigital")).toBe(true);
     expect(usesLawyerSessionProvider("/dashboard/advogado/cartaodigital/preview")).toBe(true);
+    expect(usesLawyerSessionProvider("/dashboard/advogado/monitoramento")).toBe(true);
+    expect(usesLawyerSessionProvider("/dashboard/advogado/monitoramento/detalhes")).toBe(true);
     expect(usesLawyerSessionProvider("/dashboard/advogado/documentacao")).toBe(true);
     expect(usesLawyerSessionProvider("/dashboard/advogado/documentacao/manual")).toBe(true);
   });

@@ -1,0 +1,237 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(12px, 2.5vw, 28px);
+  background: rgba(0, 0, 0, 0.86);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.modal {
+  display: grid;
+  width: min(600px, 96vw);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 82% 0%, rgba(212, 175, 55, 0.12), transparent 22rem),
+    #0d0d0d;
+  color: #fff;
+  padding: 40px;
+  position: relative;
+  box-shadow: 0 34px 120px rgba(0, 0, 0, 0.72);
+  animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  overflow: hidden;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #fff;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.closeBtn:hover,
+.closeBtn:focus-visible {
+  border-color: rgba(212, 175, 55, 0.42);
+  background: rgba(212, 175, 55, 0.1);
+  color: #f0d77a;
+  outline: none;
+  transform: scale(1.05);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+  color: #d4af37;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.12;
+  letter-spacing: -0.04em;
+  color: #fff;
+  font-weight: 800;
+}
+
+.subtitle {
+  max-width: 480px;
+  margin: 8px auto 0;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.featureCard {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 20px;
+  border-radius: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  transition: 180ms ease;
+}
+
+.featureCard:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(212, 175, 55, 0.24);
+  box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.4);
+}
+
+.featureIcon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.featureCard:hover .featureIcon {
+  transform: scale(1.08);
+}
+
+.featureText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.featureText strong {
+  color: #fff;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.featureText span {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.ctaBtn {
+  width: 100%;
+  min-height: 46px;
+  background: linear-gradient(135deg, #e2c45c, #b58d18);
+  border: 1px solid rgba(212, 175, 55, 0.52);
+  color: #090909;
+  padding: 12px 24px;
+  border-radius: 11px;
+  font-weight: 850;
+  font-size: 14.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: 160ms ease;
+  box-shadow: 0 10px 25px -8px rgba(212, 175, 55, 0.22);
+  position: relative;
+  overflow: hidden;
+}
+
+.ctaBtn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(212, 175, 55, 0.38);
+  box-shadow: 0 14px 28px -6px rgba(212, 175, 55, 0.3);
+}
+
+.ctaBtn:active {
+  transform: translateY(0);
+}
+
+.skipBtn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: color 160ms ease;
+}
+
+.skipBtn:hover {
+  color: #fff;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .modal {
+    padding: 30px 20px;
+    border-radius: 20px;
+  }
+  .title {
+    font-size: 22px;
+  }
+  .features {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .featureCard {
+    padding: 16px;
+  }
+}

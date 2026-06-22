@@ -26,6 +26,7 @@ export default function LawyerPlansModal({
     isOpen,
     profileData,
     onSelectPlan,
+    onClose,
   });
 
   const bestAnnualSaving = useMemo(

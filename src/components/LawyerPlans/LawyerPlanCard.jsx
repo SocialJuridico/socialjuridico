@@ -66,7 +66,7 @@ export default function LawyerPlanCard({
         </span>
         <div className={styles.priceLine}>
           <span className={styles.price}>
-            {formatBRL(plan.introEligible ? 10.99 : plan.pricing.display)}
+            {formatBRL(plan.pricing.display)}
           </span>
           <span className={styles.period}>{getPeriodLabel(billingCycle)}</span>
         </div>
@@ -82,7 +82,7 @@ export default function LawyerPlanCard({
 
       {plan.introEligible && (
         <span className={styles.promoNotice}>
-          <Sparkles size={13} aria-hidden="true" /> Primeiro mês por R$ 10,99
+          <Sparkles size={13} aria-hidden="true" /> Primeiro mês por {formatBRL(plan.pricing.display)}
         </span>
       )}
 

@@ -8,6 +8,7 @@ export const LAWYER_SESSION_ROUTES = Object.freeze([
   "/dashboard/advogado/anuncioseserviços",
   "/dashboard/advogado/queroumsite",
   "/dashboard/advogado/assinaturadigital",
+  "/dashboard/advogado/monitoramento",
   "/dashboard/advogado/notificacaoextrajudicial",
   "/dashboard/advogado/agenda",
   "/dashboard/advogado/meusclientes",

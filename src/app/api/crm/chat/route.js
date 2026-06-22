@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
@@ -8,6 +8,7 @@ import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
 });
 
 async function getSessionUser(request) {

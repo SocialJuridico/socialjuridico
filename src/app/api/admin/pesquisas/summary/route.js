@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 import {
   CLIENT_QUESTION_KEYS,
   LAWYER_QUESTION_KEYS,
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
-  return new OpenAI({ apiKey });
+  return new OpenAI({ apiKey, baseURL: process.env.OPENAI_BASE_URL });
 }
 
 function formatFeedbacks(items, role, questionKeys) {

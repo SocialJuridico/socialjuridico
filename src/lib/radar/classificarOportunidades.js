@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+import OpenAI from "openai";
 
 /**
  * Classifica oportunidades públicas encontradas pelo Radar Jurídico.
@@ -42,7 +42,7 @@ export async function classificarOportunidades(oportunidadesBrutas) {
     });
   }
 
-  const openai = new OpenAI({ apiKey });
+  const openai = new OpenAI({ apiKey, baseURL: process.env.OPENAI_BASE_URL });
 
   try {
     const listToClassify = oportunidadesBrutas.map((item, index) => ({

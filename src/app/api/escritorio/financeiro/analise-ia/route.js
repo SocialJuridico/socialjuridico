@@ -1,4 +1,4 @@
-﻿import { supabaseAdmin } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
@@ -6,6 +6,7 @@ import OpenAI from "openai";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
 });
 
 async function getSessionInfo() {

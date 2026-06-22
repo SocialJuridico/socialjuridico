@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabaseServer";
+import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -8,6 +8,7 @@ import crypto from "crypto";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
 });
 
 // GET /api/crm/documents?client_id=... (se sem client_id, busca todos do advogado)

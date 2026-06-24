@@ -1,3 +1,53 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--color-black);
+}
+
+.card {
+  width: 100%;
+  max-width: 460px;
+  background: var(--color-black-light);
+  border: 1px solid var(--color-brown);
+  border-radius: 20px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.logoRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.logoText {
+  color: var(--color-gold);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.stateContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.title {
+  margin: 0;
+  color: var(--color-gold);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .successTitle {
   margin: 0;
   color: #10b981;
@@ -14,10 +64,83 @@
   line-height: 1.2;
 }
 
+.description {
+  margin: 0;
+  color: var(--color-silver);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.subtext {
+  margin: 0;
+  color: var(--color-silver-dark);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .iconWrapperSuccess svg {
   color: #10b981;
 }
 
 .iconWrapperError svg {
   color: #ef4444;
+}
+
+.iconWrapperLoading svg {
+  color: var(--color-gold);
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--color-gold);
+  color: var(--color-black);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.actionBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.buttonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.supportBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--color-silver);
+  border: 1px solid var(--color-silver-dark);
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 14px;
+  text-decoration: none;
 }

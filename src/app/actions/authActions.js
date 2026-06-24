@@ -25,7 +25,6 @@ function escapeHtml(value = "") {
 
 function createConfirmationEmailHtml({ name, role, verifyLink }) {
   const safeName = escapeHtml(name || "usuário");
-  const encodedName = encodeURIComponent(name || "");
 
   const lawyerInstructions =
     role === "LAWYER"
@@ -46,40 +45,19 @@ function createConfirmationEmailHtml({ name, role, verifyLink }) {
               font-weight: bold;
             "
           >
-            Verificação profissional necessária
+            Verificação profissional automática
           </p>
 
           <p style="font-size:14px;line-height:1.6;">
-            Após confirmar seu e-mail, entre em contato com a equipe
-            do Social Jurídico para concluir a validação manual da sua OAB.
+            Ao confirmar seu e-mail, você será direcionado direto para a
+            verificação da sua identidade e da sua OAB. Tenha em mãos sua
+            CNA (física ou digital) e leva menos de 2 minutos.
           </p>
 
-          <p
-            style="
-              font-size:14px;
-              line-height:1.6;
-              color:#ff6b6b;
-              font-weight:bold;
-            "
-          >
-            A validação profissional deve ser concluída em até sete dias.
+          <p style="font-size:14px;line-height:1.6;color:#a8a8a8;">
+            Caso a verificação automática não seja concluída, nossa equipe
+            fará a análise manualmente e você será notificado por e-mail.
           </p>
-
-          <a
-            href="https://wa.me/5515981657317?text=Ol%C3%A1%2C%20acabei%20de%20criar%20minha%20conta%20e%20gostaria%20de%20verificar%20minha%20OAB.%20Nome%3A%20${encodedName}"
-            style="
-              display:inline-block;
-              padding:11px 18px;
-              border-radius:7px;
-              color:#ffffff;
-              background:#25d366;
-              text-decoration:none;
-              font-size:14px;
-              font-weight:bold;
-            "
-          >
-            Iniciar validação da OAB
-          </a>
         </div>
       `
       : "";

@@ -170,7 +170,12 @@ async function sendConfirmationEmail({ email, name, role }) {
     throw new Error("Não foi possível gerar o token de confirmação.");
   }
 
-  const verifyUrl = new URL("/api/auth/confirm-email", SITE_URL);
+  // Aponta para uma página intermediária (não para a rota que confirma
+  // direto) porque scanners de segurança de e-mail (Gmail, Outlook/M365,
+  // antivírus corporativo) costumam pré-visitar links de e-mail via GET
+  // antes do usuário clicar, consumindo o token de uso único. A página
+  // intermediária só dispara a confirmação real após um clique explícito.
+  const verifyUrl = new URL("/confirmar-email/processar", SITE_URL);
 
   verifyUrl.searchParams.set("token_hash", hashedToken);
   verifyUrl.searchParams.set("type", "signup");

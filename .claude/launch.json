@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "validacaooab",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["--cwd", "E:/Documentos/Alura/cliente/Carlos/validacaooab", "dev"],
+      "port": 3100
+    }
+  ]
+}

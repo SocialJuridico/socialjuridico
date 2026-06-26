@@ -91,7 +91,7 @@ ${JSON.stringify(context, null, 2)}
 RESPONDA APENAS O INSIGHT, sem introduções.`;
 
     const completion = await openai.chat.completions.create({
-      model: "gemini-2.5-flash",
+      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
       messages: [
         { role: "system", content: "Você é um assistente jurídico experiente." },
         { role: "user", content: prompt }

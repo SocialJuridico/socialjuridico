@@ -41,7 +41,7 @@ RESPONDA APENAS O RESUMO ESTRUTURADO, sem introduções genéricas do tipo 'Aqui
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gemini-2.5-flash",
+      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
       messages: [
         { role: "system", content: "Você é um assistente jurídico sênior experiente." },
         { role: "user", content: prompt }

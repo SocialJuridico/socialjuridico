@@ -284,7 +284,7 @@ export async function generateDocumentationFromPdf({ fileName, pages }) {
   }
 
   const completion = await openai.chat.completions.create({
-    model: "gemini-2.5-flash",
+    model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
     response_format: { type: "json_object" },
     temperature: 0.1,
     messages: [
@@ -329,6 +329,6 @@ export async function generateDocumentationFromPdf({ fileName, pages }) {
     summary: normalizePlatformText(parsed.summary, 1200),
     contentType: allowedTypes.has(contentType) ? contentType : "ARTICLE",
     contentSchema: schema,
-    model: "gemini-2.5-flash",
+    model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
   };
 }

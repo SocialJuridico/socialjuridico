@@ -196,7 +196,7 @@ export async function POST(request) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: isImage ? "gemini-2.5-flash" : "gemini-2.5-flash",
+      model: isImage ? process.env.OPENAI_MODEL || "gpt-4.1-mini" : process.env.OPENAI_MODEL || "gpt-4.1-mini",
       messages,
       response_format: { type: "json_object" },
       temperature: 0.1,

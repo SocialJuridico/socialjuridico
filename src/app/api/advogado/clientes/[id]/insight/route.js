@@ -95,7 +95,7 @@ export async function POST(request, context) {
     };
 
     const completion = await openai.chat.completions.create({
-      model: "gemini-2.5-flash",
+      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
       messages: [
         {
           role: "system",
@@ -118,7 +118,7 @@ export async function POST(request, context) {
       requestId: body.requestId,
       clientId: client.id,
       action: "GENERATE_INSIGHT",
-      metadata: { model: "gemini-2.5-flash" },
+      metadata: { model: process.env.OPENAI_MODEL || "gpt-4.1-mini" },
     });
 
     return clientJson({ success: true, insight });

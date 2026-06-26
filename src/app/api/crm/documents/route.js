@@ -174,7 +174,7 @@ export async function POST(request) {
         Responda EXCLUSIVAMENTE em formato JSON: {"type": "Tipo", "tags": ["tag1", "tag2", "tag3"]}`;
 
         const completion = await openai.chat.completions.create({
-          model: "gemini-2.5-flash",
+          model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
           messages: [
             {
               role: "system",

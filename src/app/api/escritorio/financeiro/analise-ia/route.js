@@ -207,7 +207,7 @@ O parecer deve conter as seguintes seções estruturadas:
 4. 💡 **Recomendações Estratégicas da IA** (Mínimo 3 conselhos contábeis ou de otimização de custos customizados para a realidade dos lançamentos deste mês).`;
 
     const completion = await openai.chat.completions.create({
-      model: "gemini-2.5-flash",
+      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }

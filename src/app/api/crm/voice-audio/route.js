@@ -1,19 +1,25 @@
-import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import { GoogleGenAI, Type } from "@google/genai";
+import OpenAI from "openai";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
 
-const ai = new GoogleGenAI({ apiKey: process.env.OPENAI_API_KEY }); // Utilizando a chave do Gemini configurada no .env
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL,
+});
+
+const TRANSCRIBE_MODEL =
+  process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe";
+const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
 
 /**
  * POST /api/crm/voice-audio
- * Aceita um arquivo de áudio via FormData e processa com Gemini 2.5 Flash nativo.
- * Extrai transcrição e estrutura os dados do cliente em uma única chamada.
+ * Aceita um arquivo de áudio via FormData e processa em duas etapas com OpenAI:
+ *   1. Transcrição do áudio (gpt-4o-mini-transcribe).
+ *   2. Estruturação dos dados do cliente a partir da transcrição (gpt-4.1-mini).
  * Compatível com clientes mobile que enviam o token JWT no header Authorization.
  */
 export async function POST(request) {
   try {
-    // ── Auth: Aceita tanto cookies (web) quanto Bearer token (mobile) ──
     const user = await getAuthenticatedUser(request);
 
     if (!user) {
@@ -22,78 +28,61 @@ export async function POST(request) {
         { status: 401 }
       );
     }
-    const userId = user.id;
 
-    // ── Parse FormData ──
     const formData = await request.formData();
     const audioFile = formData.get("audio");
 
-    if (!audioFile) {
+    if (!audioFile || typeof audioFile === "string") {
       return NextResponse.json(
         { success: false, message: "Arquivo de áudio não encontrado na requisição" },
         { status: 400 }
       );
     }
 
-    // ── Extrair dados estruturados com Gemini 2.5 Flash ──
-    const buffer = Buffer.from(await audioFile.arrayBuffer());
-    const base64Data = buffer.toString('base64');
-    const mimeType = audioFile.type || "audio/m4a";
-
-    const systemPrompt = "Você é um assistente jurídico inteligente. Sua tarefa é analisar um áudio com um comando de voz para cadastrar um novo cliente no CRM. Extraia o texto transcrito exato e os dados estruturados do cliente.";
-    const userPrompt = `Ouça o áudio anexo e retorne as informações solicitadas.`;
-
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-            systemPrompt,
-            userPrompt,
-            { inlineData: { mimeType: mimeType, data: base64Data } }
-        ],
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    transcript: { type: Type.STRING, description: "Transcrição exata do que foi dito no áudio." },
-                    data: {
-                        type: Type.OBJECT,
-                        properties: {
-                            nome_completo: { type: Type.STRING },
-                            tipo: { type: Type.STRING, description: "'Pessoa Física' ou 'Pessoa Jurídica' (tente inferir pelo contexto)" },
-                            cpf_cnpj: { type: Type.STRING },
-                            rg_ie: { type: Type.STRING },
-                            estado_civil: { type: Type.STRING },
-                            profissao: { type: Type.STRING },
-                            telefone: { type: Type.STRING },
-                            endereco_completo: { type: Type.STRING },
-                            email: { type: Type.STRING },
-                            notas_internas: { type: Type.STRING, description: "Resumo do que foi dito no áudio." }
-                        }
-                    }
-                }
-            }
-        }
+    // ── Etapa 1: transcrição do áudio ──
+    const transcription = await openai.audio.transcriptions.create({
+      file: audioFile,
+      model: TRANSCRIBE_MODEL,
     });
 
-    const result = JSON.parse(response.text);
+    const transcript = (transcription.text || "").trim();
 
-    if (!result.transcript) {
+    if (!transcript) {
       return NextResponse.json(
         { success: false, message: "Não foi possível extrair os dados. Tente falar mais claramente." },
         { status: 400 }
       );
     }
 
+    // ── Etapa 2: estruturar os dados do cliente a partir da transcrição ──
+    const systemPrompt =
+      "Você é um assistente jurídico inteligente. A partir da transcrição de um comando de voz para cadastrar um novo cliente no CRM, extraia os dados estruturados do cliente. Responda SOMENTE com JSON válido no formato: {\"nome_completo\":\"\",\"tipo\":\"Pessoa Física|Pessoa Jurídica\",\"cpf_cnpj\":\"\",\"rg_ie\":\"\",\"estado_civil\":\"\",\"profissao\":\"\",\"telefone\":\"\",\"endereco_completo\":\"\",\"email\":\"\",\"notas_internas\":\"\"}. Use string vazia para campos não mencionados. Em 'tipo', infira pelo contexto. Em 'notas_internas', resuma o que foi dito.";
+
+    const completion = await openai.chat.completions.create({
+      model: MODEL,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Transcrição do áudio:\n"${transcript}"` },
+      ],
+    });
+
+    let data = {};
+    try {
+      data = JSON.parse(completion.choices?.[0]?.message?.content || "{}");
+    } catch {
+      data = {};
+    }
+
     return NextResponse.json({
       success: true,
-      data: result.data || {},
-      transcript: result.transcript,
+      data: data || {},
+      transcript,
     });
   } catch (error) {
     console.error("Erro no voice-audio API:", error);
     return NextResponse.json(
-      { success: false, message: "Erro ao processar áudio com o Gemini: " + error.message },
+      { success: false, message: "Erro ao processar áudio: " + error.message },
       { status: 500 }
     );
   }

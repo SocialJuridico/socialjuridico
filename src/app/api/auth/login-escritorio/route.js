@@ -7,6 +7,7 @@ import {
 } from "@/lib/officeSession";
 import { hashPassword, isHashedPassword, verifyPassword } from "@/lib/passwordHash";
 import { recordSecurityAuditEvent } from "@/lib/audit/securityAuditLog";
+import { OAB_GRACE_PERIOD_DAYS } from "@/lib/oab";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
 
@@ -153,7 +154,7 @@ export async function POST(request) {
         ) {
           const warningStart = new Date(staffMember.oab_warning_started_at);
           const elapsedDays = (Date.now() - warningStart.getTime()) / 86_400_000;
-          if (!Number.isNaN(elapsedDays) && elapsedDays >= 7) {
+          if (!Number.isNaN(elapsedDays) && elapsedDays >= OAB_GRACE_PERIOD_DAYS) {
             hasOabError = true;
             const { error: updateError } = await db
               .from("advogados")

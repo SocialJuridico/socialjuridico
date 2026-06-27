@@ -116,6 +116,8 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     setIsSidebarOpen,
     unreadMessagesCount,
     openPlansModal,
+    oabVerified,
+    openOabModal,
     logout,
   } = useLawyerSession();
 
@@ -203,17 +205,35 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     navigateTo(item.tab);
   }
 
+  function isOabLocked(item) {
+    return item.tab === "oportunidades" && !oabVerified;
+  }
+
+  function handleItemClick(item, premium) {
+    if (isOabLocked(item)) {
+      closeSidebar();
+      openOabModal();
+      return;
+    }
+    if (premium) {
+      navigatePremium(item);
+      return;
+    }
+    navigateTo(item.tab);
+  }
+
   function renderItem(item, premium = false) {
     const Icon = item.icon;
     const isActive = DIRECT_ROUTES[item.tab]?.activeRoute === activeRoute;
     const allowed = !premium || getPermission(profileData, item);
     const planLocked = premium && (!hasPremium || (item.proOnly && planType !== "PRO"));
+    const oabLocked = isOabLocked(item);
     return (
       <button
         key={item.tab}
         type="button"
         className={`${styles.navItem} ${isActive ? styles.navItemActive : ""}`}
-        onClick={() => (premium ? navigatePremium(item) : navigateTo(item.tab))}
+        onClick={() => handleItemClick(item, premium)}
         aria-current={isActive ? "page" : undefined}
       >
         <Icon size={17} aria-hidden="true" />
@@ -226,7 +246,7 @@ export default function LawyerRouteSidebar({ activeRoute }) {
         {item.tab === "minhas-mensagens" && unreadMessagesCount > 0 && (
           <span className={styles.navBadge}>{unreadMessagesCount}</span>
         )}
-        {premium && (!allowed || planLocked) && (
+        {(oabLocked || (premium && (!allowed || planLocked))) && (
           <Lock size={12} className={styles.navLock} aria-label="Bloqueado" />
         )}
       </button>

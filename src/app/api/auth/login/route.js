@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { recordSecurityAuditEvent } from "@/lib/audit/securityAuditLog";
+import { OAB_GRACE_PERIOD_DAYS } from "@/lib/oab";
 import { NextResponse } from "next/server";
 
 // ── RATE LIMITING ──
@@ -307,7 +308,7 @@ export async function POST(request) {
     if (profile?.role === "LAWYER") {
       let isError = profile.oab_verification_status === "ERROR";
 
-      // Se estiver pendente, verifica se o prazo de 7 dias já estourou enquanto estava offline
+      // Se estiver pendente, verifica se o prazo de carência já estourou enquanto estava offline
       if (
         !isError &&
         profile.oab_verification_status === "PENDING" &&
@@ -318,7 +319,7 @@ export async function POST(request) {
           (new Date().getTime() - startedDate.getTime()) /
           (1000 * 60 * 60 * 24);
 
-        if (daysPassed >= 7) {
+        if (daysPassed >= OAB_GRACE_PERIOD_DAYS) {
           isError = true;
           // Suspende a conta imediatamente no banco
           await db

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { ShieldAlert } from "lucide-react";
 
 import { useLawyerSession } from "../LawyerSessionContext";
 import LawyerRouteSidebar from "./LawyerRouteSidebar";
@@ -14,7 +15,20 @@ export default function LawyerDashboardShell({
   icon,
   children,
 }) {
-  const { isSidebarOpen, setIsSidebarOpen } = useLawyerSession();
+  const {
+    isSidebarOpen,
+    setIsSidebarOpen,
+    profileData,
+    oabVerified,
+    oabDaysLeft,
+    openOabModal,
+  } = useLawyerSession();
+
+  const showOabBanner = Boolean(profileData) && !oabVerified;
+  const bannerContagem =
+    oabDaysLeft > 0
+      ? `Faltam ${oabDaysLeft} ${oabDaysLeft === 1 ? "dia" : "dias"} antes do bloqueio.`
+      : "O prazo de carência terminou.";
 
   useEffect(() => {
     if (!isSidebarOpen) return undefined;
@@ -50,6 +64,23 @@ export default function LawyerDashboardShell({
 
       <div className={styles.main}>
         <LawyerRouteTopBar title={title} subtitle={subtitle} icon={icon} />
+        {showOabBanner && (
+          <div className={styles.oabBanner} role="status">
+            <ShieldAlert size={18} aria-hidden="true" />
+            <span className={styles.oabBannerText}>
+              Sua OAB ainda não foi verificada. Sem a verificação, o acesso é
+              limitado e recursos como as <strong>Oportunidades</strong> ficam
+              bloqueados. <strong>{bannerContagem}</strong>
+            </span>
+            <button
+              type="button"
+              className={styles.oabBannerBtn}
+              onClick={openOabModal}
+            >
+              Verificar agora
+            </button>
+          </div>
+        )}
         <main className={styles.content}>{children}</main>
       </div>
     </div>

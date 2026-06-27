@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import { OAB_GRACE_PERIOD_DAYS } from "@/lib/oab";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
 import { sanitizeString } from "@/lib/securityUtils";
@@ -184,7 +185,7 @@ async function updateOabWarningIfNeeded(db, profile) {
 
   const startedDate = new Date(profile.oab_warning_started_at);
   const daysPassed = (now.getTime() - startedDate.getTime()) / (1000 * 60 * 60 * 24);
-  if (daysPassed >= 7) {
+  if (daysPassed >= OAB_GRACE_PERIOD_DAYS) {
     await db
       .from("advogados")
       .update({ oab_verification_status: "ERROR" })

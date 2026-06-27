@@ -13,6 +13,7 @@ import {
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
 
 import LawyerDashboardShell from "../../components/LawyerDashboardShell";
+import { useLawyerSession } from "../../LawyerSessionContext";
 import styles from "../Oportunidade.module.css";
 import { useLawyerOpportunities } from "../useLawyerOpportunities";
 import OpportunityBannerRail from "./OpportunityBannerRail";
@@ -37,7 +38,36 @@ function RouteLoading() {
   );
 }
 
+function OpportunityLocked({ onVerify }) {
+  return (
+    <LawyerDashboardShell
+      activeRoute="oportunidade"
+      title="Oportunidades"
+      subtitle="Recurso exclusivo para advogados com OAB verificada"
+      icon={Globe2}
+    >
+      <section className={styles.panel} aria-live="polite">
+        <div className={styles.stateBox}>
+          <div className={styles.stateContent}>
+            <ShieldCheck size={30} aria-hidden="true" />
+            <h3>Verifique sua OAB para acessar as Oportunidades</h3>
+            <p>
+              Esta área é exclusiva para advogados com a OAB verificada. Conclua a
+              verificação com nosso suporte para liberar os casos publicados na
+              plataforma e todos os demais benefícios.
+            </p>
+            <button type="button" className={styles.button} onClick={onVerify}>
+              Verificar OAB
+            </button>
+          </div>
+        </div>
+      </section>
+    </LawyerDashboardShell>
+  );
+}
+
 export default function OpportunityDashboard() {
+  const { oabVerified, openOabModal } = useLawyerSession();
   const controller = useLawyerOpportunities();
   const notice = controller.notices[0] || null;
   const balance = controller.profileData?.balance || 0;
@@ -49,6 +79,10 @@ export default function OpportunityDashboard() {
   function requestInterest(item) {
     controller.setSelectedCase(null);
     controller.setPendingInterest(item);
+  }
+
+  if (!oabVerified) {
+    return <OpportunityLocked onVerify={openOabModal} />;
   }
 
   return (

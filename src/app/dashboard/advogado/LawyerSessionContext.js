@@ -13,6 +13,8 @@ import toast from "react-hot-toast";
 
 import JurisPurchaseModalHost from "@/components/JurisPurchase/JurisPurchaseModalHost";
 import LawyerPlansModalHost from "@/components/LawyerPlans/LawyerPlansModalHost";
+import OabRequiredModal from "@/components/OabVerification/OabRequiredModal";
+import { isOabVerified, oabDaysRemaining } from "@/lib/oab";
 import { supabase } from "@/lib/supabase";
 
 const LawyerSessionContext = createContext(null);
@@ -94,6 +96,7 @@ export function LawyerSessionProvider({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPlansModalOpen, setIsPlansModalOpen] = useState(false);
   const [isJurisModalOpen, setIsJurisModalOpen] = useState(false);
+  const [isOabModalOpen, setIsOabModalOpen] = useState(false);
   const notificationIdsRef = useRef(new Set());
 
   const refreshProfile = useCallback(async () => {
@@ -167,6 +170,15 @@ export function LawyerSessionProvider({ children }) {
 
   const closeJurisModal = useCallback(() => {
     setIsJurisModalOpen(false);
+  }, []);
+
+  const openOabModal = useCallback(() => {
+    setIsSidebarOpen(false);
+    setIsOabModalOpen(true);
+  }, []);
+
+  const closeOabModal = useCallback(() => {
+    setIsOabModalOpen(false);
   }, []);
 
   useEffect(() => {
@@ -249,6 +261,20 @@ export function LawyerSessionProvider({ children }) {
     [notifications],
   );
 
+  const oabVerified = useMemo(() => isOabVerified(profileData), [profileData]);
+  const oabDaysLeft = useMemo(() => oabDaysRemaining(profileData), [profileData]);
+
+  // Abre o aviso de verificação de OAB automaticamente ao entrar no painel
+  // quando o advogado ainda não está verificado. Uma vez por sessão para não
+  // incomodar a cada navegação.
+  useEffect(() => {
+    if (loadingProfile || !profileData || oabVerified) return;
+    const KEY = "sj:oab-aviso-exibido";
+    if (sessionStorage.getItem(KEY)) return;
+    sessionStorage.setItem(KEY, "1");
+    setIsOabModalOpen(true);
+  }, [loadingProfile, profileData, oabVerified]);
+
   const value = useMemo(
     () => ({
       profileData,
@@ -266,20 +292,30 @@ export function LawyerSessionProvider({ children }) {
       isJurisModalOpen,
       openJurisModal,
       closeJurisModal,
+      oabVerified,
+      oabDaysLeft,
+      isOabModalOpen,
+      openOabModal,
+      closeOabModal,
       refreshProfile,
       refreshNotifications,
       logout,
     }),
     [
       closeJurisModal,
+      closeOabModal,
       closePlansModal,
       isJurisModalOpen,
+      isOabModalOpen,
       isPlansModalOpen,
       isSidebarOpen,
       loadingProfile,
       logout,
       notifications,
+      oabVerified,
+      oabDaysLeft,
       openJurisModal,
+      openOabModal,
       openPlansModal,
       profileData,
       refreshNotifications,
@@ -303,6 +339,11 @@ export function LawyerSessionProvider({ children }) {
         profileData={profileData}
         onClose={closeJurisModal}
         onProfileRefresh={refreshProfile}
+      />
+      <OabRequiredModal
+        isOpen={isOabModalOpen}
+        onClose={closeOabModal}
+        daysLeft={oabDaysLeft}
       />
     </LawyerSessionContext.Provider>
   );

@@ -69,22 +69,32 @@ function resolveIdentity(payload, reference) {
   return { userId: null, email };
 }
 
-function resolveProduct(amountInCents, items) {
-  const description = String(items?.[0]?.description || "").toLowerCase();
-
+function resolveProduct(amountInCents) {
+  // START - 1º mês promocional (R$ 40,99 - R$ 30,00 = R$ 10,99)
   if (amountInCents === 1099) {
-    const planType = description.includes("pro") ? "PRO" : "START";
-
     return {
       type: "PRO_SUBSCRIPTION",
-      planType,
+      planType: "START",
       billingCycle: "MONTHLY",
-      jurisAmount: planType === "PRO" ? 20 : 7,
+      jurisAmount: 7,
       promo: true,
       expirationDays: 30,
     };
   }
 
+  // PRO - 1º mês promocional (R$ 150,00 - R$ 110,01 = R$ 39,99)
+  if (amountInCents === 3999) {
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType: "PRO",
+      billingCycle: "MONTHLY",
+      jurisAmount: 20,
+      promo: true,
+      expirationDays: 30,
+    };
+  }
+
+  // START - mensal recorrente (R$ 40,99)
   if (amountInCents === 4099) {
     return {
       type: "PRO_SUBSCRIPTION",
@@ -96,7 +106,8 @@ function resolveProduct(amountInCents, items) {
     };
   }
 
-  if (amountInCents === 8790) {
+  // PRO - mensal recorrente, 2º mês em diante (R$ 150,00)
+  if (amountInCents === 15000) {
     return {
       type: "PRO_SUBSCRIPTION",
       planType: "PRO",
@@ -107,6 +118,7 @@ function resolveProduct(amountInCents, items) {
     };
   }
 
+  // START - anual (R$ 431,88)
   if (amountInCents === 43188) {
     return {
       type: "PRO_SUBSCRIPTION",
@@ -118,7 +130,8 @@ function resolveProduct(amountInCents, items) {
     };
   }
 
-  if (amountInCents === 91188) {
+  // PRO - anual, cobrado de uma vez (R$ 1.440,00)
+  if (amountInCents === 144000) {
     return {
       type: "PRO_SUBSCRIPTION",
       planType: "PRO",
@@ -126,6 +139,30 @@ function resolveProduct(amountInCents, items) {
       jurisAmount: 20,
       promo: false,
       expirationDays: 365,
+    };
+  }
+
+  // START - avulso, pagamento único 30 dias (R$ 49,90)
+  if (amountInCents === 4990) {
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType: "START",
+      billingCycle: "AVULSO",
+      jurisAmount: 7,
+      promo: false,
+      expirationDays: 30,
+    };
+  }
+
+  // PRO - avulso, pagamento único 30 dias (R$ 210,00)
+  if (amountInCents === 21000) {
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType: "PRO",
+      billingCycle: "AVULSO",
+      jurisAmount: 20,
+      promo: false,
+      expirationDays: 30,
     };
   }
 
@@ -405,7 +442,7 @@ export async function POST(request) {
       );
     }
 
-    const product = resolveProduct(amountInCents, payload?.items);
+    const product = resolveProduct(amountInCents);
     const reservation = await reserveTransaction({
       reference,
       lawyerId: lawyer.id,

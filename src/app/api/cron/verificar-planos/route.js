@@ -1,8 +1,39 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 
+import { renovacaoPlanoTemplate } from "@/lib/emailTemplates";
 import { sendPushNotification } from "@/lib/pushNotifications";
+import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
+
+// Links de assinatura recorrente hospedados na InfinitePay (conta PJ).
+const SUBSCRIPTION_LINKS = {
+  PRO_MONTHLY: "https://invoice.infinitepay.io/plans/plataforma-social/tkDa1iSpch",
+  PRO_ANNUAL: "https://invoice.infinitepay.io/plans/plataforma-social/nrJhBb2yJQ",
+  START_MONTHLY: "https://invoice.infinitepay.io/plans/plataforma-social/on4FAZawRE",
+  START_ANNUAL: "https://invoice.infinitepay.io/plans/plataforma-social/LFlFfOViE9",
+};
+
+const SUBSCRIPTION_VALOR = {
+  PRO_MONTHLY: "R$ 150,00/mês",
+  PRO_ANNUAL: "R$ 1.440,00/ano",
+  START_MONTHLY: "R$ 40,99/mês",
+  START_ANNUAL: "R$ 431,88/ano",
+};
+
+function resolveSubscription(lawyer) {
+  const plan = String(lawyer.plan_type || "").toUpperCase();
+  if (!["PRO", "START"].includes(plan)) return null;
+
+  const cycle =
+    String(lawyer.plan_billing_cycle || "").toUpperCase() === "ANNUAL"
+      ? "ANNUAL"
+      : "MONTHLY";
+  const key = `${plan}_${cycle}`;
+
+  if (!SUBSCRIPTION_LINKS[key]) return null;
+  return { url: SUBSCRIPTION_LINKS[key], valor: SUBSCRIPTION_VALOR[key], planType: plan };
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -145,6 +176,69 @@ async function notifyPlanExpiring(db, lawyer, daysRemaining, nowStr) {
   return true;
 }
 
+async function alreadySentRenewalEmail(db, lawyerId, expiresAtIso) {
+  const { data, error } = await db
+    .from("notificacoes")
+    .select("meta")
+    .eq("user_id", lawyerId)
+    .eq("tipo", "PLANO_RENOVACAO_EMAIL");
+
+  if (error) throw error;
+
+  return (data || []).some((item) => {
+    try {
+      const meta = typeof item.meta === "string" ? JSON.parse(item.meta) : item.meta;
+      return meta?.expires_at === expiresAtIso;
+    } catch {
+      return false;
+    }
+  });
+}
+
+async function sendRenewalEmail(db, lawyer, nowStr) {
+  if (!process.env.RESEND_API_KEY || !lawyer.email) return false;
+
+  const sub = resolveSubscription(lawyer);
+  if (!sub?.url) return false;
+
+  if (await alreadySentRenewalEmail(db, lawyer.id, lawyer.premium_expires_at)) {
+    return false;
+  }
+
+  await resend.emails.send({
+    from: "Social Jurídico <contato@socialjuridico.com.br>",
+    to: [lawyer.email],
+    subject: `Seu plano ${sub.planType} vence em breve — renove agora`,
+    html: renovacaoPlanoTemplate({
+      lawyerName: lawyer.name || "Advogado",
+      planType: sub.planType,
+      daysRemaining: 5,
+      valorTexto: sub.valor,
+      ctaUrl: sub.url,
+    }),
+  });
+
+  const { error } = await db.from("notificacoes").insert([
+    {
+      id: crypto.randomUUID(),
+      user_id: lawyer.id,
+      titulo: "Lembrete de renovação enviado",
+      mensagem: `Enviamos um email lembrando que seu plano ${sub.planType} vence em 5 dias.`,
+      tipo: "PLANO_RENOVACAO_EMAIL",
+      meta: JSON.stringify({
+        days_remaining: 5,
+        expires_at: lawyer.premium_expires_at,
+      }),
+      lida: false,
+      created_at: nowStr,
+    },
+  ]);
+
+  if (error) throw error;
+
+  return true;
+}
+
 export async function GET(request) {
   try {
     const expectedSecret =
@@ -167,7 +261,9 @@ export async function GET(request) {
 
     const { data: premiumLawyers, error: fetchError } = await db
       .from("advogados")
-      .select("id, name, email, is_premium, premium_expires_at, plan_type")
+      .select(
+        "id, name, email, is_premium, premium_expires_at, plan_type, plan_billing_cycle",
+      )
       .eq("is_premium", true)
       .not("premium_expires_at", "is", null);
 
@@ -180,6 +276,7 @@ export async function GET(request) {
     let processedCount = 0;
     let expiredCount = 0;
     let notifiedCount = 0;
+    let emailedCount = 0;
     let invalidExpirationCount = 0;
 
     for (const lawyer of premiumLawyers || []) {
@@ -220,6 +317,19 @@ export async function GET(request) {
       const diffDays = daysUntil(expiresAt, now);
       const daysRemaining = diffDays === 0 ? 1 : diffDays;
 
+      // 5 dias antes: email de renovação com o link da assinatura (Resend).
+      if (daysRemaining === 5) {
+        try {
+          const sent = await sendRenewalEmail(db, lawyer, nowStr);
+          if (sent) emailedCount += 1;
+        } catch (error) {
+          console.error(
+            `[cron/verificar-planos] Erro ao enviar email de renovacao para ${lawyer.id}:`,
+            error,
+          );
+        }
+      }
+
       if (![1, 2, 3].includes(daysRemaining)) {
         continue;
       }
@@ -245,6 +355,7 @@ export async function GET(request) {
       processed: processedCount,
       expired: expiredCount,
       notified: notifiedCount,
+      emailed: emailedCount,
       invalidExpiration: invalidExpirationCount,
       message: "Verificacao de expiracao concluida com sucesso.",
     });

@@ -1475,5 +1475,19 @@ export function monitoramentoProcessualTemplate({ lawyerName, tipoEvento, numero
 </html>`;
 }
 
+/** Lembrete de renovação — enviado 5 dias antes do vencimento do plano */
+export function renovacaoPlanoTemplate({ lawyerName, planType, daysRemaining, valorTexto, ctaUrl }) {
+  const diasTexto =
+    daysRemaining === 1 ? "amanhã" : `em ${daysRemaining} dias`;
 
+  return notificacaoAdvogadoBase({
+    lawyerName,
+    headerSubtitle: "SUA ASSINATURA ESTÁ PERTO DE VENCER",
+    emoji: "⏳",
+    titulo: `Seu plano ${planType} vence ${diasTexto}`,
+    mensagem: `Para não perder o acesso às ferramentas premium, renove sua assinatura${valorTexto ? ` por <strong style="color: #ffffff;">${valorTexto}</strong>` : ""}. É rápido: clique no botão abaixo e conclua o pagamento. Se preferir, fale com o suporte para qualquer dúvida.`,
+    ctaText: "Renovar assinatura",
+    ctaUrl,
+  });
+}
 

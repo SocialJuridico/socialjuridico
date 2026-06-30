@@ -46,9 +46,12 @@ function normalizePhone(value) {
   return `+${withCountryCode.slice(0, 15)}`;
 }
 
-function resolveProduct({ planType, jurisAmount, isPromoEligible }) {
+// Valores em centavos. Mantidos em sincronia com o catálogo (planCatalog.js) e
+// com o webhook (api/webhook/infinitepay) que reconhece estes mesmos valores.
+function resolveProduct({ planType, jurisAmount, isPromoEligible, billingCycle }) {
   const normalizedPlan = String(planType || "").toUpperCase();
   const normalizedJuris = Number(jurisAmount || 0);
+  const cycle = String(billingCycle || "MONTHLY").toUpperCase();
 
   if ([10, 20, 50].includes(normalizedJuris)) {
     const prices = { 10: 990, 20: 1690, 50: 3990 };
@@ -59,22 +62,30 @@ function resolveProduct({ planType, jurisAmount, isPromoEligible }) {
     };
   }
 
-  if (["START", "PRO"].includes(normalizedPlan)) {
-    const isPro = normalizedPlan === "PRO";
-
-    if (Boolean(isPromoEligible)) {
-      return {
-        priceInCents: 1099,
-        description: isPro
-          ? "Plano Pro Promocional 30 dias"
-          : "Plano Start Promocional 30 dias",
-      };
+  if (normalizedPlan === "PRO") {
+    if (cycle === "AVULSO") {
+      return { priceInCents: 21000, description: "Plano Pro Avulso 30 dias" };
     }
+    if (cycle === "ANNUAL") {
+      return { priceInCents: 144000, description: "Plano Pro Anual" };
+    }
+    if (isPromoEligible) {
+      return { priceInCents: 3999, description: "Plano Pro Promocional 30 dias" };
+    }
+    return { priceInCents: 15000, description: "Plano Pro Mensal" };
+  }
 
-    return {
-      priceInCents: isPro ? 8790 : 4099,
-      description: isPro ? "Plano Pro Mensal" : "Plano Start Mensal",
-    };
+  if (normalizedPlan === "START") {
+    if (cycle === "AVULSO") {
+      return { priceInCents: 4990, description: "Plano Start Avulso 30 dias" };
+    }
+    if (cycle === "ANNUAL") {
+      return { priceInCents: 43188, description: "Plano Start Anual" };
+    }
+    if (isPromoEligible) {
+      return { priceInCents: 1099, description: "Plano Start Promocional 30 dias" };
+    }
+    return { priceInCents: 4099, description: "Plano Start Mensal" };
   }
 
   return null;
@@ -129,6 +140,7 @@ export async function POST(request) {
 
     const body = await request.json().catch(() => null);
     const planType = String(body?.planType || "").toUpperCase();
+    const billingCycle = String(body?.billingCycle || "MONTHLY").toUpperCase();
     const jurisAmount = Number(body?.jurisAmount || 0);
     const requestedPromo = Boolean(body?.isPromoEligible);
     const promoAlreadyUsed =
@@ -138,6 +150,7 @@ export async function POST(request) {
     const product = resolveProduct({
       planType,
       jurisAmount,
+      billingCycle,
       isPromoEligible: requestedPromo && !promoAlreadyUsed,
     });
 
@@ -152,7 +165,7 @@ export async function POST(request) {
     }
 
     const checkoutHandle =
-      process.env.INFINITEPAY_HANDLE || "carlos-henrique-1o7";
+      process.env.INFINITEPAY_HANDLE || "plataforma-social";
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL || "https://socialjuridico.com.br";
     const orderReference = `sj_${user.id}_${Date.now()}`;

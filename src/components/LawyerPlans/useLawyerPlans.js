@@ -217,22 +217,54 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
       }
 
       if (planCard.id === "PRO") {
-        let redirectUrl = "";
-        if (billingCycle === "AVULSO") {
-          redirectUrl = "https://loja.infinitepay.io/carlos-henrique-1o7/hsr7194-plano-pro-avulso";
-        } else if (billingCycle === "ANNUAL") {
-          redirectUrl = "https://invoice.infinitepay.io/plans/carlos-henrique-1o7/34RALUKLYU";
-        } else if (billingCycle === "MONTHLY") {
-          if (planCard.introEligible) {
-            redirectUrl = "https://loja.infinitepay.io/carlos-henrique-1o7/igf9756-plano-pro-promocional-30-dias";
-          } else {
-            redirectUrl = "https://invoice.infinitepay.io/plans/carlos-henrique-1o7/sZW30KJ8H5";
-          }
+        // Assinaturas recorrentes hospedadas na InfinitePay (mensal-renovação e
+        // anual): mantêm o link estático até a migração para a conta PJ, pois o
+        // webhook dessas assinaturas ainda não devolve a identificação do
+        // assinante. Compra não é atribuída automaticamente nesses casos.
+        const hostedSubscriptionUrl =
+          billingCycle === "ANNUAL"
+            ? "https://invoice.infinitepay.io/plans/plataforma-social/nrJhBb2yJQ"
+            : billingCycle === "MONTHLY" && !planCard.introEligible
+              ? "https://invoice.infinitepay.io/plans/plataforma-social/tkDa1iSpch"
+              : "";
+
+        if (hostedSubscriptionUrl) {
+          window.open(hostedSubscriptionUrl, "_blank", "noopener,noreferrer");
+          onClose?.();
+          return;
         }
 
-        if (redirectUrl) {
-          window.open(redirectUrl, "_blank", "noopener,noreferrer");
+        // Compras únicas (avulso e 1º mês promocional): link gerado pela nossa
+        // API com order_nsu = sj_<userId>, para o webhook identificar o advogado
+        // e ativar o plano automaticamente.
+        setSelectingPlan(planCard.id);
+        try {
+          const response = await fetch("/api/checkout/infinitepay", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              planType: "PRO",
+              billingCycle,
+              isPromoEligible: Boolean(planCard.introEligible),
+            }),
+          });
+
+          const data = await response.json().catch(() => null);
+          if (!response.ok || !data?.success || !data?.url) {
+            throw new Error(
+              data?.message || "Não foi possível gerar o link de pagamento.",
+            );
+          }
+
+          window.open(data.url, "_blank", "noopener,noreferrer");
           onClose?.();
+        } catch (error) {
+          console.error("[LawyerPlans] Falha ao iniciar checkout PRO:", error);
+          toast.error(
+            error.message || "Não foi possível iniciar o pagamento.",
+          );
+        } finally {
+          setSelectingPlan(null);
         }
         return;
       }

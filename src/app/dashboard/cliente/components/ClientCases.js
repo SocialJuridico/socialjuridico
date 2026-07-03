@@ -11,6 +11,13 @@ import {
 
 import { CASE_STATUS_META } from "../clientDashboardConfig";
 import styles from "../ClientDashboard.module.css";
+import {
+  PRIORITY_LABELS,
+  SOCIAL_TYPE_LABELS,
+  isSocialCase,
+  normalizePriority,
+  normalizeSocialType,
+} from "@/lib/clientDashboard/caseClassification";
 
 function formatDate(value) {
   if (!value) return "Não informado";
@@ -24,9 +31,14 @@ function CaseCard({ item, controller }) {
     label: item.status,
     tone: "default",
   };
+  const priority = normalizePriority(item.prioridade);
+  const socialType = normalizeSocialType(item.tipo_social);
+  const isSocial = isSocialCase(socialType);
 
   return (
-    <article className={styles.caseCard}>
+    <article
+      className={`${styles.caseCard} ${isSocial ? styles.caseCardSocial : ""}`.trim()}
+    >
       <button
         type="button"
         className={styles.caseCardMain}
@@ -40,6 +52,26 @@ function CaseCard({ item, controller }) {
           </span>
           <span>{formatDate(item.created_at)}</span>
         </div>
+        {(priority !== "NORMAL" || isSocial) && (
+          <div className={styles.caseTagRow}>
+            {priority !== "NORMAL" && (
+              <span
+                className={`${styles.caseTag} ${
+                  priority === "URGENTE"
+                    ? styles.caseTagUrgent
+                    : styles.caseTagPreferencial
+                }`}
+              >
+                {PRIORITY_LABELS[priority]}
+              </span>
+            )}
+            {isSocial && (
+              <span className={`${styles.caseTag} ${styles.caseTagSocial}`}>
+                {SOCIAL_TYPE_LABELS[socialType]}
+              </span>
+            )}
+          </div>
+        )}
         <h3>{item.titulo}</h3>
         <p className={styles.caseArea}>{item.area_atuacao || "Área não informada"}</p>
         <p className={styles.caseExcerpt}>

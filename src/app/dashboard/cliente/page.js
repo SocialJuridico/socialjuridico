@@ -10,6 +10,7 @@ import { resolveClientTutorialRoute } from "@/lib/platformTutorials/tutorialRout
 
 import ClientCaseComposer from "./components/ClientCaseComposer";
 import { ClientCases, ClientConversations } from "./components/ClientCases";
+import EmergencyButton from "./components/EmergencyButton";
 import ClientDirectory from "./components/ClientDirectory";
 import ClientModalsGoverned from "./components/ClientModalsGoverned";
 import ClientNotifications from "./components/ClientNotifications";
@@ -87,6 +88,12 @@ export default function ClientDashboardPage() {
     <ClientShell controller={controller}>
       {controller.loadError && <div className={styles.warningBanner} role="alert"><AlertTriangle size={18} aria-hidden="true" /><div><strong>Alguns dados podem estar desatualizados</strong><p>{controller.loadError}</p></div><button type="button" onClick={() => controller.loadDashboard()}>Atualizar</button></div>}
       <ActiveContent controller={controller} composer={composer} />
+      <EmergencyButton
+        onPosted={async () => {
+          await controller.refreshAfterMutation();
+          controller.setActiveTab("meus-casos");
+        }}
+      />
       {controller.showOnboarding && <ClientTutorial activeTab={controller.activeTab} setActiveTab={controller.setActiveTab} onComplete={() => controller.setShowOnboarding(false)} />}
       <ClientModalsGoverned controller={controller} />
       <AdvogadoMesPopup />

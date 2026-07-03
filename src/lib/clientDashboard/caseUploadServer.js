@@ -163,9 +163,48 @@ export async function cleanupExpiredUploads(db, userId) {
   }
 }
 
+// Categorias de slot único (VIDEO/AUDIO): um novo upload substitui o anterior
+// que ficou em preparação (PENDING), evitando o bloqueio de "já existe" quando
+// o cliente reenvia sem ter publicado o caso.
+async function purgePendingSingleSlot(db, userId, category) {
+  const { data, error } = await db
+    .from("client_case_uploads")
+    .select("id, bucket, object_path")
+    .eq("user_id", userId)
+    .eq("category", category)
+    .eq("status", "PENDING");
+
+  if (error) {
+    if (["42P01", "PGRST205"].includes(error.code)) return;
+    return;
+  }
+
+  for (const item of data || []) {
+    await db.storage.from(item.bucket).remove([item.object_path]).catch(() => null);
+    await db
+      .from("client_case_uploads")
+      .update({ status: "REMOVED", removed_at: new Date().toISOString() })
+      .eq("id", item.id)
+      .eq("status", "PENDING");
+    await auditCaseUpload(db, {
+      uploadId: item.id,
+      userId,
+      action: "REMOVED",
+      bucket: item.bucket,
+      objectPath: item.object_path,
+      metadata: { reason: "REPLACED_PENDING_SINGLE_SLOT" },
+    }).catch(() => null);
+  }
+}
+
 export async function issueCaseUploadTicket(db, userId, input) {
   const normalized = validateUploadMetadata(input);
   await cleanupExpiredUploads(db, userId);
+
+  // Slot único: limpa o pendente anterior antes de contar (permite substituir).
+  if (normalized.rules.maxCount === 1) {
+    await purgePendingSingleSlot(db, userId, normalized.category);
+  }
 
   const { count, error: countError } = await db
     .from("client_case_uploads")
@@ -296,7 +335,7 @@ export async function resolveCaseUploads(db, userId, uploadIds) {
   const { data, error } = await db
     .from("client_case_uploads")
     .select(
-      "id, user_id, bucket, object_path, category, original_name, declared_mime, size_bytes, status, expires_at",
+      "id, user_id, bucket, object_path, category, original_name, declared_mime, size_bytes, status, expires_at, transcricao",
     )
     .in("id", ids)
     .eq("user_id", userId);

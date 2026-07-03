@@ -62,10 +62,15 @@ export function useCaseComposer({ onCreated }) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const audioTimerRef = useRef(null);
   const streamRef = useRef(null);
+  const analyzedKeyRef = useRef("");
+  const formRef = useRef(form);
+  formRef.current = form;
 
   const updateForm = useCallback((field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -325,6 +330,9 @@ export function useCaseComposer({ onCreated }) {
     setSubmitting(false);
     setRecordingTime(0);
     setIsRecording(false);
+    setAnalysis(null);
+    setAnalyzing(false);
+    analyzedKeyRef.current = "";
     if (audioPreviewUrl) URL.revokeObjectURL(audioPreviewUrl);
     setAudioPreviewUrl(null);
   }, [audioPreviewUrl]);
@@ -348,6 +356,77 @@ export function useCaseComposer({ onCreated }) {
     );
   }, []);
 
+  const runAnalysis = useCallback(async () => {
+    const currentForm = formRef.current;
+    const readyIds = uploads
+      .filter((item) => item.status === "ready" && item.ticket?.id)
+      .map((item) => item.ticket.id);
+
+    const hasReadyMedia = uploads.some(
+      (item) =>
+        (item.category === "AUDIO" || item.category === "VIDEO") &&
+        item.status === "ready",
+    );
+    if (!currentForm.descricao.trim() && !hasReadyMedia) return;
+
+    setAnalyzing(true);
+    try {
+      const response = await fetch("/api/casos/analisar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          descricao: currentForm.descricao,
+          area_atuacao: currentForm.area,
+          upload_ids: readyIds,
+        }),
+      });
+      const data = await readJson(response);
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Não foi possível analisar o caso.");
+      }
+
+      setAnalysis(data.data);
+
+      // Prefill: quando o cliente não preencheu, a IA sugere relato e título.
+      setForm((current) => {
+        const next = { ...current };
+        if (!current.descricao.trim() && data.data?.transcricao) {
+          next.descricao = data.data.transcricao;
+        }
+        if (!current.titulo.trim() && data.data?.titulo) {
+          next.titulo = data.data.titulo;
+        }
+        return next;
+      });
+    } catch (error) {
+      toast.error(error.message || "Não foi possível analisar o caso.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }, [uploads]);
+
+  // Dispara a pré-análise automaticamente quando um áudio/vídeo fica pronto.
+  useEffect(() => {
+    const readyMediaIds = uploads
+      .filter(
+        (item) =>
+          (item.category === "AUDIO" || item.category === "VIDEO") &&
+          item.status === "ready" &&
+          item.ticket?.id,
+      )
+      .map((item) => item.ticket.id)
+      .sort()
+      .join(",");
+
+    if (!readyMediaIds) return;
+    if (readyMediaIds === analyzedKeyRef.current) return;
+    if (analyzing) return;
+
+    analyzedKeyRef.current = readyMediaIds;
+    runAnalysis();
+  }, [uploads, analyzing, runAnalysis]);
+
   const submit = useCallback(
     async (event) => {
       event?.preventDefault?.();
@@ -358,6 +437,18 @@ export function useCaseComposer({ onCreated }) {
       }
       if (hasFailedUploads) {
         toast.error("Remova ou envie novamente os arquivos com falha.");
+        return;
+      }
+
+      const hasReadyMedia = uploads.some(
+        (item) =>
+          (item.category === "AUDIO" || item.category === "VIDEO") &&
+          item.status === "ready",
+      );
+      if (!form.descricao.trim() && !hasReadyMedia) {
+        toast.error(
+          "Descreva o caso por texto ou grave/envie um áudio ou vídeo com o relato.",
+        );
         return;
       }
 
@@ -422,6 +513,8 @@ export function useCaseComposer({ onCreated }) {
     isRecording,
     recordingTime,
     audioPreviewUrl,
+    analysis,
+    analyzing,
     hasPendingUploads,
     hasFailedUploads,
     isDirty,
@@ -430,6 +523,7 @@ export function useCaseComposer({ onCreated }) {
     removeUpload,
     startRecording,
     stopRecording,
+    runAnalysis,
     submit,
     reset,
   };

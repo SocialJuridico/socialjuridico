@@ -49,6 +49,7 @@ export function useLawyerOpportunities() {
   const [notices, setNotices] = useState([]);
   const [banners, setBanners] = useState([]);
   const [radarCount, setRadarCount] = useState(0);
+  const [emergencyCount, setEmergencyCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [supportLoading, setSupportLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,6 +70,7 @@ export function useLawyerOpportunities() {
       const params = new URLSearchParams({
         page: String(page),
         limit: "12",
+        emergency: activeFeed === "emergency" ? "true" : "false",
       });
       if (appliedFilters.search) params.set("q", appliedFilters.search);
       if (appliedFilters.area) params.set("area", appliedFilters.area);
@@ -98,6 +100,9 @@ export function useLawyerOpportunities() {
       setPagination(
         data.pagination || { page: 1, pages: 1, total: 0, limit: 12 },
       );
+      if (activeFeed === "emergency") {
+        setEmergencyCount(data.pagination?.total || 0);
+      }
     } catch (loadError) {
       if (loadError.name === "AbortError") return;
       console.error("[Oportunidades] Falha ao carregar:", loadError);
@@ -107,7 +112,7 @@ export function useLawyerOpportunities() {
     } finally {
       if (!controller.signal.aborted) setLoading(false);
     }
-  }, [appliedFilters, page, router]);
+  }, [activeFeed, appliedFilters, page, router]);
 
   const loadSupportContent = useCallback(async () => {
     setSupportLoading(true);
@@ -117,9 +122,12 @@ export function useLawyerOpportunities() {
       fetch("/api/radar?count_only=true", { cache: "no-store" }).then(
         readJson,
       ),
+      fetch("/api/advogado/oportunidades?emergency=true&limit=6&page=1", {
+        cache: "no-store",
+      }).then(readJson),
     ]);
 
-    const [noticeResult, bannerResult, radarResult] = requests;
+    const [noticeResult, bannerResult, radarResult, emergencyResult] = requests;
     if (
       noticeResult.status === "fulfilled" &&
       noticeResult.value?.success
@@ -135,6 +143,12 @@ export function useLawyerOpportunities() {
     if (radarResult.status === "fulfilled" && radarResult.value?.success) {
       setRadarCount(radarResult.value.count || 0);
     }
+    if (
+      emergencyResult.status === "fulfilled" &&
+      emergencyResult.value?.success
+    ) {
+      setEmergencyCount(emergencyResult.value.pagination?.total || 0);
+    }
     setSupportLoading(false);
   }, []);
 
@@ -142,6 +156,11 @@ export function useLawyerOpportunities() {
     void loadOpportunities();
     return () => abortRef.current?.abort();
   }, [loadOpportunities]);
+
+  // Ao trocar de aba (feed), volta para a primeira página.
+  useEffect(() => {
+    setPage(1);
+  }, [activeFeed]);
 
   useEffect(() => {
     void loadSupportContent();
@@ -218,7 +237,8 @@ export function useLawyerOpportunities() {
   async function manifestInterest(caseItem) {
     if (!caseItem?.id || busyCaseId) return;
 
-    if ((session.profileData?.balance || 0) < 1) {
+    // Emergências são gratuitas: não exigem saldo de Juris.
+    if (!caseItem.isEmergency && (session.profileData?.balance || 0) < 1) {
       toast.error(
         "Você precisa de pelo menos 1 Juri para manifestar interesse.",
       );
@@ -296,6 +316,7 @@ export function useLawyerOpportunities() {
     notices,
     bannerGroups,
     radarCount,
+    emergencyCount,
     loading,
     supportLoading,
     error,

@@ -4,14 +4,20 @@ import {
   CalendarDays,
   FileText,
   Headphones,
+  HeartPulse,
   Loader2,
   MapPin,
   MessageCircleMore,
+  Siren,
   Video,
 } from "lucide-react";
 
 import styles from "../Oportunidade.module.css";
 import { formatOpportunityDate, getInitials } from "../opportunityUtils";
+import {
+  PRIORITY_LABELS,
+  SOCIAL_TYPE_LABELS,
+} from "@/lib/clientDashboard/caseClassification";
 
 export default function OpportunityCard({
   item,
@@ -21,11 +27,49 @@ export default function OpportunityCard({
 }) {
   const location = [item.city, item.state].filter(Boolean).join(" - ") || "Local não informado";
   const lawyers = item.negotiatingLawyers || [];
+  const priority = item.priority || "NORMAL";
+  const isSocial = Boolean(item.isSocial);
+  const isEmergency = Boolean(item.isEmergency);
+  const riskToLife = Boolean(item.riskToLife);
+  const showPriorityBadge = priority !== "NORMAL";
 
   return (
-    <article className={styles.caseCard}>
+    <article
+      className={`${styles.caseCard} ${isSocial ? styles.caseCardSocial : ""} ${
+        priority === "URGENTE" ? styles.caseCardUrgent : ""
+      } ${isEmergency ? styles.caseCardEmergency : ""}`.trim()}
+      data-priority={priority}
+      data-social={item.socialType || "NENHUM"}
+      data-emergency={isEmergency ? "true" : "false"}
+    >
       <div className={styles.cardTop}>
         <div className={styles.badges}>
+          {isEmergency && (
+            <span className={`${styles.priorityBadge} ${styles.emergencyBadge}`}>
+              <Siren size={12} aria-hidden="true" /> Emergência
+            </span>
+          )}
+          {riskToLife && (
+            <span className={`${styles.priorityBadge} ${styles.riskLifeBadge}`}>
+              <HeartPulse size={12} aria-hidden="true" /> Risco à vida
+            </span>
+          )}
+          {showPriorityBadge && (
+            <span
+              className={`${styles.priorityBadge} ${
+                priority === "URGENTE"
+                  ? styles.priorityUrgent
+                  : styles.priorityPreferencial
+              }`}
+            >
+              {PRIORITY_LABELS[priority]}
+            </span>
+          )}
+          {isSocial && (
+            <span className={styles.socialBadge}>
+              {SOCIAL_TYPE_LABELS[item.socialType]}
+            </span>
+          )}
           <span className={styles.areaBadge}>{item.practiceArea}</span>
           {item.status === "NEGOCIANDO" && (
             <span className={styles.statusBadge}>Em negociação</span>

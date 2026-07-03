@@ -8,6 +8,7 @@ import {
   Radar,
   RefreshCw,
   ShieldCheck,
+  Siren,
 } from "lucide-react";
 
 import AdvogadoMesPopup from "@/components/AdvogadoMesPopup/AdvogadoMesPopup";
@@ -21,6 +22,7 @@ import {
   InterestConfirmModal,
   OpportunityDetailsModal,
 } from "./OpportunityModals";
+import EmergencyOpportunities from "./EmergencyOpportunities";
 import PlatformOpportunities from "./PlatformOpportunities";
 import RadarPanel from "./RadarPanel";
 
@@ -146,6 +148,20 @@ export default function OpportunityDashboard() {
           </button>
           <button
             type="button"
+            className={`${styles.feedTab} ${styles.feedTabEmergency} ${
+              controller.activeFeed === "emergency" ? styles.feedTabActive : ""
+            }`}
+            onClick={() => controller.setActiveFeed("emergency")}
+            aria-pressed={controller.activeFeed === "emergency"}
+          >
+            <Siren size={17} aria-hidden="true" />
+            Emergências
+            <span className={styles.tabCount}>
+              {controller.emergencyCount || 0}
+            </span>
+          </button>
+          <button
+            type="button"
             className={`${styles.feedTab} ${
               controller.activeFeed === "radar" ? styles.feedTabActive : ""
             }`}
@@ -199,6 +215,8 @@ export default function OpportunityDashboard() {
 
             {controller.activeFeed === "radar" ? (
               <RadarPanel />
+            ) : controller.activeFeed === "emergency" ? (
+              <EmergencyOpportunities controller={controller} />
             ) : (
               <PlatformOpportunities controller={controller} />
             )}

@@ -2406,3 +2406,362 @@
     flex-direction: column;
   }
 }
+
+/* Tags de classificação social / prioridade nos casos do cliente */
+.caseCardSocial {
+  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(167, 139, 250, 0.06);
+}
+
+.caseTagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.caseTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.caseTagUrgent {
+  background: rgba(248, 113, 113, 0.16);
+  color: #fca5a5;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.caseTagPreferencial {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fcd34d;
+  border: 1px solid rgba(251, 191, 36, 0.32);
+}
+
+.caseTagSocial {
+  background: rgba(167, 139, 250, 0.16);
+  color: #c4b5fd;
+  border: 1px solid rgba(167, 139, 250, 0.34);
+}
+
+/* Painel de pré-análise da IA no formulário de novo caso */
+.analysisPanel {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  background: linear-gradient(
+    145deg,
+    rgba(212, 175, 55, 0.08),
+    rgba(255, 255, 255, 0.015)
+  );
+}
+
+.analysisPanelSocial {
+  border-color: rgba(167, 139, 250, 0.4);
+  background: linear-gradient(
+    145deg,
+    rgba(167, 139, 250, 0.1),
+    rgba(255, 255, 255, 0.015)
+  );
+}
+
+.analysisHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e7ca68;
+}
+
+.analysisHeader strong {
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+}
+
+.analysisReanalyze {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.analysisReanalyze:hover:not(:disabled) {
+  border-color: rgba(212, 175, 55, 0.4);
+  color: #fff;
+}
+
+.analysisReanalyze:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.analysisSpinner {
+  animation: spin 900ms linear infinite;
+}
+
+.analysisTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.analysisBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.analysisBadgeUrgent {
+  background: rgba(248, 113, 113, 0.16);
+  color: #fca5a5;
+  border: 1px solid rgba(248, 113, 113, 0.35);
+}
+
+.analysisBadgePreferencial {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fcd34d;
+  border: 1px solid rgba(251, 191, 36, 0.32);
+}
+
+.analysisBadgeSocial {
+  background: rgba(167, 139, 250, 0.16);
+  color: #c4b5fd;
+  border: 1px solid rgba(167, 139, 250, 0.34);
+}
+
+.analysisSummary {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.analysisHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.analysisDetails {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.analysisDetails summary {
+  cursor: pointer;
+  color: #e7ca68;
+  font-weight: 700;
+}
+
+.analysisTranscript {
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 8px 0 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+/* ===== Botão de EMERGÊNCIA (exclusivo mobile) ===== */
+.emergencyFab {
+  position: fixed;
+  left: 16px;
+  bottom: 84px;
+  z-index: 60;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #fff;
+  font-size: 0.86rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  box-shadow: 0 10px 30px rgba(220, 38, 38, 0.45);
+  cursor: pointer;
+  animation: emergencyPulse 1.8s ease-in-out infinite;
+}
+
+.emergencyFab:active {
+  transform: scale(0.97);
+}
+
+@keyframes emergencyPulse {
+  0%,
+  100% {
+    box-shadow: 0 10px 30px rgba(220, 38, 38, 0.4);
+  }
+  50% {
+    box-shadow: 0 10px 42px rgba(220, 38, 38, 0.75);
+  }
+}
+
+/* Backup: garante que não apareça em telas grandes */
+@media (min-width: 769px) {
+  .emergencyFab {
+    display: none;
+  }
+}
+
+.emergencyOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(3px);
+}
+
+.emergencyModal {
+  width: 100%;
+  max-width: 460px;
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border-radius: 20px 20px 16px 16px;
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: #14100f;
+  box-shadow: 0 -8px 44px rgba(0, 0, 0, 0.5);
+}
+
+.emergencyModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.emergencyModalTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #fca5a5;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+}
+
+.emergencyProgress {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 20px 10px;
+  text-align: center;
+}
+
+.emergencyProgress strong {
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.emergencyProgress p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.82rem;
+}
+
+.emergencyErrorIcon {
+  display: inline-flex;
+  color: #fca5a5;
+}
+
+.emergencyResult {
+  display: grid;
+  gap: 14px;
+}
+
+/* Botão grande de ligar para a Polícia Militar */
+.policeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #dc2626, #991b1b);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 12px 34px rgba(220, 38, 38, 0.5);
+  animation: emergencyPulse 1.4s ease-in-out infinite;
+}
+
+.policeButton span {
+  display: grid;
+}
+
+.policeButton strong {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.policeButton small {
+  font-size: 0.72rem;
+  opacity: 0.9;
+}
+
+.emergencySuccess {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #86efac;
+}
+
+.emergencySuccess strong {
+  display: block;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.emergencySuccess p {
+  margin: 2px 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+}
+
+.emergencyTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.emergencySummary {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.84rem;
+  line-height: 1.6;
+}

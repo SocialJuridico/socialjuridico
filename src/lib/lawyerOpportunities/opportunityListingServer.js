@@ -8,6 +8,11 @@ import {
   opportunityJson,
   requireLawyerAccess,
 } from "./opportunityServerUtils";
+import {
+  isSocialCase,
+  normalizePriority,
+  normalizeSocialType,
+} from "@/lib/clientDashboard/caseClassification";
 
 function normalizeAttachments(value) {
   const items = Array.isArray(value)
@@ -46,7 +51,42 @@ function normalizeAttachments(value) {
     .slice(0, 20);
 }
 
+function normalizeNextSteps(value) {
+  let list = value;
+  if (typeof value === "string") {
+    try {
+      list = JSON.parse(value);
+    } catch {
+      list = [];
+    }
+  }
+  if (!Array.isArray(list)) return [];
+
+  return list
+    .map((step) => ({
+      titulo: normalizeSearch(step?.titulo, 120),
+      descricao: normalizeSearch(step?.descricao, 800),
+    }))
+    .filter((step) => step.titulo || step.descricao)
+    .slice(0, 6);
+}
+
+function readMeta(value) {
+  if (!value) return {};
+  if (typeof value === "object") return value;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function serializeCase(item, negotiatingLawyers = []) {
+  const meta = readMeta(item.ai_meta);
+  const priority = normalizePriority(item.prioridade);
+  const socialType = normalizeSocialType(item.tipo_social);
+
   return {
     id: item.id,
     title: normalizeSearch(item.titulo || "Caso jurídico", 180),
@@ -62,6 +102,16 @@ function serializeCase(item, negotiatingLawyers = []) {
     attachments: normalizeAttachments(item.anexos),
     audioUrl: safePublicUrl(item.audio_url),
     videoUrl: safePublicUrl(item.video_url || item.video_link),
+    priority,
+    socialType,
+    isSocial: isSocialCase(socialType),
+    isEmergency: item.is_emergencia === true,
+    riskToLife: item.risco_vida === true,
+    nextSteps: normalizeNextSteps(item.ai_proximos_passos),
+    aiSummary: normalizeSearch(meta.resumo, 900),
+    priorityReason: normalizeSearch(meta.prioridadeJustificativa, 900),
+    socialTypeReason: normalizeSearch(meta.tipoSocialJustificativa, 900),
+    transcript: normalizeSearch(meta.transcricao, 12000),
     negotiatingLawyers,
   };
 }
@@ -119,6 +169,15 @@ export async function listLawyerOpportunities(request) {
     const page = clampInteger(searchParams.get("page"), 1, 1, 1000);
     const limit = clampInteger(searchParams.get("limit"), 12, 6, 30);
 
+    // emergency: "true" só emergências, "false" exclui emergências, ausente = todos.
+    const emergencyParam = searchParams.get("emergency");
+    const emergency =
+      emergencyParam === "true"
+        ? true
+        : emergencyParam === "false"
+          ? false
+          : null;
+
     const { data: result, error } = await access.db.rpc(
       "list_lawyer_opportunities",
       {
@@ -128,6 +187,7 @@ export async function listLawyerOpportunities(request) {
         p_state: state,
         p_page: page,
         p_limit: limit,
+        p_emergency: emergency,
       },
     );
 

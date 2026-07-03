@@ -8,6 +8,7 @@ import { getRoleFromDatabase } from "@/lib/securityUtils";
 import { resolveCaseUploads } from "@/lib/clientDashboard/caseUploadServer";
 import { attachCaseUploadsSafely } from "@/lib/clientDashboard/caseUploadAttachServer";
 import { validateClientMutationOrigin } from "@/lib/clientDashboard/clientServer";
+import { classifyCase } from "@/lib/clientDashboard/caseClassifierServer";
 import {
   json,
   normalizeText,
@@ -163,12 +164,14 @@ export async function createCase(request) {
       ? body.upload_ids.slice(0, 7)
       : [];
 
-    if (!title || !description || !area || !city || state.length !== 2) {
+    // Área, cidade e estado permanecem obrigatórios (declaração do cliente).
+    // O relato (descrição) e o título podem vir apenas de áudio/vídeo — a IA
+    // transcreve e preenche. Assim quebramos a barreira de quem não escreve.
+    if (!area || !city || state.length !== 2) {
       return json(
         {
           success: false,
-          message:
-            "Título, descrição, área, cidade e estado são obrigatórios.",
+          message: "Área, cidade e estado são obrigatórios.",
         },
         400,
       );
@@ -190,10 +193,49 @@ export async function createCase(request) {
       uploadIds,
     );
 
+    const hasMedia = Boolean(
+      resolvedUploads.audioUrl || resolvedUploads.videoUrl,
+    );
+
+    // Exige texto OU mídia. Sem nenhum dos dois não há relato para o caso.
+    if (!description && !hasMedia) {
+      return json(
+        {
+          success: false,
+          message:
+            "Descreva o caso por texto ou envie um áudio/vídeo com o relato.",
+        },
+        400,
+      );
+    }
+
+    // Classificação social/prioridade por IA (transcreve áudio/vídeo, classifica
+    // o relato). Nunca lança: em falha retorna NORMAL/NENHUM sem bloquear a publicação.
+    const classification = await classifyCase({
+      db: access.db,
+      descricao: description,
+      area,
+      tickets: resolvedUploads.tickets,
+    });
+
+    // Backfill: quando o cliente não digitou, usa a transcrição como relato e
+    // o resumo da IA como título, garantindo conteúdo legível ao advogado.
+    const transcription = String(classification.meta?.transcricao || "").trim();
+    const finalDescription =
+      description ||
+      transcription ||
+      "Relato enviado por áudio/vídeo. Abra a mídia anexada ao caso.";
+    const finalTitle =
+      title ||
+      normalizeText(classification.titulo, 180) ||
+      normalizeText(classification.meta?.resumo, 180) ||
+      (transcription ? normalizeText(transcription, 120) : "") ||
+      "Relato enviado por áudio/vídeo";
+
     const createdAt = new Date().toISOString();
     const payload = {
-      titulo: title,
-      descricao: description,
+      titulo: finalTitle,
+      descricao: finalDescription,
       area_atuacao: area,
       cidade: city,
       estado: state,
@@ -202,6 +244,11 @@ export async function createCase(request) {
       video_link: videoLink,
       video_url: resolvedUploads.videoUrl,
       audio_url: resolvedUploads.audioUrl,
+      prioridade: classification.prioridade,
+      tipo_social: classification.tipoSocial,
+      ai_proximos_passos: classification.proximosPassos,
+      ai_meta: classification.meta,
+      ai_classified_at: createdAt,
       status: "ABERTO",
       created_at: createdAt,
       updated_at: createdAt,
@@ -211,7 +258,7 @@ export async function createCase(request) {
       .from("casos")
       .insert([payload])
       .select(
-        "id, titulo, descricao, area_atuacao, cidade, estado, status, advogado_id, anexos, video_link, video_url, audio_url, created_at, updated_at",
+        "id, titulo, descricao, area_atuacao, cidade, estado, status, advogado_id, anexos, video_link, video_url, audio_url, prioridade, tipo_social, ai_proximos_passos, ai_meta, ai_classified_at, created_at, updated_at",
       )
       .single();
 

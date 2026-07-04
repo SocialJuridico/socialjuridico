@@ -460,6 +460,23 @@ async function deleteLawyerData(db, userId) {
     { optional: true },
   );
 
+  // Tabelas que referenciam o advogado com ON DELETE RESTRICT precisam ser
+  // purgadas antes de excluir o perfil, senão a FK bloqueia a exclusão.
+  await executeDelete(
+    db,
+    "lawyer_opportunity_audit_logs",
+    (query) => query.eq("lawyer_id", userId),
+    "Falha ao excluir auditoria de oportunidades do advogado",
+    { optional: true },
+  );
+  await executeDelete(
+    db,
+    "chat_video_sessions",
+    (query) => query.eq("lawyer_id", userId),
+    "Falha ao excluir sessões de vídeo do advogado",
+    { optional: true },
+  );
+
   await executeUpdate(
     db,
     "casos",
@@ -490,6 +507,38 @@ async function deleteClientData(db, userId) {
       (query) => query.in("case_id", caseIds),
       "Falha ao excluir interesses dos casos",
     );
+
+    // Tabelas que referenciam casos com ON DELETE RESTRICT precisam ser
+    // purgadas antes de excluir os casos, senão a FK bloqueia a exclusão.
+    await executeDelete(
+      db,
+      "lawyer_opportunity_audit_logs",
+      (query) => query.in("case_id", caseIds),
+      "Falha ao excluir auditoria de oportunidades dos casos",
+      { optional: true },
+    );
+    await executeDelete(
+      db,
+      "chat_audit_logs",
+      (query) => query.in("case_id", caseIds),
+      "Falha ao excluir auditoria de chat dos casos",
+      { optional: true },
+    );
+    await executeDelete(
+      db,
+      "chat_attachments",
+      (query) => query.in("case_id", caseIds),
+      "Falha ao excluir anexos de chat dos casos",
+      { optional: true },
+    );
+    await executeDelete(
+      db,
+      "chat_video_sessions",
+      (query) => query.in("case_id", caseIds),
+      "Falha ao excluir sessões de vídeo dos casos",
+      { optional: true },
+    );
+
     await executeDelete(
       db,
       "casos",
@@ -497,6 +546,16 @@ async function deleteClientData(db, userId) {
       "Falha ao excluir casos do cliente",
     );
   }
+
+  // Sessões de vídeo referenciam o cliente (client_id RESTRICT); remove o que
+  // ainda estiver vinculado ao titular antes de excluir o perfil.
+  await executeDelete(
+    db,
+    "chat_video_sessions",
+    (query) => query.eq("client_id", userId),
+    "Falha ao excluir sessões de vídeo do cliente",
+    { optional: true },
+  );
 
   await executeDelete(
     db,
@@ -509,6 +568,54 @@ async function deleteClientData(db, userId) {
     "notificacoes",
     (query) => query.eq("user_id", userId),
     "Falha ao excluir notificações",
+  );
+}
+
+// O advogado pode ter lançamentos no ledger financeiro imutável (transacoes),
+// que não podem ser apagados nem ter o advogado_id alterado (triggers legais).
+// Nesses casos, o perfil é ANONIMIZADO em vez de excluído: a PII é removida e o
+// vínculo fiscal é preservado, atendendo à LGPD e à retenção legal.
+async function lawyerHasImmutableLedger(db, userId) {
+  const { data, error } = await db
+    .from("transacoes")
+    .select("id")
+    .eq("advogado_id", userId)
+    .limit(1);
+
+  if (error) {
+    if (OPTIONAL_DELETE_ERROR_CODES.has(error.code)) return false;
+    throw new Error(`Falha ao verificar o ledger financeiro: ${error.message}`);
+  }
+  return (data || []).length > 0;
+}
+
+async function anonymizeLawyerProfile(db, userId) {
+  const token = hashSensitiveValue(userId, "anon").slice(0, 16);
+  const anonymized = {
+    name: "Conta removida",
+    email: `anonimizado+${token}@removido.invalid`,
+    avatar: null,
+    phone: null,
+    bio: null,
+    oab: null,
+    specialties: null,
+    google_id: null,
+    facebook_id: null,
+    google_refresh_token: null,
+    google_sync_enabled: false,
+    stripe_customer_id: null,
+    stripe_subscription_id: null,
+    verified: false,
+    // Marca como inativo para não aparecer em listagens nem receber oportunidades.
+    oab_verification_status: "ERROR",
+  };
+
+  await executeUpdate(
+    db,
+    "advogados",
+    anonymized,
+    (query) => query.eq("id", userId),
+    "Falha ao anonimizar perfil do advogado",
   );
 }
 
@@ -537,13 +644,20 @@ export async function executeAccountDeletion(db, requestRow) {
     }
   }
 
+  let profileAnonymized = false;
   if (subject.profileType === DELETION_PROFILE_TYPES.LAWYER) {
-    await executeDelete(
-      db,
-      "advogados",
-      (query) => query.eq("id", userId),
-      "Falha ao excluir perfil do advogado",
-    );
+    if (await lawyerHasImmutableLedger(db, userId)) {
+      // Ledger financeiro imutável presente: anonimiza em vez de excluir.
+      await anonymizeLawyerProfile(db, userId);
+      profileAnonymized = true;
+    } else {
+      await executeDelete(
+        db,
+        "advogados",
+        (query) => query.eq("id", userId),
+        "Falha ao excluir perfil do advogado",
+      );
+    }
   } else if (subject.profileType === DELETION_PROFILE_TYPES.CLIENT) {
     await executeDelete(
       db,
@@ -557,8 +671,10 @@ export async function executeAccountDeletion(db, requestRow) {
     subject,
     subscription,
     authAlreadyMissing,
-    retentionNote:
-      "Registros financeiros, fiscais, antifraude e auditorias administrativas podem ser preservados de forma restrita pelo prazo legal aplicável, sem acesso ativo à conta.",
+    profileAnonymized,
+    retentionNote: profileAnonymized
+      ? "Perfil anonimizado: dados pessoais removidos e registros financeiros/fiscais preservados de forma restrita pelo prazo legal aplicável, sem acesso ativo à conta."
+      : "Registros financeiros, fiscais, antifraude e auditorias administrativas podem ser preservados de forma restrita pelo prazo legal aplicável, sem acesso ativo à conta.",
   };
 }
 

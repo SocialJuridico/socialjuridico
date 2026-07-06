@@ -15,6 +15,10 @@ const EMPTY_SUMMARY = {
   conversionRate: 0,
   interestRate: 0,
   byStage: {},
+  countAlta: 0,
+  countMedia: 0,
+  countOraculo: 0,
+  countLegado: 0,
 };
 
 async function readJson(response) {
@@ -119,6 +123,7 @@ export function useAdminCases() {
   const [searchTerm, setSearchTerm] = useState("");
   const [stageFilter, setStageFilter] = useState("ALL");
   const [riskFilter, setRiskFilter] = useState("ALL");
+  const [intentFilter, setIntentFilter] = useState("ALL");
   const [alertsOnly, setAlertsOnly] = useState(false);
   const [selectedCaseId, setSelectedCaseId] = useState(null);
   const [sensitiveDetail, setSensitiveDetail] = useState(null);
@@ -195,10 +200,13 @@ export function useAdminCases() {
       ) {
         return false;
       }
+      if (intentFilter !== "ALL" && caseItem.intentTier !== intentFilter) {
+        return false;
+      }
       if (alertsOnly && !caseItem.alert) return false;
       return matchesSearch(caseItem, normalizedSearch);
     });
-  }, [alertsOnly, cases, riskFilter, searchTerm, stageFilter]);
+  }, [alertsOnly, cases, intentFilter, riskFilter, searchTerm, stageFilter]);
 
   const pipelineSummary = useMemo(
     () => calculateCaseSummary(filteredCases),
@@ -499,6 +507,7 @@ export function useAdminCases() {
     searchTerm,
     stageFilter,
     riskFilter,
+    intentFilter,
     alertsOnly,
     selectedCase,
     sensitiveDetail,
@@ -515,6 +524,7 @@ export function useAdminCases() {
     setSearchTerm,
     setStageFilter,
     setRiskFilter,
+    setIntentFilter,
     setAlertsOnly,
     setFunnelTypeFilter,
     setFunnelAlertsOnly,

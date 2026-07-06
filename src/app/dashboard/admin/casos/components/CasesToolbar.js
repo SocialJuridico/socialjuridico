@@ -1,5 +1,6 @@
 import { AlertTriangle, Filter, Search, X } from "lucide-react";
 import {
+  CASE_INTENT_TIERS,
   CASE_RISK_LEVELS,
   CASE_STAGES,
   CASE_VIEWS,
@@ -20,6 +21,7 @@ export default function CasesToolbar({
   searchTerm,
   stageFilter,
   riskFilter,
+  intentFilter,
   alertsOnly,
   funnelTypeFilter,
   funnelAlertsOnly,
@@ -27,6 +29,7 @@ export default function CasesToolbar({
   onSearchChange,
   onStageFilterChange,
   onRiskFilterChange,
+  onIntentFilterChange,
   onAlertsOnlyChange,
   onFunnelTypeFilterChange,
   onFunnelAlertsOnlyChange,
@@ -87,6 +90,21 @@ export default function CasesToolbar({
               {CASE_RISK_LEVELS.map((level) => (
                 <option key={level.value} value={level.value}>
                   {level.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className={styles.selectFilter}>
+            <span>Intenção</span>
+            <select
+              value={intentFilter}
+              onChange={(event) => onIntentFilterChange(event.target.value)}
+            >
+              <option value="ALL">Todas</option>
+              {CASE_INTENT_TIERS.map((tier) => (
+                <option key={tier.value} value={tier.value}>
+                  {tier.label}
                 </option>
               ))}
             </select>

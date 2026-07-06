@@ -1,8 +1,28 @@
+import { INTENT_TIER_LABELS } from "@/lib/clientDashboard/caseIntentQuestions";
+
 export const CASE_VIEWS = {
   PIPELINE: "PIPELINE",
   LIST: "LIST",
   EMAIL_FUNNEL: "EMAIL_FUNNEL",
 };
+
+// Mesmas faixas de intenção de fechamento da triagem de cliente (ver
+// triagemCliente.md). ALTA/MEDIA/ORACULO vêm da IA; LEGADO cobre os casos
+// publicados antes da triagem existir (intencao_fechamento null).
+export const CASE_INTENT_TIERS = [
+  { value: "ALTA", label: INTENT_TIER_LABELS.ALTA },
+  { value: "MEDIA", label: INTENT_TIER_LABELS.MEDIA },
+  { value: "ORACULO", label: INTENT_TIER_LABELS.ORACULO },
+  { value: "LEGADO", label: INTENT_TIER_LABELS.LEGADO },
+];
+
+export const CASE_INTENT_TIER_MAP = Object.fromEntries(
+  CASE_INTENT_TIERS.map((tier) => [tier.value, tier]),
+);
+
+export function getIntentTierLabel(tier) {
+  return CASE_INTENT_TIER_MAP[tier]?.label || "Sem triagem";
+}
 
 export const CASE_STAGES = [
   {

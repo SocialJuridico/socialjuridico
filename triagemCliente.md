@@ -120,6 +120,27 @@ Legado continuam notificando normalmente.
 Faixas centralizadas em `getIntentTier()` /
 `INTENT_TIER_LABELS`(`caseIntentQuestions.js`), mesmos limites da RPC.
 
+## 6.3 Painel administrativo (`/dashboard/admin/casos`)
+
+O painel do admin também reflete a intenção de fechamento, além do que já
+está em `list_lawyer_opportunities`:
+
+- `adminCasesRead.js` — `fetchCases()` agora seleciona `intencao_fechamento`;
+  cada caso normalizado ganha `intencaoFechamento` (número ou `null`) e
+  `intentTier` (via `getIntentTier()`, mesma faixa da RPC). O `summary`
+  devolve `countAlta` / `countMedia` / `countOraculo` / `countLegado`.
+- `CasesToolbar.js` ganha um filtro "Intenção" (`ALL | ALTA | MEDIA |
+  ORACULO | LEGADO`), mesmo padrão dos filtros de Etapa/Privacidade já
+  existentes — sem abas, o admin já usa dropdowns.
+- `CaseCard.js` mostra um selo com o rótulo da faixa + percentual (quando
+  houver score) ao lado dos selos de etapa/privacidade já existentes.
+- `CasesSummary.js` ganha uma segunda faixa de cards com a contagem de
+  casos em cada faixa (Alta / Média / Oráculos / Sem triagem).
+
+Diferente do dashboard do advogado, aqui o admin enxerga **as 4 faixas**,
+incluindo Oráculos — visão administrativa não tem a restrição de acesso
+que existe para advogados (seção 6).
+
 ## 7. Terreno preparado para os Oráculos (schema apenas, sem lógica/API/UI)
 
 Os "Oráculos Jurídicos" serão, no futuro, **estagiários e bacharéis em

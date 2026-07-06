@@ -1,3 +1,4 @@
+import { getIntentTier } from "@/lib/clientDashboard/caseIntentQuestions";
 import {
   calculatePrivacyAttention,
   deriveCaseStage,
@@ -15,7 +16,7 @@ async function fetchCases(db) {
   const modern = await db
     .from("casos")
     .select(
-      "id, titulo, area_atuacao, status, cliente_id, advogado_id, created_at, updated_at, anexos, cidade, estado, video_link, video_url, audio_url",
+      "id, titulo, area_atuacao, status, cliente_id, advogado_id, created_at, updated_at, anexos, cidade, estado, video_link, video_url, audio_url, intencao_fechamento",
     )
     .order("created_at", { ascending: false })
     .limit(2000);
@@ -86,6 +87,8 @@ function calculateSummary(cases) {
       if (caseItem.alert) current.needsAction += 1;
       if (caseItem.privacyAttention === "RESTRICTED") current.restricted += 1;
       if (caseItem.interestSummary.total > 0) current.withInterest += 1;
+      current.byIntentTier[caseItem.intentTier] =
+        (current.byIntentTier[caseItem.intentTier] || 0) + 1;
       return current;
     },
     {
@@ -95,6 +98,7 @@ function calculateSummary(cases) {
       restricted: 0,
       withInterest: 0,
       byStage: {},
+      byIntentTier: {},
     },
   );
 
@@ -111,6 +115,10 @@ function calculateSummary(cases) {
     interestRate: summary.total
       ? Number(((summary.withInterest / summary.total) * 100).toFixed(1))
       : 0,
+    countAlta: summary.byIntentTier.ALTA || 0,
+    countMedia: summary.byIntentTier.MEDIA || 0,
+    countOraculo: summary.byIntentTier.ORACULO || 0,
+    countLegado: summary.byIntentTier.LEGADO || 0,
   };
 }
 
@@ -225,6 +233,10 @@ export async function getAdminCases() {
         state: caseItem.estado || "",
         sourceStatus: caseItem.status || "ABERTO",
         stage,
+        intencaoFechamento: Number.isFinite(caseItem.intencao_fechamento)
+          ? caseItem.intencao_fechamento
+          : null,
+        intentTier: getIntentTier(caseItem.intencao_fechamento),
         createdAt: caseItem.created_at,
         updatedAt: caseItem.updated_at,
         lastActivityAt,

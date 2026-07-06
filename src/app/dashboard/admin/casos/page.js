@@ -99,6 +99,7 @@ export default function AdminCasosPage() {
           searchTerm={state.searchTerm}
           stageFilter={state.stageFilter}
           riskFilter={state.riskFilter}
+          intentFilter={state.intentFilter}
           alertsOnly={state.alertsOnly}
           funnelTypeFilter={state.funnelTypeFilter}
           funnelAlertsOnly={state.funnelAlertsOnly}
@@ -106,6 +107,7 @@ export default function AdminCasosPage() {
           onSearchChange={state.setSearchTerm}
           onStageFilterChange={state.setStageFilter}
           onRiskFilterChange={state.setRiskFilter}
+          onIntentFilterChange={state.setIntentFilter}
           onAlertsOnlyChange={state.setAlertsOnly}
           onFunnelTypeFilterChange={state.setFunnelTypeFilter}
           onFunnelAlertsOnlyChange={state.setFunnelAlertsOnly}

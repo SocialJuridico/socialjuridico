@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import {
+  getIntentTierLabel,
   getRiskLabel,
   getStageLabel,
 } from "../config/caseManagement";
@@ -58,6 +59,15 @@ export default function CaseCard({ caseItem, compact = false, onOpen }) {
           >
             <ShieldAlert size={12} aria-hidden="true" />
             {getRiskLabel(caseItem.privacyAttention)}
+          </span>
+          <span
+            className={styles.intentBadge}
+            data-intent={caseItem.intentTier}
+          >
+            {getIntentTierLabel(caseItem.intentTier)}
+            {Number.isFinite(caseItem.intencaoFechamento)
+              ? ` · ${caseItem.intencaoFechamento}%`
+              : ""}
           </span>
           {caseItem.governance?.legalHold && (
             <span className={styles.legalHoldBadge}>Preservação jurídica</span>

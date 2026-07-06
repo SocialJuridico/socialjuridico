@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -20,6 +20,7 @@ import {
 
 import { BRAZIL_STATES, CASE_AREAS } from "../clientDashboardConfig";
 import styles from "../ClientDashboard.module.css";
+import ClientIntentTriage from "./ClientIntentTriage";
 
 function formatBytes(value) {
   const bytes = Number(value || 0);
@@ -186,6 +187,29 @@ function AnalysisPanel({ composer }) {
 export default function ClientCaseComposer({ composer, onCancel }) {
   const attachmentsRef = useRef(null);
   const videoRef = useRef(null);
+  const [triageOpen, setTriageOpen] = useState(false);
+  const [prevSuccess, setPrevSuccess] = useState(composer.success);
+
+  // Fecha o modal de triagem quando a publicação é concluída. Ajuste de
+  // estado durante a renderização (não em um efeito) reagindo à mudança de
+  // composer.success, seguindo o padrão recomendado pelo React.
+  if (composer.success !== prevSuccess) {
+    setPrevSuccess(composer.success);
+    if (composer.success) setTriageOpen(false);
+  }
+
+  function handleFormSubmit(event) {
+    event.preventDefault();
+    if (!event.currentTarget.checkValidity()) {
+      event.currentTarget.reportValidity();
+      return;
+    }
+    setTriageOpen(true);
+  }
+
+  function handleTriageComplete(respostas) {
+    composer.submit(undefined, respostas);
+  }
 
   if (composer.success) {
     return (
@@ -203,7 +227,8 @@ export default function ClientCaseComposer({ composer, onCancel }) {
   }
 
   return (
-    <form className={styles.composerCard} onSubmit={composer.submit}>
+    <>
+    <form className={styles.composerCard} onSubmit={handleFormSubmit}>
       <div className={styles.pageIntroCardCompact}>
         <div>
           <span className={styles.eyebrow}>Nova solicitação jurídica</span>
@@ -517,5 +542,15 @@ export default function ClientCaseComposer({ composer, onCancel }) {
         </button>
       </div>
     </form>
+
+    <ClientIntentTriage
+      open={triageOpen}
+      submitting={composer.submitting}
+      onCancel={() => {
+        if (!composer.submitting) setTriageOpen(false);
+      }}
+      onComplete={handleTriageComplete}
+    />
+    </>
   );
 }

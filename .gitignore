@@ -25,6 +25,7 @@
 !/database/migrations/__tests__/signatureSaasAccountsMigration.test.js
 /Legado
 /scratch
+/laudosEDocumentos
 
 # testing
 /coverage

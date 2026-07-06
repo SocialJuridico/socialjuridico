@@ -428,7 +428,7 @@ export function useCaseComposer({ onCreated }) {
   }, [uploads, analyzing, runAnalysis]);
 
   const submit = useCallback(
-    async (event) => {
+    async (event, triagemRespostas) => {
       event?.preventDefault?.();
 
       if (hasPendingUploads) {
@@ -464,6 +464,7 @@ export function useCaseComposer({ onCreated }) {
             cidade: form.cidade,
             estado: form.estado,
             video_link: form.videoLink || null,
+            intencao_respostas: triagemRespostas || null,
             upload_ids: uploads
               .filter((item) => item.status === "ready" && item.ticket?.id)
               .map((item) => item.ticket.id),

@@ -40,6 +40,12 @@ export function useLawyerOpportunities() {
   const [cases, setCases] = useState([]);
   const [areas, setAreas] = useState([]);
   const [summary, setSummary] = useState({ available: 0, negotiating: 0 });
+  const [tierCounts, setTierCounts] = useState({
+    alta: 0,
+    media: 0,
+    oraculo: 0,
+    legado: 0,
+  });
   const [pagination, setPagination] = useState({
     page: 1,
     pages: 1,
@@ -67,11 +73,18 @@ export function useLawyerOpportunities() {
     setError("");
 
     try {
+      const isPlatformFeed = [
+        "platform",
+        "media",
+        "oraculos",
+        "legado",
+      ].includes(activeFeed);
       const params = new URLSearchParams({
         page: String(page),
         limit: "12",
         emergency: activeFeed === "emergency" ? "true" : "false",
       });
+      if (isPlatformFeed) params.set("feed", activeFeed);
       if (appliedFilters.search) params.set("q", appliedFilters.search);
       if (appliedFilters.area) params.set("area", appliedFilters.area);
       if (appliedFilters.state) params.set("state", appliedFilters.state);
@@ -97,6 +110,12 @@ export function useLawyerOpportunities() {
       setCases(data.data || []);
       setAreas(data.filters?.areas || []);
       setSummary(data.summary || { available: 0, negotiating: 0 });
+      setTierCounts({
+        alta: data.summary?.countAlta || 0,
+        media: data.summary?.countMedia || 0,
+        oraculo: data.summary?.countOraculo || 0,
+        legado: data.summary?.countLegado || 0,
+      });
       setPagination(
         data.pagination || { page: 1, pages: 1, total: 0, limit: 12 },
       );
@@ -310,6 +329,7 @@ export function useLawyerOpportunities() {
     cases,
     areas,
     summary,
+    tierCounts,
     pagination,
     page,
     setPage,

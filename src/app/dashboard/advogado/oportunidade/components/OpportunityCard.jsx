@@ -74,6 +74,11 @@ export default function OpportunityCard({
           {item.status === "NEGOCIANDO" && (
             <span className={styles.statusBadge}>Em negociação</span>
           )}
+          {Number.isFinite(item.intencaoFechamento) && (
+            <span className={styles.intentBadge}>
+              {item.intencaoFechamento}% intenção
+            </span>
+          )}
         </div>
       </div>
 

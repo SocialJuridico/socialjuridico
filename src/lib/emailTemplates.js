@@ -3,10 +3,48 @@
  * Todos os templates seguem a identidade visual: fundo escuro, dourado (#d4af37)
  */
 
+// Faixas de intenção de fechamento (ver triagemCliente.md seção 5). Mesmos
+// limites de database/migrations/20260706_opportunities_intent_tiers.sql.
+// ORACULO (0-59%, geralmente dúvidas/informação) nunca chega a gerar email
+// pro advogado hoje — createCase.js pula notifyLawyers() nesse tier, já que
+// advogados não têm acesso a esses casos. O estilo fica aqui só de forma
+// defensiva, caso os templates sejam reaproveitados no futuro.
+const INTENT_BADGE_STYLES = {
+  ALTA: { label: 'Alta intenção', color: '#4ade80', bg: 'rgba(74, 222, 128, 0.14)', border: 'rgba(74, 222, 128, 0.35)' },
+  MEDIA: { label: 'Média intenção', color: '#facc15', bg: 'rgba(250, 204, 21, 0.14)', border: 'rgba(250, 204, 21, 0.35)' },
+  ORACULO: { label: 'Oráculos', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.14)', border: 'rgba(148, 163, 184, 0.35)' },
+};
+
+function intentTierFromScore(intencaoFechamento) {
+  if (intencaoFechamento === null || intencaoFechamento === undefined) return null;
+  if (intencaoFechamento >= 80) return 'ALTA';
+  if (intencaoFechamento >= 60) return 'MEDIA';
+  return 'ORACULO';
+}
+
+/**
+ * Gera o selo HTML com o percentual e a faixa de intenção de fechamento.
+ * Retorna string vazia quando não há score (ex.: caso legado sem triagem).
+ */
+function intentBadgeHtml(intencaoFechamento) {
+  const tier = intentTierFromScore(intencaoFechamento);
+  if (!tier) return '';
+
+  const style = INTENT_BADGE_STYLES[tier];
+  return `
+                <tr>
+                  <td style="padding: 0 24px 16px;">
+                    <span style="display: inline-block; padding: 6px 14px; border-radius: 999px; background-color: ${style.bg}; border: 1px solid ${style.border}; color: ${style.color}; font-size: 12px; font-weight: 800; letter-spacing: 0.4px;">
+                      ${intencaoFechamento}% de intenção de fechamento · ${style.label}
+                    </span>
+                  </td>
+                </tr>`;
+}
+
 /**
  * Template de notificação de novo caso para advogados
  */
-export function novoCasoTemplate({ titulo, area_atuacao, cidade, estado, lawyerName }) {
+export function novoCasoTemplate({ titulo, area_atuacao, cidade, estado, lawyerName, intencaoFechamento }) {
   const dashboardUrl = 'https://socialjuridico.com.br/dashboard/advogado';
 
   return `
@@ -54,6 +92,7 @@ export function novoCasoTemplate({ titulo, area_atuacao, cidade, estado, lawyerN
                     <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; line-height: 1.4;">${titulo}</p>
                   </td>
                 </tr>
+${intentBadgeHtml(intencaoFechamento)}
 
                 <!-- Divider -->
                 <tr>
@@ -757,7 +796,7 @@ export function comunicadoAdminTemplate({ recipientName, titulo, mensagem }) {
 /**
  * Template de notificação LOCAL de novo caso para advogados no mesmo ESTADO
  */
-export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado, lawyerName }) {
+export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado, lawyerName, intencaoFechamento }) {
   const dashboardUrl = 'https://socialjuridico.com.br/dashboard/advogado';
 
   return `
@@ -803,6 +842,7 @@ export function oportunidadeLocalTemplate({ titulo, area_atuacao, cidade, estado
                     <p style="margin: 0; color: #ffffff; font-size: 18px; font-weight: 700; line-height: 1.4;">${titulo}</p>
                   </td>
                 </tr>
+${intentBadgeHtml(intencaoFechamento)}
                 <tr>
                   <td style="padding: 0 24px;">
                     <div style="border-top: 1px solid rgba(212, 175, 55, 0.15);"></div>

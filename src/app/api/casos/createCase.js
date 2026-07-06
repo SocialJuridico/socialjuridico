@@ -9,6 +9,8 @@ import { resolveCaseUploads } from "@/lib/clientDashboard/caseUploadServer";
 import { attachCaseUploadsSafely } from "@/lib/clientDashboard/caseUploadAttachServer";
 import { validateClientMutationOrigin } from "@/lib/clientDashboard/clientServer";
 import { classifyCase } from "@/lib/clientDashboard/caseClassifierServer";
+import { classifyClosingIntent } from "@/lib/clientDashboard/caseIntentClassifierServer";
+import { getIntentTier } from "@/lib/clientDashboard/caseIntentQuestions";
 import {
   json,
   normalizeText,
@@ -111,6 +113,7 @@ async function notifyLawyers(db, caseItem) {
         cidade: caseItem.cidade,
         estado: caseItem.estado,
         lawyerName: lawyer.name || "Advogado(a)",
+        intencaoFechamento: caseItem.intencao_fechamento,
       }),
     }));
 
@@ -128,6 +131,7 @@ async function notifyLawyers(db, caseItem) {
         cidade: caseItem.cidade,
         estado: caseItem.estado,
         lawyerName: lawyer.name || "Advogado(a)",
+        intencaoFechamento: caseItem.intencao_fechamento,
       }),
     }));
   } catch (error) {
@@ -163,6 +167,10 @@ export async function createCase(request) {
     const uploadIds = Array.isArray(body?.upload_ids)
       ? body.upload_ids.slice(0, 7)
       : [];
+    const triageAnswers =
+      body?.intencao_respostas && typeof body.intencao_respostas === "object"
+        ? body.intencao_respostas
+        : {};
 
     // Área, cidade e estado permanecem obrigatórios (declaração do cliente).
     // O relato (descrição) e o título podem vir apenas de áudio/vídeo — a IA
@@ -218,6 +226,15 @@ export async function createCase(request) {
       tickets: resolvedUploads.tickets,
     });
 
+    // Índice de Intenção de Fechamento (0-100), calculado só a partir das
+    // respostas da triagem do cliente — nunca aceito pronto do frontend.
+    // Nunca lança: em falha retorna o score determinístico de fallback.
+    const intentClassification = await classifyClosingIntent({
+      respostas: triageAnswers,
+      area,
+      descricao: description,
+    });
+
     // Backfill: quando o cliente não digitou, usa a transcrição como relato e
     // o resumo da IA como título, garantindo conteúdo legível ao advogado.
     const transcription = String(classification.meta?.transcricao || "").trim();
@@ -249,6 +266,10 @@ export async function createCase(request) {
       ai_proximos_passos: classification.proximosPassos,
       ai_meta: classification.meta,
       ai_classified_at: createdAt,
+      intencao_fechamento: intentClassification.intencaoFechamento,
+      intencao_respostas: triageAnswers,
+      intencao_meta: intentClassification.meta,
+      intencao_classificada_em: createdAt,
       status: "ABERTO",
       created_at: createdAt,
       updated_at: createdAt,
@@ -258,7 +279,7 @@ export async function createCase(request) {
       .from("casos")
       .insert([payload])
       .select(
-        "id, titulo, descricao, area_atuacao, cidade, estado, status, advogado_id, anexos, video_link, video_url, audio_url, prioridade, tipo_social, ai_proximos_passos, ai_meta, ai_classified_at, created_at, updated_at",
+        "id, titulo, descricao, area_atuacao, cidade, estado, status, advogado_id, anexos, video_link, video_url, audio_url, prioridade, tipo_social, ai_proximos_passos, ai_meta, ai_classified_at, intencao_fechamento, created_at, updated_at",
       )
       .single();
 
@@ -290,7 +311,12 @@ export async function createCase(request) {
       console.error("[Casos/Criação] Falha ao inicializar governança:", error);
     });
 
-    await notifyLawyers(access.db, caseItem);
+    // Casos ORÁCULOS (0-59% de intenção — geralmente dúvidas, não demanda de
+    // contratação) não são notificados aos advogados: eles não têm acesso a
+    // esses casos hoje, só os Oráculos (ver triagemCliente.md seção 5/6).
+    if (getIntentTier(intentClassification.intencaoFechamento) !== "ORACULO") {
+      await notifyLawyers(access.db, caseItem);
+    }
 
     return json({ success: true, data: caseItem }, 201);
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  Archive,
   BriefcaseBusiness,
   Globe2,
   Megaphone,
@@ -141,9 +142,42 @@ export default function OpportunityDashboard() {
             aria-pressed={controller.activeFeed === "platform"}
           >
             <BriefcaseBusiness size={17} aria-hidden="true" />
-            Casos da plataforma
+            Casos de Alta Intenção
             <span className={styles.tabCount}>
-              {controller.summary.available || 0}
+              {controller.tierCounts.alta || 0}
+            </span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.feedTab} ${
+              controller.activeFeed === "media" ? styles.feedTabActive : ""
+            }`}
+            onClick={() => controller.setActiveFeed("media")}
+            aria-pressed={controller.activeFeed === "media"}
+          >
+            <BriefcaseBusiness size={17} aria-hidden="true" />
+            Casos de Média Intenção
+            <span className={styles.tabCount}>
+              {controller.tierCounts.media || 0}
+            </span>
+          </button>
+          {/* Aba "Oráculos Jurídicos" (baixa intenção) não é exibida aqui —
+              este dashboard é exclusivo de advogados. Esses casos ainda são
+              classificados e reservados no backend (tier ORACULO), prontos
+              para uma futura tela própria dos Oráculos (estagiários/
+              bacharéis sem OAB — ver triagemCliente.md seção 7). */}
+          <button
+            type="button"
+            className={`${styles.feedTab} ${
+              controller.activeFeed === "legado" ? styles.feedTabActive : ""
+            }`}
+            onClick={() => controller.setActiveFeed("legado")}
+            aria-pressed={controller.activeFeed === "legado"}
+          >
+            <Archive size={17} aria-hidden="true" />
+            Casos sem Triagem
+            <span className={styles.tabCount}>
+              {controller.tierCounts.legado || 0}
             </span>
           </button>
           <button

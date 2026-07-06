@@ -2765,3 +2765,56 @@
   font-size: 0.84rem;
   line-height: 1.6;
 }
+
+.triageProgress {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0 18px;
+}
+
+.triageDot {
+  height: 5px;
+  flex: 1;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.triageDotActive {
+  background: #d4af37;
+}
+
+.triageOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.triageOption {
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.025);
+  text-align: left;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.triageOption:hover:not(:disabled) {
+  border-color: rgba(212, 175, 55, 0.3);
+}
+
+.triageOptionSelected {
+  border-color: #d4af37;
+  background: rgba(212, 175, 55, 0.1);
+  color: #fff;
+}
+
+.triageActions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}

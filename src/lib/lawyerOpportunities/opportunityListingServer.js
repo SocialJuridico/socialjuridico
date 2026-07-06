@@ -106,6 +106,10 @@ function serializeCase(item, negotiatingLawyers = []) {
     socialType,
     isSocial: isSocialCase(socialType),
     isEmergency: item.is_emergencia === true,
+    intencaoFechamento:
+      item.intencao_fechamento === null || item.intencao_fechamento === undefined
+        ? null
+        : Number(item.intencao_fechamento),
     riskToLife: item.risco_vida === true,
     nextSteps: normalizeNextSteps(item.ai_proximos_passos),
     aiSummary: normalizeSearch(meta.resumo, 900),
@@ -178,6 +182,22 @@ export async function listLawyerOpportunities(request) {
           ? false
           : null;
 
+    // feed: platform|media|oraculos|legado mapeiam para as faixas de
+    // intenção da RPC; emergência e radar nunca enviam faixa (emergency já
+    // os isola). "legado" são casos anteriores à triagem (sem score) — não
+    // se misturam com "platform" (alta intenção já triada).
+    const feedParam = searchParams.get("feed");
+    const intentTier =
+      feedParam === "media"
+        ? "MEDIA"
+        : feedParam === "oraculos"
+          ? "ORACULO"
+          : feedParam === "legado"
+            ? "LEGADO"
+            : feedParam === "platform"
+              ? "ALTA"
+              : null;
+
     const { data: result, error } = await access.db.rpc(
       "list_lawyer_opportunities",
       {
@@ -188,6 +208,7 @@ export async function listLawyerOpportunities(request) {
         p_page: page,
         p_limit: limit,
         p_emergency: emergency,
+        p_intent_tier: intentTier,
       },
     );
 
@@ -224,6 +245,10 @@ export async function listLawyerOpportunities(request) {
       summary: {
         available: total,
         negotiating: Number(result?.negotiating || 0),
+        countAlta: Number(result?.count_alta || 0),
+        countMedia: Number(result?.count_media || 0),
+        countOraculo: Number(result?.count_oraculo || 0),
+        countLegado: Number(result?.count_legado || 0),
       },
     });
   } catch (error) {

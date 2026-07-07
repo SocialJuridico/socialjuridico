@@ -49,6 +49,17 @@ export async function getRoleFromDatabase(db, userId) {
       return "CLIENT";
     }
 
+    // Verificar em oraculo_profissionais (estagiários/bacharéis sem OAB)
+    const { data: oraculoData } = await db
+      .from("oraculo_profissionais")
+      .select("id")
+      .eq("auth_user_id", userId)
+      .maybeSingle();
+
+    if (oraculoData) {
+      return "ORACULO";
+    }
+
     return null;
   } catch (error) {
     console.error("[securityUtils] Erro ao resolver role:", error.message);

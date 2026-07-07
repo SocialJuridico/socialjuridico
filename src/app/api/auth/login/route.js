@@ -273,6 +273,28 @@ export async function POST(request) {
       }
     }
 
+    // oraculo_profissionais usa auth_user_id (não id) como FK, então não
+    // participa do loop genérico acima — sem este bloco, um Oráculo sem
+    // perfil em clientes/advogados/admins cairia no fallback "criar perfil
+    // padrão" abaixo e seria indevidamente transformado em CLIENT.
+    if (!profile) {
+      const { data: oraculoData } = await db
+        .from("oraculo_profissionais")
+        .select("id, name, email, status")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+
+      if (oraculoData) {
+        profile = {
+          id: user.id,
+          name: oraculoData.name,
+          email: oraculoData.email,
+          role: "ORACULO",
+          oraculo_status: oraculoData.status,
+        };
+      }
+    }
+
     // Bloquear membros de escritório no login individual
     if (profile && profile.escritorio_id) {
       await supabase.auth.signOut(); // Revoga a sessão
@@ -387,6 +409,7 @@ export async function POST(request) {
         name: profile?.name || user.email.split("@")[0],
         role: profile?.role || "CLIENT",
         cargo: profile?.cargo || null,
+        oraculoStatus: profile?.oraculo_status || null,
         needsPasswordUpdate: user.user_metadata?.needs_password_update === true,
       },
     });

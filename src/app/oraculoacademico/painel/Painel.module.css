@@ -1,0 +1,74 @@
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 32px;
+  background: var(--color-black);
+  color: var(--color-white);
+}
+
+.card {
+  max-width: 560px;
+  width: 100%;
+  padding: 40px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 16px;
+  background: #0d0f12;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #d4af37;
+}
+
+.card h1 {
+  margin: 18px 0 20px;
+  font-size: 1.6rem;
+}
+
+.statusBadge {
+  display: inline-flex;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.06);
+  margin-bottom: 18px;
+}
+
+.statusBadge[data-status="ATIVO"] {
+  border-color: rgba(74, 222, 128, 0.28);
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.06);
+}
+
+.statusBadge[data-status="PENDENTE_DOCUMENTOS"],
+.statusBadge[data-status="PENDENTE_SUPERVISOR"],
+.statusBadge[data-status="PENDENTE_ADMIN"] {
+  border-color: rgba(250, 204, 21, 0.28);
+  color: #facc15;
+  background: rgba(250, 204, 21, 0.06);
+}
+
+.statusBadge[data-status="SUSPENSO"],
+.statusBadge[data-status="REPROVADO"],
+.statusBadge[data-status="RESTRITO"] {
+  border-color: rgba(239, 68, 68, 0.28);
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.card p {
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}

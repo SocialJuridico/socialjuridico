@@ -2,8 +2,19 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
-const PROTECTED_ROUTES = ["/dashboard", "/chat", "/admin", "/assinatura/app"];
-const AUTH_ROUTES = ["/login", "/cadastro", "/assinatura/entrar"];
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/chat",
+  "/admin",
+  "/assinatura/app",
+  "/oraculoacademico/painel",
+];
+const AUTH_ROUTES = [
+  "/login",
+  "/cadastro",
+  "/assinatura/entrar",
+  "/oraculoacademico/login",
+];
 const LAWYER_ROOT = "/dashboard/advogado";
 const LAWYER_HOME = "/dashboard/advogado/oportunidade";
 const SIGNATURE_AUTH_COOKIE_NAME = "sj-signature-auth";
@@ -168,6 +179,7 @@ export async function middleware(request) {
       url.pathname = "/assinatura/app";
     } else if (role === "ADMIN") url.pathname = "/dashboard/admin";
     else if (role === "LAWYER") url.pathname = LAWYER_HOME;
+    else if (role === "ORACULO") url.pathname = "/oraculoacademico/painel";
     else url.pathname = "/dashboard/cliente";
 
     return NextResponse.redirect(url);
@@ -187,5 +199,7 @@ export const config = {
     "/assinatura/entrar",
     "/login",
     "/cadastro",
+    "/oraculoacademico/painel/:path*",
+    "/oraculoacademico/login",
   ],
 };

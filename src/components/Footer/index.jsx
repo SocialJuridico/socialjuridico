@@ -68,7 +68,8 @@ export default function Footer() {
     pathname?.startsWith("/dashboard") ||
     pathname?.startsWith("/assinatura/app") ||
     pathname === "/assinatura/entrar" ||
-    pathname === "/assinatura/cadastro"
+    pathname === "/assinatura/cadastro" ||
+    pathname?.startsWith("/oraculoacademico")
   ) {
     return null;
   }

@@ -447,6 +447,26 @@ export async function resendConfirmationAction(email) {
       }
     }
 
+    if (!profile) {
+      const { data: oraculo, error: oraculoError } = await supabaseAdmin
+        .from("oraculo_profissionais")
+        .select("auth_user_id, name, email")
+        .eq("email", normalizedEmail)
+        .maybeSingle();
+
+      if (oraculoError) {
+        console.error(
+          "[Reenvio] Erro ao consultar oraculo_profissionais:",
+          oraculoError,
+        );
+      }
+
+      if (oraculo?.auth_user_id) {
+        profile = { id: oraculo.auth_user_id, name: oraculo.name };
+        role = "ORACULO";
+      }
+    }
+
     // Não revela se o endereço existe.
     if (!profile?.id) {
       return genericResponse;

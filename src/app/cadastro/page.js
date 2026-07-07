@@ -652,98 +652,49 @@ function CadastroContent() {
                 onSubmit={handleSubmit}
                 noValidate
               >
-                <div className={styles.formGroup}>
-                  <label
-                    htmlFor="cadastro-nome"
-                    className={styles.label}
-                  >
-                    Nome completo
-                  </label>
-
-                  <input
-                    id="cadastro-nome"
-                    type="text"
-                    name="nome"
-                    value={formData.nome}
-                    onChange={handleChange}
-                    className={styles.input}
-                    placeholder="Seu nome completo"
-                    autoComplete="name"
-                    minLength={3}
-                    maxLength={120}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label
-                      htmlFor="cadastro-email"
+                      htmlFor="cadastro-nome"
                       className={styles.label}
                     >
-                      E-mail
+                      Nome completo
                     </label>
 
                     <input
-                      id="cadastro-email"
-                      type="email"
-                      name="email"
-                      value={formData.email}
+                      id="cadastro-nome"
+                      type="text"
+                      name="nome"
+                      value={formData.nome}
                       onChange={handleChange}
                       className={styles.input}
-                      placeholder="seu@email.com"
-                      autoComplete="email"
-                      maxLength={160}
+                      placeholder="Seu nome completo"
+                      autoComplete="name"
+                      minLength={3}
+                      maxLength={120}
                       required
                       disabled={loading}
                     />
                   </div>
 
-                  <div className={styles.formGroup}>
-                    <label
-                      htmlFor="cadastro-whatsapp"
-                      className={styles.label}
-                    >
-                      WhatsApp
-                    </label>
-
-                    <input
-                      id="cadastro-whatsapp"
-                      type="tel"
-                      name="whatsapp"
-                      value={formData.whatsapp}
-                      onChange={handleChange}
-                      className={styles.input}
-                      placeholder="(15) 99999-9999"
-                      autoComplete="tel"
-                      inputMode="tel"
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                {activeTab === "lawyer" && (
                   <div className={styles.formRow}>
                     <div className={styles.formGroup}>
                       <label
-                        htmlFor="cadastro-oab"
+                        htmlFor="cadastro-email"
                         className={styles.label}
                       >
-                        Número da OAB
+                        E-mail
                       </label>
 
                       <input
-                        id="cadastro-oab"
-                        type="text"
-                        name="oab"
-                        value={formData.oab}
+                        id="cadastro-email"
+                        type="email"
+                        name="email"
+                        value={formData.email}
                         onChange={handleChange}
                         className={styles.input}
-                        placeholder="Somente números"
-                        inputMode="numeric"
-                        maxLength={10}
+                        placeholder="seu@email.com"
+                        autoComplete="email"
+                        maxLength={160}
                         required
                         disabled={loading}
                       />
@@ -751,253 +702,302 @@ function CadastroContent() {
 
                     <div className={styles.formGroup}>
                       <label
-                        htmlFor="cadastro-estado"
+                        htmlFor="cadastro-whatsapp"
                         className={styles.label}
                       >
-                        Seccional
+                        WhatsApp
                       </label>
 
-                      <select
-                        id="cadastro-estado"
-                        name="estado"
-                        value={formData.estado}
+                      <input
+                        id="cadastro-whatsapp"
+                        type="tel"
+                        name="whatsapp"
+                        value={formData.whatsapp}
                         onChange={handleChange}
                         className={styles.input}
+                        placeholder="(15) 99999-9999"
+                        autoComplete="tel"
+                        inputMode="tel"
                         required
                         disabled={loading}
-                      >
-                        <option value="">
-                          Selecione
-                        </option>
-
-                        {states.map(([uf, name]) => (
-                          <option key={uf} value={uf}>
-                            {uf} — {name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
                   </div>
-                )}
 
-                <div className={styles.formGroup}>
-                  <label
-                    htmlFor="cadastro-origem"
-                    className={styles.label}
-                  >
-                    Onde conheceu o Social Jurídico?
-                  </label>
+                  {activeTab === "lawyer" && (
+                    <div className={styles.formRow}>
+                      <div className={styles.formGroup}>
+                        <label
+                          htmlFor="cadastro-oab"
+                          className={styles.label}
+                        >
+                          Número da OAB
+                        </label>
 
-                  <select
-                    id="cadastro-origem"
-                    name="origem_descoberta"
-                    value={
-                      formData.origem_descoberta
-                    }
-                    onChange={handleChange}
-                    className={styles.input}
-                    required
-                    disabled={loading}
-                  >
-                    <option value="">
-                      Selecione uma opção
-                    </option>
+                        <input
+                          id="cadastro-oab"
+                          type="text"
+                          name="oab"
+                          value={formData.oab}
+                          onChange={handleChange}
+                          className={styles.input}
+                          placeholder="Somente números"
+                          inputMode="numeric"
+                          maxLength={10}
+                          required
+                          disabled={loading}
+                        />
+                      </div>
 
-                    <option value="Grupo do Facebook">
-                      Grupo do Facebook
-                    </option>
+                      <div className={styles.formGroup}>
+                        <label
+                          htmlFor="cadastro-estado"
+                          className={styles.label}
+                        >
+                          Seccional
+                        </label>
 
-                    <option value="Instagram">
-                      Instagram
-                    </option>
+                        <select
+                          id="cadastro-estado"
+                          name="estado"
+                          value={formData.estado}
+                          onChange={handleChange}
+                          className={styles.input}
+                          required
+                          disabled={loading}
+                        >
+                          <option value="">
+                            Selecione
+                          </option>
 
-                    <option value="LinkedIn">
-                      LinkedIn
-                    </option>
+                          {states.map(([uf, name]) => (
+                            <option key={uf} value={uf}>
+                              {uf} — {name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
 
-                    <option value="Pesquisa Google">
-                      Pesquisa no Google
-                    </option>
-
-                    <option value="Indicação">
-                      Indicação
-                    </option>
-
-                    <option value="Outro">
-                      Outro
-                    </option>
-                  </select>
-                </div>
-
-                <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label
-                      htmlFor="cadastro-senha"
+                      htmlFor="cadastro-origem"
                       className={styles.label}
                     >
-                      Senha
+                      Onde conheceu o Social Jurídico?
                     </label>
 
-                    <div className={styles.passwordField}>
+                    <select
+                      id="cadastro-origem"
+                      name="origem_descoberta"
+                      value={
+                        formData.origem_descoberta
+                      }
+                      onChange={handleChange}
+                      className={styles.input}
+                      required
+                      disabled={loading}
+                    >
+                      <option value="">
+                        Selecione uma opção
+                      </option>
+
+                      <option value="Grupo do Facebook">
+                        Grupo do Facebook
+                      </option>
+
+                      <option value="Instagram">
+                        Instagram
+                      </option>
+
+                      <option value="LinkedIn">
+                        LinkedIn
+                      </option>
+
+                      <option value="Pesquisa Google">
+                        Pesquisa no Google
+                      </option>
+
+                      <option value="Indicação">
+                        Indicação
+                      </option>
+
+                      <option value="Outro">
+                        Outro
+                      </option>
+                    </select>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label
+                        htmlFor="cadastro-senha"
+                        className={styles.label}
+                      >
+                        Senha
+                      </label>
+
+                      <div className={styles.passwordField}>
+                        <input
+                          id="cadastro-senha"
+                          type={
+                            showPassword
+                              ? "text"
+                              : "password"
+                          }
+                          name="senha"
+                          value={formData.senha}
+                          onChange={handleChange}
+                          className={styles.input}
+                          placeholder="Mínimo de 8 caracteres"
+                          autoComplete="new-password"
+                          minLength={8}
+                          required
+                          disabled={loading}
+                        />
+
+                        <button
+                          type="button"
+                          className={styles.passwordToggle}
+                          onClick={() =>
+                            setShowPassword(
+                              (current) => !current,
+                            )
+                          }
+                          aria-label={
+                            showPassword
+                              ? "Ocultar senha"
+                              : "Mostrar senha"
+                          }
+                        >
+                          {showPassword ? (
+                            <EyeOff
+                              size={18}
+                              aria-hidden="true"
+                            />
+                          ) : (
+                            <Eye
+                              size={18}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label
+                        htmlFor="cadastro-confirmar-senha"
+                        className={styles.label}
+                      >
+                        Confirmar senha
+                      </label>
+
                       <input
-                        id="cadastro-senha"
+                        id="cadastro-confirmar-senha"
                         type={
                           showPassword
                             ? "text"
                             : "password"
                         }
-                        name="senha"
-                        value={formData.senha}
+                        name="confirmarSenha"
+                        value={
+                          formData.confirmarSenha
+                        }
                         onChange={handleChange}
                         className={styles.input}
-                        placeholder="Mínimo de 8 caracteres"
+                        placeholder="Repita a senha"
                         autoComplete="new-password"
                         minLength={8}
                         required
                         disabled={loading}
                       />
-
-                      <button
-                        type="button"
-                        className={styles.passwordToggle}
-                        onClick={() =>
-                          setShowPassword(
-                            (current) => !current,
-                          )
-                        }
-                        aria-label={
-                          showPassword
-                            ? "Ocultar senha"
-                            : "Mostrar senha"
-                        }
-                      >
-                        {showPassword ? (
-                          <EyeOff
-                            size={18}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <Eye
-                            size={18}
-                            aria-hidden="true"
-                          />
-                        )}
-                      </button>
                     </div>
                   </div>
 
-                  <div className={styles.formGroup}>
-                    <label
-                      htmlFor="cadastro-confirmar-senha"
-                      className={styles.label}
-                    >
-                      Confirmar senha
-                    </label>
-
+                  <div className={styles.checkboxGroup}>
                     <input
-                      id="cadastro-confirmar-senha"
-                      type={
-                        showPassword
-                          ? "text"
-                          : "password"
-                      }
-                      name="confirmarSenha"
-                      value={
-                        formData.confirmarSenha
+                      id="cadastro-termos"
+                      type="checkbox"
+                      name="termsAccepted"
+                      checked={
+                        formData.termsAccepted
                       }
                       onChange={handleChange}
-                      className={styles.input}
-                      placeholder="Repita a senha"
-                      autoComplete="new-password"
-                      minLength={8}
+                      className={styles.checkbox}
                       required
                       disabled={loading}
                     />
-                  </div>
-                </div>
 
-                <div className={styles.checkboxGroup}>
-                  <input
-                    id="cadastro-termos"
-                    type="checkbox"
-                    name="termsAccepted"
-                    checked={
-                      formData.termsAccepted
-                    }
-                    onChange={handleChange}
-                    className={styles.checkbox}
-                    required
-                    disabled={loading}
-                  />
-
-                  <label
-                    htmlFor="cadastro-termos"
-                    className={styles.checkboxLabel}
-                  >
-                    Concordo com os{" "}
-                    <Link
-                      href="/termos"
-                      className={styles.linkTag}
+                    <label
+                      htmlFor="cadastro-termos"
+                      className={styles.checkboxLabel}
                     >
-                      Termos de Uso
-                    </Link>{" "}
-                    e com a{" "}
-                    <Link
-                      href="/privacidade"
-                      className={styles.linkTag}
-                    >
-                      Política de Privacidade
-                    </Link>
-                    .
-                  </label>
-                </div>
-
-                {errorMsg && (
-                  <div
-                    className={styles.errorMessage}
-                    role="alert"
-                  >
-                    <AlertCircle
-                      size={18}
-                      aria-hidden="true"
-                    />
-
-                    <span>{errorMsg}</span>
+                      Concordo com os{" "}
+                      <Link
+                        href="/termos"
+                        className={styles.linkTag}
+                      >
+                        Termos de Uso
+                      </Link>{" "}
+                      e com a{" "}
+                      <Link
+                        href="/privacidade"
+                        className={styles.linkTag}
+                      >
+                        Política de Privacidade
+                      </Link>
+                      .
+                    </label>
                   </div>
-                )}
 
-                <button
-                  type="submit"
-                  className={styles.submitBtn}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2
-                        size={19}
-                        className={styles.spinner}
+                  {errorMsg && (
+                    <div
+                      className={styles.errorMessage}
+                      role="alert"
+                    >
+                      <AlertCircle
+                        size={18}
                         aria-hidden="true"
                       />
 
-                      {activeTab === "lawyer"
-                        ? "Criando perfil profissional..."
-                        : "Criando sua conta..."}
-                    </>
-                  ) : (
-                    "Criar conta"
+                      <span>{errorMsg}</span>
+                    </div>
                   )}
-                </button>
 
-                <p className={styles.loginHint}>
-                  Já possui uma conta?{" "}
-                  <Link
-                    href="/login"
-                    className={styles.linkTag}
+                  <button
+                    type="submit"
+                    className={styles.submitBtn}
+                    disabled={loading}
                   >
-                    Fazer login
-                  </Link>
-                </p>
-              </form>
+                    {loading ? (
+                      <>
+                        <Loader2
+                          size={19}
+                          className={styles.spinner}
+                          aria-hidden="true"
+                        />
+
+                        {activeTab === "lawyer"
+                          ? "Criando perfil profissional..."
+                          : "Criando sua conta..."}
+                      </>
+                    ) : (
+                      "Criar conta"
+                    )}
+                  </button>
+
+                  <p className={styles.loginHint}>
+                    Já possui uma conta?{" "}
+                    <Link
+                      href="/login"
+                      className={styles.linkTag}
+                    >
+                      Fazer login
+                    </Link>
+                  </p>
+                </form>
             </>
           )}
         </div>

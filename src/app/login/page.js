@@ -329,6 +329,14 @@ function LoginContent() {
           return;
         }
 
+        if (userRole === "ORACULO") {
+          router.push(
+            "/oraculoacademico/painel",
+          );
+
+          return;
+        }
+
         let target = redirectTo;
 
         if (trackId) {

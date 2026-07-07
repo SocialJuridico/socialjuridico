@@ -45,12 +45,13 @@ export default function PraticaJuridicaPage() {
             </li>
           </ul>
 
-          <h2>O papel do supervisor</h2>
+          <h2>O papel do Advogado Supervisor</h2>
           <p>
-            Cada Oráculo tem pelo menos um advogado supervisor (&quot;padrinho&quot;)
-            responsável por acompanhar sua atuação. O supervisor confirma o
-            convite antes da ativação e pode ser consultado a qualquer momento
-            pela equipe do Social Jurídico.
+            Cada Oráculo atua vinculado a um Advogado Supervisor identificado
+            por sua OAB — carinhosamente chamado de &quot;padrinho&quot; pela
+            comunidade do programa. O supervisor confirma o convite antes da
+            ativação e pode ser consultado a qualquer momento pela equipe do
+            Social Jurídico.
           </p>
 
           <h2>Auditoria</h2>

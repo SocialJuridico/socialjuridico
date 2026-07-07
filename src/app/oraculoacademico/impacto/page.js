@@ -15,7 +15,7 @@ const IMPACT_POINTS = [
   },
   {
     title: "Rede de supervisores engajados",
-    text: "Advogados que atuam como padrinhos ampliam sua rede e contribuem diretamente com a formação de novos profissionais.",
+    text: "Advogados que atuam como Advogado Supervisor ampliam sua rede e contribuem diretamente com a formação de novos profissionais.",
   },
 ];
 

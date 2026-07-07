@@ -11,7 +11,7 @@ const REGRAS = [
   "A atuação se limita a informações gerais, apoio inicial e organização do relato do caso.",
   "Casos que exijam contratação, urgência, prazo ou prática de ato jurídico devem ser encaminhados a um advogado habilitado.",
   "As interações podem ser auditadas pelo Social Jurídico para fins de segurança, qualidade e compliance.",
-  "É necessário ter pelo menos um advogado supervisor aprovando o convite de padrinho para o acesso ser ativado.",
+  "É necessário ter pelo menos um Advogado Supervisor aprovando o convite para o acesso ser ativado.",
 ];
 
 export default function RegrasPage() {

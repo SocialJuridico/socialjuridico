@@ -8,13 +8,13 @@ export const metadata = { title: "Para Estudantes" };
 const REQUISITOS = [
   "Estar cursando Direito a partir do 8º período, ou ser estagiário inscrito na OAB.",
   "Ter um comprovante válido: matrícula atualizada ou inscrição de estagiário.",
-  "Indicar de 1 a 3 advogados que aceitem ser seus supervisores (padrinhos).",
+  "Indicar de 1 a 3 advogados supervisores que aceitem vincular sua OAB ao seu cadastro.",
 ];
 
 const BENEFICIOS = [
-  "Experiência prática real, sempre sob supervisão de um advogado.",
-  "Histórico de atuação supervisionada para levar à sua carreira.",
-  "Acompanhamento e auditoria que garantem segurança para você e para o cliente.",
+  "Análise de demandas reais recebidas pelo Social Jurídico, com consulta a bases jurídicas.",
+  "Atuação vinculada a um advogado supervisor identificado por sua OAB.",
+  "Atividade preservada integralmente, com rastreabilidade e auditoria.",
 ];
 
 export default function EstudantesPage() {
@@ -30,9 +30,8 @@ export default function EstudantesPage() {
             Comece sua prática jurídica com a supervisão certa.
           </h1>
           <p className={styles.heroSubtitle}>
-            Se você é estudante ou estagiário de Direito, o Oráculo
-            Acadêmico é o caminho para atuar em casos reais com o respaldo de
-            um advogado supervisor.
+            Analise demandas reais, consulte bases jurídicas e desenvolva
+            experiência prática em ambiente supervisionado e auditável.
           </p>
           <div className={styles.heroActions}>
             <Link href="/oraculoacademico/cadastro" className={styles.primaryBtn}>

@@ -442,6 +442,15 @@ export default function OraculoCadastroPage() {
               </div>
             ))}
           </div>
+
+          <div className={styles.whoCanJoin}>
+            <span className={styles.whoCanJoinTitle}>Quem pode participar?</span>
+            <ul>
+              <li>Estudante de Direito a partir do 8º período ou estagiário inscrito na OAB.</li>
+              <li>Comprovante válido: matrícula atualizada ou inscrição de estagiário.</li>
+              <li>Advogado Supervisor vinculado, identificado por sua OAB.</li>
+            </ul>
+          </div>
         </div>
       </section>
 

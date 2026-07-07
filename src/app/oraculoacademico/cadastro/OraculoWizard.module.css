@@ -157,6 +157,40 @@
   font-weight: 800;
 }
 
+.whoCanJoin {
+  margin-top: 30px;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.whoCanJoinTitle {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--oraculo-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.whoCanJoin ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.whoCanJoin li {
+  margin-bottom: 8px;
+  color: rgba(224, 224, 224, 0.62);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.whoCanJoin li:last-child {
+  margin-bottom: 0;
+}
+
 .rightSide {
   display: flex;
   min-width: 0;

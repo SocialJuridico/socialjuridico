@@ -5,8 +5,8 @@ import styles from "../components/marketing.module.css";
 export const metadata = { title: "Para Supervisores" };
 
 const RESPONSABILIDADES = [
-  "Confirmar ou recusar o convite recebido por e-mail quando um candidato indicar você como padrinho.",
-  "Acompanhar a atuação do candidato dentro dos limites definidos pelo programa (sem prometer resultado, sem captação irregular).",
+  "Confirmar ou recusar o convite recebido por e-mail quando um candidato indicar você como supervisor.",
+  "Permanecer vinculado ao candidato com sua OAB, dentro dos limites definidos pelo programa (sem prometer resultado, sem captação irregular).",
   "Estar disponível para orientar o candidato e, se necessário, ser consultado pela equipe do Social Jurídico.",
 ];
 
@@ -20,12 +20,11 @@ export default function SupervisoresPage() {
             Para Supervisores
           </span>
           <h1 className={styles.heroTitle}>
-            Seja padrinho de um futuro advogado.
+            Seja o Advogado Supervisor de um futuro colega de profissão.
           </h1>
           <p className={styles.heroSubtitle}>
-            Advogados com OAB ativa podem apoiar a formação de estudantes,
-            confirmando o papel de supervisor quando forem indicados por um
-            candidato.
+            Supervisione estudantes de Direito com sua OAB vinculada ao
+            participante e rastreabilidade das atividades realizadas.
           </p>
         </div>
       </section>
@@ -53,11 +52,12 @@ export default function SupervisoresPage() {
         <div className={styles.prose}>
           <h2>Por que aceitar</h2>
           <p>
-            Ao aceitar ser padrinho de um candidato, você contribui
-            diretamente com a formação de um futuro colega de profissão,
-            ampliando sua rede e fortalecendo o ecossistema jurídico. O
-            candidato só é ativado na plataforma após sua aprovação e a
-            validação de documentos pela nossa equipe.
+            Ao aceitar vincular sua OAB a um candidato como Advogado
+            Supervisor, você contribui diretamente com a formação de um
+            futuro colega de profissão, ampliando sua rede e fortalecendo o
+            ecossistema jurídico. O candidato só é ativado na plataforma
+            após sua aprovação e a validação de documentos pela nossa
+            equipe.
           </p>
         </div>
       </section>

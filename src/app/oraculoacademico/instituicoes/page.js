@@ -19,9 +19,9 @@ export default function InstituicoesPage() {
             jurídica.
           </h1>
           <p className={styles.heroSubtitle}>
-            O Oráculo Acadêmico complementa o Núcleo de Prática Jurídica com
-            um programa de supervisão externa, validação de documentos e
-            auditoria — sem custo para a instituição.
+            Integre seus alunos a um ambiente digital de prática jurídica com
+            demandas reais, supervisão e evidências de atividade — sem custo
+            para a instituição.
           </p>
           <div className={styles.heroActions}>
             <Link href="/oraculoacademico/instituicoes/parceria" className={styles.primaryBtn}>

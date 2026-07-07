@@ -60,7 +60,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   color: var(--oraculo-accent);
   font-size: 0.72rem;
   font-weight: 800;
@@ -68,39 +68,92 @@
   text-transform: uppercase;
 }
 
-.heroVisualRow {
+.heroVisualArea {
+  display: inline-flex;
+  padding: 4px 12px;
+  margin-bottom: 12px;
+  margin-left: 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--color-gold);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.heroVisualCaseTitle {
+  margin: 0 0 22px;
+  color: var(--color-white);
+  font-size: 1.12rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.heroVisualBlock {
+  padding: 16px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.heroVisualBlockLabel {
+  display: block;
+  margin-bottom: 10px;
+  color: rgba(224, 224, 224, 0.45);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.heroVisualSourceList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.heroVisualSourceList li {
+  color: rgba(224, 224, 224, 0.8);
+  font-size: 0.86rem;
+}
+
+.heroVisualPersonRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  padding: 14px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.heroVisualRow:last-child {
-  border-bottom: none;
+.heroVisualPersonRow svg {
+  flex-shrink: 0;
+  color: var(--oraculo-accent);
 }
 
-.heroVisualRowLabel {
+.heroVisualPersonRow strong {
+  display: block;
+  color: var(--color-white);
+  font-size: 0.88rem;
+}
+
+.heroVisualPersonRow span {
+  color: rgba(224, 224, 224, 0.55);
+  font-size: 0.78rem;
+}
+
+.heroVisualStatusRow {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: rgba(224, 224, 224, 0.72);
-  font-size: 0.84rem;
+  color: var(--oraculo-accent);
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
-.heroVisualRowLabel svg {
-  color: var(--color-gold);
+.heroVisualStatusRow svg {
   flex-shrink: 0;
 }
 
-.heroVisualRowValue {
-  font-weight: 800;
-  font-size: 0.86rem;
-  color: var(--color-white);
-}
-
-.statsBar {
+.pillarsBar {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
@@ -109,26 +162,25 @@
   padding: 0 24px;
 }
 
-.statItem {
-  padding: 28px 20px;
+.pillarItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 16px;
   text-align: center;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(224, 224, 224, 0.68);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.statNumber {
-  display: block;
-  margin-bottom: 6px;
+.pillarItem svg {
+  flex-shrink: 0;
   color: var(--color-gold);
-  font-size: clamp(1.6rem, 2.6vw, 2.1rem);
-  font-weight: 850;
-  letter-spacing: -0.02em;
-}
-
-.statLabel {
-  color: rgba(224, 224, 224, 0.6);
-  font-size: 0.78rem;
-  line-height: 1.5;
 }
 
 @media (max-width: 900px) {
@@ -148,8 +200,15 @@
     justify-content: center;
   }
 
-  .statsBar {
+  .pillarsBar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .pillarItem {
+    flex-direction: column;
+    gap: 6px;
   }
 }
 

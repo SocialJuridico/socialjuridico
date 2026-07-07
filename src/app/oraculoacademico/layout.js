@@ -9,7 +9,7 @@ export const metadata = {
     template: `%s | Oráculo Acadêmico`,
   },
   description:
-    "Programa de prática jurídica supervisionada do ecossistema Social Jurídico: estudantes de Direito atuam sob a supervisão de advogados padrinhos, com validação e auditoria.",
+    "Programa de prática jurídica supervisionada do ecossistema Social Jurídico: estudantes de Direito analisam demandas reais, consultam uma biblioteca jurídica e atuam vinculados a um advogado supervisor, com auditoria integral da atividade.",
   applicationName: `Oráculo Acadêmico | ${SITE_NAME}`,
 };
 

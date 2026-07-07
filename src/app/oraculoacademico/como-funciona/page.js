@@ -12,7 +12,7 @@ const STEPS = [
   },
   {
     title: "2. Convite aos supervisores",
-    text: "Cada advogado indicado recebe um e-mail de convite para atuar como padrinho. Ele pode aceitar ou recusar; o cadastro segue pendente até que ao menos um confirme.",
+    text: "Cada advogado indicado recebe um e-mail de convite para atuar como Advogado Supervisor. Ele pode aceitar ou recusar; o cadastro segue pendente até que ao menos um confirme.",
   },
   {
     title: "3. Validação de documentos",

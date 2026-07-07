@@ -109,10 +109,35 @@ export const ORACULO_CHECKLIST_ITEMS = [
     key: "pronta_para_ativacao",
     label: "Instituição pronta para ativação",
   },
+  {
+    key: "primeiro_admin_institucional_definido",
+    label: "Primeiro Administrador Institucional definido",
+  },
+  {
+    key: "email_institucional_validado_ou_excecao",
+    label: "E-mail institucional validado ou exceção aprovada",
+  },
+  { key: "role_inicial_validada", label: "Role inicial validada" },
+  { key: "politica_mfa_definida", label: "Política de MFA definida" },
+  {
+    key: "pronta_para_convite_acesso",
+    label: "Instituição pronta para emissão do convite de acesso",
+  },
+  {
+    key: "convite_institucional_gerado",
+    label: "Convite institucional gerado",
+    postActivation: true,
+  },
+  {
+    key: "convite_institucional_enviado",
+    label: "Convite institucional enviado",
+    postActivation: true,
+  },
 ];
 
 export function getRequiredChecklistKeys(modality) {
   return ORACULO_CHECKLIST_ITEMS.filter((item) => {
+    if (item.postActivation) return false;
     if (item.key === "oab_seccional_validada") {
       return modality === "ESTAGIO_OAB";
     }
@@ -144,6 +169,10 @@ export function validateInstitutionDossier(dossier) {
   const instruments = dossier?.instrumentos || {};
   const supervisor = dossier?.supervisor_principal || {};
   const checklist = dossier?.checklist_ativacao || {};
+  const accessAdmin =
+    dossier?.acesso_institucional?.primeiro_admin ||
+    dossier?.acessoInstitucional?.primeiroAdmin ||
+    {};
 
   if (
     modality &&
@@ -199,6 +228,9 @@ export function validateInstitutionDossier(dossier) {
     );
     if (missing.length) {
       errors.push("A ativação exige concluir o checklist administrativo obrigatório.");
+    }
+    if (!accessAdmin.nome || !accessAdmin.email) {
+      errors.push("A ativação exige definir o primeiro Administrador Institucional.");
     }
   }
 

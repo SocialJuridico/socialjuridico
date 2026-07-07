@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
+import { createInitialInstitutionAdminInvite } from "@/lib/oraculoInstitutionAccess";
 import { buildInstitutionPayload } from "@/lib/oraculoInstitutionPayload";
 import {
   syncInstitutionMainSupervisor,
@@ -116,6 +117,33 @@ export async function PATCH(request, { params }) {
       if (historyError) {
         throw new Error(`Falha ao registrar histórico: ${historyError.message}`);
       }
+    }
+
+    if (payload.status === "ATIVA") {
+      const { data: activatedInstitution, error: activeFetchError } =
+        await supabaseAdmin
+          .from("oraculo_instituicoes")
+          .select("id, nome, status, checklist_ativacao, acesso_institucional")
+          .eq("id", id)
+          .maybeSingle();
+
+      if (activeFetchError) {
+        throw new Error(
+          `Falha ao consultar instituicao ativada: ${activeFetchError.message}`,
+        );
+      }
+
+      await createInitialInstitutionAdminInvite({
+        db: supabaseAdmin,
+        instituicao: activatedInstitution,
+        invitedByAuthUserId: auth.user.id,
+        request,
+      }).catch((inviteError) => {
+        console.error(
+          "[Admin/Instituicoes][PATCH] Falha ao gerar convite inicial:",
+          inviteError,
+        );
+      });
     }
 
     return json({

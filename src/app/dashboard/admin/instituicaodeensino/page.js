@@ -32,6 +32,7 @@ const STEPS = [
   "Supervisão",
   "Instrumentos",
   "LGPD/Auditoria",
+  "Acesso",
 ];
 
 const INITIAL_FORM = {
@@ -67,6 +68,21 @@ const INITIAL_FORM = {
   estrutura_academica: {},
   instrumentos: {},
   lgpd: {},
+  acesso_institucional: {
+    primeiro_admin: {
+      role: "ORACULO_INSTITUICAO_ADMIN",
+      mfa_required: true,
+      pode_convidar_usuarios: true,
+      pode_gerenciar_roles: true,
+      pode_acessar_auditoria: true,
+      pode_visualizar_relatorios: true,
+      pode_visualizar_conteudo_integral: false,
+      pode_gerenciar_programas: true,
+    },
+  },
+  dominio_institucional: "",
+  dominio_institucional_validado: false,
+  instituicao_mfa_policy: "ROLE_BASED",
   checklist_ativacao: {},
   observacoes_internas: "",
   pessoas: {
@@ -122,6 +138,12 @@ function fromInstitution(item) {
     estrutura_academica: item.estrutura_academica || {},
     instrumentos: item.instrumentos || {},
     lgpd: item.lgpd || {},
+    acesso_institucional:
+      item.acesso_institucional || INITIAL_FORM.acesso_institucional,
+    dominio_institucional: item.dominio_institucional || "",
+    dominio_institucional_validado:
+      item.dominio_institucional_validado || false,
+    instituicao_mfa_policy: item.instituicao_mfa_policy || "ROLE_BASED",
     checklist_ativacao: item.checklist_ativacao || {},
     pessoas: {
       representante_legal: byRole(item.pessoas, "REPRESENTANTE_LEGAL"),
@@ -265,6 +287,19 @@ export default function AdminInstituicoesPage() {
         ...(current.supervisor_principal || {}),
         poderes: {
           ...(current.supervisor_principal?.poderes || {}),
+          [field]: value,
+        },
+      },
+    }));
+  }
+
+  function updateAccessAdmin(field, value) {
+    setForm((current) => ({
+      ...current,
+      acesso_institucional: {
+        ...(current.acesso_institucional || {}),
+        primeiro_admin: {
+          ...(current.acesso_institucional?.primeiro_admin || {}),
           [field]: value,
         },
       },
@@ -599,6 +634,52 @@ export default function AdminInstituicoesPage() {
                   <Toggle label="Autoriza métricas anonimizadas" checked={form.lgpd.autoriza_metricas} onChange={(value) => updateNested("lgpd", "autoriza_metricas", value)} />
                   <Toggle label="Autoriza uso do nome" checked={form.lgpd.autoriza_nome} onChange={(value) => updateNested("lgpd", "autoriza_nome", value)} />
                   <Toggle label="Autoriza uso de marca/logotipo" checked={form.lgpd.autoriza_marca} onChange={(value) => updateNested("lgpd", "autoriza_marca", value)} />
+                </div>
+              )}
+
+              {step === 7 && (
+                <div className={styles.grid}>
+                  <div className={styles.notice}>
+                    A instituição não recebe senha compartilhada. O primeiro
+                    administrador institucional receberá um convite individual
+                    quando a instituição for ativada.
+                  </div>
+                  <Field label="Nome completo" value={form.acesso_institucional?.primeiro_admin?.nome} onChange={(value) => updateAccessAdmin("nome", value)} />
+                  <Field label="CPF" value={form.acesso_institucional?.primeiro_admin?.cpf} onChange={(value) => updateAccessAdmin("cpf", value)} />
+                  <Field label="Cargo" value={form.acesso_institucional?.primeiro_admin?.cargo} onChange={(value) => updateAccessAdmin("cargo", value)} />
+                  <Field label="E-mail institucional" value={form.acesso_institucional?.primeiro_admin?.email} onChange={(value) => updateAccessAdmin("email", value)} />
+                  <Field label="Telefone" value={form.acesso_institucional?.primeiro_admin?.telefone} onChange={(value) => updateAccessAdmin("telefone", value)} />
+                  <Field label="Tipo de vínculo" value={form.acesso_institucional?.primeiro_admin?.tipo_vinculo} onChange={(value) => updateAccessAdmin("tipo_vinculo", value)} as="select">
+                    <option value="">Selecione</option>
+                    <option value="REITOR">Reitor</option>
+                    <option value="DIRETOR">Diretor</option>
+                    <option value="COORDENADOR">Coordenador</option>
+                    <option value="GESTOR_NPJ">Gestor do NPJ</option>
+                    <option value="RESPONSAVEL_ACADEMICO">Responsável acadêmico</option>
+                    <option value="RESPONSAVEL_ADMINISTRATIVO">Responsável administrativo</option>
+                    <option value="OUTRO">Outro</option>
+                  </Field>
+                  <Field label="Descrição se outro" value={form.acesso_institucional?.primeiro_admin?.tipo_vinculo_descricao} onChange={(value) => updateAccessAdmin("tipo_vinculo_descricao", value)} />
+                  <Field label="Role inicial" value={form.acesso_institucional?.primeiro_admin?.role || "ORACULO_INSTITUICAO_ADMIN"} onChange={(value) => updateAccessAdmin("role", value)} as="select">
+                    <option value="ORACULO_INSTITUICAO_ADMIN">Administrador institucional</option>
+                    <option value="ORACULO_COORDENADOR_CURSO">Coordenador do curso</option>
+                    <option value="ORACULO_COORDENADOR_NPJ">Coordenador do NPJ</option>
+                    <option value="ORACULO_PROFESSOR_ORIENTADOR">Professor orientador</option>
+                    <option value="ORACULO_SUPERVISOR_JURIDICO">Supervisor jurídico</option>
+                  </Field>
+                  <Field label="Domínio institucional" value={form.dominio_institucional || form.dominio_email} onChange={(value) => update("dominio_institucional", value)} />
+                  <Field label="Política MFA da instituição" value={form.instituicao_mfa_policy} onChange={(value) => update("instituicao_mfa_policy", value)} as="select">
+                    <option value="ROLE_BASED">Por role</option>
+                    <option value="ALL_USERS">Todos os usuários</option>
+                  </Field>
+                  <Toggle label="Domínio institucional validado" checked={form.dominio_institucional_validado} onChange={(value) => update("dominio_institucional_validado", value)} />
+                  <Toggle label="MFA obrigatório" checked={form.acesso_institucional?.primeiro_admin?.mfa_required ?? true} onChange={(value) => updateAccessAdmin("mfa_required", value)} />
+                  <Toggle label="Pode convidar usuários institucionais" checked={form.acesso_institucional?.primeiro_admin?.pode_convidar_usuarios ?? true} onChange={(value) => updateAccessAdmin("pode_convidar_usuarios", value)} />
+                  <Toggle label="Pode gerenciar roles" checked={form.acesso_institucional?.primeiro_admin?.pode_gerenciar_roles ?? true} onChange={(value) => updateAccessAdmin("pode_gerenciar_roles", value)} />
+                  <Toggle label="Pode acessar auditoria institucional" checked={form.acesso_institucional?.primeiro_admin?.pode_acessar_auditoria ?? true} onChange={(value) => updateAccessAdmin("pode_acessar_auditoria", value)} />
+                  <Toggle label="Pode visualizar relatórios acadêmicos" checked={form.acesso_institucional?.primeiro_admin?.pode_visualizar_relatorios ?? true} onChange={(value) => updateAccessAdmin("pode_visualizar_relatorios", value)} />
+                  <Toggle label="Pode visualizar conteúdo integral dos atendimentos" checked={form.acesso_institucional?.primeiro_admin?.pode_visualizar_conteudo_integral} onChange={(value) => updateAccessAdmin("pode_visualizar_conteudo_integral", value)} />
+                  <Toggle label="Pode gerenciar programas acadêmicos" checked={form.acesso_institucional?.primeiro_admin?.pode_gerenciar_programas ?? true} onChange={(value) => updateAccessAdmin("pode_gerenciar_programas", value)} />
                 </div>
               )}
             </div>

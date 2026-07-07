@@ -295,6 +295,28 @@ export async function POST(request) {
       }
     }
 
+    const { data: institutionalAccess, error: institutionalAccessError } =
+      await db
+        .from("oraculo_instituicao_usuarios")
+        .select(
+          "id, instituicao_id, status, mfa_required, oraculo_instituicoes(id, nome), oraculo_instituicao_user_roles(role, programa_academico_id, revoked_at)",
+        )
+        .eq("auth_user_id", user.id)
+        .in("status", ["ATIVO", "PENDENTE_MFA"]);
+
+    const institutionContexts = institutionalAccessError
+      ? []
+      : (institutionalAccess || []).map((item) => ({
+          institutionUserId: item.id,
+          instituicaoId: item.instituicao_id,
+          instituicaoNome: item.oraculo_instituicoes?.nome || null,
+          status: item.status,
+          mfaRequired: Boolean(item.mfa_required),
+          roles: (item.oraculo_instituicao_user_roles || [])
+            .filter((role) => !role.revoked_at)
+            .map((role) => role.role),
+        }));
+
     // Bloquear membros de escritório no login individual
     if (profile && profile.escritorio_id) {
       await supabase.auth.signOut(); // Revoga a sessão
@@ -410,6 +432,7 @@ export async function POST(request) {
         role: profile?.role || "CLIENT",
         cargo: profile?.cargo || null,
         oraculoStatus: profile?.oraculo_status || null,
+        institutionContexts,
         needsPasswordUpdate: user.user_metadata?.needs_password_update === true,
       },
     });
@@ -441,6 +464,7 @@ export async function POST(request) {
       metadata: {
         profile_role: profile?.role || "CLIENT",
         cargo: profile?.cargo || null,
+        institution_contexts_count: institutionContexts.length,
       },
     });
 

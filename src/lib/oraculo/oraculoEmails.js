@@ -219,3 +219,46 @@ export function oraculoAdminDecisionTemplate({ name, status, motivo }) {
       ${button(loginUrl, "Acessar minha conta")}`,
   });
 }
+
+export function oraculoInstitutionInviteTemplate({
+  invitedName,
+  institutionName,
+  roleLabel,
+  inviteUrl,
+  expiresAt,
+}) {
+  const expires = expiresAt
+    ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(
+        new Date(expiresAt),
+      )
+    : "em breve";
+
+  return wrapEmail({
+    eyebrow: "ACESSO INSTITUCIONAL",
+    title: "Convite para o Oraculo Academico",
+    bodyHtml: `
+      <p style="margin:0;color:#ffffff;font-size:17px;line-height:1.6;">
+        Ola, <strong style="color:#d4af37;">${escapeHtml(invitedName || "convidado(a)")}</strong>!
+      </p>
+      <p style="margin:12px 0 0;color:rgba(255,255,255,0.75);font-size:15px;line-height:1.7;">
+        Voce foi convidado para acessar o dashboard institucional do
+        <strong style="color:#d4af37;">Oraculo Academico</strong>.
+      </p>
+      <div style="margin:20px 0;padding:16px 18px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
+        <p style="margin:0;color:rgba(255,255,255,0.78);font-size:14px;line-height:1.7;">
+          <strong>Instituicao:</strong> ${escapeHtml(institutionName || "")}<br />
+          <strong>Perfil:</strong> ${escapeHtml(roleLabel || "")}<br />
+          <strong>Validade:</strong> ${escapeHtml(expires)}
+        </p>
+      </div>
+      <p style="margin:0;color:rgba(255,255,255,0.7);font-size:14px;line-height:1.7;">
+        O acesso e individual. Nao compartilhamos senha por e-mail e o Social
+        Juridico nao visualiza sua senha. Use o link abaixo para aceitar o
+        convite e definir suas credenciais.
+      </p>
+      ${button(inviteUrl, "Aceitar convite")}
+      <p style="margin:0;color:#a8a8a8;font-size:13px;line-height:1.55;text-align:center;">
+        Se voce nao reconhece este convite, ignore esta mensagem.
+      </p>`,
+  });
+}

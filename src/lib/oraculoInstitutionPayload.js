@@ -63,11 +63,20 @@ export function buildInstitutionPayload(body = {}) {
     dominio_email: asNullableText(body.dominio_email, 120),
     email_institucional: asNullableText(body.email_institucional, 180),
     telefone_institucional: asNullableText(body.telefone_institucional, 40),
+    dominio_institucional: asNullableText(body.dominio_institucional, 120),
+    dominio_institucional_validado: asBoolean(
+      body.dominio_institucional_validado,
+    ),
+    instituicao_mfa_policy:
+      ["ROLE_BASED", "ALL_USERS"].includes(body.instituicao_mfa_policy)
+        ? body.instituicao_mfa_policy
+        : "ROLE_BASED",
     endereco: cleanObject(body.endereco || {}),
     curso: cleanObject(body.curso || {}),
     estrutura_academica: cleanObject(body.estrutura_academica || {}),
     instrumentos: cleanObject(body.instrumentos || {}),
     lgpd: cleanObject(body.lgpd || {}),
+    acesso_institucional: cleanObject(body.acesso_institucional || {}),
     checklist_ativacao: cleanObject(body.checklist_ativacao || {}),
     observacoes_internas: asNullableText(body.observacoes_internas, 4000),
   });

@@ -20,12 +20,26 @@ export async function GET(request) {
     const { data: oraculos, error } = await supabaseAdmin
       .from("oraculo_profissionais")
       .select(
-        "id, name, email, whatsapp, cpf, cidade, estado, tipo, status, instituicao_ensino, periodo_atual, previsao_conclusao, numero_matricula, ano_conclusao, prestou_exame_oab, aprovado_exame_fase, atuou_area_juridica, participa_nucleo_pratica, fez_estagio_juridico, oab_estagiario_numero, oab_estagiario_uf, comprovante_matricula_url, diploma_url, comprovante_estagiario_url, areas_interesse, experiencia_pratica, disponibilidade_semanal, bio, motivo_participacao, termos_aceitos_em, aprovado_em, reprovado_em, motivo_reprovacao, suspenso_em, motivo_suspensao, created_at",
+        "id, name, email, whatsapp, cpf, cidade, estado, tipo, status, instituicao_id, instituicao_ensino, periodo_atual, previsao_conclusao, numero_matricula, participa_nucleo_pratica, fez_estagio_juridico, oab_estagiario_numero, oab_estagiario_uf, comprovante_matricula_url, comprovante_estagiario_url, areas_interesse, experiencia_pratica, disponibilidade_semanal, bio, motivo_participacao, termos_aceitos_em, aprovado_em, reprovado_em, motivo_reprovacao, suspenso_em, motivo_suspensao, created_at",
       )
       .order("created_at", { ascending: false })
       .limit(500);
 
-    if (error) throw new Error(`Falha ao consultar Oráculos: ${error.message}`);
+    if (error) {
+      // Erro mais comum em produção: migration ainda não aplicada no
+      // Supabase — a tabela não existe.
+      if (/does not exist|schema cache/i.test(error.message || "")) {
+        return json(
+          {
+            success: false,
+            message:
+              "As tabelas do Oráculo Acadêmico ainda não existem no banco. Rode a migration 20260706_oraculo_groundwork.sql no SQL Editor do Supabase.",
+          },
+          503,
+        );
+      }
+      throw new Error(`Falha ao consultar Oráculos: ${error.message}`);
+    }
 
     const oraculoIds = (oraculos || []).map((item) => item.id);
     let supervisorsByOraculo = new Map();

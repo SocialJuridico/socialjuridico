@@ -115,6 +115,8 @@ export default function OraculoCadastroPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [instituicoes, setInstituicoes] = useState([]);
+  const [activationRequired, setActivationRequired] = useState(false);
+  const [activationPassword, setActivationPassword] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -320,10 +322,15 @@ export default function OraculoCadastroPage() {
     setStep((current) => Math.max(current - 1, 0));
   }
 
-  async function handleFinalSubmit() {
+  async function handleFinalSubmit(existingPassword) {
     const validationError = validateStep(4);
     if (validationError) {
       setErrorMsg(validationError);
+      return;
+    }
+
+    if (activationRequired && !String(existingPassword || "").length) {
+      setErrorMsg("Informe a senha da sua conta já existente.");
       return;
     }
 
@@ -336,6 +343,7 @@ export default function OraculoCadastroPage() {
         email: form.email.trim().toLowerCase(),
         whatsapp: form.whatsapp,
         senha: form.senha,
+        senha_conta_existente: existingPassword || null,
         cpf: form.cpf,
         cidade: form.cidade.trim(),
         estado: form.estado,
@@ -384,6 +392,11 @@ export default function OraculoCadastroPage() {
       const result = await response.json().catch(() => null);
 
       if (!response.ok || !result?.success) {
+        if (result?.code === "ORACULO_ACTIVATION_REQUIRED") {
+          setActivationRequired(true);
+          setErrorMsg("");
+          return;
+        }
         setErrorMsg(
           result?.message || "Não foi possível concluir o cadastro.",
         );
@@ -998,6 +1011,27 @@ export default function OraculoCadastroPage() {
             <TermsStep terms={terms} onChange={setTerms} disabled={loading} />
           )}
 
+          {step === 4 && activationRequired && (
+            <div className={styles.activationBox}>
+              <strong>Conta do ecossistema reconhecida</strong>
+              <p>
+                Já existe uma conta no Social Jurídico com o e-mail{" "}
+                <b>{form.email.trim().toLowerCase()}</b>. Informe a senha
+                dessa conta para vincular o cadastro do Oráculo Acadêmico a
+                ela — você continuará acessando com esse mesmo e-mail e senha.
+              </p>
+              <input
+                type="password"
+                value={activationPassword}
+                onChange={(event) => setActivationPassword(event.target.value)}
+                className={styles.input}
+                placeholder="Senha da sua conta já existente"
+                autoComplete="current-password"
+                disabled={loading}
+              />
+            </div>
+          )}
+
           <div className={styles.actions}>
             {step > 0 && (
               <button
@@ -1024,7 +1058,11 @@ export default function OraculoCadastroPage() {
               <button
                 type="button"
                 className={styles.submitBtn}
-                onClick={handleFinalSubmit}
+                onClick={() =>
+                  handleFinalSubmit(
+                    activationRequired ? activationPassword : undefined,
+                  )
+                }
                 disabled={loading}
               >
                 {loading ? (
@@ -1036,6 +1074,8 @@ export default function OraculoCadastroPage() {
                     />
                     Enviando cadastro...
                   </>
+                ) : activationRequired ? (
+                  "Vincular à minha conta"
                 ) : (
                   "Concluir cadastro"
                 )}

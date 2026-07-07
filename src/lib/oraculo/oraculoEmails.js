@@ -83,24 +83,41 @@ const STATUS_COPY = {
 
 /**
  * E-mail enviado ao final das 5 etapas do cadastro do Oráculo, com o status
- * inicial (sempre PENDENTE_DOCUMENTOS neste ponto) e o botão de confirmação
- * de conta (link de confirmação de e-mail do Supabase).
+ * inicial (sempre PENDENTE_DOCUMENTOS neste ponto). Com `verifyUrl`, leva o
+ * botão de confirmação de conta (link do Supabase); sem `verifyUrl` (fluxo
+ * de ativação — a conta do ecossistema já existe e está confirmada), leva o
+ * botão de acesso ao login do produto.
  */
-export function oraculoAccountConfirmationTemplate({ name, verifyUrl }) {
+export function oraculoAccountConfirmationTemplate({
+  name,
+  verifyUrl,
+  activation = false,
+}) {
   const status = STATUS_COPY.PENDENTE_DOCUMENTOS;
   const safeName = escapeHtml(name || "Oráculo");
+  const loginUrl = `${
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://www.socialjuridico.com.br"
+  }/oraculoacademico/login`;
+
+  const intro = activation
+    ? `Recebemos todas as etapas do seu cadastro no Oráculo Acadêmico e o
+        vinculamos à sua conta já existente do ecossistema Social Jurídico.
+        Seu acesso usa o e-mail e a senha que você já possui.`
+    : `Recebemos todas as etapas do seu cadastro no Oráculo Acadêmico.
+        Confirme seu e-mail para poder acompanhar o andamento da sua
+        liberação.`;
 
   return wrapEmail({
     eyebrow: "CADASTRO DO ORÁCULO ACADÊMICO RECEBIDO",
-    title: "Confirme sua conta",
+    title: activation ? "Cadastro recebido" : "Confirme sua conta",
     bodyHtml: `
       <p style="margin:0;color:#ffffff;font-size:17px;line-height:1.6;">
         Olá, <strong style="color:#d4af37;">${safeName}</strong>!
       </p>
       <p style="margin:12px 0 0;color:rgba(255,255,255,0.75);font-size:15px;line-height:1.7;">
-        Recebemos todas as etapas do seu cadastro no Oráculo Acadêmico.
-        Confirme seu e-mail para poder acompanhar o andamento da sua
-        liberação.
+        ${intro}
       </p>
       <div style="margin:20px 0;padding:16px 18px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);">
         <span style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;color:${status.color};border:1px solid ${status.color}55;">
@@ -120,10 +137,17 @@ export function oraculoAccountConfirmationTemplate({ name, verifyUrl }) {
           indicação e vamos entrar em contato com ela.
         </p>
       </div>
-      ${button(verifyUrl, "Confirmar minha conta")}
+      ${
+        verifyUrl
+          ? button(verifyUrl, "Confirmar minha conta")
+          : button(loginUrl, "Acessar minha conta")
+      }
       <p style="margin:0;color:#a8a8a8;font-size:13px;line-height:1.55;text-align:center;">
-        O link possui validade limitada. Caso você não tenha solicitado este
-        cadastro, ignore esta mensagem.
+        ${
+          verifyUrl
+            ? "O link possui validade limitada. Caso você não tenha solicitado este cadastro, ignore esta mensagem."
+            : "Caso você não tenha solicitado este cadastro, entre em contato com nossa equipe."
+        }
       </p>`,
   });
 }

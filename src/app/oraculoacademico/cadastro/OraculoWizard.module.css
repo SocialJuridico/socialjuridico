@@ -313,6 +313,28 @@ select.input option {
   line-height: 1.55;
 }
 
+.activationBox {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(47, 143, 120, 0.35);
+  background: rgba(47, 143, 120, 0.08);
+}
+
+.activationBox strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #2f8f78;
+  font-size: 0.9rem;
+}
+
+.activationBox p {
+  margin: 0 0 14px;
+  color: rgba(224, 224, 224, 0.75);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
 .institutionNotice {
   display: flex;
   align-items: flex-start;

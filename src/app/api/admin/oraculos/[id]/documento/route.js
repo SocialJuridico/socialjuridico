@@ -5,7 +5,6 @@ import { supabaseAdmin } from "@/lib/supabase";
 
 const ALLOWED_FIELDS = new Set([
   "comprovante_matricula_url",
-  "diploma_url",
   "comprovante_estagiario_url",
 ]);
 

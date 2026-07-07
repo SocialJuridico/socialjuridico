@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 import {
+  ArrowLeft,
   CheckCircle2,
   FileText,
   Loader2,
@@ -129,10 +131,8 @@ function OraculoCard({ item, onDecide }) {
           Instituição
         </span>
         <span>
-          <strong>
-            {item.periodo_atual || item.ano_conclusao || "—"}
-          </strong>
-          Período/ano
+          <strong>{item.periodo_atual || "—"}</strong>
+          Período atual
         </span>
         <span>
           <strong>{item.disponibilidade_semanal || "—"}</strong>
@@ -303,6 +303,11 @@ export default function AdminOraculosPage() {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
+        <Link href="/dashboard/admin" className={styles.backLink}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          Voltar ao painel admin
+        </Link>
+
         <div className={styles.header}>
           <h1>Cadastros do Oráculo Acadêmico</h1>
           <p>

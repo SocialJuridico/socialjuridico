@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
 // Lista pública das instituições de ensino que participam do programa
-// Oráculo Acadêmico — alimenta o select da Etapa 2 do cadastro. Instituições
-// INDICADA/INATIVA nunca aparecem aqui.
+// Oráculo Acadêmico — alimenta o select da Etapa 2 do cadastro. Só
+// instituições ATIVA aparecem aqui; qualquer outro status do onboarding
+// institucional fica oculto.
 export async function GET() {
   if (!supabaseAdmin) {
     return NextResponse.json(
@@ -17,7 +18,7 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("oraculo_instituicoes")
       .select("id, nome")
-      .eq("status", "PARTICIPANTE")
+      .eq("status", "ATIVA")
       .order("nome", { ascending: true });
 
     if (error) {

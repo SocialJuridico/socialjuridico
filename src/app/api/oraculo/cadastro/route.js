@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "@/lib/supabase";
+import { createClient } from "@/lib/supabaseServer";
 import { validateClientMutationOrigin } from "@/lib/clientDashboard/clientServer";
 import { isValidCPF, normalizeCPF } from "@/lib/cpf";
 import { normalizeUF } from "@/lib/oab";
@@ -101,7 +102,7 @@ function validatePayload(payload) {
     );
   }
 
-  // Instituição: ou um id vindo do select (instituição PARTICIPANTE), ou o
+  // Instituição: ou um id vindo do select (instituição ATIVA), ou o
   // nome digitado quando o candidato indica uma instituição nova. O nome
   // final é sempre resolvido no servidor (nunca se confia no texto do
   // cliente quando há id).
@@ -308,8 +309,8 @@ export async function POST(request) {
     }
 
     // Resolver a instituição de ensino. Com id: precisa existir e estar
-    // PARTICIPANTE (é o que o select público lista). Sem id: o candidato
-    // indicou uma instituição nova — registra como INDICADA para a equipe
+    // ATIVA (é o que o select público lista). Sem id: o candidato
+    // indicou uma instituição nova — registra como RASCUNHO para a equipe
     // formalizar a participação depois.
     let instituicaoIdFinal = null;
     let instituicaoNome = data.instituicaoEnsino;
@@ -321,7 +322,7 @@ export async function POST(request) {
         .eq("id", data.instituicaoId)
         .maybeSingle();
 
-      if (!instituicao || instituicao.status !== "PARTICIPANTE") {
+      if (!instituicao || instituicao.status !== "ATIVA") {
         throw fail("Selecione uma instituição de ensino válida.");
       }
 
@@ -340,7 +341,7 @@ export async function POST(request) {
       } else {
         const { data: indicada, error: indicadaError } = await supabaseAdmin
           .from("oraculo_instituicoes")
-          .insert([{ nome: instituicaoNome, status: "INDICADA" }])
+          .insert([{ nome: instituicaoNome, status: "RASCUNHO" }])
           .select("id")
           .single();
 
@@ -371,32 +372,112 @@ export async function POST(request) {
     const docFile = form.get(docField);
     const validatedDoc = await validateDocument(docFile, docLabel);
 
-    // 1. Criar usuário no Auth (não confirmado — o link de confirmação é
-    // enviado no e-mail final, ao término das 5 etapas).
-    const { data: authData, error: authError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email: data.email,
-        password: data.senha,
-        email_confirm: false,
-        user_metadata: { full_name: data.nome, role: "ORACULO" },
-      });
+    // 1. Conta no Auth. Dois caminhos:
+    //    - Criação normal: e-mail novo → cria usuário não confirmado.
+    //    - Ativação: e-mail já existe no ecossistema Social Jurídico → o
+    //      candidato prova posse da conta com a senha atual e o cadastro do
+    //      Oráculo é vinculado ao auth_user_id existente (mesmo padrão do
+    //      produto Assinatura).
+    const senhaContaExistente = String(payload?.senha_conta_existente || "");
+    const isActivation = senhaContaExistente.length > 0;
+    let user = null;
 
-    if (authError) {
-      if (
-        authError.message?.includes("already be registered") ||
-        authError.status === 422
-      ) {
+    if (isActivation) {
+      const supabase = createClient();
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: senhaContaExistente,
+        });
+
+      if (signInError || !signInData?.user) {
+        if (/not confirmed/i.test(signInError?.message || "")) {
+          throw fail(
+            "O e-mail da sua conta existente ainda não foi confirmado. Confirme-o antes de vincular o Oráculo Acadêmico.",
+            403,
+          );
+        }
         throw fail(
-          "Este e-mail já está cadastrado em nossa plataforma.",
+          "Senha incorreta para a conta já existente com este e-mail.",
+          401,
+        );
+      }
+
+      user = signInData.user;
+      // A verificação de posse não deve deixar sessão aberta nesta resposta.
+      await supabase.auth.signOut().catch(() => {});
+
+      // Regra do programa: quem já tem OAB de advogado não pode ser Oráculo;
+      // contas de administrador também não.
+      const { data: advogado } = await supabaseAdmin
+        .from("advogados")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (advogado) {
+        throw fail(
+          "Contas de advogado não podem ativar o Oráculo Acadêmico — o programa é exclusivo para quem ainda não possui OAB de advogado.",
+          403,
+        );
+      }
+
+      const { data: adminRow } = await supabaseAdmin
+        .from("admins")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (adminRow) {
+        throw fail(
+          "Contas de administrador não podem ativar o Oráculo Acadêmico.",
+          403,
+        );
+      }
+
+      const { data: existingProfile } = await supabaseAdmin
+        .from("oraculo_profissionais")
+        .select("id")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      if (existingProfile) {
+        throw fail(
+          "Esta conta já possui um cadastro do Oráculo Acadêmico.",
           409,
         );
       }
-      throw authError;
-    }
+    } else {
+      const { data: authData, error: authError } =
+        await supabaseAdmin.auth.admin.createUser({
+          email: data.email,
+          password: data.senha,
+          email_confirm: false,
+          user_metadata: { full_name: data.nome, role: "ORACULO" },
+        });
 
-    const user = authData.user;
-    if (!user) throw new Error("Erro ao identificar usuário.");
-    createdUserId = user.id;
+      if (authError) {
+        if (
+          authError.message?.includes("already be registered") ||
+          authError.status === 422
+        ) {
+          // Conta do ecossistema reconhecida — o wizard oferece vincular o
+          // cadastro do Oráculo a ela mediante a senha atual.
+          return json(
+            {
+              success: false,
+              code: "ORACULO_ACTIVATION_REQUIRED",
+              message:
+                "Este e-mail já possui uma conta no ecossistema Social Jurídico. Informe a senha dessa conta para vincular o cadastro do Oráculo Acadêmico a ela.",
+            },
+            409,
+          );
+        }
+        throw authError;
+      }
+
+      user = authData.user;
+      if (!user) throw new Error("Erro ao identificar usuário.");
+      // Rollback só se ESTA requisição criou o usuário — nunca na ativação.
+      createdUserId = user.id;
+    }
 
     // 2. Upload do documento obrigatório.
     const objectPath = await uploadDocument(user.id, docField, validatedDoc);
@@ -505,35 +586,49 @@ export async function POST(request) {
     }
 
     // 6. E-mail de confirmação de conta com status, ao final de todas as
-    // etapas do cadastro.
+    // etapas do cadastro. Na ativação a conta já está confirmada, então o
+    // e-mail não leva botão de confirmação — só o status e o acesso.
     try {
-      const { data: linkData, error: linkError } =
-        await supabaseAdmin.auth.admin.generateLink({
-          type: "signup",
-          email: data.email,
-          options: { redirectTo: `${SITE_URL}/oraculoacademico/login` },
+      if (isActivation) {
+        await resend.emails.send({
+          from: RESEND_FROM,
+          to: data.email,
+          subject: "Cadastro do Oráculo Acadêmico recebido",
+          html: oraculoAccountConfirmationTemplate({
+            name: data.nome,
+            verifyUrl: null,
+            activation: true,
+          }),
         });
+      } else {
+        const { data: linkData, error: linkError } =
+          await supabaseAdmin.auth.admin.generateLink({
+            type: "signup",
+            email: data.email,
+            options: { redirectTo: `${SITE_URL}/oraculoacademico/login` },
+          });
 
-      if (linkError) throw linkError;
+        if (linkError) throw linkError;
 
-      const hashedToken = linkData?.properties?.hashed_token;
-      if (!hashedToken) {
-        throw new Error("Não foi possível gerar o token de confirmação.");
+        const hashedToken = linkData?.properties?.hashed_token;
+        if (!hashedToken) {
+          throw new Error("Não foi possível gerar o token de confirmação.");
+        }
+
+        const verifyUrl = new URL("/confirmar-email/processar", SITE_URL);
+        verifyUrl.searchParams.set("token_hash", hashedToken);
+        verifyUrl.searchParams.set("type", "signup");
+
+        await resend.emails.send({
+          from: RESEND_FROM,
+          to: data.email,
+          subject: "Bem-vindo ao Oráculo Acadêmico — confirme sua conta",
+          html: oraculoAccountConfirmationTemplate({
+            name: data.nome,
+            verifyUrl: verifyUrl.toString(),
+          }),
+        });
       }
-
-      const verifyUrl = new URL("/confirmar-email/processar", SITE_URL);
-      verifyUrl.searchParams.set("token_hash", hashedToken);
-      verifyUrl.searchParams.set("type", "signup");
-
-      await resend.emails.send({
-        from: RESEND_FROM,
-        to: data.email,
-        subject: "Bem-vindo ao Oráculo Acadêmico — confirme sua conta",
-        html: oraculoAccountConfirmationTemplate({
-          name: data.nome,
-          verifyUrl: verifyUrl.toString(),
-        }),
-      });
     } catch (emailError) {
       console.error(
         "[Oraculo/Cadastro] Falha ao enviar confirmação de conta:",
@@ -545,8 +640,9 @@ export async function POST(request) {
     return json(
       {
         success: true,
-        message:
-          "Cadastro recebido! Verifique seu e-mail para confirmar sua conta.",
+        message: isActivation
+          ? "Cadastro do Oráculo vinculado à sua conta existente! Seu acesso usa o e-mail e a senha que você já possui."
+          : "Cadastro recebido! Verifique seu e-mail para confirmar sua conta.",
       },
       201,
     );

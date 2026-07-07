@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -74,6 +74,7 @@ const INITIAL_FORM = {
   confirmarSenha: "",
   origem_descoberta: "",
   tipo: "",
+  instituicao_id: "",
   instituicao_ensino: "",
   periodo_atual: "",
   previsao_conclusao: "",
@@ -88,6 +89,10 @@ const INITIAL_FORM = {
   bio: "",
   motivo_participacao: "",
 };
+
+// Valor especial do select de instituição: candidato indica uma instituição
+// que ainda não participa do programa.
+const INDICAR_INSTITUICAO = "INDICAR";
 
 function formatPhone(value) {
   const numbers = value.replace(/\D/g, "").slice(0, 11);
@@ -109,6 +114,31 @@ export default function OraculoCadastroPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [instituicoes, setInstituicoes] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInstituicoes() {
+      try {
+        const response = await fetch("/api/oraculo/instituicoes", {
+          cache: "no-store",
+        });
+        const payload = await response.json().catch(() => null);
+        if (!cancelled && response.ok && payload?.success) {
+          setInstituicoes(payload.data || []);
+        }
+      } catch {
+        // Sem lista, o candidato ainda consegue concluir indicando a
+        // instituição por texto.
+      }
+    }
+
+    loadInstituicoes();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const docFieldForTipo = useMemo(() => {
     if (form.tipo === "ESTAGIARIO") return "comprovante_estagiario";
@@ -202,8 +232,14 @@ export default function OraculoCadastroPage() {
       if (!form.tipo || form.tipo === "ADVOGADO_OAB") {
         return "Selecione seu perfil jurídico/acadêmico.";
       }
-      if (!form.instituicao_ensino.trim()) {
-        return "Informe a instituição de ensino.";
+      if (!form.instituicao_id) {
+        return "Selecione a sua instituição de ensino.";
+      }
+      if (
+        form.instituicao_id === INDICAR_INSTITUICAO &&
+        form.instituicao_ensino.trim().length < 3
+      ) {
+        return "Informe o nome da instituição de ensino que deseja indicar.";
       }
       if (form.tipo === "ESTUDANTE" && !form.periodo_atual) {
         return "Informe seu período atual.";
@@ -305,7 +341,14 @@ export default function OraculoCadastroPage() {
         estado: form.estado,
         origem_descoberta: form.origem_descoberta,
         tipo: form.tipo,
-        instituicao_ensino: form.instituicao_ensino.trim(),
+        instituicao_id:
+          form.instituicao_id === INDICAR_INSTITUICAO
+            ? null
+            : form.instituicao_id,
+        instituicao_ensino:
+          form.instituicao_id === INDICAR_INSTITUICAO
+            ? form.instituicao_ensino.trim()
+            : null,
         periodo_atual: form.periodo_atual || null,
         previsao_conclusao: form.previsao_conclusao || null,
         numero_matricula: form.numero_matricula || null,
@@ -389,6 +432,14 @@ export default function OraculoCadastroPage() {
                 documentos forem validados e pelo menos um supervisor
                 aprovar, seu acesso é liberado.
               </p>
+              <div className={styles.institutionNotice}>
+                <AlertCircle size={16} aria-hidden="true" />
+                <span>
+                  Importante: seu cadastro só será aceito se a sua
+                  instituição de ensino estiver participando do programa
+                  Oráculo Acadêmico.
+                </span>
+              </div>
               <Link href="/oraculoacademico/login" className={styles.submitBtn}>
                 Ir para o login
               </Link>
@@ -654,16 +705,51 @@ export default function OraculoCadastroPage() {
                     <label className={styles.label}>
                       Instituição de ensino/faculdade
                     </label>
-                    <input
-                      type="text"
-                      name="instituicao_ensino"
-                      value={form.instituicao_ensino}
+                    <select
+                      name="instituicao_id"
+                      value={form.instituicao_id}
                       onChange={handleChange}
                       className={styles.input}
-                      maxLength={180}
                       disabled={loading}
-                    />
+                    >
+                      <option value="">Selecione</option>
+                      {instituicoes.map((instituicao) => (
+                        <option key={instituicao.id} value={instituicao.id}>
+                          {instituicao.nome}
+                        </option>
+                      ))}
+                      <option value={INDICAR_INSTITUICAO}>
+                        Minha instituição não está na lista — indicar
+                      </option>
+                    </select>
+                    <p className={styles.hint}>
+                      A lista mostra as instituições que participam do
+                      programa Oráculo Acadêmico.
+                    </p>
                   </div>
+
+                  {form.instituicao_id === INDICAR_INSTITUICAO && (
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>
+                        Nome da instituição de ensino
+                      </label>
+                      <input
+                        type="text"
+                        name="instituicao_ensino"
+                        value={form.instituicao_ensino}
+                        onChange={handleChange}
+                        className={styles.input}
+                        maxLength={180}
+                        disabled={loading}
+                      />
+                      <p className={styles.hintWarning}>
+                        Atenção: seu cadastro só será aceito se a instituição
+                        indicada passar a participar do programa Oráculo
+                        Acadêmico. Vamos registrar a indicação e entrar em
+                        contato com a instituição.
+                      </p>
+                    </div>
+                  )}
 
                   {form.tipo === "ESTUDANTE" && (
                     <>

@@ -101,8 +101,13 @@ function validatePayload(payload) {
     );
   }
 
-  const instituicaoEnsino = text(payload?.instituicao_ensino, 180);
-  if (!instituicaoEnsino) {
+  // Instituição: ou um id vindo do select (instituição PARTICIPANTE), ou o
+  // nome digitado quando o candidato indica uma instituição nova. O nome
+  // final é sempre resolvido no servidor (nunca se confia no texto do
+  // cliente quando há id).
+  const instituicaoId = text(payload?.instituicao_id, 60) || null;
+  const instituicaoEnsino = text(payload?.instituicao_ensino, 180) || null;
+  if (!instituicaoId && !instituicaoEnsino) {
     throw fail("Informe a instituição de ensino.");
   }
 
@@ -207,6 +212,7 @@ function validatePayload(payload) {
     tipo,
     oabEstagiarioNumero,
     oabEstagiarioUf,
+    instituicaoId,
     instituicaoEnsino,
     periodoAtual,
     previsaoConclusao,
@@ -301,6 +307,56 @@ export async function POST(request) {
       );
     }
 
+    // Resolver a instituição de ensino. Com id: precisa existir e estar
+    // PARTICIPANTE (é o que o select público lista). Sem id: o candidato
+    // indicou uma instituição nova — registra como INDICADA para a equipe
+    // formalizar a participação depois.
+    let instituicaoIdFinal = null;
+    let instituicaoNome = data.instituicaoEnsino;
+
+    if (data.instituicaoId) {
+      const { data: instituicao } = await supabaseAdmin
+        .from("oraculo_instituicoes")
+        .select("id, nome, status")
+        .eq("id", data.instituicaoId)
+        .maybeSingle();
+
+      if (!instituicao || instituicao.status !== "PARTICIPANTE") {
+        throw fail("Selecione uma instituição de ensino válida.");
+      }
+
+      instituicaoIdFinal = instituicao.id;
+      instituicaoNome = instituicao.nome;
+    } else {
+      const { data: existente } = await supabaseAdmin
+        .from("oraculo_instituicoes")
+        .select("id, nome")
+        .ilike("nome", instituicaoNome)
+        .maybeSingle();
+
+      if (existente) {
+        instituicaoIdFinal = existente.id;
+        instituicaoNome = existente.nome;
+      } else {
+        const { data: indicada, error: indicadaError } = await supabaseAdmin
+          .from("oraculo_instituicoes")
+          .insert([{ nome: instituicaoNome, status: "INDICADA" }])
+          .select("id")
+          .single();
+
+        if (indicadaError) {
+          // Não bloqueia o cadastro: o nome em texto continua registrado no
+          // perfil mesmo sem a linha na tabela de instituições.
+          console.error(
+            "[Oraculo/Cadastro] Falha ao registrar instituição indicada:",
+            indicadaError,
+          );
+        } else {
+          instituicaoIdFinal = indicada.id;
+        }
+      }
+    }
+
     // Documento obrigatório de acordo com o tipo de perfil.
     let docField = "comprovante_matricula";
     let docLabel = "comprovante de matrícula";
@@ -360,7 +416,8 @@ export async function POST(request) {
           estado: data.estado,
           origem_descoberta: data.origemDescoberta,
           tipo: data.tipo,
-          instituicao_ensino: data.instituicaoEnsino,
+          instituicao_id: instituicaoIdFinal,
+          instituicao_ensino: instituicaoNome,
           periodo_atual: data.periodoAtual,
           previsao_conclusao: data.previsaoConclusao,
           numero_matricula: data.numeroMatricula,

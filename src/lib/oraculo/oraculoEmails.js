@@ -112,6 +112,14 @@ export function oraculoAccountConfirmationTemplate({ name, verifyUrl }) {
           seus documentos, você vira Oráculo ativo.
         </p>
       </div>
+      <div style="margin:0 0 20px;padding:14px 16px;border-radius:10px;border:1px solid rgba(250,204,21,0.35);background:rgba(250,204,21,0.06);">
+        <p style="margin:0;color:#facc15;font-size:13px;line-height:1.6;">
+          <strong>Importante:</strong> seu cadastro só será aceito se a sua
+          instituição de ensino estiver participando do programa Oráculo
+          Acadêmico. Se você indicou uma instituição nova, registramos a
+          indicação e vamos entrar em contato com ela.
+        </p>
+      </div>
       ${button(verifyUrl, "Confirmar minha conta")}
       <p style="margin:0;color:#a8a8a8;font-size:13px;line-height:1.55;text-align:center;">
         O link possui validade limitada. Caso você não tenha solicitado este

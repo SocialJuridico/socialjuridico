@@ -878,9 +878,16 @@
 }
 
 .rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   color: #f9df84 !important;
   font-weight: 900;
-  word-spacing: 8px;
+}
+
+.rowActions a {
+  color: #f9df84;
+  text-decoration: none;
 }
 
 .academicEmpty,

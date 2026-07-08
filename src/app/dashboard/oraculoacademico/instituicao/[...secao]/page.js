@@ -590,6 +590,7 @@ export async function createInstitutionReportAction(formData) {
   const periodoInicio = textField(formData, "periodo_inicio");
   const periodoFim = textField(formData, "periodo_fim");
   const titulo = textField(formData, "titulo", REPORT_TYPE_LABELS[tipo] || "Relatorio institucional");
+  const downloadFormat = textField(formData, "download_format", "pdf");
 
   const payload = {
     instituicao_id: instituicaoId,
@@ -611,6 +612,7 @@ export async function createInstitutionReportAction(formData) {
       periodo_inicio: periodoInicio,
       periodo_fim: periodoFim,
       template_version: numberField(formData, "template_version", 1),
+      download_format: downloadFormat,
     },
     fonte_dados: {
       atividades: "oraculo_atividades_academicas",
@@ -624,6 +626,10 @@ export async function createInstitutionReportAction(formData) {
     assinaturas_concluidas: 0,
     generated_by_auth_user_id: user.id,
     generated_by_name_snapshot: user.email,
+    arquivo_url: "/api/oraculoacademico/instituicao/relatorios/pendente/download",
+    metadata: {
+      formato_preferido: downloadFormat,
+    },
   };
 
   if (!payload.titulo || !payload.periodo_inicio || !payload.periodo_fim) {
@@ -659,7 +665,7 @@ export async function createInstitutionReportAction(formData) {
   ]);
 
   revalidatePath("/dashboard/oraculoacademico/instituicao/relatorios");
-  redirect("/dashboard/oraculoacademico/instituicao/relatorios?criado=1");
+  redirect(`/api/oraculoacademico/instituicao/relatorios/${data.id}/download?format=${downloadFormat}`);
 }
 
 export async function createInstitutionUserAction(formData) {
@@ -1954,7 +1960,11 @@ function renderReportRow(item) {
     <span key="autor">{item.geradoPor}</span>,
     <span key="assinatura">{item.assinatura}<small>{item.assinaturaStatus}</small></span>,
     <StatusBadge key="status" status={item.status} />,
-    <span key="acoes" className={styles.rowActions}>Visualizar Parametros Arquivar</span>,
+    <span key="acoes" className={styles.rowActions}>
+      <Link href={`/api/oraculoacademico/instituicao/relatorios/${item.id}/download?format=pdf`}>PDF</Link>
+      <Link href={`/api/oraculoacademico/instituicao/relatorios/${item.id}/download?format=docx`}>DOCX</Link>
+      <Link href={`/api/oraculoacademico/instituicao/relatorios/${item.id}/download?format=xlsx`}>Excel</Link>
+    </span>,
   ];
 }
 
@@ -2647,11 +2657,18 @@ function ReportForm({ programs, classes, students }) {
             </select>
           </Field>
           <Field label="Assinaturas requeridas" name="assinaturas_requeridas" type="number" min="0" defaultValue="0" />
+          <Field label="Formato para baixar agora" name="download_format">
+            <select name="download_format" defaultValue="pdf">
+              <option value="pdf">PDF estilizado</option>
+              <option value="docx">Word DOCX</option>
+              <option value="xlsx">Excel XLSX</option>
+            </select>
+          </Field>
         </div>
       </section>
 
       <SubmitRow backHref="/dashboard/oraculoacademico/instituicao/relatorios">
-        <button type="submit">Gerar relatorio</button>
+        <button type="submit">Gerar e baixar</button>
       </SubmitRow>
     </form>
   );

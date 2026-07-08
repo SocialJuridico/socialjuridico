@@ -58,7 +58,25 @@ export default function OraculoAcademicoLoginPage() {
         return;
       }
 
-      router.push("/oraculoacademico/painel");
+      const institutionalContext = data.user?.institutionContexts?.find(
+        (context) =>
+          context.status === "ATIVO" &&
+          context.roles?.some((role) =>
+            [
+              "ORACULO_INSTITUICAO_ADMIN",
+              "ORACULO_COORDENADOR_CURSO",
+              "ORACULO_COORDENADOR_NPJ",
+              "ORACULO_PROFESSOR_ORIENTADOR",
+              "ORACULO_SUPERVISOR_JURIDICO",
+            ].includes(role),
+          ),
+      );
+
+      router.push(
+        institutionalContext
+          ? "/dashboard/oraculoacademico/instituicao"
+          : "/oraculoacademico/painel",
+      );
     } catch {
       setErrorMsg("Não foi possível conectar ao servidor.");
     } finally {

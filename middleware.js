@@ -18,9 +18,22 @@ const AUTH_ROUTES = [
 const LAWYER_ROOT = "/dashboard/advogado";
 const LAWYER_HOME = "/dashboard/advogado/oportunidade";
 const SIGNATURE_AUTH_COOKIE_NAME = "sj-signature-auth";
+const ORACULO_INSTITUTION_DASHBOARD = "/dashboard/oraculoacademico/instituicao";
+const LOCAL_DEV_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
+  const isLocalDevHost = LOCAL_DEV_HOSTS.has(request.nextUrl.hostname);
+  const allowOraculoDevBypass =
+    process.env.NODE_ENV !== "production" &&
+    process.env.ORACULO_DEV_BYPASS !== "false" &&
+    isLocalDevHost &&
+    pathname.startsWith(ORACULO_INSTITUTION_DASHBOARD);
+
+  if (allowOraculoDevBypass) {
+    return NextResponse.next();
+  }
+
   const isProtected = PROTECTED_ROUTES.some((route) =>
     pathname.startsWith(route),
   );

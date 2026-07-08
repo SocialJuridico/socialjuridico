@@ -63,6 +63,32 @@ export default async function OraculoAcademicoPainelPage() {
   }
 
   const db = supabaseAdmin || supabase;
+
+  const { data: institutionalAccess } = await db
+    .from("oraculo_instituicao_usuarios")
+    .select("id, status, oraculo_instituicao_user_roles(role, revoked_at)")
+    .eq("auth_user_id", user.id)
+    .eq("status", "ATIVO");
+
+  const hasInstitutionalDashboardAccess = (institutionalAccess || []).some(
+    (context) =>
+      (context.oraculo_instituicao_user_roles || []).some(
+        (role) =>
+          !role.revoked_at &&
+          [
+            "ORACULO_INSTITUICAO_ADMIN",
+            "ORACULO_COORDENADOR_CURSO",
+            "ORACULO_COORDENADOR_NPJ",
+            "ORACULO_PROFESSOR_ORIENTADOR",
+            "ORACULO_SUPERVISOR_JURIDICO",
+          ].includes(role.role),
+      ),
+  );
+
+  if (hasInstitutionalDashboardAccess) {
+    redirect("/dashboard/oraculoacademico/instituicao");
+  }
+
   const { data: profile } = await db
     .from("oraculo_profissionais")
     .select("name, status")

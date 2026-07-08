@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   AlertTriangle,
@@ -23,6 +24,7 @@ import {
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 
+import InstitutionLogoutButton from "./InstitutionLogoutButton";
 import styles from "./InstitutionDashboard.module.css";
 
 const NAV_GROUPS = [
@@ -154,6 +156,26 @@ const NAV_GROUPS = [
   },
 ];
 
+const IS_DEV_DASHBOARD_BYPASS =
+  process.env.NODE_ENV !== "production" &&
+  process.env.ORACULO_DEV_BYPASS !== "false";
+
+function isLocalDevHost(host = "") {
+  return (
+    host === "localhost" ||
+    host.startsWith("localhost:") ||
+    host === "127.0.0.1" ||
+    host.startsWith("127.0.0.1:") ||
+    host === "::1" ||
+    host === "[::1]" ||
+    host.startsWith("[::1]:")
+  );
+}
+
+function canUseDevDashboardBypass(requestHeaders) {
+  return IS_DEV_DASHBOARD_BYPASS && isLocalDevHost(requestHeaders.get("host") || "");
+}
+
 function hasPermission(access, permission) {
   return access.permissions.includes(permission);
 }
@@ -220,21 +242,21 @@ async function loadInstitutionDashboardData({ instituicaoId }) {
   ] = await Promise.all([
     safeCount(
       supabaseAdmin
-        .from("oraculo_profissionais")
+        .from("oraculo_estudante_vinculos_academicos")
         .select("id", { count: "exact", head: true })
         .eq("instituicao_id", instituicaoId)
-        .eq("status", "ATIVO"),
+        .eq("status_academico", "ATIVO"),
     ),
     safeCount(
       supabaseAdmin
-        .from("oraculo_profissionais")
+        .from("oraculo_estudante_vinculos_academicos")
         .select("id", { count: "exact", head: true })
         .eq("instituicao_id", instituicaoId)
-        .in("status", [
-          "CADASTRO_INCOMPLETO",
-          "PENDENTE_DOCUMENTOS",
-          "PENDENTE_SUPERVISOR",
-          "PENDENTE_ADMIN",
+        .in("status_academico", [
+          "PENDENTE_VINCULO",
+          "PAUSADO",
+          "AFASTADO",
+          "SUSPENSO",
         ]),
     ),
     safeCount(
@@ -353,47 +375,136 @@ function formatTime(value) {
   }).format(new Date(value));
 }
 
+async function createDevDashboardContext() {
+  const { data: institutionRecord } = await supabaseAdmin
+    .from("oraculo_instituicoes")
+    .select(
+      "id, nome, sigla, status, nome_programa, modalidade_parceria, dominio_institucional, dominio_email, instituicao_mfa_policy",
+    )
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const dashboardData = institutionRecord?.id
+    ? await loadInstitutionDashboardData({ instituicaoId: institutionRecord.id })
+    : {
+        activeStudents: 0,
+        pendingStudents: 0,
+        activeUsers: 0,
+        pendingInvites: 0,
+        formalSupervisors: 0,
+        documents: 0,
+        recentAudit: [],
+      };
+
+  return {
+    user: {
+      email: "visualizacao.local@socialjuridico.local",
+      user_metadata: {
+        name: "Visualizacao Local",
+      },
+    },
+    access: {
+      institutionUserId: "dev-local-institution-user",
+      instituicaoId: institutionRecord?.id || "dev-local-institution",
+      status: "ATIVO",
+      roles: ["ORACULO_INSTITUICAO_ADMIN"],
+      permissions: [
+        "INSTITUTION_VIEW_DASHBOARD",
+        "INSTITUTION_MANAGE_USERS",
+        "INSTITUTION_INVITE_USERS",
+        "INSTITUTION_MANAGE_ROLES",
+        "INSTITUTION_VIEW_PROGRAMS",
+        "INSTITUTION_MANAGE_PROGRAMS",
+        "INSTITUTION_VIEW_STUDENTS",
+        "INSTITUTION_VIEW_REPORTS",
+        "INSTITUTION_VIEW_METRICS",
+        "INSTITUTION_VIEW_AUDIT",
+        "PROGRAM_MANAGE_ORIENTATORS",
+        "PROGRAM_MANAGE_SUPERVISORS",
+        "STUDENT_EVALUATE",
+        "STUDENT_REVIEW_ACTIVITY",
+        "STUDENT_APPROVE_ACTIVITY",
+      ],
+      programScopes: [],
+      mfaRequired: false,
+    },
+    instituicao: institutionRecord || {
+      nome: "Nenhuma instituicao cadastrada",
+      sigla: "SJ",
+      status: "SEM DADOS",
+      nome_programa: "Programa Oraculo",
+      modalidade_parceria: null,
+    },
+    dashboardData,
+  };
+}
+
 export default async function OraculoInstitutionDashboardPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const requestHeaders = await headers();
+  const allowDevDashboardBypass = canUseDevDashboardBypass(requestHeaders);
+  let currentUser = null;
+  let access;
+  let instituicao;
+  let dashboardData;
 
-  if (!user) redirect("/oraculoacademico/login");
-
-  const { data: memberships } = await supabaseAdmin
-    .from("oraculo_instituicao_usuarios")
-    .select("instituicao_id")
-    .eq("auth_user_id", user.id)
-    .eq("status", "ATIVO")
-    .limit(1);
-
-  const instituicaoId = memberships?.[0]?.instituicao_id;
-  if (!instituicaoId) redirect("/oraculoacademico/login");
-
-  const access = await getInstitutionAccessContext({
-    authUserId: user.id,
-    instituicaoId,
-  });
-
-  if (!access || !hasPermission(access, "INSTITUTION_VIEW_DASHBOARD")) {
-    redirect("/oraculoacademico/login");
+  if (allowDevDashboardBypass) {
+    const preview = await createDevDashboardContext();
+    currentUser = preview.user;
+    access = preview.access;
+    instituicao = preview.instituicao;
+    dashboardData = preview.dashboardData;
   }
 
-  const [{ data: instituicao }, dashboardData] = await Promise.all([
-    supabaseAdmin
-      .from("oraculo_instituicoes")
-      .select(
-        "nome, sigla, status, nome_programa, modalidade_parceria, dominio_institucional, dominio_email, instituicao_mfa_policy",
-      )
-      .eq("id", instituicaoId)
-      .maybeSingle(),
-    loadInstitutionDashboardData({ instituicaoId }),
-  ]);
+  if (!currentUser) {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    currentUser = user;
+  }
+
+  if (!currentUser) redirect("/oraculoacademico/login");
+
+  if (!access) {
+    const { data: memberships } = await supabaseAdmin
+      .from("oraculo_instituicao_usuarios")
+      .select("instituicao_id")
+      .eq("auth_user_id", currentUser.id)
+      .eq("status", "ATIVO")
+      .limit(1);
+
+    const instituicaoId = memberships?.[0]?.instituicao_id;
+    if (!instituicaoId) redirect("/oraculoacademico/login");
+
+    access = await getInstitutionAccessContext({
+      authUserId: currentUser.id,
+      instituicaoId,
+    });
+
+    if (!access || !hasPermission(access, "INSTITUTION_VIEW_DASHBOARD")) {
+      redirect("/oraculoacademico/login");
+    }
+
+    const [{ data: institutionRecord }, institutionDashboardData] = await Promise.all([
+      supabaseAdmin
+        .from("oraculo_instituicoes")
+        .select(
+          "nome, sigla, status, nome_programa, modalidade_parceria, dominio_institucional, dominio_email, instituicao_mfa_policy",
+        )
+        .eq("id", instituicaoId)
+        .maybeSingle(),
+      loadInstitutionDashboardData({ instituicaoId }),
+    ]);
+
+    instituicao = institutionRecord;
+    dashboardData = institutionDashboardData;
+  }
 
   const navigation = filterNavigation(access);
   const attentionItems = buildAttentionItems(dashboardData, access);
-  const userName = displayName(user);
+  const userName = displayName(currentUser);
   const roleLabel = firstRoleLabel(access.roles);
   const programName = instituicao?.nome_programa || "Programa Oraculo";
   const institutionName = instituicao?.nome || "Instituicao de ensino";
@@ -516,6 +627,7 @@ export default async function OraculoInstitutionDashboardPage() {
               <strong>{userName}</strong>
               <small>{roleLabel}</small>
             </div>
+            <InstitutionLogoutButton />
           </div>
         </header>
 

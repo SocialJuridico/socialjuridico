@@ -1866,13 +1866,44 @@ async function loadInstitutionCandidateQueue() {
   const instituicaoId = await getCurrentInstitutionId();
   if (!instituicaoId) return [];
 
-  const candidates = await safeSelect("oraculo_profissionais", (query) =>
+  const rawCandidates = await safeSelect("oraculo_profissionais", (query) =>
     query
       .select("id, name, email, tipo, status, periodo_atual, numero_matricula, created_at, motivo_reprovacao, suspenso_em")
       .eq("instituicao_id", instituicaoId)
-      .in("status", ["PENDENTE_DOCUMENTOS", "PENDENTE_SUPERVISOR", "PENDENTE_ADMIN", "REPROVADO", "SUSPENSO"])
+      // ATIVO entra para exibir aprovados que ainda nao foram vinculados a um
+      // programa/turma. Sem isso o aluno recem-aprovado some do dashboard: fica
+      // fora da fila (deixa de ser pendente) e ainda nao aparece na tabela de
+      // vinculos academicos (o vinculo so nasce na tela de vincular).
+      .in("status", ["PENDENTE_DOCUMENTOS", "PENDENTE_SUPERVISOR", "PENDENTE_ADMIN", "ATIVO", "REPROVADO", "SUSPENSO"])
       .order("created_at", { ascending: false }),
   );
+
+  if (!rawCandidates.length) return [];
+
+  const rawCandidateIds = rawCandidates.map((item) => item.id);
+
+  // Aprovados que ja possuem vinculo academico saem da fila: eles ja aparecem
+  // na tabela de estudantes. Mantemos na fila apenas os aprovados ainda sem
+  // vinculo, alem de todos os pendentes/reprovados/suspensos.
+  const existingLinks = await safeSelect(
+    "oraculo_estudante_vinculos_academicos",
+    (query) =>
+      query
+        .select("oraculo_profissional_id")
+        .eq("instituicao_id", instituicaoId)
+        .in("oraculo_profissional_id", rawCandidateIds),
+  );
+  const linkedProfessionalIds = new Set(
+    existingLinks.map((item) => item.oraculo_profissional_id),
+  );
+
+  const candidates = rawCandidates.filter((candidate) => {
+    if (candidate.status !== "ATIVO") return true;
+    // So estudantes aprovados e ainda nao vinculados continuam na fila.
+    return (
+      candidate.tipo === "ESTUDANTE" && !linkedProfessionalIds.has(candidate.id)
+    );
+  });
 
   if (!candidates.length) return [];
 
@@ -2346,8 +2377,16 @@ function CandidateDecisionQueue({ candidates }) {
       <div className={styles.candidateList}>
         {candidates.map((candidate) => {
           const isFinal = ["REPROVADO", "SUSPENSO"].includes(candidate.status);
-          const canApprove = !isFinal;
-          const canReject = !isFinal;
+          const isApproved = candidate.status === "ATIVO";
+          const canApprove = !isFinal && !isApproved;
+          const canReject = !isFinal && !isApproved;
+          const vincularHref = `/dashboard/oraculoacademico/instituicao/estudantes/vincular?nome=${encodeURIComponent(
+            candidate.name || "",
+          )}&email=${encodeURIComponent(
+            candidate.email || "",
+          )}&periodo_atual=${encodeURIComponent(
+            candidate.periodo_atual || "",
+          )}&matricula=${encodeURIComponent(candidate.numero_matricula || "")}`;
 
           return (
             <article key={candidate.id} className={styles.candidateCard}>
@@ -2364,26 +2403,43 @@ function CandidateDecisionQueue({ candidates }) {
                 {candidate.supervisorCount} aprovaram.
               </p>
               <div className={styles.candidateActions}>
-                <form action={decideOraculoCandidateAction}>
-                  <input type="hidden" name="id" value={candidate.id} />
-                  <input type="hidden" name="decision" value="APROVADO" />
-                  <button type="submit" disabled={!canApprove}>
-                    Aprovar pela instituicao
-                  </button>
-                </form>
-                <form action={decideOraculoCandidateAction}>
-                  <input type="hidden" name="id" value={candidate.id} />
-                  <input type="hidden" name="decision" value="REPROVADO" />
-                  <input
-                    name="motivo"
-                    placeholder="Motivo da reprovacao"
-                    disabled={!canReject}
-                    required={canReject}
-                  />
-                  <button type="submit" disabled={!canReject}>
-                    Reprovar
-                  </button>
-                </form>
+                {isApproved ? (
+                  <div className={styles.candidateApprovedNote}>
+                    <p>
+                      Aprovado pela instituicao. Vincule a um programa/turma para
+                      concluir a entrada do estudante.
+                    </p>
+                    <Link
+                      href={vincularHref}
+                      className={styles.candidateLinkAction}
+                    >
+                      Vincular a programa/turma
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    <form action={decideOraculoCandidateAction}>
+                      <input type="hidden" name="id" value={candidate.id} />
+                      <input type="hidden" name="decision" value="APROVADO" />
+                      <button type="submit" disabled={!canApprove}>
+                        Aprovar pela instituicao
+                      </button>
+                    </form>
+                    <form action={decideOraculoCandidateAction}>
+                      <input type="hidden" name="id" value={candidate.id} />
+                      <input type="hidden" name="decision" value="REPROVADO" />
+                      <input
+                        name="motivo"
+                        placeholder="Motivo da reprovacao"
+                        disabled={!canReject}
+                        required={canReject}
+                      />
+                      <button type="submit" disabled={!canReject}>
+                        Reprovar
+                      </button>
+                    </form>
+                  </>
+                )}
               </div>
               {candidate.supervisors?.length > 0 && (
                 <ul className={styles.supervisorInviteList}>
@@ -2651,16 +2707,44 @@ function ClassForm({ programs }) {
   );
 }
 
-function StudentLinkForm({ programs, classes, institutionName }) {
+function StudentLinkForm({
+  programs,
+  classes,
+  institutionName,
+  defaultNome = "",
+  defaultEmail = "",
+  defaultPeriodo = "",
+  defaultMatricula = "",
+}) {
   return (
     <form action={linkAcademicStudentAction} className={styles.academicForm}>
       <section>
         <h2>Dados do estudante</h2>
         <div className={styles.formGrid}>
-          <Field label="Nome completo" name="nome" required />
-          <Field label="E-mail" name="email" type="email" required />
-          <Field label="Matricula" name="matricula" />
-          <Field label="Periodo atual" name="periodo_atual" placeholder="9o periodo" />
+          <Field
+            label="Nome completo"
+            name="nome"
+            required
+            defaultValue={defaultNome}
+          />
+          <Field
+            label="E-mail"
+            name="email"
+            type="email"
+            required
+            defaultValue={defaultEmail}
+          />
+          <Field
+            label="Matricula"
+            name="matricula"
+            defaultValue={defaultMatricula}
+          />
+          <Field
+            label="Periodo atual"
+            name="periodo_atual"
+            placeholder="9o periodo"
+            defaultValue={defaultPeriodo}
+          />
           <Field label="Curso" name="curso" defaultValue="Direito" />
           <Field
             label="Instituicao de ensino"
@@ -3169,7 +3253,7 @@ function InstitutionDocumentForm({ programs }) {
   );
 }
 
-async function WizardPage({ section, action }) {
+async function WizardPage({ section, action, searchParams = {} }) {
   const isProgram = section === "programas";
   const isClass = section === "turmas";
   const isStudent = section === "estudantes";
@@ -3228,6 +3312,22 @@ async function WizardPage({ section, action }) {
           programs={programs}
           classes={classes}
           institutionName={institutionName}
+          defaultNome={
+            typeof searchParams.nome === "string" ? searchParams.nome : ""
+          }
+          defaultEmail={
+            typeof searchParams.email === "string" ? searchParams.email : ""
+          }
+          defaultPeriodo={
+            typeof searchParams.periodo_atual === "string"
+              ? searchParams.periodo_atual
+              : ""
+          }
+          defaultMatricula={
+            typeof searchParams.matricula === "string"
+              ? searchParams.matricula
+              : ""
+          }
         />
       )}
       {isSupervisor && <SupervisorForm />}
@@ -3332,15 +3432,25 @@ async function ListPage({ section }) {
   );
 }
 
-export default async function OraculoInstitutionSectionPage({ params }) {
+export default async function OraculoInstitutionSectionPage({
+  params,
+  searchParams,
+}) {
   const { allowed } = await canAccessRoute();
   if (!allowed) redirect("/oraculoacademico/login");
 
   const { secao = [] } = await params;
   const [section, action] = secao;
+  const resolvedSearchParams = (await searchParams) || {};
 
   if (["novo", "nova", "vincular", "registrar", "solicitar-alteracao", "adicionar-estudantes"].includes(action)) {
-    return <WizardPage section={section} action={action} />;
+    return (
+      <WizardPage
+        section={section}
+        action={action}
+        searchParams={resolvedSearchParams}
+      />
+    );
   }
 
   if (PAGE_CONFIG[section] && action) {

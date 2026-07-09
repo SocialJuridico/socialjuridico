@@ -1,10 +1,37 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
+import { DEFAULT_PUBLIC_APP_ORIGIN } from "@/lib/publicAppOrigin";
 import { NextResponse } from "next/server";
 
 const SITE_URL = "https://www.socialjuridico.com.br";
 const DASHBOARD_URL = `${SITE_URL}/dashboard/cliente`;
-const LOGIN_URL = `${SITE_URL}/login`;
+
+function isLoopbackHost(hostname = "") {
+  const normalized = String(hostname).toLowerCase();
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "0.0.0.0" ||
+    normalized === "::1" ||
+    normalized.endsWith(".localhost")
+  );
+}
+
+export function normalizeTrackingDestination(value) {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    if (!isLoopbackHost(url.hostname)) return url.toString();
+
+    const publicUrl = new URL(url.pathname, DEFAULT_PUBLIC_APP_ORIGIN);
+    publicUrl.search = url.search;
+    publicUrl.hash = url.hash;
+    return publicUrl.toString();
+  } catch {
+    return null;
+  }
+}
 
 export function isPublicDestination(value) {
   if (!value) {
@@ -25,6 +52,9 @@ export function isPublicDestination(value) {
         url.pathname.startsWith("/atualizar-senha") ||
         url.pathname.startsWith("/notificacao/") ||
         url.pathname.startsWith("/assinatura/") ||
+        url.pathname.startsWith("/oraculoacademico/supervisor/") ||
+        url.pathname.startsWith("/oraculoacademico/convite-institucional/") ||
+        url.pathname.startsWith("/oraculoacademico/login") ||
         url.pathname.startsWith("/api/auth/confirm-email") ||
         url.pathname.startsWith("/login") ||
         url.pathname.startsWith("/cadastro")
@@ -48,7 +78,8 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const trackId = searchParams.get("trackId");
   const dest = searchParams.get("dest");
-  const redirectTarget = dest || DASHBOARD_URL;
+  const safeDest = normalizeTrackingDestination(dest);
+  const redirectTarget = safeDest || DASHBOARD_URL;
 
   if (!trackId) {
     return NextResponse.redirect(redirectTarget);
@@ -96,15 +127,15 @@ export async function GET(request) {
       }
 
       // Confirmation and recovery links must remain usable without an existing session.
-      if (isPublicDestination(dest)) {
+      if (isPublicDestination(redirectTarget)) {
         return NextResponse.redirect(redirectTarget);
       }
 
       const loginRedirect = new URL("/login", SITE_URL);
       loginRedirect.searchParams.set("trackId", trackId);
 
-      if (dest) {
-        loginRedirect.searchParams.set("redirectTo", dest);
+      if (safeDest) {
+        loginRedirect.searchParams.set("redirectTo", safeDest);
       }
 
       return NextResponse.redirect(loginRedirect);

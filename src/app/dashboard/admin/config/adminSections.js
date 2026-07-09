@@ -48,7 +48,7 @@ export function createAdminSections(stats) {
         { title: "Escritórios Enterprise", value: "Gerenciar", href: "/dashboard/admin/escritorios", icon: Building, tone: ADMIN_CARD_TONES.cyan },
         { title: "Assinaturas (SaaS)", value: "Ver cadastros", href: "/dashboard/admin/assinatura-accounts", icon: PenLine, tone: ADMIN_CARD_TONES.purple },
         { title: "Administradores", value: "Gerenciar", href: "/dashboard/admin/admins", icon: UserCog },
-        { title: "Cadastros do Oráculo", value: "Aprovar/rejeitar/suspender", href: "/dashboard/admin/oraculos", icon: GraduationCap, tone: ADMIN_CARD_TONES.purple },
+        { title: "Cadastros do Oráculo", value: "Monitorar/suspender", href: "/dashboard/admin/oraculos", icon: GraduationCap, tone: ADMIN_CARD_TONES.purple },
         { title: "Instituições de Ensino", value: "Programa Oráculo Acadêmico", href: "/dashboard/admin/instituicaodeensino", icon: Landmark, tone: ADMIN_CARD_TONES.cyan },
         { title: "Avaliações de casos", value: "Ver notas", href: "/dashboard/admin/avaliacoes", icon: Star, tone: ADMIN_CARD_TONES.gold },
         { title: "Pesquisas da plataforma", value: "Gerenciar", href: "/dashboard/admin/pesquisas", icon: Star, tone: ADMIN_CARD_TONES.gold },

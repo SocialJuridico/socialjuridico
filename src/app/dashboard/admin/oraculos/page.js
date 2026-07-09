@@ -5,12 +5,10 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import {
   ArrowLeft,
-  CheckCircle2,
   FileText,
   Loader2,
   RefreshCw,
   ShieldOff,
-  XCircle,
 } from "lucide-react";
 
 import styles from "./OraculosAdmin.module.css";
@@ -19,7 +17,7 @@ const STATUS_FILTERS = [
   { value: "ALL", label: "Todos" },
   { value: "PENDENTE_DOCUMENTOS", label: "Pendente documentos" },
   { value: "PENDENTE_SUPERVISOR", label: "Pendente supervisor" },
-  { value: "PENDENTE_ADMIN", label: "Pendente admin" },
+  { value: "PENDENTE_ADMIN", label: "Pendente instituicao" },
   { value: "ATIVO", label: "Ativo" },
   { value: "SUSPENSO", label: "Suspenso" },
   { value: "REPROVADO", label: "Reprovado" },
@@ -27,7 +25,7 @@ const STATUS_FILTERS = [
 
 const TIPO_LABELS = {
   ESTUDANTE: "Estudante de Direito",
-  ESTAGIARIO: "Estagiário inscrito na OAB",
+  ESTAGIARIO: "Estagiario inscrito na OAB",
 };
 
 const DOC_FIELD_BY_TIPO = {
@@ -38,29 +36,33 @@ const DOC_FIELD_BY_TIPO = {
 async function readJson(response) {
   const payload = await response.json().catch(() => null);
   if (!response.ok || !payload?.success) {
-    throw new Error(payload?.message || "Não foi possível concluir a operação.");
+    throw new Error(payload?.message || "Nao foi possivel concluir a operacao.");
   }
   return payload;
 }
 
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) return "-";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
 }
 
-function OraculoCard({ item, onDecide }) {
-  const [reasonMode, setReasonMode] = useState(null);
+function OraculoCard({ item, onSuspend }) {
+  const [reasonMode, setReasonMode] = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [loadingDoc, setLoadingDoc] = useState(false);
 
   const docField = DOC_FIELD_BY_TIPO[item.tipo];
   const hasDoc = Boolean(item[docField]);
+  const supervisorSummary = item.supervisores || [];
+  const approvedCount = supervisorSummary.filter(
+    (supervisor) => supervisor.status === "APROVADO",
+  ).length;
 
   async function openDocument() {
     if (!hasDoc || loadingDoc) return;
@@ -81,34 +83,21 @@ function OraculoCard({ item, onDecide }) {
     }
   }
 
-  async function decide(decision, motivo) {
+  async function confirmSuspension() {
+    if (!reason.trim()) {
+      toast.error("Informe o motivo da suspensao.");
+      return;
+    }
+
     setBusy(true);
     try {
-      await onDecide(item.id, decision, motivo);
-      setReasonMode(null);
+      await onSuspend(item.id, reason.trim());
+      setReasonMode(false);
       setReason("");
     } finally {
       setBusy(false);
     }
   }
-
-  function requestReason(mode) {
-    setReasonMode(mode);
-    setReason("");
-  }
-
-  function confirmReason() {
-    if (!reason.trim()) {
-      toast.error("Informe o motivo.");
-      return;
-    }
-    decide(reasonMode, reason.trim());
-  }
-
-  const supervisorSummary = item.supervisores || [];
-  const approvedCount = supervisorSummary.filter(
-    (supervisor) => supervisor.status === "APROVADO",
-  ).length;
 
   return (
     <article className={styles.card}>
@@ -116,7 +105,7 @@ function OraculoCard({ item, onDecide }) {
         <div>
           <h3>{item.name}</h3>
           <span>
-            {item.email} · {TIPO_LABELS[item.tipo] || item.tipo} ·{" "}
+            {item.email} - {TIPO_LABELS[item.tipo] || item.tipo} -{" "}
             {item.cidade}/{item.estado}
           </span>
         </div>
@@ -127,22 +116,29 @@ function OraculoCard({ item, onDecide }) {
 
       <div className={styles.metaGrid}>
         <span>
-          <strong>{item.instituicao_ensino || "—"}</strong>
-          Instituição
+          <strong>{item.instituicao_ensino || "-"}</strong>
+          Instituicao
         </span>
         <span>
-          <strong>{item.periodo_atual || "—"}</strong>
-          Período atual
+          <strong>{item.instituicao?.status || "Nao cadastrada"}</strong>
+          Status institucional
         </span>
         <span>
-          <strong>{item.disponibilidade_semanal || "—"}</strong>
-          Disponibilidade
+          <strong>{item.periodo_atual || "-"}</strong>
+          Periodo atual
         </span>
         <span>
           <strong>{formatDate(item.created_at)}</strong>
           Cadastrado em
         </span>
       </div>
+
+      {item.alerta_instituicao && (
+        <p style={{ fontSize: "0.78rem", color: "#facc15" }}>
+          Alerta institucional: {item.alerta_instituicao}
+          {item.instituicao?.nome ? ` - ${item.instituicao.nome}` : ""}
+        </p>
+      )}
 
       <button
         type="button"
@@ -172,14 +168,14 @@ function OraculoCard({ item, onDecide }) {
         ))}
       </div>
 
-      {(item.status === "REPROVADO" && item.motivo_reprovacao) && (
+      {item.status === "REPROVADO" && item.motivo_reprovacao && (
         <p style={{ fontSize: "0.78rem", color: "#fca5a5" }}>
-          Motivo da reprovação: {item.motivo_reprovacao}
+          Motivo da reprovacao: {item.motivo_reprovacao}
         </p>
       )}
-      {(item.status === "SUSPENSO" && item.motivo_suspensao) && (
+      {item.status === "SUSPENSO" && item.motivo_suspensao && (
         <p style={{ fontSize: "0.78rem", color: "#fca5a5" }}>
-          Motivo da suspensão: {item.motivo_suspensao}
+          Motivo da suspensao: {item.motivo_suspensao}
         </p>
       )}
 
@@ -188,26 +184,22 @@ function OraculoCard({ item, onDecide }) {
           <textarea
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder={
-              reasonMode === "REPROVADO"
-                ? "Motivo da rejeição..."
-                : "Motivo da suspensão..."
-            }
+            placeholder="Motivo da suspensao por denuncia ou mau uso..."
             disabled={busy}
           />
           <div className={styles.reasonActions}>
             <button
               type="button"
               className={styles.confirmBtn}
-              onClick={confirmReason}
+              onClick={confirmSuspension}
               disabled={busy}
             >
-              {busy ? "Enviando..." : "Confirmar"}
+              {busy ? "Enviando..." : "Confirmar suspensao"}
             </button>
             <button
               type="button"
               className={styles.cancelBtn}
-              onClick={() => setReasonMode(null)}
+              onClick={() => setReasonMode(false)}
               disabled={busy}
             >
               Cancelar
@@ -218,27 +210,9 @@ function OraculoCard({ item, onDecide }) {
         <div className={styles.actions}>
           <button
             type="button"
-            className={styles.approveBtn}
-            onClick={() => decide("APROVADO")}
-            disabled={busy}
-          >
-            <CheckCircle2 size={15} aria-hidden="true" />
-            Aprovar
-          </button>
-          <button
-            type="button"
-            className={styles.rejectBtn}
-            onClick={() => requestReason("REPROVADO")}
-            disabled={busy}
-          >
-            <XCircle size={15} aria-hidden="true" />
-            Rejeitar
-          </button>
-          <button
-            type="button"
             className={styles.suspendBtn}
-            onClick={() => requestReason("SUSPENSO")}
-            disabled={busy}
+            onClick={() => setReasonMode(true)}
+            disabled={busy || item.status === "SUSPENSO"}
           >
             <ShieldOff size={15} aria-hidden="true" />
             Suspender
@@ -273,21 +247,21 @@ export default function AdminOraculosPage() {
     loadItems();
   }, [loadItems]);
 
-  const handleDecide = useCallback(
-    async (id, decision, motivo) => {
-      const toastId = toast.loading("Atualizando cadastro...");
+  const handleSuspend = useCallback(
+    async (id, motivo) => {
+      const toastId = toast.loading("Suspendendo cadastro...");
       try {
         const response = await fetch(`/api/admin/oraculos/${id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ decision, motivo }),
+          body: JSON.stringify({ decision: "SUSPENSO", motivo }),
         });
         const payload = await readJson(response);
         toast.success(payload.message, { id: toastId });
         await loadItems();
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : "Erro ao atualizar cadastro.",
+          error instanceof Error ? error.message : "Erro ao suspender cadastro.",
           { id: toastId },
         );
       }
@@ -309,10 +283,11 @@ export default function AdminOraculosPage() {
         </Link>
 
         <div className={styles.header}>
-          <h1>Cadastros do Oráculo Acadêmico</h1>
+          <h1>Cadastros do Oraculo Academico</h1>
           <p>
-            Aprove, rejeite ou suspenda cadastros de estudantes/estagiários,
-            com acesso aos documentos enviados no cadastro.
+            Monitore cadastros, documentos e supervisores. O admin do Social
+            Juridico apenas acompanha e suspende em caso de denuncia ou mau uso;
+            aprovacao e reprovacao pertencem a instituicao de ensino.
           </p>
         </div>
 
@@ -347,7 +322,11 @@ export default function AdminOraculosPage() {
         ) : filteredItems.length ? (
           <div className={styles.grid}>
             {filteredItems.map((item) => (
-              <OraculoCard key={item.id} item={item} onDecide={handleDecide} />
+              <OraculoCard
+                key={item.id}
+                item={item}
+                onSuspend={handleSuspend}
+              />
             ))}
           </div>
         ) : (

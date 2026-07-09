@@ -2,6 +2,12 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "socialjuridico",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["dev"],
+      "port": 3000
+    },
+    {
       "name": "validacaooab",
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["--cwd", "E:/Documentos/Alura/cliente/Carlos/validacaooab", "dev"],

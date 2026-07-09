@@ -6,13 +6,13 @@ import { AlertCircle, Loader2, Mail, Scale } from "lucide-react";
 
 import styles from "../ConfirmarEmail.module.css";
 
-function ConfirmationCard({ children }) {
+function ConfirmationCard({ children, brandLabel = "Social Jurídico" }) {
   return (
     <main className={styles.container}>
       <section className={styles.card}>
         <div className={styles.logoRow}>
           <Scale size={32} color="var(--color-gold)" aria-hidden="true" />
-          <span className={styles.logoText}>Social Jurídico</span>
+          <span className={styles.logoText}>{brandLabel}</span>
         </div>
 
         {children}
@@ -27,10 +27,13 @@ function ProcessarConfirmacaoContent() {
 
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") || "signup";
+  const contexto = searchParams.get("contexto") || "";
+  const isOraculo = contexto === "oraculo";
+  const brandLabel = isOraculo ? "Oráculo Acadêmico" : "Social Jurídico";
 
   if (!tokenHash) {
     return (
-      <ConfirmationCard>
+      <ConfirmationCard brandLabel={brandLabel}>
         <div className={styles.stateContent}>
           <div className={styles.iconWrapperError}>
             <AlertCircle size={48} aria-hidden="true" />
@@ -62,16 +65,17 @@ function ProcessarConfirmacaoContent() {
     const url = new URL("/api/auth/confirm-email", window.location.origin);
     url.searchParams.set("token_hash", tokenHash);
     url.searchParams.set("type", type);
+    if (contexto) url.searchParams.set("contexto", contexto);
     window.location.href = url.toString();
   }
 
   return (
-    <ConfirmationCard>
+    <ConfirmationCard brandLabel={brandLabel}>
       <div className={styles.stateContent}>
         <h1 className={styles.title}>Confirme sua conta</h1>
 
         <p className={styles.description}>
-          Para concluir seu cadastro no Social Jurídico, clique no botão
+          Para concluir seu cadastro no {brandLabel}, clique no botão
           abaixo. Por segurança, a confirmação só acontece com esse clique.
         </p>
 

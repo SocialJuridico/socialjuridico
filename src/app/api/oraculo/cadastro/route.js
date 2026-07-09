@@ -9,12 +9,8 @@ import {
   oraculoAccountConfirmationTemplate,
   oraculoSupervisorInviteTemplate,
 } from "@/lib/oraculo/oraculoEmails";
+import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 import { resend } from "@/lib/resend";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  "https://www.socialjuridico.com.br";
 
 const RESEND_FROM = "Social Jurídico <contato@socialjuridico.com.br>";
 
@@ -283,6 +279,7 @@ export async function POST(request) {
   let createdUserId = null;
 
   try {
+    const siteUrl = resolvePublicAppOrigin(request);
     const form = await request.formData();
     const rawPayload = form.get("payload");
     let payload;
@@ -562,7 +559,7 @@ export async function POST(request) {
     for (const supervisor of supervisorRows || []) {
       const acceptUrl = new URL(
         `/oraculoacademico/supervisor/${supervisor.token_convite}`,
-        SITE_URL,
+        siteUrl,
       ).toString();
 
       try {
@@ -605,7 +602,7 @@ export async function POST(request) {
           await supabaseAdmin.auth.admin.generateLink({
             type: "signup",
             email: data.email,
-            options: { redirectTo: `${SITE_URL}/oraculoacademico/login` },
+            options: { redirectTo: `${siteUrl}/oraculoacademico/login` },
           });
 
         if (linkError) throw linkError;
@@ -615,9 +612,12 @@ export async function POST(request) {
           throw new Error("Não foi possível gerar o token de confirmação.");
         }
 
-        const verifyUrl = new URL("/confirmar-email/processar", SITE_URL);
+        const verifyUrl = new URL("/confirmar-email/processar", siteUrl);
         verifyUrl.searchParams.set("token_hash", hashedToken);
         verifyUrl.searchParams.set("type", "signup");
+        // Marca a origem do cadastro para que a confirmacao leve o usuario de
+        // volta ao login do Oraculo Academico, e nao ao login do Social Juridico.
+        verifyUrl.searchParams.set("contexto", "oraculo");
 
         await resend.emails.send({
           from: RESEND_FROM,

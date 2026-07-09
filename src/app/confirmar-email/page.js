@@ -12,7 +12,7 @@ import {
 
 import styles from "./ConfirmarEmail.module.css";
 
-function ConfirmationCard({ children }) {
+function ConfirmationCard({ children, brandLabel = "Social Jurídico" }) {
   return (
     <main className={styles.container}>
       <section className={styles.card}>
@@ -24,7 +24,7 @@ function ConfirmationCard({ children }) {
           />
 
           <span className={styles.logoText}>
-            Social Jurídico
+            {brandLabel}
           </span>
         </div>
 
@@ -40,6 +40,10 @@ function ConfirmarEmailContent() {
 
   const status = searchParams.get("status");
   const message = searchParams.get("message");
+  const contexto = searchParams.get("contexto");
+  const isOraculo = contexto === "oraculo";
+  const loginPath = isOraculo ? "/oraculoacademico/login" : "/login";
+  const brandLabel = isOraculo ? "Oráculo Acadêmico" : "Social Jurídico";
 
   const isSuccess = status === "success";
   const isError = status === "error";
@@ -50,17 +54,17 @@ function ConfirmarEmailContent() {
     }
 
     const timer = window.setTimeout(() => {
-      router.push("/login");
+      router.push(loginPath);
     }, 4000);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [isSuccess, router]);
+  }, [isSuccess, router, loginPath]);
 
   if (isSuccess) {
     return (
-      <ConfirmationCard>
+      <ConfirmationCard brandLabel={brandLabel}>
         <div className={styles.stateContent}>
           <div className={styles.iconWrapperSuccess}>
             <CheckCircle2
@@ -86,7 +90,7 @@ function ConfirmarEmailContent() {
           <button
             type="button"
             className={styles.actionBtn}
-            onClick={() => router.push("/login")}
+            onClick={() => router.push(loginPath)}
           >
             Ir para o login
           </button>
@@ -97,7 +101,7 @@ function ConfirmarEmailContent() {
 
   if (isError) {
     return (
-      <ConfirmationCard>
+      <ConfirmationCard brandLabel={brandLabel}>
         <div className={styles.stateContent}>
           <div className={styles.iconWrapperError}>
             <AlertCircle
@@ -124,7 +128,7 @@ function ConfirmarEmailContent() {
             <button
               type="button"
               className={styles.actionBtn}
-              onClick={() => router.push("/login")}
+              onClick={() => router.push(loginPath)}
             >
               Ir para o login
             </button>
@@ -147,7 +151,7 @@ function ConfirmarEmailContent() {
   }
 
   return (
-    <ConfirmationCard>
+    <ConfirmationCard brandLabel={brandLabel}>
       <div className={styles.stateContent}>
         <div className={styles.iconWrapperLoading}>
           <Loader2

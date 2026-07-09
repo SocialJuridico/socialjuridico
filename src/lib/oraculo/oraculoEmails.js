@@ -2,6 +2,8 @@
 // oraculoJuridico.md). Mesma identidade visual dos demais e-mails
 // transacionais: fundo escuro, dourado (#d4af37).
 
+import { resolveStaticPublicAppOrigin } from "@/lib/publicAppOrigin";
+
 function escapeHtml(value = "") {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -60,9 +62,9 @@ const STATUS_COPY = {
     text: "Falta pelo menos um advogado supervisor confirmar seu convite de padrinho.",
   },
   PENDENTE_ADMIN: {
-    label: "Aguardando validação do admin",
+    label: "Aguardando validação da instituição",
     color: "#facc15",
-    text: "Seu(s) supervisor(es) já confirmaram. Falta a validação final da nossa equipe.",
+    text: "Seu(s) supervisor(es) já confirmaram. Falta a validação final da sua instituição de ensino.",
   },
   ATIVO: {
     label: "Ativo",
@@ -95,11 +97,7 @@ export function oraculoAccountConfirmationTemplate({
 }) {
   const status = STATUS_COPY.PENDENTE_DOCUMENTOS;
   const safeName = escapeHtml(name || "Oráculo");
-  const loginUrl = `${
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "https://www.socialjuridico.com.br"
-  }/oraculoacademico/login`;
+  const loginUrl = `${resolveStaticPublicAppOrigin()}/oraculoacademico/login`;
 
   const intro = activation
     ? `Recebemos todas as etapas do seu cadastro no Oráculo Acadêmico e o
@@ -184,17 +182,13 @@ export function oraculoSupervisorInviteTemplate({
 }
 
 /**
- * E-mail enviado ao Oráculo após decisão do admin (aprovar/rejeitar/
- * suspender), avisando que já pode tentar acessar a conta.
+ * E-mail enviado ao Oráculo após decisão institucional ou suspensão
+ * administrativa, avisando que já pode tentar acessar a conta.
  */
 export function oraculoAdminDecisionTemplate({ name, status, motivo }) {
   const copy = STATUS_COPY[status] || STATUS_COPY.PENDENTE_DOCUMENTOS;
   const safeName = escapeHtml(name || "Oráculo");
-  const loginUrl = `${
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "https://www.socialjuridico.com.br"
-  }/oraculoacademico/login`;
+  const loginUrl = `${resolveStaticPublicAppOrigin()}/oraculoacademico/login`;
 
   return wrapEmail({
     eyebrow: "ATUALIZAÇÃO DO SEU CADASTRO",

@@ -42,7 +42,11 @@ export async function GET(request) {
     }
 
     const oraculoIds = (oraculos || []).map((item) => item.id);
+    const institutionIds = [
+      ...new Set((oraculos || []).map((item) => item.instituicao_id).filter(Boolean)),
+    ];
     let supervisorsByOraculo = new Map();
+    let institutionsById = new Map();
 
     if (oraculoIds.length) {
       const { data: supervisors, error: supervisorsError } = await supabaseAdmin
@@ -64,8 +68,34 @@ export async function GET(request) {
       }, new Map());
     }
 
+    if (institutionIds.length) {
+      const { data: institutions, error: institutionsError } = await supabaseAdmin
+        .from("oraculo_instituicoes")
+        .select("id, nome, status")
+        .in("id", institutionIds);
+
+      if (institutionsError) {
+        throw new Error(
+          `Falha ao consultar instituicoes: ${institutionsError.message}`,
+        );
+      }
+
+      institutionsById = (institutions || []).reduce((map, item) => {
+        map.set(item.id, item);
+        return map;
+      }, new Map());
+    }
+
     const data = (oraculos || []).map((item) => ({
       ...item,
+      instituicao: item.instituicao_id
+        ? institutionsById.get(item.instituicao_id) || null
+        : null,
+      alerta_instituicao: !item.instituicao_id
+        ? "Instituicao nao cadastrada"
+        : institutionsById.get(item.instituicao_id)?.status !== "ATIVA"
+          ? "Instituicao ainda nao ativa"
+          : null,
       supervisores: supervisorsByOraculo.get(item.id) || [],
     }));
 

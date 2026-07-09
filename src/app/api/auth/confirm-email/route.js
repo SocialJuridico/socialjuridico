@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 import { NextResponse } from "next/server";
 
-function buildConfirmPageUrl(request, status, message) {
+function buildConfirmPageUrl(request, status, message, contexto) {
   const url = new URL(
     "/confirmar-email",
     resolvePublicAppOrigin(request),
@@ -11,6 +11,9 @@ function buildConfirmPageUrl(request, status, message) {
   url.searchParams.set("status", status);
   if (message) {
     url.searchParams.set("message", message);
+  }
+  if (contexto) {
+    url.searchParams.set("contexto", contexto);
   }
   return url;
 }
@@ -77,6 +80,7 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") || "signup";
+  const contexto = searchParams.get("contexto") || "";
 
   if (!token_hash) {
     return NextResponse.redirect(
@@ -84,6 +88,7 @@ export async function GET(request) {
         request,
         "error",
         "Link de confirmação inválido ou incompleto.",
+        contexto,
       ),
     );
   }
@@ -107,6 +112,7 @@ export async function GET(request) {
           request,
           "error",
           "Não foi possível confirmar o e-mail. O link pode ter expirado ou já ter sido utilizado.",
+          contexto,
         ),
       );
     }
@@ -125,6 +131,7 @@ export async function GET(request) {
         request,
         "success",
         "E-mail confirmado com sucesso!",
+        contexto,
       ),
     );
   } catch (error) {
@@ -134,6 +141,7 @@ export async function GET(request) {
         request,
         "error",
         "Erro interno ao confirmar o e-mail.",
+        contexto,
       ),
     );
   }

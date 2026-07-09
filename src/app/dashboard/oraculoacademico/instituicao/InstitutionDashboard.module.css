@@ -924,6 +924,158 @@
   text-decoration: none;
 }
 
+.candidateQueue {
+  display: grid;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 22px;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  border-radius: 8px;
+  background: rgba(10, 12, 14, 0.84);
+}
+
+.candidateQueue h2,
+.candidateQueue p {
+  margin: 0;
+}
+
+.candidateQueue h2 {
+  color: #ffffff;
+}
+
+.candidateQueue p {
+  color: rgba(247, 242, 223, 0.62);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.candidateList {
+  display: grid;
+  gap: 12px;
+}
+
+.candidateCard {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(160px, 0.7fr) minmax(280px, 1.2fr);
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.candidateCard strong,
+.candidateCard small {
+  display: block;
+}
+
+.candidateCard strong {
+  color: #ffffff;
+}
+
+.candidateCard small {
+  margin-top: 4px;
+  color: rgba(247, 242, 223, 0.58);
+  font-size: 0.78rem;
+}
+
+.candidateActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.candidateActions form {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.candidateActions input {
+  width: min(210px, 34vw);
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: #ffffff;
+}
+
+.candidateActions button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #d4af37;
+  color: #080808;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.candidateActions button:disabled,
+.candidateActions input:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.supervisorInviteList {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 12px 0 0;
+  list-style: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.supervisorInviteItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.supervisorInviteInfo {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.supervisorInviteInfo strong {
+  display: block;
+  color: #ffffff;
+  font-size: 0.85rem;
+}
+
+.supervisorInviteInfo small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(247, 242, 223, 0.58);
+  font-size: 0.75rem;
+}
+
+.supervisorInviteItem form {
+  display: inline-flex;
+}
+
+.supervisorInviteItem button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #d4af37;
+  border-radius: 8px;
+  background: transparent;
+  color: #d4af37;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.supervisorInviteItem button:hover {
+  background: #d4af37;
+  color: #080808;
+}
+
 .wizardGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1132,9 +1284,14 @@
   .metricsGrid,
   .contentGrid,
   .academicCards,
+  .candidateCard,
   .wizardGrid,
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .candidateActions {
+    justify-content: flex-start;
   }
 }
 

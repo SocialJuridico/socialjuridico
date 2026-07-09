@@ -25,10 +25,27 @@ import {
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getInstitutionAccessContext } from "@/lib/oraculoInstitutionAccess";
+import { computeOraculoStatus } from "@/lib/oraculo/oraculoStatus";
+import {
+  oraculoAdminDecisionTemplate,
+  oraculoSupervisorInviteTemplate,
+} from "@/lib/oraculo/oraculoEmails";
+import { resend } from "@/lib/resend";
+import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 
 import styles from "../InstitutionDashboard.module.css";
 
 const LOCAL_DEV_HOSTS = ["localhost", "127.0.0.1", "::1", "[::1]"];
+const RESEND_FROM = "Social Juridico <contato@socialjuridico.com.br>";
+
+const SUPERVISOR_RELACAO_LABELS = {
+  PROFESSOR: "Professor",
+  ADVOGADO_CONHECIDO: "Advogado conhecido",
+  ADVOGADO_ESCRITORIO: "Advogado do escritorio onde estagia",
+  COORDENADOR_ACADEMICO: "Coordenador academico",
+  MENTOR: "Mentor",
+  OUTRO: "Outro",
+};
 
 const REPORT_TYPE_LABELS = {
   RELATORIO_INDIVIDUAL_ESTUDANTE: "Relatorio Individual do Estudante",
@@ -266,6 +283,180 @@ export async function linkAcademicStudentAction(formData) {
 
   revalidatePath("/dashboard/oraculoacademico/instituicao/estudantes");
   redirect("/dashboard/oraculoacademico/instituicao/estudantes?criado=1");
+}
+
+export async function decideOraculoCandidateAction(formData) {
+  "use server";
+
+  const { user, instituicaoId } = await requireInstitutionActionContext(
+    "INSTITUTION_MANAGE_PROGRAMS",
+  );
+
+  const id = textField(formData, "id");
+  const decision = textField(formData, "decision")?.toUpperCase();
+  const motivo = textField(formData, "motivo", "")?.slice(0, 1000) || "";
+
+  if (!id || !["APROVADO", "REPROVADO"].includes(decision)) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=decisao");
+  }
+
+  if (decision === "REPROVADO" && !motivo) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=motivo");
+  }
+
+  const { data: candidate, error: candidateError } = await supabaseAdmin
+    .from("oraculo_profissionais")
+    .select("id, name, email, status, instituicao_id")
+    .eq("id", id)
+    .eq("instituicao_id", instituicaoId)
+    .maybeSingle();
+
+  if (candidateError || !candidate) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=candidato");
+  }
+
+  if (candidate.status === "SUSPENSO") {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=suspenso");
+  }
+
+  const { data: supervisors } = await supabaseAdmin
+    .from("oraculo_supervisores")
+    .select("status")
+    .eq("oraculo_id", id);
+
+  const supervisorApproved = (supervisors || []).some(
+    (item) => item.status === "APROVADO",
+  );
+  const nextStatus = computeOraculoStatus({
+    adminDecision: decision,
+    supervisorApproved,
+  });
+  const nowIso = new Date().toISOString();
+
+  const updatePayload =
+    decision === "APROVADO"
+      ? {
+          status: nextStatus,
+          verificado: nextStatus === "ATIVO",
+          aprovado_em: nowIso,
+          aprovado_por: user.id,
+          reprovado_em: null,
+          motivo_reprovacao: null,
+        }
+      : {
+          status: nextStatus,
+          verificado: false,
+          reprovado_em: nowIso,
+          motivo_reprovacao: motivo,
+        };
+
+  const { error: updateError } = await supabaseAdmin
+    .from("oraculo_profissionais")
+    .update(updatePayload)
+    .eq("id", id)
+    .eq("instituicao_id", instituicaoId);
+
+  if (updateError) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=salvar");
+  }
+
+  try {
+    await resend.emails.send({
+      from: RESEND_FROM,
+      to: candidate.email,
+      subject: `Seu cadastro no Oraculo Juridico esta: ${nextStatus}`,
+      html: oraculoAdminDecisionTemplate({
+        name: candidate.name,
+        status: nextStatus,
+        motivo: decision === "REPROVADO" ? motivo : null,
+      }),
+    });
+  } catch (emailError) {
+    console.error(
+      "[Oraculo/Instituicao] Falha ao notificar decisao institucional:",
+      emailError,
+    );
+  }
+
+  revalidatePath("/dashboard/oraculoacademico/instituicao/estudantes");
+  redirect("/dashboard/oraculoacademico/instituicao/estudantes?decidido=1");
+}
+
+export async function resendSupervisorInviteAction(formData) {
+  "use server";
+
+  const { instituicaoId } = await requireInstitutionActionContext(
+    "INSTITUTION_MANAGE_PROGRAMS",
+  );
+
+  const supervisorId = textField(formData, "supervisor_id");
+  if (!supervisorId) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=supervisor");
+  }
+
+  const { data: supervisor, error: supervisorError } = await supabaseAdmin
+    .from("oraculo_supervisores")
+    .select("id, oraculo_id, nome, email, relacao, status, token_convite")
+    .eq("id", supervisorId)
+    .maybeSingle();
+
+  if (supervisorError || !supervisor || !supervisor.token_convite) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=supervisor");
+  }
+
+  // So supervisores ainda aguardando resposta podem ser relembrados.
+  if (supervisor.status !== "CONVIDADO") {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=supervisor_respondido");
+  }
+
+  // Garante que o supervisor pertence a um candidato desta instituicao.
+  const { data: candidate } = await supabaseAdmin
+    .from("oraculo_profissionais")
+    .select("id, name, instituicao_id")
+    .eq("id", supervisor.oraculo_id)
+    .maybeSingle();
+
+  if (!candidate || candidate.instituicao_id !== instituicaoId) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=supervisor");
+  }
+
+  const requestHeaders = await headers();
+  const siteUrl = resolvePublicAppOrigin({ headers: requestHeaders });
+  const acceptUrl = new URL(
+    `/oraculoacademico/supervisor/${supervisor.token_convite}`,
+    siteUrl,
+  ).toString();
+
+  try {
+    await resend.emails.send({
+      from: RESEND_FROM,
+      to: [supervisor.email],
+      subject: "Lembrete: convite para ser supervisor - Oraculo Academico",
+      html: oraculoSupervisorInviteTemplate({
+        supervisorName: supervisor.nome,
+        oraculoName: candidate.name,
+        relacaoLabel:
+          SUPERVISOR_RELACAO_LABELS[supervisor.relacao] || supervisor.relacao,
+        acceptUrl,
+      }),
+    });
+  } catch (emailError) {
+    console.error(
+      "[Oraculo/Instituicao] Falha ao reenviar convite de supervisor:",
+      emailError,
+    );
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=email");
+  }
+
+  // Re-carimba a data do convite para refletir o reenvio.
+  await supabaseAdmin
+    .from("oraculo_supervisores")
+    .update({ convidado_em: new Date().toISOString() })
+    .eq("id", supervisor.id)
+    .eq("status", "CONVIDADO");
+
+  revalidatePath("/dashboard/oraculoacademico/instituicao/estudantes");
+  redirect("/dashboard/oraculoacademico/instituicao/estudantes?reenviado=1");
 }
 
 export async function createFormalSupervisorAction(formData) {
@@ -1026,8 +1217,8 @@ async function canAccessRoute() {
 
 function statusTone(status = "") {
   if (["ATIVO", "ATIVA", "APROVADA", "RECONHECIDO_AUTOMATICO", "RECONHECIDO_APOS_REVISAO", "META_ATINGIDA", "GERADO", "ASSINADO", "VALIDO", "SUCESSO"].includes(status)) return "success";
-  if (["PROGRAMADO", "PROGRAMADA", "RASCUNHO", "PENDENTE", "EM_REVISAO", "ENVIADA_REVISAO", "EM_ANDAMENTO", "CONVIDADO", "PENDENTE_ASSINATURA", "PENDENTE_VALIDACAO", "VENCENDO", "PARCIAL"].includes(status)) return "warning";
-  if (["PAUSADO", "PAUSADA", "PENDENTE_VINCULO", "AJUSTE_SOLICITADO", "CRITICA", "LIMITADO_POR_REGRA", "ABAIXO_DA_META", "REJEITADO", "VENCIDO", "NEGADO", "ERRO", "RECUSADO"].includes(status)) return "attention";
+  if (["PROGRAMADO", "PROGRAMADA", "RASCUNHO", "PENDENTE", "PENDENTE_DOCUMENTOS", "PENDENTE_SUPERVISOR", "PENDENTE_ADMIN", "EM_REVISAO", "ENVIADA_REVISAO", "EM_ANDAMENTO", "CONVIDADO", "PENDENTE_ASSINATURA", "PENDENTE_VALIDACAO", "VENCENDO", "PARCIAL"].includes(status)) return "warning";
+  if (["PAUSADO", "PAUSADA", "PENDENTE_VINCULO", "AJUSTE_SOLICITADO", "CRITICA", "LIMITADO_POR_REGRA", "ABAIXO_DA_META", "REJEITADO", "VENCIDO", "NEGADO", "ERRO", "RECUSADO", "REPROVADO", "SUSPENSO"].includes(status)) return "attention";
   return "neutral";
 }
 
@@ -1077,8 +1268,28 @@ async function getFirstInstitutionId() {
   return data?.id || null;
 }
 
+async function getCurrentInstitutionId() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return getFirstInstitutionId();
+
+  const { data, error } = await supabaseAdmin
+    .from("oraculo_instituicao_usuarios")
+    .select("instituicao_id")
+    .eq("auth_user_id", user.id)
+    .eq("status", "ATIVO")
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data?.instituicao_id) return getFirstInstitutionId();
+  return data.instituicao_id;
+}
+
 async function loadAcademicRows(section) {
-  const instituicaoId = await getFirstInstitutionId();
+  const instituicaoId = await getCurrentInstitutionId();
   if (!instituicaoId) return [];
 
   if (section === "programas") {
@@ -1651,6 +1862,52 @@ async function loadAcademicRows(section) {
   });
 }
 
+async function loadInstitutionCandidateQueue() {
+  const instituicaoId = await getCurrentInstitutionId();
+  if (!instituicaoId) return [];
+
+  const candidates = await safeSelect("oraculo_profissionais", (query) =>
+    query
+      .select("id, name, email, tipo, status, periodo_atual, numero_matricula, created_at, motivo_reprovacao, suspenso_em")
+      .eq("instituicao_id", instituicaoId)
+      .in("status", ["PENDENTE_DOCUMENTOS", "PENDENTE_SUPERVISOR", "PENDENTE_ADMIN", "REPROVADO", "SUSPENSO"])
+      .order("created_at", { ascending: false }),
+  );
+
+  if (!candidates.length) return [];
+
+  const candidateIds = candidates.map((item) => item.id);
+  const supervisors = await safeSelect("oraculo_supervisores", (query) =>
+    query
+      .select("id, oraculo_id, nome, email, relacao, status, convidado_em")
+      .in("oraculo_id", candidateIds),
+  );
+
+  return candidates.map((candidate) => {
+    const candidateSupervisors = supervisors.filter(
+      (item) => item.oraculo_id === candidate.id,
+    );
+    return {
+      ...candidate,
+      supervisors: candidateSupervisors.map((item) => ({
+        id: item.id,
+        nome: item.nome,
+        email: item.email,
+        status: item.status,
+        relacaoLabel:
+          SUPERVISOR_RELACAO_LABELS[item.relacao] || item.relacao,
+      })),
+      supervisorApproved: candidateSupervisors.some(
+        (item) => item.status === "APROVADO",
+      ),
+      supervisorCount: candidateSupervisors.length,
+      approvedSupervisors: candidateSupervisors.filter(
+        (item) => item.status === "APROVADO",
+      ).length,
+    };
+  });
+}
+
 function buildSummaryCards(section, rows) {
   if (section === "programas") {
     return [
@@ -2072,6 +2329,95 @@ function SummaryCards({ cards }) {
   );
 }
 
+function CandidateDecisionQueue({ candidates }) {
+  if (!candidates.length) return null;
+
+  return (
+    <section className={styles.candidateQueue}>
+      <div>
+        <span className={styles.kicker}>Decisao institucional</span>
+        <h2>Cadastros aguardando a instituicao</h2>
+        <p>
+          A instituicao aprova ou reprova o cadastro do estudante. O Social
+          Juridico apenas monitora e pode suspender por denuncia ou mau uso.
+        </p>
+      </div>
+
+      <div className={styles.candidateList}>
+        {candidates.map((candidate) => {
+          const isFinal = ["REPROVADO", "SUSPENSO"].includes(candidate.status);
+          const canApprove = !isFinal;
+          const canReject = !isFinal;
+
+          return (
+            <article key={candidate.id} className={styles.candidateCard}>
+              <div>
+                <strong>{candidate.name}</strong>
+                <small>
+                  {candidate.email} - {candidate.tipo} -{" "}
+                  {candidate.periodo_atual || "Periodo nao informado"}
+                </small>
+              </div>
+              <StatusBadge status={candidate.status} />
+              <p>
+                Supervisores: {candidate.approvedSupervisors}/
+                {candidate.supervisorCount} aprovaram.
+              </p>
+              <div className={styles.candidateActions}>
+                <form action={decideOraculoCandidateAction}>
+                  <input type="hidden" name="id" value={candidate.id} />
+                  <input type="hidden" name="decision" value="APROVADO" />
+                  <button type="submit" disabled={!canApprove}>
+                    Aprovar pela instituicao
+                  </button>
+                </form>
+                <form action={decideOraculoCandidateAction}>
+                  <input type="hidden" name="id" value={candidate.id} />
+                  <input type="hidden" name="decision" value="REPROVADO" />
+                  <input
+                    name="motivo"
+                    placeholder="Motivo da reprovacao"
+                    disabled={!canReject}
+                    required={canReject}
+                  />
+                  <button type="submit" disabled={!canReject}>
+                    Reprovar
+                  </button>
+                </form>
+              </div>
+              {candidate.supervisors?.length > 0 && (
+                <ul className={styles.supervisorInviteList}>
+                  {candidate.supervisors.map((supervisor) => (
+                    <li key={supervisor.id} className={styles.supervisorInviteItem}>
+                      <span className={styles.supervisorInviteInfo}>
+                        <strong>{supervisor.nome}</strong>
+                        <small>
+                          {supervisor.email} - {supervisor.relacaoLabel}
+                        </small>
+                      </span>
+                      <StatusBadge status={supervisor.status} />
+                      {supervisor.status === "CONVIDADO" && (
+                        <form action={resendSupervisorInviteAction}>
+                          <input
+                            type="hidden"
+                            name="supervisor_id"
+                            value={supervisor.id}
+                          />
+                          <button type="submit">Reenviar convite</button>
+                        </form>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function DataTable({ config, rows, section }) {
   const renderer = {
     programas: renderProgramRow,
@@ -2127,7 +2473,7 @@ function DataTable({ config, rows, section }) {
 }
 
 async function loadFormOptions() {
-  const instituicaoId = await getFirstInstitutionId();
+  const instituicaoId = await getCurrentInstitutionId();
   if (!instituicaoId) {
     return { programs: [], classes: [], students: [], activityTypes: [], institutionName: "" };
   }
@@ -2950,6 +3296,8 @@ async function ListPage({ section }) {
   const config = PAGE_CONFIG[section];
   const Icon = config.icon;
   const rows = await loadAcademicRows(section);
+  const candidates =
+    section === "estudantes" ? await loadInstitutionCandidateQueue() : [];
   const cards = buildSummaryCards(section, rows);
 
   return (
@@ -2976,6 +3324,9 @@ async function ListPage({ section }) {
 
       <SummaryCards cards={cards} />
       <FilterBar filters={config.filters} />
+      {section === "estudantes" && (
+        <CandidateDecisionQueue candidates={candidates} />
+      )}
       <DataTable config={config} rows={rows} section={section} />
     </main>
   );

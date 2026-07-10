@@ -99,6 +99,11 @@ export default async function OraculoAcademicoPainelPage() {
     redirect("/oraculoacademico");
   }
 
+  // Estudante ativo entra direto no Dashboard do Oráculo.
+  if (profile.status === "ATIVO") {
+    redirect("/dashboard/oraculo");
+  }
+
   const statusInfo =
     STATUS_LABELS[profile.status] || STATUS_LABELS.CADASTRO_INCOMPLETO;
 

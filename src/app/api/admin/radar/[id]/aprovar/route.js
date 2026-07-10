@@ -1,5 +1,6 @@
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { deriveAcademicIfApproved } from "@/lib/oraculo/radarAcademic/radarAcademicCaseGeneration";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -57,10 +58,17 @@ export async function POST(_request, { params }) {
       return json({ success: false, message: "Oportunidade não encontrada." }, 404);
     }
 
+    // A MESMA aprovação que publica o Radar Jurídico deriva o caso do Radar
+    // Acadêmico (não-fatal).
+    const academicDerived = await deriveAcademicIfApproved(data);
+
     return json({
       success: true,
       data,
-      message: "Oportunidade aprovada e publicada.",
+      academicDerived,
+      message: academicDerived
+        ? "Oportunidade aprovada e caso acadêmico derivado."
+        : "Oportunidade aprovada e publicada.",
     });
   } catch (error) {
     console.error("[Admin/Radar/:id/aprovar][POST] Erro:", error);

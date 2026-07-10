@@ -62,3 +62,18 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 cortex.yaml
+
+# IDEs
+.idea/
+.vscode/
+
+# Arquivos locais de referência/documentação e rascunhos soltos
+Swagger UI.html
+Tabelas supabase.txt
+npm-audit.json
+
+# Scripts de debug temporários
+scratch_*.js
+fix_*.ps1
+fix_*.sh
+*.patch

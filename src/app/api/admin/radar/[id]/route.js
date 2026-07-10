@@ -1,5 +1,6 @@
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 import { supabaseAdmin } from "@/lib/supabase";
+import { deriveAcademicIfApproved } from "@/lib/oraculo/radarAcademic/radarAcademicCaseGeneration";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -239,9 +240,13 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    // Se a edição aprovou a oportunidade, deriva o caso acadêmico (não-fatal).
+    const academicDerived = await deriveAcademicIfApproved(data);
+
     return json({
       success: true,
       data,
+      academicDerived,
       message: "Oportunidade atualizada com sucesso.",
     });
   } catch (error) {

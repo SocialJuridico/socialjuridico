@@ -39,7 +39,7 @@ async function loadStudentProfile(match) {
   const query = supabaseAdmin
     .from("oraculo_profissionais")
     .select(
-      "id, name, email, status, tipo, instituicao_id, curso, periodo_atual, numero_matricula, auth_user_id",
+      "id, name, email, status, tipo, instituicao_id, curso, periodo_atual, numero_matricula, auth_user_id, telemetria_ciente_em",
     );
 
   if (match.authUserId) query.eq("auth_user_id", match.authUserId);
@@ -148,6 +148,7 @@ function buildContext(profile, link, related) {
     authUserId: profile.auth_user_id || null,
     studentName: profile.name || "Estudante",
     studentEmail: profile.email || null,
+    telemetriaCienteEm: profile.telemetria_ciente_em || null,
     profileStatus: profile.status || null,
     curso: profile.curso || null,
     institutionId: related.institution?.id || link?.instituicao_id || profile.instituicao_id || null,

@@ -20,6 +20,11 @@ import { generateFinalEvaluation } from "@/lib/oraculo/ai/academicAngelFinalEval
 
 import { getRadarAcademicCaseInternal } from "./radarAcademicCasesRead";
 import { recordOraculoAudit } from "./radarAcademicAudit";
+import {
+  recordInterviewStartActivity,
+  finalizeInterviewActivity,
+} from "./academicActivityBridge";
+import { logOraculoEvent, ORACULO_EVENTS } from "@/lib/oraculo/telemetry/oraculoTelemetry";
 
 const OPENING_MESSAGE =
   "Entrevista simulada iniciada. O cliente é simulado por IA e responde apenas com base no relato disponível. Faça perguntas para coletar informações.";
@@ -155,6 +160,17 @@ export async function startSimulatedInterview({ academicCaseId, context }) {
     academicCaseId,
     interviewId: interview.id,
     eventType: "ORACULO_SIMULATED_INTERVIEW_STARTED",
+  });
+
+  // Registra a prática na trilha acadêmica da instituição (não-fatal).
+  await recordInterviewStartActivity({ interview, academicCase, context });
+  await logOraculoEvent({
+    context,
+    type: ORACULO_EVENTS.INTERVIEW_START,
+    surface: "/dashboard/oraculo/casos",
+    refType: "CASE",
+    refId: academicCaseId,
+    metadata: { interviewId: interview.id, title: academicCase?.title || null },
   });
 
   return { ok: true, interview };
@@ -479,6 +495,16 @@ export async function sendStudentMessage({ interviewId, oraculoId, content, cont
     interviewId,
     eventType: "ORACULO_SIMULATED_CLIENT_RESPONSE_GENERATED",
   });
+  if (context) {
+    await logOraculoEvent({
+      context,
+      type: ORACULO_EVENTS.INTERVIEW_MESSAGE,
+      surface: "/dashboard/oraculo/casos",
+      refType: "INTERVIEW",
+      refId: interviewId,
+      metadata: { sequence: newCount },
+    });
+  }
 
   // 7. Window Evaluator a cada N mensagens (não bloqueia a resposta).
   if (newCount > 0 && newCount % WINDOW_EVAL_EVERY === 0) {
@@ -632,6 +658,9 @@ export async function endSimulatedInterview({ interviewId, oraculoId }) {
       eventType: "ORACULO_SIMULATED_INTERVIEW_AI_FEEDBACK_GENERATED",
     });
   }
+
+  // Finaliza a atividade acadêmica correspondente (não-fatal).
+  await finalizeInterviewActivity({ interview: updated || interview });
 
   return { ok: true, interview: updated };
 }

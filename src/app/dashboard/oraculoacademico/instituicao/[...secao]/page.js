@@ -26,6 +26,7 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getInstitutionAccessContext } from "@/lib/oraculoInstitutionAccess";
 import { computeOraculoStatus } from "@/lib/oraculo/oraculoStatus";
+import { getStudentTelemetrySummary } from "@/lib/oraculo/telemetry/oraculoTelemetry";
 import {
   oraculoAdminDecisionTemplate,
   oraculoSupervisorInviteTemplate,
@@ -380,6 +381,48 @@ export async function decideOraculoCandidateAction(formData) {
 
   revalidatePath("/dashboard/oraculoacademico/instituicao/estudantes");
   redirect("/dashboard/oraculoacademico/instituicao/estudantes?decidido=1");
+}
+
+export async function setStudentAcademicStatusAction(formData) {
+  "use server";
+
+  const { instituicaoId } = await requireInstitutionActionContext(
+    "INSTITUTION_MANAGE_PROGRAMS",
+  );
+
+  const linkId = textField(formData, "link_id");
+  const action = textField(formData, "action")?.toUpperCase();
+  const nextStatus = action === "REATIVAR" ? "ATIVO" : action === "PAUSAR" ? "PAUSADO" : null;
+
+  if (!linkId || !nextStatus) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=status");
+  }
+
+  const { data: link, error: linkError } = await supabaseAdmin
+    .from("oraculo_estudante_vinculos_academicos")
+    .select("id, status_academico, instituicao_id")
+    .eq("id", linkId)
+    .eq("instituicao_id", instituicaoId)
+    .maybeSingle();
+
+  if (linkError || !link) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=vinculo");
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from("oraculo_estudante_vinculos_academicos")
+    .update({ status_academico: nextStatus, updated_at: new Date().toISOString() })
+    .eq("id", linkId)
+    .eq("instituicao_id", instituicaoId);
+
+  if (updateError) {
+    redirect("/dashboard/oraculoacademico/instituicao/estudantes?erro=salvar");
+  }
+
+  revalidatePath("/dashboard/oraculoacademico/instituicao/estudantes");
+  redirect(
+    `/dashboard/oraculoacademico/instituicao/estudantes?${nextStatus === "PAUSADO" ? "pausado" : "reativado"}=1`,
+  );
 }
 
 export async function resendSupervisorInviteAction(formData) {
@@ -2124,7 +2167,21 @@ function renderStudentRow(item) {
     <span key="horas">{item.horas}</span>,
     <span key="ultima">{item.ultimaAtividade}</span>,
     <span key="responsaveis">{item.orientador}<small>{item.supervisor}</small></span>,
-    <span key="acoes" className={styles.rowActions}>Ver Alterar Pausar</span>,
+    <span key="acoes" className={styles.rowActions}>
+      <Link href={`/dashboard/oraculoacademico/instituicao/estudantes/${item.id}`}>Ver</Link>
+      <Link href={`/dashboard/oraculoacademico/instituicao/estudantes/${item.id}?editar=1`}>Alterar</Link>
+      <form action={setStudentAcademicStatusAction}>
+        <input type="hidden" name="link_id" value={item.id} />
+        <input
+          type="hidden"
+          name="action"
+          value={item.statusAcademico === "PAUSADO" ? "REATIVAR" : "PAUSAR"}
+        />
+        <button type="submit" className={styles.rowActionButton}>
+          {item.statusAcademico === "PAUSADO" ? "Reativar" : "Pausar"}
+        </button>
+      </form>
+    </span>,
   ];
 }
 
@@ -3353,8 +3410,112 @@ async function WizardPage({ section, action, searchParams = {} }) {
   );
 }
 
-function DetailPage({ section, id }) {
+const EVENT_LABELS = {
+  LOGIN: "Entrou no dashboard",
+  LOGOUT: "Saiu do dashboard",
+  HEARTBEAT: "Ativo na tela",
+  PAGE_VIEW: "Abriu a tela",
+  CASE_OPEN: "Abriu um caso",
+  INTERVIEW_START: "Iniciou entrevista",
+  INTERVIEW_MESSAGE: "Mensagem na entrevista",
+  INTERVIEW_END: "Encerrou entrevista",
+  ANALYSIS_OPEN: "Abriu a Mesa de Análise",
+  ANALYSIS_EDIT: "Editou análise",
+  ANALYSIS_SUBMIT: "Enviou análise",
+  ENCAMINHAMENTO: "Encaminhou",
+  CLICK: "Clicou",
+  ACTION: "Ação",
+};
+
+function surfaceLabel(surface) {
+  if (!surface) return "—";
+  const clean = surface.replace("/dashboard/oraculo", "").replace(/^\//, "") || "início";
+  return clean;
+}
+
+async function DetailPage({ section, id }) {
   const config = PAGE_CONFIG[section] || {};
+
+  if (section === "estudantes") {
+    const telemetry = await getStudentTelemetrySummary({ estudanteVinculoId: id });
+    return (
+      <main className={styles.academicPage}>
+        <Link href={`/dashboard/oraculoacademico/instituicao/${section}`} className={styles.placeholderBack}>
+          <ArrowLeft size={16} aria-hidden="true" />
+          Voltar
+        </Link>
+        <section className={styles.academicHeader}>
+          <div>
+            <span className={styles.kicker}>Atividade do estudante</span>
+            <h1>Painel de atividade</h1>
+            <p>Tudo que o estudante fez no dashboard do Oráculo: tempo online, telas e ações.</p>
+          </div>
+          <StatusBadge status="ATIVO" />
+        </section>
+
+        {!telemetry ? (
+          <section className={styles.academicPanel}>
+            <h2>Sem atividade registrada</h2>
+            <p>Este estudante ainda não gerou telemetria de uso no dashboard.</p>
+          </section>
+        ) : (
+          <>
+            <SummaryCards
+              cards={[
+                ["Tempo online (total)", telemetry.totalOnline, "Tempo ativo no dashboard"],
+                ["Tempo online (hoje)", telemetry.todayOnline, "Somente hoje"],
+                ["Sessões", String(telemetry.sessionsCount), "Aberturas do dashboard"],
+                [
+                  "Última atividade",
+                  telemetry.lastSeenAt ? new Date(telemetry.lastSeenAt).toLocaleString("pt-BR") : "—",
+                  "Visto por último",
+                ],
+              ]}
+            />
+
+            <section className={styles.academicPanel}>
+              <h2>Tempo por tela</h2>
+              {telemetry.surfaces.length === 0 ? (
+                <p>Sem distribuição registrada.</p>
+              ) : (
+                <ul className={styles.telemetryList}>
+                  {telemetry.surfaces.map((s) => (
+                    <li key={s.surface}>
+                      <strong>{surfaceLabel(s.surface)}</strong>
+                      <span>{s.online} · {s.count} eventos</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className={styles.academicPanel}>
+              <h2>Linha do tempo</h2>
+              {telemetry.recentEvents.length === 0 ? (
+                <p>Sem eventos recentes.</p>
+              ) : (
+                <ul className={styles.telemetryTimeline}>
+                  {telemetry.recentEvents.map((ev, i) => (
+                    <li key={`${ev.type}-${ev.at}-${i}`}>
+                      <span className={styles.telemetryTime}>
+                        {ev.at ? new Date(ev.at).toLocaleString("pt-BR") : "—"}
+                      </span>
+                      <span className={styles.telemetryEvent}>
+                        {EVENT_LABELS[ev.type] || ev.type}
+                        {ev.surface ? ` · ${surfaceLabel(ev.surface)}` : ""}
+                        {ev.metadata?.label ? ` · "${ev.metadata.label}"` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
+      </main>
+    );
+  }
+
   return (
     <main className={styles.academicPage}>
       <Link href={`/dashboard/oraculoacademico/instituicao/${section}`} className={styles.placeholderBack}>

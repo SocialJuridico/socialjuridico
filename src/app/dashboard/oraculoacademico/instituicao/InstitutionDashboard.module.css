@@ -890,6 +890,26 @@
   text-decoration: none;
 }
 
+.rowActions form {
+  display: inline;
+  margin: 0;
+}
+
+.rowActionButton {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #f9df84;
+  font-weight: 900;
+  font: inherit;
+  cursor: pointer;
+}
+
+.rowActionButton:hover {
+  text-decoration: underline;
+}
+
 .academicEmpty,
 .academicPanel {
   margin-top: 14px;
@@ -903,6 +923,56 @@
   display: grid;
   justify-items: start;
   gap: 10px;
+}
+
+.telemetryList {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.telemetryList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.telemetryList li span {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+
+.telemetryTimeline {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.telemetryTimeline li {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.telemetryTime {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+}
+
+.telemetryEvent {
+  color: #f9df84;
+  font-weight: 700;
+  font-size: 13px;
 }
 
 .academicEmpty h2,

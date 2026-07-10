@@ -6,6 +6,8 @@ import { resolveOraculoStudentContext } from "@/lib/oraculo/oraculoAcademicConte
 
 import OraculoSidebar from "./OraculoSidebar";
 import OraculoLogoutButton from "./OraculoLogoutButton";
+import OraculoActivityTracker from "./OraculoActivityTracker";
+import OraculoTelemetryNotice from "./OraculoTelemetryNotice";
 import styles from "./OraculoStudentDashboard.module.css";
 
 export const metadata = {
@@ -34,6 +36,7 @@ export default async function OraculoStudentLayout({ children }) {
 
   return (
     <div className={styles.shell}>
+      <OraculoActivityTracker />
       <OraculoSidebar />
 
       <section className={styles.workspace}>
@@ -62,6 +65,7 @@ export default async function OraculoStudentLayout({ children }) {
           </div>
         </header>
 
+        <OraculoTelemetryNotice initiallyConsented={Boolean(context.telemetriaCienteEm)} />
         {children}
       </section>
     </div>

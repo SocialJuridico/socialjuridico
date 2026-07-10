@@ -105,6 +105,46 @@
   min-width: 0;
 }
 
+.telemetryNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 12px 26px 0;
+  padding: 12px 18px;
+  border: 1px solid rgba(249, 223, 132, 0.35);
+  border-radius: 8px;
+  background: rgba(249, 223, 132, 0.06);
+}
+
+.telemetryNotice strong {
+  color: #f9df84;
+  font-size: 14px;
+}
+
+.telemetryNotice p {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.telemetryNotice button {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #f9df84;
+  color: #1a1200;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.telemetryNotice button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .header {
   display: flex;
   align-items: center;

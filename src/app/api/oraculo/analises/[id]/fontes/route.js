@@ -4,6 +4,7 @@ import {
   addAnalysisSource,
   removeAnalysisSource,
 } from "@/lib/oraculo/oraculoAnalises";
+import { addLegalSourceToAnalysis } from "@/lib/oraculo/legalLibrary/legalLibrarySources";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,35 @@ export async function POST(request, { params }) {
 
   const { id } = await params;
   const body = await request.json().catch(() => null);
+
+  // Fonte vinda da Biblioteca Jurídica: vincula + snapshot da versão.
+  const legalUnitId = String(body?.legalUnitId || "").trim();
+  if (legalUnitId) {
+    const result = await addLegalSourceToAnalysis({
+      analiseId: id,
+      oraculoId: auth.context.oraculoId,
+      context: auth.context,
+      legalUnitId,
+    });
+    if (!result.ok) {
+      const status =
+        result.code === "NOT_FOUND" || result.code === "UNIT_NOT_FOUND"
+          ? 404
+          : result.code === "NOT_EDITABLE"
+            ? 409
+            : result.code === "ALREADY_ADDED"
+              ? 409
+              : 500;
+      const message =
+        result.code === "ALREADY_ADDED"
+          ? "Esta fonte já está na análise."
+          : "Não foi possível adicionar a fonte.";
+      return oraculoJson({ success: false, code: result.code, message }, status);
+    }
+    return oraculoJson({ success: true, data: result.source });
+  }
+
+  // Fonte de texto livre (comportamento existente).
   const titulo = String(body?.titulo || "").trim();
   if (!titulo) {
     return oraculoJson({ success: false, message: "Informe a fonte." }, 400);

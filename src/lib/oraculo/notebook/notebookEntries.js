@@ -1,12 +1,13 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { logOraculoEvent, ORACULO_EVENTS } from "@/lib/oraculo/telemetry/oraculoTelemetry";
 import { recordNotebookActivity } from "@/lib/oraculo/notebook/notebookActivityBridge";
+import { recordInstitutionAudit } from "@/lib/oraculoInstitutionAccess";
 
 // Anotações livres e rascunhos do Caderno Jurídico. Sempre escopado por
 // oraculo_id resolvido no servidor — nunca confia no id enviado pelo cliente.
 
 const ENTRY_FIELDS =
-  "id, entry_type, title, content, category, tags, status, linked_analysis_id, case_title_snapshot, question_status, answer_notes, created_at, updated_at, archived_at";
+  "id, entry_type, title, content, category, tags, status, linked_analysis_id, case_title_snapshot, question_status, answer_notes, target_type, target_auth_user_id, answered_by_auth_user_id, answered_at, created_at, updated_at, archived_at";
 
 const CASE_LINKED_TYPES = ["CASE_NOTE", "STUDY_QUESTION"];
 
@@ -72,6 +73,7 @@ export async function createNotebookEntry({
   category,
   tags,
   linkedAnalysisId,
+  targetType,
 }) {
   if (!supabaseAdmin) return { ok: false, code: "SERVICE_UNAVAILABLE" };
 
@@ -94,6 +96,30 @@ export async function createNotebookEntry({
     caseTitleSnapshot = analysis.titulo || null;
   }
 
+  // Envio ao Supervisor/Orientador: nunca confia no id de destino vindo do
+  // cliente — só aceita o supervisor/orientador de fato vinculado ao aluno
+  // (resolvido no servidor a partir do contexto acadêmico). Alvo é sempre
+  // auth_user_id: Orientador via oraculo_instituicao_usuarios.auth_user_id,
+  // Supervisor via oraculo_supervisores.advogado_user_id (só depois que ele
+  // ativa o serviço na própria conta — sem vínculo institucional).
+  let resolvedTargetType = null;
+  let resolvedTargetUserId = null;
+  if (type === "STUDY_QUESTION" && (targetType === "SUPERVISOR" || targetType === "ORIENTADOR")) {
+    if (targetType === "ORIENTADOR" && context?.orientator?.authUserId) {
+      resolvedTargetType = "ORIENTADOR";
+      resolvedTargetUserId = context.orientator.authUserId;
+    } else if (targetType === "SUPERVISOR") {
+      const padrinho = (context?.supervisors || []).find(
+        (s) => s.tipo === "PADRINHO" && s.advogadoUserId,
+      );
+      if (padrinho) {
+        resolvedTargetType = "SUPERVISOR";
+        resolvedTargetUserId = padrinho.advogadoUserId;
+      }
+    }
+    if (!resolvedTargetUserId) return { ok: false, code: "TARGET_NOT_FOUND" };
+  }
+
   const { data, error } = await supabaseAdmin
     .from("oraculo_notebook_entries")
     .insert([
@@ -108,6 +134,8 @@ export async function createNotebookEntry({
         linked_analysis_id: analysisId,
         case_title_snapshot: caseTitleSnapshot,
         question_status: type === "STUDY_QUESTION" ? "OPEN" : null,
+        target_type: resolvedTargetType,
+        target_auth_user_id: resolvedTargetUserId,
       },
     ])
     .select(ENTRY_FIELDS)
@@ -239,6 +267,135 @@ export async function archiveNotebookEntry({ context, oraculoId, id }) {
   });
 
   return { ok: true };
+}
+
+const STAFF_QUESTION_FIELDS =
+  "id, oraculo_id, content, case_title_snapshot, question_status, answer_notes, answered_at, target_type, linked_analysis_id, created_at";
+
+/**
+ * Perguntas enviadas a este Supervisor/Orientador (identidade = auth_user_id
+ * puro — Orientador via oraculo_instituicao_usuarios.auth_user_id, Supervisor
+ * via oraculo_supervisores.advogado_user_id), com nome do aluno resolvido à
+ * parte (sem depender de FK direta — o aluno permanece dono do registro).
+ */
+export async function listStaffQuestions({ authUserId, answered = null, limit = 100 }) {
+  if (!supabaseAdmin || !authUserId) return [];
+
+  let query = supabaseAdmin
+    .from("oraculo_notebook_entries")
+    .select(STAFF_QUESTION_FIELDS)
+    .eq("target_auth_user_id", authUserId)
+    .eq("entry_type", "STUDY_QUESTION")
+    .eq("status", "ACTIVE")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (answered === true) query = query.eq("question_status", "ANSWERED");
+  if (answered === false) query = query.neq("question_status", "ANSWERED");
+
+  const { data: questions } = await query;
+  if (!questions?.length) return [];
+
+  const oraculoIds = [...new Set(questions.map((q) => q.oraculo_id))];
+  const { data: students } = await supabaseAdmin
+    .from("oraculo_profissionais")
+    .select("id, name")
+    .in("id", oraculoIds);
+  const nameById = new Map((students || []).map((s) => [s.id, s.name]));
+
+  return questions.map((q) => ({ ...q, studentName: nameById.get(q.oraculo_id) || "Estudante" }));
+}
+
+export async function countStaffQuestions({ authUserId, answered = null }) {
+  if (!supabaseAdmin || !authUserId) return 0;
+  let query = supabaseAdmin
+    .from("oraculo_notebook_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("target_auth_user_id", authUserId)
+    .eq("entry_type", "STUDY_QUESTION")
+    .eq("status", "ACTIVE");
+  if (answered === true) query = query.eq("question_status", "ANSWERED");
+  if (answered === false) query = query.neq("question_status", "ANSWERED");
+  const { count } = await query;
+  return count || 0;
+}
+
+export async function getStaffQuestion({ authUserId, id }) {
+  if (!supabaseAdmin || !authUserId) return null;
+  const { data: question } = await supabaseAdmin
+    .from("oraculo_notebook_entries")
+    .select(STAFF_QUESTION_FIELDS)
+    .eq("id", id)
+    .eq("target_auth_user_id", authUserId)
+    .eq("entry_type", "STUDY_QUESTION")
+    .maybeSingle();
+  if (!question) return null;
+
+  const { data: student } = await supabaseAdmin
+    .from("oraculo_profissionais")
+    .select("id, name, email, curso")
+    .eq("id", question.oraculo_id)
+    .maybeSingle();
+
+  return { question, student };
+}
+
+/**
+ * Responde uma pergunta enviada a este Supervisor/Orientador. Nunca confia
+ * no id da pergunta sem validar que foi endereçada a ele. Auditoria
+ * institucional só se aplica ao Orientador (Supervisor não tem instituição).
+ */
+export async function answerStaffQuestion({
+  authUserId,
+  instituicaoId = null,
+  institutionUserId = null,
+  id,
+  answerNotes,
+  request = null,
+}) {
+  if (!supabaseAdmin) return { ok: false, code: "SERVICE_UNAVAILABLE" };
+  const answer = String(answerNotes || "").trim();
+  if (!answer) return { ok: false, code: "ANSWER_REQUIRED" };
+
+  const { data: existing } = await supabaseAdmin
+    .from("oraculo_notebook_entries")
+    .select("id, target_type")
+    .eq("id", id)
+    .eq("target_auth_user_id", authUserId)
+    .eq("entry_type", "STUDY_QUESTION")
+    .maybeSingle();
+  if (!existing) return { ok: false, code: "NOT_FOUND" };
+
+  const nowIso = new Date().toISOString();
+  const { data, error } = await supabaseAdmin
+    .from("oraculo_notebook_entries")
+    .update({
+      answer_notes: answer.slice(0, 8000),
+      question_status: "ANSWERED",
+      answered_by_auth_user_id: authUserId,
+      answered_at: nowIso,
+      updated_at: nowIso,
+    })
+    .eq("id", id)
+    .select(STAFF_QUESTION_FIELDS)
+    .single();
+  if (error) return { ok: false, code: "SAVE_FAILED" };
+
+  if (instituicaoId) {
+    await recordInstitutionAudit({
+      instituicaoId,
+      instituicaoUsuarioId: institutionUserId,
+      authUserId,
+      eventType:
+        existing.target_type === "SUPERVISOR"
+          ? "SUPERVISOR_QUESTION_ANSWERED"
+          : "ORIENTATOR_QUESTION_ANSWERED",
+      action: "Respondeu pergunta do estudante",
+      metadata: { questionId: id },
+      request,
+    });
+  }
+
+  return { ok: true, question: data };
 }
 
 function normalizeTags(tags) {

@@ -659,9 +659,12 @@ function CaseNoteCard({ entry, onArchive }) {
   );
 }
 
+const TARGET_LABELS = { ORIENTADOR: "Orientador", SUPERVISOR: "Supervisor" };
+
 function QuestionCard({ entry, onSave, onArchive }) {
   const [answering, setAnswering] = useState(false);
   const [answer, setAnswer] = useState(entry.answer_notes || "");
+  const sentToStaff = Boolean(entry.target_type);
 
   return (
     <article className={styles.entryCard}>
@@ -672,13 +675,16 @@ function QuestionCard({ entry, onSave, onArchive }) {
         </span>
         <small>{formatDate(entry.created_at)}</small>
       </div>
+      {sentToStaff && (
+        <span className={styles.categoryTag}>Enviada ao {TARGET_LABELS[entry.target_type]}</span>
+      )}
       {entry.case_title_snapshot && (
         <span className={styles.categoryTag}>{entry.case_title_snapshot}</span>
       )}
       <p className={styles.entryContent}>{entry.content}</p>
       {entry.answer_notes && !answering && (
         <p className={styles.entryContent}>
-          <strong>Minha resposta: </strong>
+          <strong>{sentToStaff ? `Resposta do ${TARGET_LABELS[entry.target_type]}: ` : "Minha resposta: "}</strong>
           {entry.answer_notes}
         </p>
       )}
@@ -711,7 +717,7 @@ function QuestionCard({ entry, onSave, onArchive }) {
         </div>
       ) : (
         <div className={styles.entryActions}>
-          {entry.question_status === "OPEN" && (
+          {!sentToStaff && entry.question_status === "OPEN" && (
             <button
               type="button"
               className={styles.actionBtn}
@@ -720,9 +726,11 @@ function QuestionCard({ entry, onSave, onArchive }) {
               Marcar como estudando
             </button>
           )}
-          <button type="button" className={styles.actionBtn} onClick={() => setAnswering(true)}>
-            <Pencil size={13} /> Responder com minhas palavras
-          </button>
+          {!sentToStaff && (
+            <button type="button" className={styles.actionBtn} onClick={() => setAnswering(true)}>
+              <Pencil size={13} /> Responder com minhas palavras
+            </button>
+          )}
           {entry.linked_analysis_id && (
             <Link href={`/dashboard/oraculo/analises/${entry.linked_analysis_id}`} className={styles.actionBtn}>
               Abrir caso

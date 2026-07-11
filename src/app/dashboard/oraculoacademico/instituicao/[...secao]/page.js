@@ -24,7 +24,7 @@ import {
 
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getInstitutionAccessContext } from "@/lib/oraculoInstitutionAccess";
+import { getInstitutionAccessContext, sendInstitutionRoleInvite } from "@/lib/oraculoInstitutionAccess";
 import { computeOraculoStatus } from "@/lib/oraculo/oraculoStatus";
 import { getStudentTelemetrySummary } from "@/lib/oraculo/telemetry/oraculoTelemetry";
 import {
@@ -505,6 +505,9 @@ export async function resendSupervisorInviteAction(formData) {
 export async function createFormalSupervisorAction(formData) {
   "use server";
 
+  // Supervisor Jurídico não tem vínculo institucional (é indicado pelo
+  // aluno, ver oraculo_supervisores) — este cadastro é só um roster
+  // informativo da instituição, sem convite/login associado.
   const { instituicaoId } = await requireInstitutionActionContext(
     "PROGRAM_MANAGE_SUPERVISORS",
   );
@@ -551,77 +554,27 @@ export async function createInstitutionOrientatorAction(formData) {
     redirect("/dashboard/oraculoacademico/instituicao/orientadores/vincular?erro=campos");
   }
 
-  const payload = {
-    instituicao_id: instituicaoId,
-    nome_completo: nomeCompleto,
+  // Antes gravava direto em oraculo_instituicao_usuarios com status ATIVO mas
+  // sem auth_user_id: o orientador nunca conseguia logar de verdade. Envia
+  // convite de verdade (cria conta + login no aceite), mesmo mecanismo do
+  // Supervisor.
+  const invite = await sendInstitutionRoleInvite({
+    instituicaoId,
+    invitedByAuthUserId: user.id,
     email,
-    telefone: textField(formData, "telefone"),
-    cargo: textField(formData, "cargo", "Professor orientador"),
-    tipo_vinculo: textField(formData, "tipo_vinculo", "RESPONSAVEL_ACADEMICO"),
-    status: "ATIVO",
-    email_institucional: true,
-    created_by_auth_user_id: user.id,
-    activated_at: new Date().toISOString(),
-  };
-
-  const { data: existing } = await supabaseAdmin
-    .from("oraculo_instituicao_usuarios")
-    .select("id")
-    .eq("instituicao_id", instituicaoId)
-    .eq("email", email)
-    .maybeSingle();
-
-  let institutionUserId = existing?.id;
-
-  if (institutionUserId) {
-    const { error } = await supabaseAdmin
-      .from("oraculo_instituicao_usuarios")
-      .update(payload)
-      .eq("id", institutionUserId);
-
-    if (error) {
-      redirect("/dashboard/oraculoacademico/instituicao/orientadores/vincular?erro=salvar");
-    }
-  } else {
-    const { data, error } = await supabaseAdmin
-      .from("oraculo_instituicao_usuarios")
-      .insert([payload])
-      .select("id")
-      .single();
-
-    if (error) {
-      redirect("/dashboard/oraculoacademico/instituicao/orientadores/vincular?erro=salvar");
-    }
-
-    institutionUserId = data.id;
-  }
-
-  const { data: existingRole } = await supabaseAdmin
-    .from("oraculo_instituicao_user_roles")
-    .select("id")
-    .eq("instituicao_usuario_id", institutionUserId)
-    .eq("role", "ORACULO_PROFESSOR_ORIENTADOR")
-    .is("revoked_at", null)
-    .maybeSingle();
-
-  if (!existingRole) {
-    const { error } = await supabaseAdmin
-      .from("oraculo_instituicao_user_roles")
-      .insert([
-        {
-          instituicao_usuario_id: institutionUserId,
-          role: "ORACULO_PROFESSOR_ORIENTADOR",
-          granted_by_auth_user_id: user.id,
-        },
-      ]);
-
-    if (error) {
-      redirect("/dashboard/oraculoacademico/instituicao/orientadores/vincular?erro=role");
-    }
-  }
+    nome: nomeCompleto,
+    role: "ORACULO_PROFESSOR_ORIENTADOR",
+  }).catch((inviteError) => {
+    console.error("[Instituicao] Falha ao convidar orientador:", inviteError?.message);
+    return { ok: false, code: "SEND_FAILED" };
+  });
 
   revalidatePath("/dashboard/oraculoacademico/instituicao/orientadores");
-  redirect("/dashboard/oraculoacademico/instituicao/orientadores?criado=1");
+  redirect(
+    invite.ok
+      ? "/dashboard/oraculoacademico/instituicao/orientadores?criado=1&convite=1"
+      : "/dashboard/oraculoacademico/instituicao/orientadores?criado=1&convite=0",
+  );
 }
 
 export async function createAcademicActivityAction(formData) {

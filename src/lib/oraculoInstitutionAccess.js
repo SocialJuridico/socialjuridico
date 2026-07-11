@@ -325,3 +325,102 @@ export async function createInitialInstitutionAdminInvite({
 
   return { created: true, inviteId: invite.id };
 }
+
+/**
+ * Convite de auto-atendimento: o próprio admin da instituição convida um
+ * Professor Orientador (diferente de createInitialInstitutionAdminInvite,
+ * que é só para o primeiro admin, e da rota interna
+ * /api/admin/oraculoacademico, que exige admin da plataforma). Mesmo
+ * mecanismo (oraculo_instituicao_convites + e-mail com token) — sem isso, o
+ * usuário criado nunca ganha auth_user_id e nunca consegue logar.
+ *
+ * Não usar para Supervisor Jurídico: ele não tem vínculo institucional (é
+ * indicado pelo aluno — ver oraculo_supervisores / supervisorContext.js).
+ */
+export async function sendInstitutionRoleInvite({
+  db = supabaseAdmin,
+  instituicaoId,
+  invitedByAuthUserId,
+  email,
+  nome,
+  role,
+  request = null,
+}) {
+  const normalizedEmail = normalizeInstitutionEmail(email);
+  if (!db || !instituicaoId || !normalizedEmail || !nome || !INSTITUTION_ROLES.includes(role)) {
+    return { ok: false, code: "INVALID_INPUT" };
+  }
+
+  const { data: instituicao, error: institutionError } = await db
+    .from("oraculo_instituicoes")
+    .select("id, nome, status")
+    .eq("id", instituicaoId)
+    .maybeSingle();
+  if (institutionError) throw institutionError;
+  if (!instituicao || instituicao.status !== "ATIVA") {
+    return { ok: false, code: "INSTITUTION_NOT_ACTIVE" };
+  }
+
+  const { data: existing, error: existingError } = await db
+    .from("oraculo_instituicao_convites")
+    .select("id")
+    .eq("instituicao_id", instituicaoId)
+    .eq("email", normalizedEmail)
+    .eq("role", role)
+    .eq("status", "PENDENTE")
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existing) return { ok: false, code: "INVITE_ALREADY_PENDING" };
+
+  const { token, tokenHash } = createInstitutionInviteToken();
+  const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: invite, error } = await db
+    .from("oraculo_instituicao_convites")
+    .insert([
+      {
+        instituicao_id: instituicaoId,
+        email: normalizedEmail,
+        nome_convidado: nome,
+        role,
+        supervisor_formal_id: supervisorFormalId,
+        token_hash: tokenHash,
+        status: "PENDENTE",
+        invited_by_auth_user_id: invitedByAuthUserId,
+        invited_by_role: "INSTITUTION_ADMIN",
+        expires_at: expiresAt,
+      },
+    ])
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  const inviteUrl = `${
+    process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "https://www.socialjuridico.com.br"
+  }/oraculoacademico/convite-institucional/${token}`;
+
+  await resend.emails.send({
+    from: RESEND_FROM,
+    to: normalizedEmail,
+    subject: "Você foi convidado para o Oráculo Acadêmico",
+    html: oraculoInstitutionInviteTemplate({
+      invitedName: nome,
+      institutionName: instituicao.nome,
+      roleLabel: INSTITUTION_ROLE_LABELS[role] || role,
+      inviteUrl,
+      expiresAt,
+    }),
+  });
+
+  await recordInstitutionAudit({
+    db,
+    instituicaoId,
+    authUserId: invitedByAuthUserId,
+    eventType: "INSTITUTION_INVITE_SENT",
+    action: "send_institution_role_invite",
+    request,
+    metadata: { email: normalizedEmail, role, inviteId: invite.id },
+  });
+
+  return { ok: true, inviteId: invite.id };
+}

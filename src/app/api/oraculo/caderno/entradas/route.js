@@ -48,11 +48,16 @@ export async function POST(request) {
     category: body.category,
     tags: body.tags,
     linkedAnalysisId: body.analiseId,
+    targetType: body.targetType,
   });
 
   if (!result.ok) {
     const status =
-      result.code === "CONTENT_REQUIRED" || result.code === "ANALYSIS_NOT_FOUND" ? 400 : 500;
+      result.code === "CONTENT_REQUIRED" ||
+      result.code === "ANALYSIS_NOT_FOUND" ||
+      result.code === "TARGET_NOT_FOUND"
+        ? 400
+        : 500;
     return oraculoJson({ success: false, message: "Não foi possível salvar." }, status);
   }
   return oraculoJson({ success: true, data: result.entry });

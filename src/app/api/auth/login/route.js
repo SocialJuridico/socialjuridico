@@ -317,6 +317,29 @@ export async function POST(request) {
             .map((role) => role.role),
         }));
 
+    // Supervisor Jurídico Acadêmico: não tem vínculo institucional (é
+    // indicado pelo aluno em oraculo_supervisores), então não aparece em
+    // institutionContexts. Ativado = advogado_user_id já é esta conta.
+    // Elegível = e-mail bate com um vínculo aprovado ainda não ativado.
+    const { data: supervisorRows } = await db
+      .from("oraculo_supervisores")
+      .select("id, email, status, advogado_user_id")
+      .eq("status", "APROVADO")
+      .or(`advogado_user_id.eq.${user.id},email.eq.${normalizedEmail}`);
+
+    const supervisorActive = (supervisorRows || []).some(
+      (row) => row.advogado_user_id === user.id,
+    );
+    const supervisorEligibleForActivation =
+      !supervisorActive &&
+      (supervisorRows || []).some(
+        (row) => !row.advogado_user_id && row.email === normalizedEmail,
+      );
+    const supervisorAccess = {
+      active: supervisorActive,
+      eligibleForActivation: supervisorEligibleForActivation,
+    };
+
     // Bloquear membros de escritório no login individual
     if (profile && profile.escritorio_id) {
       await supabase.auth.signOut(); // Revoga a sessão
@@ -433,6 +456,7 @@ export async function POST(request) {
         cargo: profile?.cargo || null,
         oraculoStatus: profile?.oraculo_status || null,
         institutionContexts,
+        supervisorAccess,
         needsPasswordUpdate: user.user_metadata?.needs_password_update === true,
       },
     });

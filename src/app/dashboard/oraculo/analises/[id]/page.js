@@ -36,6 +36,8 @@ export default async function MesaPage({ params }) {
       editable={state.editable}
       canAct={context.studentStatus === "ATIVO"}
       initialNotebookEntries={notebookEntries}
+      hasOrientator={Boolean(context.orientator?.authUserId)}
+      hasSupervisor={Boolean(context.supervisors?.some((s) => s.tipo === "PADRINHO" && s.advogadoUserId))}
     />
   );
 }

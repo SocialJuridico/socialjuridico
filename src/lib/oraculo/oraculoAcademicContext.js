@@ -118,15 +118,18 @@ async function loadRelated({
     orientadorUsuarioId
       ? supabaseAdmin
           .from("oraculo_instituicao_usuarios")
-          .select("id, nome_completo, cargo")
+          .select("id, nome_completo, cargo, auth_user_id")
           .eq("id", orientadorUsuarioId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
-    // Padrinho(s) indicado(s) pelo aluno no cadastro (pode ser externo).
+    // Padrinho(s) indicado(s) pelo aluno no cadastro (pode ser externo). É
+    // este o Supervisor Jurídico de verdade — não tem vínculo institucional;
+    // advogado_user_id só é setado quando ele ativa o serviço na própria
+    // conta Social Jurídico (ver /api/oraculoacademico/supervisor/ativar).
     oraculoId
       ? supabaseAdmin
           .from("oraculo_supervisores")
-          .select("id, nome, email, relacao, status, oab_numero, oab_uf")
+          .select("id, nome, email, relacao, status, oab_numero, oab_uf, advogado_user_id")
           .eq("oraculo_id", oraculoId)
           .in("status", ["APROVADO", "CONVIDADO"])
       : Promise.resolve({ data: [] }),
@@ -176,6 +179,7 @@ function buildContext(profile, link, related) {
     orientator: related.orientator
       ? {
           id: related.orientator.id,
+          authUserId: related.orientator.auth_user_id || null,
           name: related.orientator.nome_completo,
           cargo: related.orientator.cargo || null,
         }
@@ -209,6 +213,9 @@ function buildSupervisorsList(related) {
       tipo: "PADRINHO",
       origem: "Indicado pelo aluno",
       status: p.status || null,
+      // Só quando o supervisor ativa o serviço na própria conta é que ele
+      // ganha dashboard e pode receber perguntas do Caderno.
+      advogadoUserId: p.advogado_user_id || null,
     });
   }
   return list;

@@ -82,6 +82,8 @@ export default function MesaClient({
   editable: initialEditable,
   canAct,
   initialNotebookEntries,
+  hasOrientator,
+  hasSupervisor,
 }) {
   const [values, setValues] = useState(() => {
     const v = {};
@@ -364,22 +366,25 @@ export default function MesaClient({
         analiseId={analiseId}
         initialEntries={initialNotebookEntries || []}
         editable={editable}
+        hasOrientator={hasOrientator}
+        hasSupervisor={hasSupervisor}
       />
     </main>
   );
 }
 
-function CadernoPanel({ analiseId, initialEntries, editable }) {
+function CadernoPanel({ analiseId, initialEntries, editable, hasOrientator, hasSupervisor }) {
   const [entries, setEntries] = useState(initialEntries);
   const [noteDraft, setNoteDraft] = useState("");
   const [questionDraft, setQuestionDraft] = useState("");
+  const [questionTarget, setQuestionTarget] = useState("");
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
   const notes = entries.filter((e) => e.entry_type === "CASE_NOTE");
   const questions = entries.filter((e) => e.entry_type === "STUDY_QUESTION");
 
-  async function create(entryType, content, reset) {
+  async function create(entryType, content, reset, extra = {}) {
     const text = content.trim();
     if (!text || busy) return;
     setBusy(true);
@@ -387,7 +392,7 @@ function CadernoPanel({ analiseId, initialEntries, editable }) {
       const res = await fetch("/api/oraculo/caderno/entradas", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entryType, content: text, analiseId }),
+        body: JSON.stringify({ entryType, content: text, analiseId, ...extra }),
       });
       const payload = await res.json().catch(() => null);
       if (res.ok && payload?.success) {
@@ -502,9 +507,20 @@ function CadernoPanel({ analiseId, initialEntries, editable }) {
                 value={questionDraft}
                 onChange={(e) => setQuestionDraft(e.target.value)}
               />
+              {(hasOrientator || hasSupervisor) && (
+                <select value={questionTarget} onChange={(e) => setQuestionTarget(e.target.value)}>
+                  <option value="">Só minha dúvida (não enviar)</option>
+                  {hasOrientator && <option value="ORIENTADOR">Enviar ao meu Orientador</option>}
+                  {hasSupervisor && <option value="SUPERVISOR">Enviar ao meu Supervisor</option>}
+                </select>
+              )}
               <button
                 type="button"
-                onClick={() => create("STUDY_QUESTION", questionDraft, () => setQuestionDraft(""))}
+                onClick={() =>
+                  create("STUDY_QUESTION", questionDraft, () => setQuestionDraft(""), {
+                    targetType: questionTarget || undefined,
+                  })
+                }
                 disabled={!questionDraft.trim() || busy}
               >
                 <HelpCircle size={14} aria-hidden="true" /> Nova questão de estudo
@@ -523,9 +539,12 @@ const QUESTION_STATUS_LABELS = {
   ANSWERED: "Respondida",
 };
 
+const TARGET_LABELS = { ORIENTADOR: "Enviada ao Orientador", SUPERVISOR: "Enviada ao Supervisor" };
+
 function StudyQuestionItem({ question, editable, onPatch, onArchive }) {
   const [answering, setAnswering] = useState(false);
   const [answer, setAnswer] = useState(question.answer_notes || "");
+  const sentToStaff = Boolean(question.target_type);
 
   return (
     <li>
@@ -533,9 +552,10 @@ function StudyQuestionItem({ question, editable, onPatch, onArchive }) {
         <strong>{question.content}</strong>
         <small>
           {QUESTION_STATUS_LABELS[question.question_status] || question.question_status}
+          {sentToStaff ? ` · ${TARGET_LABELS[question.target_type]}` : ""}
           {question.answer_notes ? ` · ${question.answer_notes}` : ""}
         </small>
-        {editable && answering && (
+        {editable && !sentToStaff && answering && (
           <div className={styles.sourceForm}>
             <input
               placeholder="Responda com suas palavras…"
@@ -557,12 +577,12 @@ function StudyQuestionItem({ question, editable, onPatch, onArchive }) {
       </div>
       {editable && (
         <div className={styles.encaminhaBtns}>
-          {question.question_status === "OPEN" && (
+          {!sentToStaff && question.question_status === "OPEN" && (
             <button type="button" onClick={() => onPatch(question.id, { questionStatus: "STUDYING" })}>
               Estudando
             </button>
           )}
-          {!answering && (
+          {!sentToStaff && !answering && (
             <button type="button" onClick={() => setAnswering(true)}>
               Responder
             </button>

@@ -11,6 +11,7 @@ import {
 } from "@/lib/oraculo/ai/simulatedClientAgent";
 import { frozenCanonMetaFromCase } from "@/lib/oraculo/ai/simulationCanonStore";
 import { evaluateConduct } from "@/lib/oraculo/ai/academicAngelConductGuard";
+import { recordConductAlert } from "@/lib/oraculo/ai/academicAngelAlertBridge";
 import { validateGrounding } from "@/lib/oraculo/ai/academicAngelGroundingGuard";
 import {
   evaluateWindow,
@@ -263,6 +264,7 @@ export async function sendStudentMessage({ interviewId, oraculoId, content, cont
         : "ORACULO_SIMULATED_INTERVIEW_MESSAGE_BLOCKED",
       metadata: { flags: conduct.flags, excerpt: conduct.excerpt, action: conduct.action },
     });
+    await recordConductAlert({ context, interview, conduct });
     return { ok: false, blocked: true, conduct };
   }
 

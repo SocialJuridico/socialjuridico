@@ -2,6 +2,7 @@
   position: relative;
   isolation: isolate;
   display: flex;
+  flex-direction: column;
   min-height: 760px;
   align-items: center;
   justify-content: center;
@@ -43,6 +44,42 @@
     rgba(0, 0, 0, 0.55),
     transparent 78%
   );
+}
+
+.parceriaSelo {
+  z-index: 3;
+  width: 30%;
+  height: auto;
+  filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.45));
+  /* animation: seloFloat 10.5s ease-in-out infinite; */
+  pointer-events: none;
+  user-select: none;
+  border-radius: 15px;
+}
+
+@keyframes seloFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(2deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .parceriaSelo {
+    top: 82px;
+    right: 40%;
+    width: 80px;
+    border-radius: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parceriaSelo {
+    animation: none;
+  }
 }
 
 .backgroundGlow {

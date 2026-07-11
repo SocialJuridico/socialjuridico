@@ -142,6 +142,14 @@ export default async function Hero() {
     <section id="inicio" className={styles.heroSection}>
       <div className={styles.backgroundGlow} aria-hidden="true" />
 
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/Parcerias/selo.png"
+        alt="Selo de parceria com a OAB/RS"
+        className={styles.parceriaSelo}
+      />
+
+
       <div className={styles.content}>
         <h1 className={styles.title}>
           Encontre o advogado certo

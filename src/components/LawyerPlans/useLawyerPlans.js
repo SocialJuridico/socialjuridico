@@ -12,6 +12,20 @@ import {
   isIntroPromotionEligible,
   LAWYER_PLANS,
 } from "./planCatalog";
+import {
+  isRsLawyer,
+  applyRsDiscountValue,
+  rsRateFor,
+  RS_DISCOUNT_LABELS,
+} from "@/lib/lawyerDiscount";
+
+// Links hospedados InfinitePay com desconto OAB/RS para o PRO recorrente
+// (mensal/anual). Só entram em uso quando configurados no ambiente; sem eles o
+// PRO recorrente não recebe o desconto automático (limitação dos links fixos).
+const PRO_RS_HOSTED = {
+  MONTHLY: process.env.NEXT_PUBLIC_INFINITEPAY_PRO_MENSAL_RS_URL || "",
+  ANNUAL: process.env.NEXT_PUBLIC_INFINITEPAY_PRO_ANUAL_RS_URL || "",
+};
 
 function normalizeCouponResponse(data, fallbackCode, promotional = false) {
   const code = String(data?.codigo || fallbackCode || "")
@@ -131,6 +145,8 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
     [profileData],
   );
 
+  const isRs = useMemo(() => isRsLawyer(profileData), [profileData]);
+
   const planCards = useMemo(
     () =>
       Object.values(LAWYER_PLANS).map((plan) => {
@@ -143,11 +159,36 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
           Boolean(promotionCoupon) &&
           isIntroPromotionEligible(plan.id, billingCycle, profileData);
         const previewCoupon = introEligible ? promotionCoupon : coupon;
-        const pricing = applyCouponToPrice(
-          priceInfo,
-          billingCycle,
-          previewCoupon,
-        );
+        let pricing = applyCouponToPrice(priceInfo, billingCycle, previewCoupon);
+
+        // Desconto de parceria OAB/RS: só quando a cobrança daquele caminho
+        // realmente aplica o desconto (não empilha com promo/cupom). PRO
+        // recorrente depende do link RS configurado por ambiente.
+        let rsDiscount = null;
+        const rsRate = rsRateFor(plan.id);
+        let rsEligible = isRs && rsRate > 0 && !introEligible && !coupon;
+        if (
+          rsEligible &&
+          plan.id === "PRO" &&
+          (billingCycle === "MONTHLY" || billingCycle === "ANNUAL")
+        ) {
+          rsEligible = Boolean(PRO_RS_HOSTED[billingCycle]);
+        }
+        if (rsEligible) {
+          const rsTotal = applyRsDiscountValue(pricing.total, plan.id);
+          pricing = {
+            ...pricing,
+            total: rsTotal,
+            display: billingCycle === "ANNUAL" ? rsTotal / 12 : rsTotal,
+          };
+          rsDiscount = {
+            rate: rsRate,
+            rateLabel: RS_DISCOUNT_LABELS[plan.id],
+            originalTotal: applyCouponToPrice(priceInfo, billingCycle, previewCoupon)
+              .total,
+          };
+        }
+
         const isCurrent = activePlan === plan.id;
         const isDowngrade = activePlan === "PRO" && plan.id === "START";
 
@@ -156,6 +197,7 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
           billingCycle,
           priceInfo,
           pricing,
+          rsDiscount,
           previewCoupon,
           introEligible,
           annualSavings: calculateAnnualSavings(plan),
@@ -170,6 +212,7 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
       activePlan,
       billingCycle,
       coupon,
+      isRs,
       profileData,
       profilePending,
       promotionCoupons,
@@ -223,9 +266,11 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
         // assinante. Compra não é atribuída automaticamente nesses casos.
         const hostedSubscriptionUrl =
           billingCycle === "ANNUAL"
-            ? "https://invoice.infinitepay.io/plans/plataforma-social/nrJhBb2yJQ"
+            ? (isRs && PRO_RS_HOSTED.ANNUAL) ||
+              "https://invoice.infinitepay.io/plans/plataforma-social/nrJhBb2yJQ"
             : billingCycle === "MONTHLY" && !planCard.introEligible
-              ? "https://invoice.infinitepay.io/plans/plataforma-social/tkDa1iSpch"
+              ? (isRs && PRO_RS_HOSTED.MONTHLY) ||
+                "https://invoice.infinitepay.io/plans/plataforma-social/tkDa1iSpch"
               : "";
 
         if (hostedSubscriptionUrl) {
@@ -327,7 +372,15 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
         setSelectingPlan(null);
       }
     },
-    [billingCycle, coupon, onSelectPlan, onClose, profilePending, selectingPlan],
+    [
+      billingCycle,
+      coupon,
+      isRs,
+      onSelectPlan,
+      onClose,
+      profilePending,
+      selectingPlan,
+    ],
   );
 
   return {

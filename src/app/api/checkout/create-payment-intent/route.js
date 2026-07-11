@@ -14,6 +14,7 @@ import {
   assertLawyerPlanPurchaseAllowed,
   normalizeLawyerPlanType,
 } from "@/lib/lawyerPlans/planAccessServer";
+import { isRsLawyer, applyRsDiscountCents } from "@/lib/lawyerDiscount";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
@@ -121,7 +122,7 @@ export async function POST(request) {
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("advogados")
-      .select("oab_verification_status, plan_type, subscription_status")
+      .select("oab_verification_status, plan_type, subscription_status, estado, oab")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -201,11 +202,20 @@ export async function POST(request) {
     }
 
     const originalAmount = Number(price.unit_amount);
-    const amountInCents = couponReservation
+    let amountInCents = couponReservation
       ? calculateDiscountedAmount(originalAmount, couponReservation.coupon)
       : originalAmount;
 
-    if (couponReservation && amountInCents < 50) {
+    // Desconto de parceria OAB/RS (10% START / 15% PRO). Não empilha com cupom.
+    const rsApplied =
+      !couponReservation &&
+      Boolean(product.planType) &&
+      isRsLawyer(profile);
+    if (rsApplied) {
+      amountInCents = applyRsDiscountCents(amountInCents, product.planType);
+    }
+
+    if ((couponReservation || rsApplied) && amountInCents < 50) {
       const error = new Error(
         "O desconto deixa o valor abaixo da cobrança mínima de R$ 0,50. Use outro cupom ou produto.",
       );

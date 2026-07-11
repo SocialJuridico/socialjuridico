@@ -31,6 +31,7 @@ import {
   normalizeUF,
 } from "@/lib/oab";
 
+import PartnershipPopup from "@/components/PartnershipPopup/PartnershipPopup";
 import styles from "./Cadastro.module.css";
 
 const states = [
@@ -1019,6 +1020,7 @@ export default function CadastroPage() {
         </main>
       }
     >
+      <PartnershipPopup />
       <CadastroContent />
     </Suspense>
   );

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
+import { isRsLawyer, applyRsDiscountCents } from "@/lib/lawyerDiscount";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -48,7 +49,7 @@ function normalizePhone(value) {
 
 // Valores em centavos. Mantidos em sincronia com o catálogo (planCatalog.js) e
 // com o webhook (api/webhook/infinitepay) que reconhece estes mesmos valores.
-function resolveProduct({ planType, jurisAmount, isPromoEligible, billingCycle }) {
+function resolveProduct({ planType, jurisAmount, isPromoEligible, billingCycle, isRs }) {
   const normalizedPlan = String(planType || "").toUpperCase();
   const normalizedJuris = Number(jurisAmount || 0);
   const cycle = String(billingCycle || "MONTHLY").toUpperCase();
@@ -62,30 +63,36 @@ function resolveProduct({ planType, jurisAmount, isPromoEligible, billingCycle }
     };
   }
 
+  // Desconto de parceria OAB/RS: só nos preços regulares do plano (não na
+  // promoção de 1º mês nem em Juris). O webhook reconhece os valores com
+  // desconto para ativar o plano automaticamente.
+  const withRs = (cents, plan) => (isRs ? applyRsDiscountCents(cents, plan) : cents);
+  const rsTag = isRs ? " (desconto OAB/RS)" : "";
+
   if (normalizedPlan === "PRO") {
     if (cycle === "AVULSO") {
-      return { priceInCents: 21000, description: "Plano Pro Avulso 30 dias" };
+      return { priceInCents: withRs(21000, "PRO"), description: `Plano Pro Avulso 30 dias${rsTag}` };
     }
     if (cycle === "ANNUAL") {
-      return { priceInCents: 144000, description: "Plano Pro Anual" };
+      return { priceInCents: withRs(144000, "PRO"), description: `Plano Pro Anual${rsTag}` };
     }
     if (isPromoEligible) {
       return { priceInCents: 3999, description: "Plano Pro Promocional 30 dias" };
     }
-    return { priceInCents: 15000, description: "Plano Pro Mensal" };
+    return { priceInCents: withRs(15000, "PRO"), description: `Plano Pro Mensal${rsTag}` };
   }
 
   if (normalizedPlan === "START") {
     if (cycle === "AVULSO") {
-      return { priceInCents: 4990, description: "Plano Start Avulso 30 dias" };
+      return { priceInCents: withRs(4990, "START"), description: `Plano Start Avulso 30 dias${rsTag}` };
     }
     if (cycle === "ANNUAL") {
-      return { priceInCents: 43188, description: "Plano Start Anual" };
+      return { priceInCents: withRs(43188, "START"), description: `Plano Start Anual${rsTag}` };
     }
     if (isPromoEligible) {
       return { priceInCents: 1099, description: "Plano Start Promocional 30 dias" };
     }
-    return { priceInCents: 4099, description: "Plano Start Mensal" };
+    return { priceInCents: withRs(4099, "START"), description: `Plano Start Mensal${rsTag}` };
   }
 
   return null;
@@ -116,7 +123,7 @@ export async function POST(request) {
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("advogados")
       .select(
-        "id, name, email, phone, oab_verification_status, promo_start_used, promo_pro_used",
+        "id, name, email, phone, estado, oab, oab_verification_status, promo_start_used, promo_pro_used",
       )
       .eq("id", user.id)
       .maybeSingle();
@@ -152,6 +159,7 @@ export async function POST(request) {
       jurisAmount,
       billingCycle,
       isPromoEligible: requestedPromo && !promoAlreadyUsed,
+      isRs: isRsLawyer(profile),
     });
 
     if (!product) {

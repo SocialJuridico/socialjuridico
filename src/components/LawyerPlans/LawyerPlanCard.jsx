@@ -56,13 +56,19 @@ export default function LawyerPlanCard({
         <span className={styles.oldPrice}>
           {plan.introEligible
             ? `De ${formatBRL(plan.priceInfo.value)}`
-            : plan.previewCoupon && plan.pricing.total < plan.pricing.rawTotal
+            : plan.rsDiscount
               ? `De ${formatBRL(
                   billingCycle === "ANNUAL"
-                    ? plan.pricing.rawTotal / 12
-                    : plan.pricing.rawTotal,
+                    ? plan.rsDiscount.originalTotal / 12
+                    : plan.rsDiscount.originalTotal,
                 )}`
-              : ""}
+              : plan.previewCoupon && plan.pricing.total < plan.pricing.rawTotal
+                ? `De ${formatBRL(
+                    billingCycle === "ANNUAL"
+                      ? plan.pricing.rawTotal / 12
+                      : plan.pricing.rawTotal,
+                  )}`
+                : ""}
         </span>
         <div className={styles.priceLine}>
           <span className={styles.price}>
@@ -83,6 +89,12 @@ export default function LawyerPlanCard({
       {plan.introEligible && (
         <span className={styles.promoNotice}>
           <Sparkles size={13} aria-hidden="true" /> Primeiro mês por {formatBRL(plan.pricing.display)}
+        </span>
+      )}
+
+      {plan.rsDiscount && (
+        <span className={styles.promoNotice}>
+          <Sparkles size={13} aria-hidden="true" /> Desconto OAB/RS de {plan.rsDiscount.rateLabel} aplicado
         </span>
       )}
 

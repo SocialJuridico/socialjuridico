@@ -10,9 +10,23 @@ import {
   assertLawyerPlanPurchaseAllowed,
   normalizeLawyerPlanType,
 } from "@/lib/lawyerPlans/planAccessServer";
+import {
+  isRsLawyer,
+  applyRsDiscountCents,
+  rsRateFor,
+} from "@/lib/lawyerDiscount";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createClient } from "@/lib/supabaseServer";
+
+// Cupons Stripe permanentes (percent_off 10/15, duração "forever") usados para
+// o desconto de parceria OAB/RS em assinaturas. Criados no painel Stripe e
+// configurados por env; sem eles o desconto RS não é aplicado em assinaturas.
+function rsStripeCouponFor(planType) {
+  return String(planType).toUpperCase() === "PRO"
+    ? process.env.STRIPE_COUPON_RS_PRO || ""
+    : process.env.STRIPE_COUPON_RS_START || "";
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -148,7 +162,7 @@ export async function POST(request) {
 
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("advogados")
-      .select("oab_verification_status, plan_type, subscription_status")
+      .select("oab_verification_status, plan_type, subscription_status, estado, oab")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -210,9 +224,20 @@ export async function POST(request) {
     }
 
     const originalAmount = Number(price.unit_amount || 0);
-    const amount = couponReservation
+    let amount = couponReservation
       ? calculateDiscountedAmount(originalAmount, couponReservation.coupon)
       : originalAmount;
+
+    // Desconto de parceria OAB/RS em assinatura: aplica um cupom Stripe
+    // permanente (não empilha com cupom do usuário). Só quando o cupom Stripe
+    // estiver configurado por env.
+    const rsCouponId =
+      !couponReservation && isRsLawyer(profile) && rsRateFor(planType)
+        ? rsStripeCouponFor(planType)
+        : "";
+    if (rsCouponId) {
+      amount = applyRsDiscountCents(originalAmount, planType);
+    }
 
     if (couponReservation && amount < 50) {
       const error = new Error(
@@ -266,6 +291,8 @@ export async function POST(request) {
       subscriptionConfig.discounts = [
         { coupon: couponReservation.coupon.stripe_coupon_id },
       ];
+    } else if (rsCouponId) {
+      subscriptionConfig.discounts = [{ coupon: rsCouponId }];
     }
 
     const subscription = await stripe.subscriptions.create(subscriptionConfig);

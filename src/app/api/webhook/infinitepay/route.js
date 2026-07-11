@@ -166,6 +166,32 @@ function resolveProduct(amountInCents) {
     };
   }
 
+  // Valores com desconto de parceria OAB/RS (10% START / 15% PRO). Precisam ser
+  // reconhecidos aqui para o plano ativar automaticamente. Mantidos em sincronia
+  // com applyRsDiscountCents (lib/lawyerDiscount) e o checkout.
+  const rsDiscounted = {
+    // START -10%
+    3689: { planType: "START", billingCycle: "MONTHLY", jurisAmount: 7, expirationDays: 30 },
+    38869: { planType: "START", billingCycle: "ANNUAL", jurisAmount: 7, expirationDays: 365 },
+    4491: { planType: "START", billingCycle: "AVULSO", jurisAmount: 7, expirationDays: 30 },
+    // PRO -15%
+    12750: { planType: "PRO", billingCycle: "MONTHLY", jurisAmount: 20, expirationDays: 30 },
+    122400: { planType: "PRO", billingCycle: "ANNUAL", jurisAmount: 20, expirationDays: 365 },
+    17850: { planType: "PRO", billingCycle: "AVULSO", jurisAmount: 20, expirationDays: 30 },
+  };
+
+  if (rsDiscounted[amountInCents]) {
+    const p = rsDiscounted[amountInCents];
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType: p.planType,
+      billingCycle: p.billingCycle,
+      jurisAmount: p.jurisAmount,
+      promo: false,
+      expirationDays: p.expirationDays,
+    };
+  }
+
   const jurisPackages = {
     990: 10,
     1690: 20,

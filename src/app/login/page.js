@@ -28,6 +28,7 @@ import {
 
 import { resendConfirmationAction } from "@/app/actions/authActions";
 
+import PartnershipPopup from "@/components/PartnershipPopup/PartnershipPopup";
 import styles from "./Login.module.css";
 
 const initialForm = {
@@ -1019,6 +1020,7 @@ export default function LoginPage() {
         </main>
       }
     >
+      <PartnershipPopup />
       <LoginContent />
     </Suspense>
   );

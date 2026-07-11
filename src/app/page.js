@@ -30,10 +30,12 @@ import Community from "@/components/Community";
 import FAQ from "@/components/FAQ";
 import CTA from "@/components/CTA";
 import MobileNav from "@/components/MobileNav";
+import PartnershipPopup from "@/components/PartnershipPopup/PartnershipPopup";
 
 export default function Home() {
   return (
     <>
+      <PartnershipPopup />
       <Header />
       <Hero />
       <Features />

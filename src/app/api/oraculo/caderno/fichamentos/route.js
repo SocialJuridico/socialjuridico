@@ -1,9 +1,6 @@
 import { validateClientMutationOrigin } from "@/lib/clientDashboard/clientServer";
 import { requireOraculoStudent, oraculoJson } from "@/lib/oraculo/oraculoStudentApi";
-import {
-  saveLegalUnitToNotebook,
-  listNotebookItems,
-} from "@/lib/oraculo/legalLibrary/legalLibrarySources";
+import { listFichamentos, createFichamento } from "@/lib/oraculo/notebook/fichamentos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,7 +9,7 @@ export async function GET(request) {
   const auth = await requireOraculoStudent(request);
   if (!auth.ok) return auth.response;
 
-  const items = await listNotebookItems({ oraculoId: auth.context.oraculoId });
+  const items = await listFichamentos({ oraculoId: auth.context.oraculoId });
   return oraculoJson({ success: true, data: items });
 }
 
@@ -24,24 +21,20 @@ export async function POST(request) {
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => null);
-  const legalUnitId = String(body?.legalUnitId || "").trim();
-  if (!legalUnitId) {
-    return oraculoJson({ success: false, message: "Dispositivo inválido." }, 400);
+  if (!body?.title) {
+    return oraculoJson({ success: false, message: "Título é obrigatório." }, 400);
   }
 
-  const result = await saveLegalUnitToNotebook({
+  const result = await createFichamento({
     context: auth.context,
     oraculoId: auth.context.oraculoId,
-    legalUnitId,
-    note: body?.note,
+    title: body.title,
+    theme: body.theme,
   });
 
   if (!result.ok) {
-    const status = result.code === "UNIT_NOT_FOUND" ? 404 : 500;
-    return oraculoJson(
-      { success: false, message: "Não foi possível salvar no caderno." },
-      status,
-    );
+    const status = result.code === "TITLE_REQUIRED" ? 400 : 500;
+    return oraculoJson({ success: false, message: "Não foi possível criar." }, status);
   }
-  return oraculoJson({ success: true, data: result.item });
+  return oraculoJson({ success: true, data: result.fichamento });
 }

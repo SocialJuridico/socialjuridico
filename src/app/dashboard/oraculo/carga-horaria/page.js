@@ -3,6 +3,11 @@ import { redirect } from "next/navigation";
 import { Timer } from "lucide-react";
 
 import { resolveOraculoStudentContext } from "@/lib/oraculo/oraculoAcademicContext";
+import {
+  listStudentActivities,
+  ACTIVITY_TYPE_LABELS,
+  RECOGNITION_STATUS_LABELS,
+} from "@/lib/oraculo/oraculoActivities";
 
 import styles from "../OraculoStudentDashboard.module.css";
 
@@ -30,6 +35,8 @@ export default async function OraculoCargaHorariaPage() {
   const restanteMin = minutos % 60;
   const meta = metaHoursFrom(context.programRules);
   const progresso = meta ? Math.min(100, Math.round((horas / meta) * 100)) : null;
+
+  const activities = await listStudentActivities({ oraculoId: context.oraculoId });
 
   return (
     <main className={styles.page}>
@@ -62,14 +69,42 @@ export default async function OraculoCargaHorariaPage() {
       </section>
 
       <section className={styles.panel}>
-        <div className={styles.emptyState}>
-          <Timer size={26} aria-hidden="true" />
-          <p>Detalhamento por atividade entra na próxima fase.</p>
-          <small>
-            As horas são somadas a partir das atividades acadêmicas reconhecidas
-            pelo supervisor no seu vínculo com o programa.
-          </small>
+        <div className={styles.panelHeader}>
+          <h2>Atividades registradas</h2>
         </div>
+        {activities.length === 0 ? (
+          <div className={styles.emptyState}>
+            <Timer size={26} aria-hidden="true" />
+            <p>Nenhuma atividade registrada ainda.</p>
+            <small>
+              Fichamentos concluídos, questões de estudo respondidas, notas de
+              caso e fontes usadas em análises geram atividades aqui —
+              aguardando reconhecimento da instituição para contar como hora.
+            </small>
+          </div>
+        ) : (
+          <div className={styles.claimList}>
+            {activities.map((a) => (
+              <div key={a.id} className={styles.claimRow}>
+                <div>
+                  <strong>{ACTIVITY_TYPE_LABELS[a.tipo_atividade] || a.tipo_atividade}</strong>
+                  <small>
+                    {a.titulo}
+                    {a.conta_carga_horaria ? ` · ${a.tempo_registrado_minutos || 0}min` : ""}
+                  </small>
+                </div>
+                <span className={styles.claimStatus}>
+                  {a.conta_carga_horaria
+                    ? RECOGNITION_STATUS_LABELS[a.reconhecimento_status] || a.reconhecimento_status
+                    : "Não conta horas"}
+                </span>
+                <span className={styles.claimDeadline}>
+                  {new Date(a.completed_at || a.created_at).toLocaleDateString("pt-BR")}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );

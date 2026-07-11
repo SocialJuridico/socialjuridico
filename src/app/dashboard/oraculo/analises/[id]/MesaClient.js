@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   BookOpen,
   Check,
+  HelpCircle,
   MessageSquare,
   NotebookPen,
   Plus,
@@ -80,6 +81,7 @@ export default function MesaClient({
   caseView,
   editable: initialEditable,
   canAct,
+  initialNotebookEntries,
 }) {
   const [values, setValues] = useState(() => {
     const v = {};
@@ -357,7 +359,220 @@ export default function MesaClient({
           </div>
         </section>
       </div>
+
+      <CadernoPanel
+        analiseId={analiseId}
+        initialEntries={initialNotebookEntries || []}
+        editable={editable}
+      />
     </main>
+  );
+}
+
+function CadernoPanel({ analiseId, initialEntries, editable }) {
+  const [entries, setEntries] = useState(initialEntries);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [questionDraft, setQuestionDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+
+  const notes = entries.filter((e) => e.entry_type === "CASE_NOTE");
+  const questions = entries.filter((e) => e.entry_type === "STUDY_QUESTION");
+
+  async function create(entryType, content, reset) {
+    const text = content.trim();
+    if (!text || busy) return;
+    setBusy(true);
+    try {
+      const res = await fetch("/api/oraculo/caderno/entradas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entryType, content: text, analiseId }),
+      });
+      const payload = await res.json().catch(() => null);
+      if (res.ok && payload?.success) {
+        setEntries((prev) => [payload.data, ...prev]);
+        reset();
+      } else {
+        setFeedback({ type: "error", text: payload?.message || "Não foi possível salvar." });
+      }
+    } catch {
+      setFeedback({ type: "error", text: "Falha de rede." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function patch(id, body) {
+    try {
+      const res = await fetch(`/api/oraculo/caderno/entradas/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const payload = await res.json().catch(() => null);
+      if (res.ok && payload?.success) {
+        setEntries((prev) => prev.map((e) => (e.id === id ? payload.data : e)));
+      }
+    } catch {
+      /* silencioso */
+    }
+  }
+
+  async function archive(id) {
+    try {
+      const res = await fetch(`/api/oraculo/caderno/entradas/${id}`, { method: "DELETE" });
+      if (res.ok) setEntries((prev) => prev.filter((e) => e.id !== id));
+    } catch {
+      /* silencioso */
+    }
+  }
+
+  return (
+    <section className={styles.panel}>
+      <div className={styles.panelHeader}>
+        <h2>
+          <NotebookPen size={18} aria-hidden="true" /> Meu Caderno — este caso
+        </h2>
+        <Link href="/dashboard/oraculo/caderno" className={styles.backLink}>
+          Ver caderno completo
+        </Link>
+      </div>
+
+      {feedback && (
+        <p className={feedback.type === "error" ? styles.dossieError : styles.savedTick}>
+          {feedback.text}
+        </p>
+      )}
+
+      <div className={styles.contentGrid}>
+        <div className={styles.mesaField}>
+          <label>Notas deste caso</label>
+          {notes.length === 0 ? (
+            <p className={styles.muted}>Nenhuma nota registrada.</p>
+          ) : (
+            <ul className={styles.sourceList}>
+              {notes.map((n) => (
+                <li key={n.id}>
+                  <div>
+                    <strong>{n.content}</strong>
+                  </div>
+                  {editable && (
+                    <button type="button" onClick={() => archive(n.id)} aria-label="Arquivar nota">
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {editable && (
+            <div className={styles.sourceForm}>
+              <input
+                placeholder="Nova nota sobre este caso…"
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => create("CASE_NOTE", noteDraft, () => setNoteDraft(""))}
+                disabled={!noteDraft.trim() || busy}
+              >
+                <Plus size={14} aria-hidden="true" /> Adicionar nota ao Caderno
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className={styles.mesaField}>
+          <label>Questões de estudo</label>
+          {questions.length === 0 ? (
+            <p className={styles.muted}>Nenhuma questão registrada.</p>
+          ) : (
+            <ul className={styles.sourceList}>
+              {questions.map((q) => (
+                <StudyQuestionItem key={q.id} question={q} editable={editable} onPatch={patch} onArchive={archive} />
+              ))}
+            </ul>
+          )}
+          {editable && (
+            <div className={styles.sourceForm}>
+              <input
+                placeholder="Quando cabe inversão do ônus da prova?"
+                value={questionDraft}
+                onChange={(e) => setQuestionDraft(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => create("STUDY_QUESTION", questionDraft, () => setQuestionDraft(""))}
+                disabled={!questionDraft.trim() || busy}
+              >
+                <HelpCircle size={14} aria-hidden="true" /> Nova questão de estudo
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const QUESTION_STATUS_LABELS = {
+  OPEN: "Em aberto",
+  STUDYING: "Estudando",
+  ANSWERED: "Respondida",
+};
+
+function StudyQuestionItem({ question, editable, onPatch, onArchive }) {
+  const [answering, setAnswering] = useState(false);
+  const [answer, setAnswer] = useState(question.answer_notes || "");
+
+  return (
+    <li>
+      <div>
+        <strong>{question.content}</strong>
+        <small>
+          {QUESTION_STATUS_LABELS[question.question_status] || question.question_status}
+          {question.answer_notes ? ` · ${question.answer_notes}` : ""}
+        </small>
+        {editable && answering && (
+          <div className={styles.sourceForm}>
+            <input
+              placeholder="Responda com suas palavras…"
+              value={answer}
+              onChange={(e) => setAnswer(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                onPatch(question.id, { answerNotes: answer });
+                setAnswering(false);
+              }}
+              disabled={!answer.trim()}
+            >
+              Salvar resposta
+            </button>
+          </div>
+        )}
+      </div>
+      {editable && (
+        <div className={styles.encaminhaBtns}>
+          {question.question_status === "OPEN" && (
+            <button type="button" onClick={() => onPatch(question.id, { questionStatus: "STUDYING" })}>
+              Estudando
+            </button>
+          )}
+          {!answering && (
+            <button type="button" onClick={() => setAnswering(true)}>
+              Responder
+            </button>
+          )}
+          <button type="button" onClick={() => onArchive(question.id)}>
+            <Trash2 size={14} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </li>
   );
 }
 

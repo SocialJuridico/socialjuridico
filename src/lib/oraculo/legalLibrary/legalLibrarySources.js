@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getLegalUnitFull } from "@/lib/oraculo/legalLibrary/legalLibraryRead";
 import { buildLegalCitation } from "@/lib/oraculo/legalLibrary/legalLibraryFormat";
 import { logOraculoEvent, ORACULO_EVENTS } from "@/lib/oraculo/telemetry/oraculoTelemetry";
+import { recordNotebookActivity } from "@/lib/oraculo/notebook/notebookActivityBridge";
 
 // Vínculo da Biblioteca com a Mesa de Análise e o Caderno.
 // - Snapshot obrigatório ao adicionar/salvar: a análise fica presa à versão
@@ -160,11 +161,18 @@ export async function addLegalSourceToAnalysis({ analiseId, oraculoId, context, 
 
   await logOraculoEvent({
     context,
-    eventType: ORACULO_EVENTS.LEGAL_SOURCE_ADDED,
+    type: ORACULO_EVENTS.LEGAL_SOURCE_ADDED,
     surface: "/dashboard/oraculo/biblioteca",
     refType: "ANALYSIS",
     refId: analiseId,
     metadata: { label, unit: legalUnitId },
+  });
+
+  await recordNotebookActivity({
+    context,
+    tipoAtividade: "FONTE_UTILIZADA_EM_ANALISE",
+    titulo: `Fonte utilizada: ${label}`,
+    codigoCaso: analiseId,
   });
 
   return { ok: true, source: data };
@@ -210,7 +218,7 @@ export async function saveLegalUnitToNotebook({ context, oraculoId, legalUnitId,
 
   await logOraculoEvent({
     context,
-    eventType: ORACULO_EVENTS.LEGAL_SOURCE_SAVED,
+    type: ORACULO_EVENTS.LEGAL_SOURCE_SAVED,
     surface: "/dashboard/oraculo/biblioteca",
     refType: "LEGAL_UNIT",
     refId: legalUnitId,
@@ -241,4 +249,50 @@ export async function countNotebookItems({ oraculoId }) {
     .select("id", { count: "exact", head: true })
     .eq("oraculo_id", oraculoId);
   return count || 0;
+}
+
+/**
+ * Edita a nota pessoal de uma fonte salva.
+ */
+export async function updateSavedItemNote({ oraculoId, id, note }) {
+  if (!supabaseAdmin) return { ok: false, code: "SERVICE_UNAVAILABLE" };
+
+  const { data, error } = await supabaseAdmin
+    .from("oraculo_legal_saved_items")
+    .update({ note: note ? String(note).slice(0, 1000) : null, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("oraculo_id", oraculoId)
+    .select("id, note")
+    .maybeSingle();
+  if (error) return { ok: false, code: "SAVE_FAILED" };
+  if (!data) return { ok: false, code: "NOT_FOUND" };
+  return { ok: true, item: data };
+}
+
+/**
+ * Remove uma fonte do Caderno Jurídico.
+ */
+export async function removeSavedItem({ context, oraculoId, id }) {
+  if (!supabaseAdmin) return { ok: false, code: "SERVICE_UNAVAILABLE" };
+
+  const { data, error } = await supabaseAdmin
+    .from("oraculo_legal_saved_items")
+    .delete()
+    .eq("id", id)
+    .eq("oraculo_id", oraculoId)
+    .select("id, legal_unit_id, title_snapshot")
+    .maybeSingle();
+  if (error) return { ok: false, code: "SAVE_FAILED" };
+  if (!data) return { ok: false, code: "NOT_FOUND" };
+
+  await logOraculoEvent({
+    context,
+    type: ORACULO_EVENTS.LEGAL_SOURCE_REMOVED,
+    surface: "/dashboard/oraculo/caderno",
+    refType: "LEGAL_UNIT",
+    refId: data.legal_unit_id,
+    metadata: { label: data.title_snapshot },
+  });
+
+  return { ok: true };
 }

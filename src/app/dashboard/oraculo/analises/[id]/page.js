@@ -3,6 +3,7 @@ import { redirect, notFound } from "next/navigation";
 
 import { resolveOraculoStudentContext } from "@/lib/oraculo/oraculoAcademicContext";
 import { getAnalysisForStudent } from "@/lib/oraculo/oraculoAnalises";
+import { listNotebookEntries } from "@/lib/oraculo/notebook/notebookEntries";
 
 import MesaClient from "./MesaClient";
 
@@ -20,6 +21,11 @@ export default async function MesaPage({ params }) {
   });
   if (!state) notFound();
 
+  const notebookEntries = await listNotebookEntries({
+    oraculoId: context.oraculoId,
+    linkedAnalysisId: id,
+  });
+
   return (
     <MesaClient
       analiseId={id}
@@ -29,6 +35,7 @@ export default async function MesaPage({ params }) {
       initialSteps={state.steps}
       editable={state.editable}
       canAct={context.studentStatus === "ATIVO"}
+      initialNotebookEntries={notebookEntries}
     />
   );
 }

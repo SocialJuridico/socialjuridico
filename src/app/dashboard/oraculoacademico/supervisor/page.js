@@ -6,6 +6,7 @@ import { resolveSupervisorContext } from "@/lib/oraculo/staff/supervisorContext"
 import { getSupervisorHomeStats } from "@/lib/oraculo/staff/supervisorRead";
 import { listStaffQuestions } from "@/lib/oraculo/notebook/notebookEntries";
 import { listSupervisorAlerts, countPendingAlerts } from "@/lib/oraculo/staff/supervisorAlerts";
+import { countUnviewedConductReportsForSupervisor } from "@/lib/oraculo/radarAcademic/professionalConductReport";
 
 import styles from "../../oraculo/OraculoStudentDashboard.module.css";
 
@@ -15,11 +16,12 @@ export default async function SupervisorHomePage() {
   const context = await resolveSupervisorContext();
   if (!context) redirect("/oraculoacademico/login");
 
-  const [stats, pending, pendingAlertsCount, criticalAlerts] = await Promise.all([
+  const [stats, pending, pendingAlertsCount, criticalAlerts, newReportsCount] = await Promise.all([
     getSupervisorHomeStats({ authUserId: context.authUserId }),
     listStaffQuestions({ authUserId: context.authUserId, answered: false, limit: 6 }),
     countPendingAlerts({ authUserId: context.authUserId }),
     listSupervisorAlerts({ authUserId: context.authUserId, status: "PENDING", limit: 5 }),
+    countUnviewedConductReportsForSupervisor({ authUserId: context.authUserId }),
   ]);
 
   return (
@@ -47,6 +49,10 @@ export default async function SupervisorHomePage() {
         <div className={styles.metricCard}>
           <strong>{pendingAlertsCount}</strong>
           <span>Alertas pendentes</span>
+        </div>
+        <div className={styles.metricCard}>
+          <strong>{newReportsCount}</strong>
+          <span>Relatórios de conduta novos</span>
         </div>
       </section>
 

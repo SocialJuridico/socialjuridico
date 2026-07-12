@@ -1,4 +1,4 @@
-import { Home, MessageCircleQuestion, Users, GraduationCap, ShieldAlert } from "lucide-react";
+import { Home, MessageCircleQuestion, Users, GraduationCap, ShieldAlert, FileText } from "lucide-react";
 
 // Navegação dos dashboards de Supervisor Jurídico / Professor Orientador.
 // Escopo desta fase: home + acompanhamento + perguntas dos alunos + alertas.
@@ -26,6 +26,11 @@ export function getStaffNavGroups(role) {
             label: "Alertas do Anjo",
             href: "/dashboard/oraculoacademico/supervisor/alertas",
             icon: ShieldAlert,
+          },
+          {
+            label: "Relatórios de Conduta",
+            href: "/dashboard/oraculoacademico/supervisor/relatorios-conduta",
+            icon: FileText,
           },
         ],
       },
@@ -59,6 +64,16 @@ export function getStaffNavGroups(role) {
           label: "Alunos",
           href: "/dashboard/oraculoacademico/orientador/alunos",
           icon: Users,
+        },
+      ],
+    },
+    {
+      title: "Avaliação",
+      items: [
+        {
+          label: "Relatórios de Conduta",
+          href: "/dashboard/oraculoacademico/orientador/relatorios-conduta",
+          icon: FileText,
         },
       ],
     },

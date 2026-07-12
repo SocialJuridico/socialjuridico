@@ -329,3 +329,17 @@ export async function listStudentAnalyses({ oraculoId }) {
     .limit(200);
   return data || [];
 }
+
+/**
+ * Conta análises que o estudante ainda está trabalhando (para o card
+ * "Análises em andamento" da home).
+ */
+export async function countActiveAnalyses({ oraculoId }) {
+  if (!supabaseAdmin || !oraculoId) return 0;
+  const { count } = await supabaseAdmin
+    .from("oraculo_analises")
+    .select("id", { count: "exact", head: true })
+    .eq("oraculo_id", oraculoId)
+    .in("status", EDITABLE_STATUSES);
+  return count || 0;
+}

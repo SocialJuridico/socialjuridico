@@ -32,10 +32,10 @@ export async function POST(request, { params }) {
     const status = CODE_STATUS[result.code] || 400;
     const message =
       result.code === "INTERVIEW_LIMIT_REACHED"
-        ? "Você atingiu o limite de entrevistas simuladas para este caso."
+        ? "Você atingiu o limite de atendimentos simulados para este caso."
         : result.code === "CASE_NOT_FOUND"
           ? "Caso não encontrado."
-          : "Não foi possível iniciar a entrevista simulada.";
+          : "Não foi possível iniciar o atendimento simulado.";
     return oraculoJson({ success: false, message }, status);
   }
 

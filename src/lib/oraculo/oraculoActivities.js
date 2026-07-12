@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 // notebook/notebookActivityBridge) e com o painel da instituição.
 
 export const ACTIVITY_TYPE_LABELS = {
-  ENTREVISTA_SIMULADA_RADAR: "Entrevista simulada (Radar)",
+  ENTREVISTA_SIMULADA_RADAR: "Atendimento jurídico simulado (Radar)",
   FICHAMENTO_CONCLUIDO: "Fichamento concluído",
   QUESTAO_ESTUDO_RESPONDIDA: "Questão de estudo respondida",
   ANOTACAO_CASO_ANALISE: "Nota de caso registrada",

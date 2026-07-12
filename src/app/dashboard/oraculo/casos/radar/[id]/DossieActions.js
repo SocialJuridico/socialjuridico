@@ -14,10 +14,10 @@ export default function DossieActions({ caseId, interviewStatus, canAct }) {
 
   const interviewLabel =
     interviewStatus === "COMPLETED"
-      ? "Ver entrevista simulada"
+      ? "Ver atendimento simulado"
       : interviewStatus === "ACTIVE"
-        ? "Continuar entrevista simulada"
-        : "Abrir entrevista simulada";
+        ? "Continuar atendimento simulado"
+        : "Iniciar atendimento simulado";
 
   async function iniciarAnalise() {
     setPending(true);

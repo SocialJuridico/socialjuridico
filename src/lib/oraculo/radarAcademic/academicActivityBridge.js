@@ -37,11 +37,11 @@ export async function recordInterviewStartActivity({ interview, academicCase, co
       oraculo_profissional_id: context.oraculoId,
       tipo_atividade: ACTIVITY_TYPE,
       titulo: academicCase?.title
-        ? `Entrevista simulada: ${academicCase.title}`.slice(0, 240)
-        : "Entrevista simulada (Radar Acadêmico)",
+        ? `Atendimento jurídico simulado: ${academicCase.title}`.slice(0, 240)
+        : "Atendimento jurídico simulado (Radar Acadêmico)",
       codigo_caso: interview.academic_case_id,
       area_juridica: academicCase?.legal_area || null,
-      conteudo_resumo: "Entrevista simulada com cliente por IA (Radar Acadêmico).",
+      conteudo_resumo: "Atendimento jurídico simulado com cliente por IA (Radar Acadêmico).",
       status: "EM_ANDAMENTO",
       revisao_exigida: false,
       conta_carga_horaria: false,
@@ -103,7 +103,7 @@ export async function finalizeInterviewActivity({ interview }) {
       : 0;
 
     const stats = interview.summary_stats || {};
-    const resumo = `Entrevista simulada concluída: ${stats.questions || 0} perguntas, ${stats.messageCount || interview.message_count || 0} mensagens.`;
+    const resumo = `Atendimento jurídico simulado concluído: ${stats.questions || 0} perguntas, ${stats.messageCount || interview.message_count || 0} mensagens.`;
 
     await supabaseAdmin
       .from("oraculo_atividades_academicas")

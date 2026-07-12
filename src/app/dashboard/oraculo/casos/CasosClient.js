@@ -288,7 +288,8 @@ function RadarAcademicTab({
           <p>
             Analise casos de estudo preparados a partir de situações jurídicas
             identificadas pelo Radar Jurídico. Estude o relato, identifique fatos
-            e lacunas, faça uma entrevista simulada e desenvolva sua análise.
+            e lacunas, treine um atendimento jurídico simulado e desenvolva sua
+            análise.
           </p>
         </div>
       </section>
@@ -352,7 +353,7 @@ function RadarAcademicTab({
                 {caso.academicSummary && <p>{caso.academicSummary}</p>}
                 {caso.hasSimulatedInterview && (
                   <span className={styles.interviewTag}>
-                    Entrevista simulada disponível
+                    Atendimento jurídico simulado disponível
                   </span>
                 )}
                 <Link

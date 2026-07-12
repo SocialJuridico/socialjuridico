@@ -22,7 +22,7 @@ export async function POST(request, { params }) {
   });
   if (!interview) {
     return oraculoJson(
-      { success: false, message: "Entrevista não encontrada." },
+      { success: false, message: "Atendimento não encontrado." },
       404,
     );
   }
@@ -30,20 +30,20 @@ export async function POST(request, { params }) {
   const result = await endSimulatedInterview({
     interviewId: interview.id,
     oraculoId: auth.context.oraculoId,
+    context: auth.context,
   });
   if (!result.ok) {
     return oraculoJson(
-      { success: false, message: "Não foi possível encerrar a entrevista." },
+      { success: false, message: "Não foi possível encerrar o atendimento." },
       400,
     );
   }
 
   return oraculoJson({
     success: true,
-    message: "Entrevista simulada concluída.",
+    message: "Atendimento jurídico simulado concluído.",
     data: {
-      indicators: result.interview.indicators,
-      feedback: result.interview.ai_feedback,
+      evaluation: result.evaluation,
       summary: result.interview.summary_stats,
     },
   });

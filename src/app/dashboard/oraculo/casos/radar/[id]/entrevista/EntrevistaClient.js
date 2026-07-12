@@ -6,13 +6,10 @@ import { AlertTriangle, ArrowLeft, Bot, Send } from "lucide-react";
 
 import styles from "../../../../OraculoStudentDashboard.module.css";
 
-const INDICATOR_LABELS = {
-  clareza_comunicacao: "Clareza na comunicação",
-  coleta_informacoes: "Coleta de informações",
-  organizacao_entrevista: "Organização da entrevista",
-  cautela_juridica: "Cautela jurídica",
-  linguagem_acessivel: "Linguagem acessível",
-  conduta_comunicacional: "Conduta comunicacional",
+const AXIS_LABELS = {
+  specialty: "Especialidade e foco de atuação",
+  transparency: "Transparência na primeira consulta",
+  ethics: "Ética e conhecimento",
 };
 
 export default function EntrevistaClient({
@@ -22,6 +19,7 @@ export default function EntrevistaClient({
   canAct,
   initialInterview,
   initialMessages,
+  initialEvaluation,
 }) {
   const [status, setStatus] = useState(initialInterview?.status || "NOT_STARTED");
   const [messages, setMessages] = useState(initialMessages || []);
@@ -30,11 +28,7 @@ export default function EntrevistaClient({
   const [banner, setBanner] = useState(null);
   const [report, setReport] = useState(
     initialInterview?.status === "COMPLETED"
-      ? {
-          indicators: initialInterview.indicators,
-          feedback: initialInterview.ai_feedback,
-          summary: initialInterview.summary_stats,
-        }
+      ? { evaluation: initialEvaluation, summary: initialInterview.summary_stats }
       : null,
   );
 
@@ -112,7 +106,7 @@ export default function EntrevistaClient({
 
   async function encerrar() {
     if (busy) return;
-    if (!window.confirm("Deseja encerrar a entrevista simulada? A conversa continuará disponível para consulta.")) {
+    if (!window.confirm("Deseja encerrar o atendimento jurídico simulado? A conversa continuará disponível para consulta.")) {
       return;
     }
     setBusy(true);
@@ -128,8 +122,7 @@ export default function EntrevistaClient({
       } else {
         setStatus("COMPLETED");
         setReport({
-          indicators: payload.data?.indicators,
-          feedback: payload.data?.feedback,
+          evaluation: payload.data?.evaluation,
           summary: payload.data?.summary,
         });
       }
@@ -152,11 +145,11 @@ export default function EntrevistaClient({
       <section className={styles.simHeader}>
         <div>
           <span className={styles.simBadge}>
-            <Bot size={13} aria-hidden="true" /> SIMULAÇÃO IA
+            <Bot size={13} aria-hidden="true" /> SIMULAÇÃO PROFISSIONAL
           </span>
-          <h1>Cliente simulado</h1>
+          <h1>Atendimento Jurídico Simulado</h1>
           <small>
-            Entrevista acadêmica por IA · {caseCode} — {caseTitle}
+            Cliente simulado por IA · {caseCode} — {caseTitle}
           </small>
         </div>
       </section>
@@ -184,15 +177,19 @@ export default function EntrevistaClient({
       {status === "NOT_STARTED" && (
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
-            <span className={styles.kicker}>Entrevista simulada</span>
+            <span className={styles.kicker}>Atendimento Jurídico Simulado</span>
             <h2>Antes de iniciar</h2>
           </div>
           <p className={styles.simIntro}>
-            Você iniciará uma conversa com um cliente simulado por inteligência
-            artificial. A IA responderá apenas com base nas informações do dossiê
-            acadêmico. Quando uma informação não estiver disponível, o cliente
-            simulado não deverá inventá-la. Sua comunicação poderá ser analisada
-            para fins de atividade acadêmica.
+            Este é um ambiente de treinamento com cliente simulado por
+            inteligência artificial. Neste caso do Radar Acadêmico, você pode
+            atuar como advogado em uma simulação profissional: conduzir a
+            primeira consulta, explicar possibilidades jurídicas, orientar
+            próximos passos simulados e demonstrar seu raciocínio profissional.
+            A IA responde apenas com base nas informações do dossiê acadêmico e
+            não inventa informação indisponível. Esta simulação não envolve
+            cliente real e não gera atendimento jurídico real. Sua atuação
+            poderá ser analisada para fins de atividade acadêmica.
           </p>
           <button
             type="button"
@@ -200,7 +197,7 @@ export default function EntrevistaClient({
             onClick={iniciar}
             disabled={busy || !canAct}
           >
-            {busy ? "Iniciando…" : "Iniciar entrevista"}
+            {busy ? "Iniciando…" : "Iniciar atendimento simulado"}
           </button>
           {!canAct && (
             <p className={styles.muted}>
@@ -246,7 +243,7 @@ export default function EntrevistaClient({
               <textarea
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
-                placeholder="Digite sua pergunta ao cliente simulado…"
+                placeholder="Digite sua mensagem ao cliente simulado…"
                 rows={2}
                 disabled={busy}
                 onKeyDown={(event) => {
@@ -271,7 +268,7 @@ export default function EntrevistaClient({
                   onClick={encerrar}
                   disabled={busy}
                 >
-                  Encerrar entrevista
+                  Encerrar atendimento
                 </button>
               </div>
             </div>
@@ -287,29 +284,73 @@ export default function EntrevistaClient({
 }
 
 function InterviewReport({ report, caseId }) {
-  const indicators = report.indicators || {};
-  const feedback = report.feedback || {};
+  const evaluation = report.evaluation;
   const summary = report.summary || {};
+
+  if (!evaluation) {
+    return (
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <span className={styles.kicker}>Relatório do atendimento simulado</span>
+          <h2>Avaliação indisponível</h2>
+        </div>
+        <p className={styles.muted}>
+          Não foi possível gerar a avaliação por IA deste atendimento. A
+          conversa continua disponível para consulta.
+        </p>
+        <Link
+          href={`/dashboard/oraculo/casos/radar/${caseId}`}
+          className={styles.dossieSecondaryCta}
+        >
+          Continuar análise
+        </Link>
+      </section>
+    );
+  }
+
+  const axes = [
+    {
+      key: "specialty",
+      score: evaluation.specialty_focus_score,
+      level: evaluation.specialty_focus_level,
+      feedback: evaluation.specialty_focus_feedback,
+    },
+    {
+      key: "transparency",
+      score: evaluation.first_consultation_transparency_score,
+      level: evaluation.first_consultation_transparency_level,
+      feedback: evaluation.first_consultation_transparency_feedback,
+    },
+    {
+      key: "ethics",
+      score: evaluation.ethics_and_knowledge_score,
+      level: evaluation.ethics_and_knowledge_level,
+      feedback: evaluation.ethics_and_knowledge_feedback,
+    },
+  ];
 
   return (
     <>
       <section className={styles.panel}>
         <div className={styles.panelHeader}>
-          <span className={styles.kicker}>Relatório da entrevista simulada</span>
-          <h2>Indicadores de comunicação</h2>
+          <span className={styles.kicker}>Relatório do atendimento simulado</span>
+          <h2>Avaliação do atendimento — {evaluation.overall_score}/100</h2>
         </div>
         <div className={styles.indicatorGrid}>
-          {Object.entries(INDICATOR_LABELS).map(([key, label]) => (
-            <div key={key} className={styles.indicatorRow}>
-              <span>{label}</span>
-              <strong>{indicators[key] ?? "—"}</strong>
+          {axes.map((axis) => (
+            <div key={axis.key} className={styles.indicatorRow}>
+              <span>
+                {AXIS_LABELS[axis.key]}
+                <br />
+                <small className={styles.muted}>{axis.level}</small>
+              </span>
+              <strong>{axis.score}/100</strong>
             </div>
           ))}
         </div>
         <div className={styles.simStats}>
           <span>{summary.questions ?? 0} perguntas</span>
           <span>{summary.conductWarnings ?? 0} alerta(s) de conduta</span>
-          <span>{summary.blockedCount ?? 0} mensagem(ns) bloqueada(s)</span>
         </div>
       </section>
 
@@ -319,20 +360,34 @@ function InterviewReport({ report, caseId }) {
         </div>
         <div className={styles.feedbackBlocks}>
           <div>
-            <h3>Pontos observados</h3>
-            <p>{feedback.pontos_observados || "—"}</p>
+            <h3>Resumo</h3>
+            <p>{evaluation.summary || "—"}</p>
+          </div>
+          {axes.map((axis) => (
+            <div key={axis.key}>
+              <h3>{AXIS_LABELS[axis.key]}</h3>
+              <p>{axis.feedback || "—"}</p>
+            </div>
+          ))}
+          <div>
+            <h3>Pontos fortes</h3>
+            <p>{(evaluation.strengths || []).join(" ") || "—"}</p>
           </div>
           <div>
-            <h3>Pontos para desenvolvimento</h3>
-            <p>{feedback.pontos_para_desenvolvimento || "—"}</p>
+            <h3>Pontos de melhoria</h3>
+            <p>{(evaluation.development_points || []).join(" ") || "—"}</p>
           </div>
-          <div>
-            <h3>Cautela comunicacional</h3>
-            <p>{feedback.cautela_comunicacional || "—"}</p>
-          </div>
+          {evaluation.critical_flags?.length > 0 && (
+            <div>
+              <h3>Pontos de atenção</h3>
+              <p>{evaluation.critical_flags.join(" ")}</p>
+            </div>
+          )}
         </div>
         <p className={styles.muted}>
-          Estes indicadores são evidência acadêmica, não uma nota final.
+          Avaliação gerada por IA para fins de apoio acadêmico. A validação
+          final cabe ao Supervisor, Orientador ou instituição, conforme
+          regras do programa.
         </p>
         <Link
           href={`/dashboard/oraculo/casos/radar/${caseId}`}

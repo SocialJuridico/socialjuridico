@@ -22,6 +22,7 @@ const FLAG_LABELS = {
   LAWYER_IMPERSONATION: "Apresentação indevida como advogado",
   PRIVACY_RISK: "Risco à privacidade",
   MISLEADING_CERTAINTY: "Certeza jurídica enganosa",
+  FRAUD: "Orientação de fraude",
   OTHER: "Outro",
 };
 

@@ -691,7 +691,7 @@ function CasoColumn({ caseView, caseId }) {
           href={`/dashboard/oraculo/casos/radar/${caseId}/entrevista`}
           className={styles.dossieSecondaryCta}
         >
-          <MessageSquare size={14} aria-hidden="true" /> Entrevista simulada
+          <MessageSquare size={14} aria-hidden="true" /> Atendimento simulado
         </Link>
       )}
 

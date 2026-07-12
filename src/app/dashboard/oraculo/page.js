@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 
 import { resolveOraculoStudentContext } from "@/lib/oraculo/oraculoAcademicContext";
+import { countActiveAnalyses } from "@/lib/oraculo/oraculoAnalises";
+import { getLastProfessionalSimulationEvaluation } from "@/lib/oraculo/radarAcademic/professionalSimulationEvaluationStorage";
 
 import styles from "./OraculoStudentDashboard.module.css";
 
@@ -118,6 +120,11 @@ export default async function OraculoStudentHomePage() {
   const { context } = await resolveOraculoStudentContext(requestHeaders);
   if (!context) redirect("/oraculoacademico/login");
 
+  const [analisesEmAndamento, lastEvaluation] = await Promise.all([
+    countActiveAnalyses({ oraculoId: context.oraculoId }),
+    getLastProfessionalSimulationEvaluation({ oraculoId: context.oraculoId }),
+  ]);
+
   const cta = buildPrimaryCta(context);
   const attentionItems = buildAttentionItems(context);
   const horasReconhecidas = minutesToHours(context.horasReconhecidasMinutos);
@@ -125,9 +132,9 @@ export default async function OraculoStudentHomePage() {
 
   const cards = [
     {
-      value: "Em breve",
+      value: String(analisesEmAndamento),
       label: "Análises em andamento",
-      detail: "Depende da base de casos (fase 2)",
+      detail: "Em andamento ou com ajuste solicitado",
     },
     {
       value: String(context.revisoesPendentes || 0),
@@ -142,9 +149,14 @@ export default async function OraculoStudentHomePage() {
       detail: metaHoras ? "Meta do programa" : "Meta ainda não configurada",
     },
     {
-      value: "Em breve",
+      value: lastEvaluation?.created_at
+        ? new Date(lastEvaluation.created_at).toLocaleDateString("pt-BR")
+        : "—",
       label: "Última avaliação",
-      detail: "Depende da base de avaliações (fase 2)",
+      detail:
+        lastEvaluation?.overall_score != null
+          ? `Nota geral: ${lastEvaluation.overall_score}/100`
+          : "Nenhum atendimento simulado concluído ainda",
     },
   ];
 

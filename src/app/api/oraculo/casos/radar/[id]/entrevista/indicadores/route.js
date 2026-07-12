@@ -1,5 +1,6 @@
 import { requireOraculoStudent, oraculoJson } from "@/lib/oraculo/oraculoStudentApi";
 import { getInterviewForCase } from "@/lib/oraculo/radarAcademic/simulatedInterview";
+import { getProfessionalSimulationEvaluation } from "@/lib/oraculo/radarAcademic/professionalSimulationEvaluationStorage";
 import { recordOraculoAudit } from "@/lib/oraculo/radarAcademic/radarAcademicAudit";
 
 export const runtime = "nodejs";
@@ -17,10 +18,15 @@ export async function GET(request, { params }) {
 
   if (!interview || interview.status !== "COMPLETED") {
     return oraculoJson(
-      { success: false, message: "Indicadores ainda não disponíveis." },
+      { success: false, message: "Avaliação ainda não disponível." },
       404,
     );
   }
+
+  const evaluation = await getProfessionalSimulationEvaluation({
+    interviewId: interview.id,
+    oraculoId: auth.context.oraculoId,
+  });
 
   await recordOraculoAudit({
     oraculoId: auth.context.oraculoId,
@@ -32,8 +38,7 @@ export async function GET(request, { params }) {
   return oraculoJson({
     success: true,
     data: {
-      indicators: interview.indicators,
-      feedback: interview.ai_feedback,
+      evaluation,
       summary: interview.summary_stats,
     },
   });

@@ -5,6 +5,7 @@ import { GraduationCap, MessageCircleQuestion } from "lucide-react";
 import { resolveOraculoStaffContext } from "@/lib/oraculo/staff/oraculoStaffContext";
 import { getOrientatorHomeStats } from "@/lib/oraculo/staff/orientatorRead";
 import { listStaffQuestions } from "@/lib/oraculo/notebook/notebookEntries";
+import { countUnviewedConductReportsForOrientador } from "@/lib/oraculo/radarAcademic/professionalConductReport";
 
 import styles from "../../oraculo/OraculoStudentDashboard.module.css";
 
@@ -16,9 +17,10 @@ export default async function OrientadorHomePage() {
   });
   if (!context) redirect("/oraculoacademico/login");
 
-  const [stats, pending] = await Promise.all([
+  const [stats, pending, newReportsCount] = await Promise.all([
     getOrientatorHomeStats({ institutionUserId: context.institutionUserId, authUserId: context.authUserId }),
     listStaffQuestions({ authUserId: context.authUserId, answered: false, limit: 6 }),
+    countUnviewedConductReportsForOrientador({ authUserId: context.authUserId }),
   ]);
 
   return (
@@ -46,6 +48,10 @@ export default async function OrientadorHomePage() {
         <div className={styles.metricCard}>
           <strong>{stats.pendingQuestions}</strong>
           <span>Perguntas aguardando resposta</span>
+        </div>
+        <div className={styles.metricCard}>
+          <strong>{newReportsCount}</strong>
+          <span>Relatórios de conduta novos</span>
         </div>
       </section>
 

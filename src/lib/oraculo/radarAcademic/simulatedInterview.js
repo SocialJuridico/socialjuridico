@@ -10,14 +10,14 @@ import {
   getSafeClientFallback,
 } from "@/lib/oraculo/ai/simulatedClientAgent";
 import { frozenCanonMetaFromCase } from "@/lib/oraculo/ai/simulationCanonStore";
-import { evaluateConduct } from "@/lib/oraculo/ai/academicAngelConductGuard";
+import { evaluateProfessionalSimulationConduct } from "@/lib/oraculo/ai/professionalSimulationEthicsMonitor";
 import { recordConductAlert } from "@/lib/oraculo/ai/academicAngelAlertBridge";
 import { validateGrounding } from "@/lib/oraculo/ai/academicAngelGroundingGuard";
 import {
   evaluateWindow,
   WINDOW_EVAL_EVERY,
 } from "@/lib/oraculo/ai/academicAngelWindowEvaluator";
-import { generateFinalEvaluation } from "@/lib/oraculo/ai/academicAngelFinalEvaluator";
+import { generateProfessionalSimulationEvaluation } from "@/lib/oraculo/ai/professionalSimulationFinalEvaluator";
 
 import { getRadarAcademicCaseInternal } from "./radarAcademicCasesRead";
 import { recordOraculoAudit } from "./radarAcademicAudit";
@@ -25,10 +25,12 @@ import {
   recordInterviewStartActivity,
   finalizeInterviewActivity,
 } from "./academicActivityBridge";
+import { saveProfessionalSimulationEvaluation } from "./professionalSimulationEvaluationStorage";
+import { generateAndSaveRadarConductReport } from "./professionalConductReport";
 import { logOraculoEvent, ORACULO_EVENTS } from "@/lib/oraculo/telemetry/oraculoTelemetry";
 
 const OPENING_MESSAGE =
-  "Entrevista simulada iniciada. O cliente é simulado por IA e responde apenas com base no relato disponível. Faça perguntas para coletar informações.";
+  "Atendimento jurídico simulado iniciado. O cliente é simulado por IA e responde apenas com base no relato disponível. Você pode conduzir a consulta, orientar juridicamente e explicar caminhos possíveis, como em uma primeira consulta simulada.";
 
 function defaultMaxInterviews(context) {
   const configured = context?.programRules?.max_simulated_interviews_per_case;
@@ -240,8 +242,9 @@ export async function sendStudentMessage({ interviewId, oraculoId, content, cont
 
   const ctx = usageContext(interview, context);
 
-  // 1. Conduct Guard (Anjo).
-  const conduct = await evaluateConduct(text);
+  // 1. Ethics Monitor (Anjo) — modo simulação profissional: não bloqueia por
+  // atuação como advogado, só riscos críticos universais (RADAR_ACADEMIC).
+  const conduct = await evaluateProfessionalSimulationConduct(text);
   if (conduct.usage) {
     await logAiUsage({
       feature: conduct.feature,
@@ -566,9 +569,13 @@ async function runWindowEvaluation({ interview, ctx }) {
 }
 
 /**
- * Encerra a entrevista: Final Evaluator (Anjo) gera indicadores + feedback.
+ * Encerra a entrevista: Final Evaluator (Anjo) gera avaliação + Relatório de
+ * Conduta Profissional (enviado a Supervisor/Orientador). `context` é o
+ * contexto acadêmico do aluno (resolveOraculoStudentContext/
+ * getOraculoAcademicContext) — opcional; sem ele o relatório é gerado sem
+ * destinatário resolvido.
  */
-export async function endSimulatedInterview({ interviewId, oraculoId }) {
+export async function endSimulatedInterview({ interviewId, oraculoId, context = null }) {
   if (!supabaseAdmin) return { ok: false, code: "SERVICE_UNAVAILABLE" };
 
   const { data: interview } = await supabaseAdmin
@@ -590,7 +597,7 @@ export async function endSimulatedInterview({ interviewId, oraculoId }) {
   const conductWarnings = studentMsgs.filter((m) => m.conduct_status === "WARNING").length;
 
   const ctx = usageContext(interview, null);
-  const evaluation = await generateFinalEvaluation(messages);
+  const evaluation = await generateProfessionalSimulationEvaluation(messages);
   if (evaluation.ok && evaluation.usage) {
     await logAiUsage({
       feature: evaluation.feature,
@@ -603,31 +610,11 @@ export async function endSimulatedInterview({ interviewId, oraculoId }) {
     });
   }
 
-  // Normaliza indicadores para o formato consumido pela UI.
-  const indicators = evaluation.ok
-    ? {
-        clareza_comunicacao: evaluation.data.indicators.clarity,
-        coleta_informacoes: evaluation.data.indicators.fact_collection,
-        organizacao_entrevista: evaluation.data.indicators.interview_structure,
-        cautela_juridica: evaluation.data.indicators.legal_caution,
-        linguagem_acessivel: evaluation.data.indicators.accessible_language,
-        conduta_comunicacional: evaluation.data.indicators.communication_conduct,
-      }
-    : null;
-  const feedback = evaluation.ok
-    ? {
-        pontos_observados: (evaluation.data.strengths || []).join(" "),
-        pontos_para_desenvolvimento: (evaluation.data.development_points || []).join(" "),
-        cautela_comunicacional: (evaluation.data.communication_cautions || []).join(" "),
-      }
-    : null;
-
   const summaryStats = {
     questions: studentMsgs.length,
     conductWarnings,
     blockedCount: 0,
     messageCount: (messages || []).length,
-    factsExplored: evaluation.ok ? evaluation.data.facts_explored?.length || 0 : 0,
   };
 
   const nowIso = new Date().toISOString();
@@ -636,14 +623,32 @@ export async function endSimulatedInterview({ interviewId, oraculoId }) {
     .update({
       status: "COMPLETED",
       completed_at: nowIso,
-      indicators,
-      ai_feedback: feedback,
       summary_stats: summaryStats,
       updated_at: nowIso,
     })
     .eq("id", interviewId)
     .select("*")
     .single();
+
+  const savedEvaluation = evaluation.ok
+    ? await saveProfessionalSimulationEvaluation({ interview: updated || interview, evaluation })
+    : null;
+
+  if (savedEvaluation) {
+    const report = await generateAndSaveRadarConductReport({
+      interview: updated || interview,
+      evaluationRow: savedEvaluation,
+      context,
+    });
+    if (report) {
+      await recordOraculoAudit({
+        oraculoId,
+        academicCaseId: interview.academic_case_id,
+        interviewId,
+        eventType: "PROFESSIONAL_CONDUCT_REPORT_GENERATED",
+      });
+    }
+  }
 
   await recordOraculoAudit({
     oraculoId,
@@ -664,5 +669,5 @@ export async function endSimulatedInterview({ interviewId, oraculoId }) {
   // Finaliza a atividade acadêmica correspondente (não-fatal).
   await finalizeInterviewActivity({ interview: updated || interview });
 
-  return { ok: true, interview: updated };
+  return { ok: true, interview: updated, evaluation: savedEvaluation };
 }

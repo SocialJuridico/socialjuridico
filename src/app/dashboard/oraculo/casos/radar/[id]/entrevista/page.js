@@ -7,10 +7,11 @@ import {
   getInterviewForCase,
   loadInterviewState,
 } from "@/lib/oraculo/radarAcademic/simulatedInterview";
+import { getProfessionalSimulationEvaluation } from "@/lib/oraculo/radarAcademic/professionalSimulationEvaluationStorage";
 
 import EntrevistaClient from "./EntrevistaClient";
 
-export const metadata = { title: "Entrevista Simulada — Radar Acadêmico" };
+export const metadata = { title: "Atendimento Jurídico Simulado — Radar Acadêmico" };
 
 function shortCode(id) {
   return `RAD-${String(id || "").replace(/-/g, "").slice(0, 8).toUpperCase()}`;
@@ -37,6 +38,14 @@ export default async function EntrevistaPage({ params }) {
       })
     : { interview: null, messages: [] };
 
+  const initialEvaluation =
+    initialState?.interview?.status === "COMPLETED"
+      ? await getProfessionalSimulationEvaluation({
+          interviewId: initialState.interview.id,
+          oraculoId: context.oraculoId,
+        })
+      : null;
+
   return (
     <EntrevistaClient
       caseId={id}
@@ -45,6 +54,7 @@ export default async function EntrevistaPage({ params }) {
       canAct={context.studentStatus === "ATIVO"}
       initialInterview={initialState?.interview || null}
       initialMessages={initialState?.messages || []}
+      initialEvaluation={initialEvaluation}
     />
   );
 }

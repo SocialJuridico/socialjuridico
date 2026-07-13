@@ -11,6 +11,7 @@ import {
   Gauge,
   Home,
   Info,
+  Library,
   Loader2,
   MapPin,
   MonitorSmartphone,
@@ -172,6 +173,9 @@ export default function LawyerHomeDashboard() {
                 </Link>
                 <Link href="/dashboard/advogado/monitoramento">
                   Monitorar OAB <MonitorSmartphone size={16} />
+                </Link>
+                <Link href="/dashboard/advogado/biblioteca">
+                  Biblioteca Jurídica <Library size={16} />
                 </Link>
               </div>
             </div>

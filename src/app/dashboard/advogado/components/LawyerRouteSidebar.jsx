@@ -12,6 +12,7 @@ import {
   FileText,
   Globe,
   Home,
+  Library,
   Lock,
   LogOut,
   MessageSquare,
@@ -37,6 +38,7 @@ const SIDEBAR_SCROLL_KEY = "sj:lawyer-sidebar-scroll";
 
 const DIRECT_ROUTES = {
   dashboard: { path: "/dashboard/advogado/dashboard", activeRoute: "dashboard" },
+  biblioteca: { path: "/dashboard/advogado/biblioteca", activeRoute: "biblioteca" },
   indicacoes: { path: "/dashboard/advogado/indiqueganhe", activeRoute: "indiqueganhe" },
   oportunidades: { path: "/dashboard/advogado/oportunidade", activeRoute: "oportunidade" },
   "minhas-mensagens": { path: "/dashboard/advogado/mensagens", activeRoute: "mensagens" },
@@ -67,6 +69,7 @@ const DIRECT_ROUTES = {
 
 const PRIMARY_ITEMS = [
   { tab: "dashboard", label: "Dashboard", icon: Home },
+  { tab: "biblioteca", label: "Biblioteca Jurídica", icon: Library },
   { tab: "indicacoes", label: "Indique e Ganhe", icon: UserPlus },
   { tab: "oportunidades", label: "Oportunidades", icon: Globe },
   { tab: "minhas-mensagens", label: "Minhas Mensagens", icon: MessageSquare },

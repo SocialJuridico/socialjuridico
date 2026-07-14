@@ -183,6 +183,9 @@ function ManageContent({ lawyer, busy, onAction }) {
   const [jurisAmount, setJurisAmount] = useState(10);
   const [oab, setOab] = useState(lawyer.oab || "");
   const [estado, setEstado] = useState(lawyer.estado || "");
+  const [subPlan, setSubPlan] = useState("PRO");
+  const [subCycle, setSubCycle] = useState("MONTHLY");
+  const [subCode, setSubCode] = useState("");
 
   const submit = async (action, value) => {
     await onAction(lawyer, action, value);
@@ -248,6 +251,84 @@ function ManageContent({ lawyer, busy, onAction }) {
               Remover plano
             </button>
           )}
+        </div>
+      </section>
+
+      <section className={styles.manageSection}>
+        <div className={planStyles.sectionTitle}>
+          <CalendarClock size={18} aria-hidden="true" />
+          <div>
+            <h3>Assinatura InfinitePay (registro manual)</h3>
+            <p>
+              Para assinaturas recorrentes (link hospedado, sem webhook). Ativa o
+              plano pelo ciclo, credita o bônus de Juris e lança a venda em
+              Transações. Informe o código/identificador do pagamento InfinitePay.
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.formGridTwo}>
+          <select
+            value={subPlan}
+            onChange={(event) => setSubPlan(event.target.value)}
+            disabled={busy}
+          >
+            <option value="START">Plano START</option>
+            <option value="PRO">Plano PRO</option>
+          </select>
+          <select
+            value={subCycle}
+            onChange={(event) => setSubCycle(event.target.value)}
+            disabled={busy}
+          >
+            <option value="MONTHLY">Mensal (30 dias)</option>
+            <option value="ANNUAL">Anual (365 dias)</option>
+          </select>
+        </div>
+
+        <div className={styles.manageActionsRow}>
+          <input
+            type="text"
+            value={subCode}
+            onChange={(event) => setSubCode(event.target.value)}
+            placeholder="Código / identificador InfinitePay"
+            disabled={busy}
+          />
+          <button
+            type="button"
+            className={styles.primaryManageButton}
+            onClick={() =>
+              submit("REGISTER_SUBSCRIPTION", {
+                planType: subPlan,
+                billingCycle: subCycle,
+                infinitePayCode: subCode.trim(),
+              })
+            }
+            disabled={busy || !subCode.trim()}
+          >
+            Registrar assinatura
+          </button>
+        </div>
+
+        <p style={{ margin: "4px 0 0" }}>
+          Status da assinatura:{" "}
+          <strong>{lawyer.subscription_status || "—"}</strong>
+        </p>
+
+        <div className={styles.manageActionsRow}>
+          <button
+            type="button"
+            className={styles.dangerManageButton}
+            onClick={() => submit("CANCEL_SUBSCRIPTION")}
+            disabled={
+              busy ||
+              ["CANCELED", "CANCELLED"].includes(
+                String(lawyer.subscription_status || "").toUpperCase(),
+              )
+            }
+          >
+            Cancelar assinatura (mantém acesso até expirar)
+          </button>
         </div>
       </section>
 

@@ -4,22 +4,23 @@ import {
 } from "@/lib/emailTemplates";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
+import { decodeOrderReference } from "@/lib/infinitepay/orderReference";
+import { consumeCouponUsage } from "@/lib/coupons/couponServer";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// O webhook da InfinitePay dispara quando o pagamento é aprovado. Ele DEVE
+// sempre responder rápido: 200 quando reconhecido/registrado/duplicado, e 400/500
+// apenas em falha transitória (para a InfinitePay reenviar). Nunca derruba a
+// resposta por venda não-mapeada — nesses casos registra e responde 200.
 
 function json(payload, status = 200) {
   return NextResponse.json(payload, {
     status,
     headers: { "Cache-Control": "no-store" },
   });
-}
-
-function isValidUuid(value) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    String(value || ""),
-  );
 }
 
 function normalizeAmountInCents(value) {
@@ -37,13 +38,14 @@ function resolveReference(payload) {
     payload?.order_nsu ||
       payload?.transaction_nsu ||
       payload?.nsu ||
+      payload?.invoice_slug ||
       payload?.id ||
       "",
   ).trim();
 }
 
-function resolveIdentity(payload, reference) {
-  const email = String(
+function resolveEmail(payload) {
+  return String(
     payload?.customer?.email ||
       payload?.customer_email ||
       payload?.metadata?.email ||
@@ -51,153 +53,34 @@ function resolveIdentity(payload, reference) {
   )
     .trim()
     .toLowerCase();
-
-  const userMatch = reference.match(
-    /^sj_([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})_/i,
-  );
-
-  if (userMatch && isValidUuid(userMatch[1])) {
-    return { userId: userMatch[1], email };
-  }
-
-  if (!email && reference.startsWith("sj_")) {
-    const parts = reference.split("_");
-    const legacyEmail = parts.slice(1, -1).join("_").trim().toLowerCase();
-    return { userId: null, email: legacyEmail };
-  }
-
-  return { userId: null, email };
 }
 
-function resolveProduct(amountInCents) {
-  // START - 1º mês promocional (R$ 40,99 - R$ 30,00 = R$ 10,99)
-  if (amountInCents === 1099) {
-    return {
-      type: "PRO_SUBSCRIPTION",
-      planType: "START",
-      billingCycle: "MONTHLY",
-      jurisAmount: 7,
-      promo: true,
-      expirationDays: 30,
-    };
-  }
-
-  // PRO - 1º mês promocional (R$ 150,00 - R$ 110,01 = R$ 39,99)
-  if (amountInCents === 3999) {
-    return {
-      type: "PRO_SUBSCRIPTION",
-      planType: "PRO",
-      billingCycle: "MONTHLY",
-      jurisAmount: 20,
-      promo: true,
-      expirationDays: 30,
-    };
-  }
-
-  // START - mensal recorrente (R$ 40,99)
-  if (amountInCents === 4099) {
-    return {
-      type: "PRO_SUBSCRIPTION",
-      planType: "START",
-      billingCycle: "MONTHLY",
-      jurisAmount: 7,
-      promo: false,
-      expirationDays: 30,
-    };
-  }
-
-  // PRO - mensal recorrente, 2º mês em diante (R$ 150,00)
-  if (amountInCents === 15000) {
-    return {
-      type: "PRO_SUBSCRIPTION",
-      planType: "PRO",
-      billingCycle: "MONTHLY",
-      jurisAmount: 20,
-      promo: false,
-      expirationDays: 30,
-    };
-  }
-
-  // START - anual (R$ 431,88)
-  if (amountInCents === 43188) {
-    return {
-      type: "PRO_SUBSCRIPTION",
-      planType: "START",
-      billingCycle: "ANNUAL",
-      jurisAmount: 7,
-      promo: false,
-      expirationDays: 365,
-    };
-  }
-
-  // PRO - anual, cobrado de uma vez (R$ 1.440,00)
-  if (amountInCents === 144000) {
-    return {
-      type: "PRO_SUBSCRIPTION",
-      planType: "PRO",
-      billingCycle: "ANNUAL",
-      jurisAmount: 20,
-      promo: false,
-      expirationDays: 365,
-    };
-  }
-
-  // START - avulso, pagamento único 30 dias (R$ 49,90)
-  if (amountInCents === 4990) {
-    return {
-      type: "PRO_SUBSCRIPTION",
-      planType: "START",
-      billingCycle: "AVULSO",
-      jurisAmount: 7,
-      promo: false,
-      expirationDays: 30,
-    };
-  }
-
-  // PRO - avulso, pagamento único 30 dias (R$ 210,00)
-  if (amountInCents === 21000) {
-    return {
-      type: "PRO_SUBSCRIPTION",
-      planType: "PRO",
-      billingCycle: "AVULSO",
-      jurisAmount: 20,
-      promo: false,
-      expirationDays: 30,
-    };
-  }
-
-  // Valores com desconto de parceria OAB/RS (10% START / 15% PRO). Precisam ser
-  // reconhecidos aqui para o plano ativar automaticamente. Mantidos em sincronia
-  // com applyRsDiscountCents (lib/lawyerDiscount) e o checkout.
-  const rsDiscounted = {
-    // START -10%
-    3689: { planType: "START", billingCycle: "MONTHLY", jurisAmount: 7, expirationDays: 30 },
-    38869: { planType: "START", billingCycle: "ANNUAL", jurisAmount: 7, expirationDays: 365 },
-    4491: { planType: "START", billingCycle: "AVULSO", jurisAmount: 7, expirationDays: 30 },
-    // PRO -15%
-    12750: { planType: "PRO", billingCycle: "MONTHLY", jurisAmount: 20, expirationDays: 30 },
-    122400: { planType: "PRO", billingCycle: "ANNUAL", jurisAmount: 20, expirationDays: 365 },
-    17850: { planType: "PRO", billingCycle: "AVULSO", jurisAmount: 20, expirationDays: 30 },
+// Reconhecimento por VALOR — usado só como fallback para vendas legadas ou de
+// links estáticos da loja (sem produto embutido no order_nsu).
+function resolveProductByAmount(amountInCents) {
+  const plans = {
+    1099: { planType: "START", billingCycle: "MONTHLY", jurisAmount: 7, promo: true, expirationDays: 30 },
+    3999: { planType: "PRO", billingCycle: "MONTHLY", jurisAmount: 20, promo: true, expirationDays: 30 },
+    4099: { planType: "START", billingCycle: "MONTHLY", jurisAmount: 7, promo: false, expirationDays: 30 },
+    15000: { planType: "PRO", billingCycle: "MONTHLY", jurisAmount: 20, promo: false, expirationDays: 30 },
+    43188: { planType: "START", billingCycle: "ANNUAL", jurisAmount: 7, promo: false, expirationDays: 365 },
+    144000: { planType: "PRO", billingCycle: "ANNUAL", jurisAmount: 20, promo: false, expirationDays: 365 },
+    4990: { planType: "START", billingCycle: "AVULSO", jurisAmount: 7, promo: false, expirationDays: 30 },
+    21000: { planType: "PRO", billingCycle: "AVULSO", jurisAmount: 20, promo: false, expirationDays: 30 },
+    // Valores com desconto OAB/RS (10% START / 15% PRO).
+    3689: { planType: "START", billingCycle: "MONTHLY", jurisAmount: 7, promo: false, expirationDays: 30 },
+    38869: { planType: "START", billingCycle: "ANNUAL", jurisAmount: 7, promo: false, expirationDays: 365 },
+    4491: { planType: "START", billingCycle: "AVULSO", jurisAmount: 7, promo: false, expirationDays: 30 },
+    12750: { planType: "PRO", billingCycle: "MONTHLY", jurisAmount: 20, promo: false, expirationDays: 30 },
+    122400: { planType: "PRO", billingCycle: "ANNUAL", jurisAmount: 20, promo: false, expirationDays: 365 },
+    17850: { planType: "PRO", billingCycle: "AVULSO", jurisAmount: 20, promo: false, expirationDays: 30 },
   };
 
-  if (rsDiscounted[amountInCents]) {
-    const p = rsDiscounted[amountInCents];
-    return {
-      type: "PRO_SUBSCRIPTION",
-      planType: p.planType,
-      billingCycle: p.billingCycle,
-      jurisAmount: p.jurisAmount,
-      promo: false,
-      expirationDays: p.expirationDays,
-    };
+  if (plans[amountInCents]) {
+    return { type: "PRO_SUBSCRIPTION", ...plans[amountInCents] };
   }
 
-  const jurisPackages = {
-    990: 10,
-    1690: 20,
-    3990: 50,
-  };
-
+  const jurisPackages = { 990: 10, 1690: 20, 3990: 50 };
   if (jurisPackages[amountInCents]) {
     return {
       type: "JURIS_PURCHASE",
@@ -212,107 +95,90 @@ function resolveProduct(amountInCents) {
   return null;
 }
 
-async function findLawyer(identity) {
+// Normaliza o produto embutido no order_nsu para o formato usado em applyProduct.
+function productFromReference(decodedProduct) {
+  if (!decodedProduct || !decodedProduct.t) return null;
+  return {
+    type: decodedProduct.t === "JURIS" ? "JURIS_PURCHASE" : "PRO_SUBSCRIPTION",
+    planType: decodedProduct.planType || null,
+    billingCycle: decodedProduct.billingCycle || null,
+    jurisAmount: Number(decodedProduct.jurisAmount || 0),
+    promo: Boolean(decodedProduct.promo),
+    expirationDays: Number(decodedProduct.expirationDays || 0),
+  };
+}
+
+async function findLawyer({ userId, email }) {
   let query = supabaseAdmin
     .from("advogados")
-    .select(
-      "id, name, email, balance, promo_start_used, promo_pro_used",
-    );
+    .select("id, name, email, balance, promo_start_used, promo_pro_used");
 
-  if (identity.userId) {
-    query = query.eq("id", identity.userId);
-  } else if (identity.email) {
-    query = query.ilike("email", identity.email);
+  if (userId) {
+    query = query.eq("id", userId);
+  } else if (email) {
+    query = query.ilike("email", email);
   } else {
     return null;
   }
 
   const { data, error } = await query.maybeSingle();
-
   if (error) {
     throw new Error("Falha ao identificar o comprador da InfinitePay.");
   }
-
   return data || null;
 }
 
 async function findTransaction(reference) {
   const { data, error } = await supabaseAdmin
     .from("transacoes")
-    .select("id, status")
+    .select("id, status, cupom_id, advogado_id")
     .eq("stripe_session_id", reference)
     .maybeSingle();
 
   if (error) {
     throw new Error("Falha ao consultar idempotência financeira.");
   }
-
   return data || null;
 }
 
-async function reserveTransaction({
+async function upsertTransaction({
+  existing,
   reference,
   lawyerId,
   product,
   amountInCents,
+  status,
 }) {
-  const existing = await findTransaction(reference);
-
-  if (existing?.status === "succeeded" || existing?.status === "processing") {
-    return { duplicate: true, transactionId: existing.id };
-  }
-
   const payload = {
     advogado_id: lawyerId,
     tipo: product?.type || "UNKNOWN_PURCHASE",
     valor: amountInCents / 100,
     moeda: "BRL",
-    status: product ? "processing" : "pending_manual_review",
+    status,
     juris_amount: product?.jurisAmount || 0,
     stripe_session_id: reference,
-    created_at: new Date().toISOString(),
   };
 
   if (existing) {
     const { error } = await supabaseAdmin
       .from("transacoes")
-      .update(payload)
+      .update({ status })
       .eq("id", existing.id);
-
-    if (error) {
-      throw new Error("Falha ao reabrir o processamento InfinitePay.");
-    }
-
-    return { duplicate: false, transactionId: existing.id };
+    if (error) throw new Error("Falha ao atualizar a transação InfinitePay.");
+    return existing.id;
   }
 
   const { data, error } = await supabaseAdmin
     .from("transacoes")
-    .insert([payload])
+    .insert([{ ...payload, created_at: new Date().toISOString() }])
     .select("id")
     .single();
 
   if (error) {
-    if (error.code === "23505") {
-      return { duplicate: true, transactionId: null };
-    }
-    throw new Error("Falha ao reservar o lançamento InfinitePay.");
+    if (error.code === "23505") return null;
+    throw new Error("Falha ao registrar o lançamento InfinitePay.");
   }
-
-  return { duplicate: false, transactionId: data.id };
-}
-
-async function updateTransactionStatus(transactionId, status) {
-  if (!transactionId) return;
-
-  const { error } = await supabaseAdmin
-    .from("transacoes")
-    .update({ status })
-    .eq("id", transactionId);
-
-  if (error) {
-    console.error("[InfinitePay] Falha ao atualizar transação:", error);
-  }
+  return data.id;
 }
 
 async function incrementBalance(lawyerId, amount) {
@@ -351,20 +217,13 @@ async function incrementBalance(lawyerId, amount) {
     .update({ balance: newBalance })
     .eq("id", lawyerId);
 
-  if (error) {
-    throw new Error("Falha ao atualizar o saldo do advogado.");
-  }
-
+  if (error) throw new Error("Falha ao atualizar o saldo do advogado.");
   return newBalance;
 }
 
 async function applyProduct(lawyer, product) {
   if (product.type === "JURIS_PURCHASE") {
-    const newBalance = await incrementBalance(
-      lawyer.id,
-      product.jurisAmount,
-    );
-
+    const newBalance = await incrementBalance(lawyer.id, product.jurisAmount);
     return { newBalance };
   }
 
@@ -377,6 +236,8 @@ async function applyProduct(lawyer, product) {
       Date.now() + product.expirationDays * 24 * 60 * 60 * 1000,
     ).toISOString(),
     balance: newBalance,
+    // Pagamento confirmado reativa a assinatura (limpa cancelamento anterior).
+    subscription_status: "ACTIVE",
   };
 
   if (product.promo) {
@@ -390,10 +251,7 @@ async function applyProduct(lawyer, product) {
     .update(updateData)
     .eq("id", lawyer.id);
 
-  if (error) {
-    throw new Error("Falha ao ativar o plano contratado.");
-  }
-
+  if (error) throw new Error("Falha ao ativar o plano contratado.");
   return { newBalance };
 }
 
@@ -435,48 +293,33 @@ export async function POST(request) {
 
   try {
     if (!supabaseAdmin) {
+      // Sem banco não há como registrar; 500 força reenvio da InfinitePay.
       return json(
         { success: false, message: "Serviço financeiro indisponível." },
-        503,
+        500,
       );
     }
 
     const payload = await request.json().catch(() => null);
     const reference = resolveReference(payload);
-    const amountInCents = normalizeAmountInCents(payload?.amount);
+    const amountInCents = normalizeAmountInCents(
+      payload?.amount ?? payload?.paid_amount,
+    );
 
-    if (!reference || amountInCents <= 0) {
-      return json(
-        {
-          success: false,
-          message: "Payload financeiro incompleto.",
-        },
-        400,
-      );
+    if (!reference) {
+      // Nada a rastrear — responde 200 para não gerar reenvios infinitos.
+      console.warn("[InfinitePay] Webhook sem referência:", { amountInCents });
+      return json({ success: true, message: "Evento ignorado (sem referência)." });
     }
 
-    const identity = resolveIdentity(payload, reference);
-    const lawyer = await findLawyer(identity);
+    const { userId, product: decodedProduct } = decodeOrderReference(reference);
+    const email = resolveEmail(payload);
 
-    if (!lawyer) {
-      console.error("[InfinitePay] Comprador não localizado:", {
-        referenceSuffix: reference.slice(-6),
-      });
-      return json(
-        { success: false, message: "Comprador não localizado." },
-        404,
-      );
-    }
+    const lawyer = await findLawyer({ userId, email });
+    const existing = await findTransaction(reference);
 
-    const product = resolveProduct(amountInCents);
-    const reservation = await reserveTransaction({
-      reference,
-      lawyerId: lawyer.id,
-      product,
-      amountInCents,
-    });
-
-    if (reservation.duplicate) {
+    // Idempotência: já processado.
+    if (existing?.status === "succeeded") {
       return json({
         success: true,
         message: "Evento já processado anteriormente.",
@@ -484,14 +327,29 @@ export async function POST(request) {
       });
     }
 
-    transactionId = reservation.transactionId;
+    const product =
+      productFromReference(decodedProduct) ||
+      resolveProductByAmount(amountInCents);
 
-    if (!product) {
-      console.warn("[InfinitePay] Valor enviado para revisão manual:", {
+    // Venda não-atribuível (link estático da loja / valor desconhecido). Registra
+    // para revisão manual quando possível e SEMPRE responde 200.
+    if (!lawyer || !product) {
+      if (lawyer) {
+        transactionId = await upsertTransaction({
+          existing,
+          reference,
+          lawyerId: lawyer.id,
+          product,
+          amountInCents,
+          status: "pending_manual_review",
+        });
+      }
+      console.warn("[InfinitePay] Venda para revisão manual:", {
         referenceSuffix: reference.slice(-6),
         amountInCents,
+        hasLawyer: Boolean(lawyer),
+        hasProduct: Boolean(product),
       });
-
       return json({
         success: true,
         message: "Pagamento registrado para revisão manual.",
@@ -499,8 +357,40 @@ export async function POST(request) {
       });
     }
 
+    // Marca em processamento (mantém a transação pendente criada no checkout).
+    transactionId = await upsertTransaction({
+      existing,
+      reference,
+      lawyerId: lawyer.id,
+      product,
+      amountInCents,
+      status: "processing",
+    });
+
     const { newBalance } = await applyProduct(lawyer, product);
-    await updateTransactionStatus(transactionId, "succeeded");
+    await upsertTransaction({
+      existing: transactionId ? { id: transactionId } : existing,
+      reference,
+      lawyerId: lawyer.id,
+      product,
+      amountInCents,
+      status: "succeeded",
+    });
+
+    // Consome o cupom reservado (se houver) — não fatal.
+    const couponId = existing?.cupom_id || null;
+    if (couponId) {
+      try {
+        await consumeCouponUsage(supabaseAdmin, {
+          couponId,
+          userId: lawyer.id,
+          checkoutReference: reference,
+        });
+      } catch (couponError) {
+        console.error("[InfinitePay] Falha ao consumir cupom:", couponError);
+      }
+    }
+
     await sendConfirmationEmail(lawyer, product, newBalance);
 
     return json({
@@ -513,16 +403,22 @@ export async function POST(request) {
     });
   } catch (error) {
     if (transactionId) {
-      await updateTransactionStatus(transactionId, "error_updating_balance");
+      await supabaseAdmin
+        .from("transacoes")
+        .update({ status: "error_updating_balance" })
+        .eq("id", transactionId)
+        .then(() => {})
+        .catch(() => {});
     }
 
+    // Falha transitória — 400 faz a InfinitePay reenviar o webhook.
     console.error("[InfinitePay][Webhook] Erro:", error);
     return json(
       {
         success: false,
         message: "Falha temporária no processamento do pagamento.",
       },
-      500,
+      400,
     );
   }
 }

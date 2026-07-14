@@ -79,7 +79,11 @@ async function sendAdministrativeActionEmail(lawyer, action, value, updates) {
       });
     }
 
-    if (action === "GIVE_PRO" || action === "GIVE_PLAN") {
+    if (
+      action === "GIVE_PRO" ||
+      action === "GIVE_PLAN" ||
+      action === "REGISTER_SUBSCRIPTION"
+    ) {
       const planType = value?.planType || "PRO";
 
       await resend.emails.send({
@@ -287,6 +291,7 @@ export async function updateAdminLawyer(request) {
 
     const updates = {};
     let sendVerifiedEmail = false;
+    let subscriptionRecord = null;
 
     if (action === "GIVE_PRO" || action === "GIVE_PLAN") {
       const planType = String(value?.planType || "PRO").toUpperCase();
@@ -308,10 +313,62 @@ export async function updateAdminLawyer(request) {
       updates.is_premium = true;
       updates.plan_type = planType;
       updates.premium_expires_at = expiresAt.toISOString();
+      updates.subscription_status = "ACTIVE";
+    } else if (action === "REGISTER_SUBSCRIPTION") {
+      // Registro manual de assinatura InfinitePay (planos recorrentes hospedados
+      // não têm webhook). Ativa o plano, credita o bônus de Juris do ciclo e
+      // lança a venda em transacoes com o código informado pelo administrador.
+      const planType = String(value?.planType || "").toUpperCase();
+      const billingCycle = String(value?.billingCycle || "MONTHLY").toUpperCase();
+      const code = String(value?.infinitePayCode || "").trim();
+
+      if (
+        !ALLOWED_PLAN_TYPES.has(planType) ||
+        planType === "FREE" ||
+        !["MONTHLY", "ANNUAL"].includes(billingCycle)
+      ) {
+        return json(
+          { success: false, message: "Plano ou ciclo da assinatura inválidos." },
+          400,
+        );
+      }
+
+      if (!code) {
+        return json(
+          {
+            success: false,
+            message:
+              "Informe o código/identificador da assinatura InfinitePay.",
+          },
+          400,
+        );
+      }
+
+      const days = billingCycle === "ANNUAL" ? 365 : 30;
+      const jurisBonus = planType === "PRO" ? 20 : 7;
+      const expiresAt = new Date();
+      expiresAt.setUTCDate(expiresAt.getUTCDate() + days);
+
+      updates.is_premium = true;
+      updates.plan_type = planType;
+      updates.plan_billing_cycle = billingCycle;
+      updates.premium_expires_at = expiresAt.toISOString();
+      updates.balance = Number(lawyer.balance || 0) + jurisBonus;
+      updates.subscription_status = "ACTIVE";
+
+      subscriptionRecord = { planType, billingCycle, code, jurisBonus };
+    } else if (action === "CANCEL_SUBSCRIPTION") {
+      // Cancelamento manual: o advogado cancelou/solicitou cancelamento na
+      // InfinitePay. Marca a assinatura como CANCELED para o sistema NÃO renovar
+      // nem enviar lembretes de renovação. O acesso é mantido até
+      // premium_expires_at (fim do período já pago); o cron rebaixa para FREE
+      // quando expirar.
+      updates.subscription_status = "CANCELED";
     } else if (action === "REMOVE_PRO") {
       updates.is_premium = false;
       updates.plan_type = "FREE";
       updates.premium_expires_at = null;
+      updates.subscription_status = "CANCELED";
     } else if (action === "ADD_JURIS") {
       const amount = normalizePositiveInteger(value);
 
@@ -363,6 +420,37 @@ export async function updateAdminLawyer(request) {
 
     if (updateError) {
       throw new Error(`Falha ao atualizar advogado: ${updateError.message}`);
+    }
+
+    if (subscriptionRecord) {
+      const valorMap = {
+        START_MONTHLY: 40.99,
+        START_ANNUAL: 431.88,
+        PRO_MONTHLY: 150,
+        PRO_ANNUAL: 1440,
+      };
+      const key = `${subscriptionRecord.planType}_${subscriptionRecord.billingCycle}`;
+
+      const { error: txError } = await db.from("transacoes").insert([
+        {
+          advogado_id: lawyerId,
+          tipo: "PRO_SUBSCRIPTION",
+          valor: valorMap[key] || 0,
+          moeda: "BRL",
+          status: "succeeded",
+          juris_amount: subscriptionRecord.jurisBonus,
+          // Prefixo ip_ para a governança financeira exibir como InfinitePay.
+          stripe_session_id: `ip_manual_${subscriptionRecord.code}_${Date.now()}`,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+
+      if (txError) {
+        console.error(
+          "[Admin/Advogados] Falha ao registrar transação da assinatura:",
+          txError,
+        );
+      }
     }
 
     if (sendVerifiedEmail) {

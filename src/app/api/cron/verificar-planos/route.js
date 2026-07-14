@@ -262,7 +262,7 @@ export async function GET(request) {
     const { data: premiumLawyers, error: fetchError } = await db
       .from("advogados")
       .select(
-        "id, name, email, is_premium, premium_expires_at, plan_type, plan_billing_cycle",
+        "id, name, email, is_premium, premium_expires_at, plan_type, plan_billing_cycle, subscription_status",
       )
       .eq("is_premium", true)
       .not("premium_expires_at", "is", null);
@@ -311,6 +311,19 @@ export async function GET(request) {
 
         expiredCount += 1;
         await notifyPlanExpired(db, lawyer, nowStr);
+        continue;
+      }
+
+      // Assinatura cancelada: não renova nem envia lembrete de renovação. O
+      // acesso segue até expirar (tratado acima); aqui apenas ignoramos os
+      // avisos/CTAs de renovação para não incomodar quem já cancelou.
+      const canceled = [
+        "CANCELED",
+        "CANCELLED",
+        "BLOCKED",
+        "UNPAID",
+      ].includes(String(lawyer.subscription_status || "").toUpperCase());
+      if (canceled) {
         continue;
       }
 

@@ -1,7 +1,15 @@
+import { NextResponse } from "next/server";
+
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isRsLawyer, applyRsDiscountCents } from "@/lib/lawyerDiscount";
-import { NextResponse } from "next/server";
+import { encodeOrderReference } from "@/lib/infinitepay/orderReference";
+import {
+  COUPON_TYPES,
+  calculateDiscountedAmount,
+  releaseCouponReservation,
+  reserveCouponForCheckout,
+} from "@/lib/coupons/couponServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -47,58 +55,131 @@ function normalizePhone(value) {
   return `+${withCountryCode.slice(0, 15)}`;
 }
 
-// Valores em centavos. Mantidos em sincronia com o catálogo (planCatalog.js) e
-// com o webhook (api/webhook/infinitepay) que reconhece estes mesmos valores.
-function resolveProduct({ planType, jurisAmount, isPromoEligible, billingCycle, isRs }) {
-  const normalizedPlan = String(planType || "").toUpperCase();
-  const normalizedJuris = Number(jurisAmount || 0);
-  const cycle = String(billingCycle || "MONTHLY").toUpperCase();
+// Catálogo em centavos. Mantido em sincronia com planCatalog.js (frontend). O
+// webhook NÃO depende destes valores para atribuir a venda (usa o produto
+// embutido no order_nsu), mas o valor cobrado precisa bater com o exibido.
+const JURIS_PACKAGES = { 10: 990, 20: 1690, 50: 3990 };
 
-  if ([10, 20, 50].includes(normalizedJuris)) {
-    const prices = { 10: 990, 20: 1690, 50: 3990 };
+const PLAN_BASE = {
+  START: {
+    juris: 7,
+    AVULSO: { cents: 4990, days: 30 },
+    MONTHLY: { cents: 4099, days: 30 },
+    ANNUAL: { cents: 43188, days: 365 },
+    promoCents: 1099,
+  },
+  PRO: {
+    juris: 20,
+    AVULSO: { cents: 21000, days: 30 },
+    MONTHLY: { cents: 15000, days: 30 },
+    ANNUAL: { cents: 144000, days: 365 },
+    promoCents: 3999,
+  },
+};
+
+/**
+ * Resolve o produto solicitado, o preço final em centavos e o contexto que será
+ * gravado na transação e embutido no order_nsu.
+ *
+ * Ordem de descontos (não empilham): promoção de 1º mês > desconto OAB/RS >
+ * cupom do usuário. Juris não recebem promo/RS.
+ */
+function resolveProduct({
+  planType,
+  billingCycle,
+  jurisAmount,
+  isPromoEligible,
+  isRs,
+  coupon,
+}) {
+  const juris = Number(jurisAmount || 0);
+
+  if (JURIS_PACKAGES[juris]) {
+    let cents = JURIS_PACKAGES[juris];
+    if (coupon) cents = calculateDiscountedAmount(cents, coupon);
 
     return {
-      priceInCents: prices[normalizedJuris],
-      description: `Pacote ${normalizedJuris} Juris`,
+      type: "JURIS_PURCHASE",
+      planType: null,
+      billingCycle: null,
+      jurisAmount: juris,
+      expirationDays: 0,
+      promo: false,
+      priceInCents: cents,
+      description: `Pacote ${juris} Juris`,
     };
   }
 
-  // Desconto de parceria OAB/RS: só nos preços regulares do plano (não na
-  // promoção de 1º mês nem em Juris). O webhook reconhece os valores com
-  // desconto para ativar o plano automaticamente.
-  const withRs = (cents, plan) => (isRs ? applyRsDiscountCents(cents, plan) : cents);
-  const rsTag = isRs ? " (desconto OAB/RS)" : "";
+  const plan = PLAN_BASE[String(planType || "").toUpperCase()];
+  const cycle = String(billingCycle || "MONTHLY").toUpperCase();
+  if (!plan || !plan[cycle]) return null;
 
-  if (normalizedPlan === "PRO") {
-    if (cycle === "AVULSO") {
-      return { priceInCents: withRs(21000, "PRO"), description: `Plano Pro Avulso 30 dias${rsTag}` };
-    }
-    if (cycle === "ANNUAL") {
-      return { priceInCents: withRs(144000, "PRO"), description: `Plano Pro Anual${rsTag}` };
-    }
-    if (isPromoEligible) {
-      return { priceInCents: 3999, description: "Plano Pro Promocional 30 dias" };
-    }
-    return { priceInCents: withRs(15000, "PRO"), description: `Plano Pro Mensal${rsTag}` };
+  const planKey = String(planType).toUpperCase();
+
+  // Promoção de 1º mês (só mensal) — valor fixo, sem RS/cupom.
+  if (cycle === "MONTHLY" && isPromoEligible) {
+    return {
+      type: "PRO_SUBSCRIPTION",
+      planType: planKey,
+      billingCycle: "MONTHLY",
+      jurisAmount: plan.juris,
+      expirationDays: plan.MONTHLY.days,
+      promo: true,
+      priceInCents: plan.promoCents,
+      description: `Plano ${planKey} Promocional 30 dias`,
+    };
   }
 
-  if (normalizedPlan === "START") {
-    if (cycle === "AVULSO") {
-      return { priceInCents: withRs(4990, "START"), description: `Plano Start Avulso 30 dias${rsTag}` };
-    }
-    if (cycle === "ANNUAL") {
-      return { priceInCents: withRs(43188, "START"), description: `Plano Start Anual${rsTag}` };
-    }
-    if (isPromoEligible) {
-      return { priceInCents: 1099, description: "Plano Start Promocional 30 dias" };
-    }
-    return { priceInCents: withRs(4099, "START"), description: `Plano Start Mensal${rsTag}` };
+  const base = plan[cycle];
+  let cents = base.cents;
+  let tag = "";
+
+  if (coupon) {
+    cents = calculateDiscountedAmount(cents, coupon);
+    tag = " (cupom)";
+  } else if (isRs) {
+    cents = applyRsDiscountCents(cents, planKey);
+    tag = " (desconto OAB/RS)";
   }
 
-  return null;
+  const cycleLabel =
+    cycle === "AVULSO" ? "Avulso 30 dias" : cycle === "ANNUAL" ? "Anual" : "Mensal";
+
+  return {
+    type: "PRO_SUBSCRIPTION",
+    planType: planKey,
+    billingCycle: cycle,
+    jurisAmount: plan.juris,
+    expirationDays: base.days,
+    promo: false,
+    priceInCents: cents,
+    description: `Plano ${planKey} ${cycleLabel}${tag}`,
+  };
+}
+
+async function bindReservation(reservationToken, userId, reference) {
+  if (!reservationToken) return;
+
+  const { data, error } = await supabaseAdmin.rpc("bind_coupon_reservation", {
+    p_token: reservationToken,
+    p_advogado_id: userId,
+    p_checkout_reference: reference,
+  });
+
+  if (error || data !== true) {
+    const bindError = new Error(
+      "Não foi possível vincular a reserva do cupom ao pagamento.",
+    );
+    bindError.status = ["PGRST202", "42883"].includes(error?.code) ? 503 : 409;
+    throw bindError;
+  }
 }
 
 export async function POST(request) {
+  let reservation = null;
+  let userId = null;
+  let pendingTransactionId = null;
+
   try {
     const originResponse = validateOrigin(request);
     if (originResponse) return originResponse;
@@ -112,6 +193,7 @@ export async function POST(request) {
     if (authError || !user) {
       return json({ success: false, message: "Não autorizado." }, 401);
     }
+    userId = user.id;
 
     if (!supabaseAdmin) {
       return json(
@@ -149,34 +231,100 @@ export async function POST(request) {
     const planType = String(body?.planType || "").toUpperCase();
     const billingCycle = String(body?.billingCycle || "MONTHLY").toUpperCase();
     const jurisAmount = Number(body?.jurisAmount || 0);
+    const internalCouponId =
+      String(body?.internalCouponId || "").trim() || null;
     const requestedPromo = Boolean(body?.isPromoEligible);
+
+    const isJuris = Boolean(JURIS_PACKAGES[jurisAmount]);
     const promoAlreadyUsed =
       planType === "PRO"
         ? Boolean(profile.promo_pro_used)
         : Boolean(profile.promo_start_used);
+
+    // Reserva do cupom (limites/janela validados no banco via RPC). Não depende
+    // mais do Stripe.
+    if (internalCouponId) {
+      reservation = await reserveCouponForCheckout(supabaseAdmin, {
+        couponId: internalCouponId,
+        userId: user.id,
+        expectedType: isJuris ? COUPON_TYPES.JURIS : COUPON_TYPES.PLAN,
+      });
+    }
+
     const product = resolveProduct({
       planType,
-      jurisAmount,
       billingCycle,
+      jurisAmount,
       isPromoEligible: requestedPromo && !promoAlreadyUsed,
       isRs: isRsLawyer(profile),
+      coupon: reservation?.coupon || null,
     });
 
     if (!product) {
-      return json(
-        {
-          success: false,
-          message: "Não foi possível determinar o produto solicitado.",
-        },
-        400,
+      throw Object.assign(
+        new Error("Não foi possível determinar o produto solicitado."),
+        { status: 400 },
       );
     }
 
-    const checkoutHandle =
-      process.env.INFINITEPAY_HANDLE || "plataforma-social";
+    if (product.priceInCents < 50) {
+      throw Object.assign(
+        new Error("O valor final ficou abaixo da cobrança mínima de R$ 0,50."),
+        { status: 422 },
+      );
+    }
+
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL || "https://socialjuridico.com.br";
-    const orderReference = `sj_${user.id}_${Date.now()}`;
+    const checkoutHandle =
+      process.env.INFINITEPAY_HANDLE || "plataforma-social";
+
+    // order_nsu com o produto embutido — o webhook decodifica e atribui a venda.
+    const orderReference = encodeOrderReference(user.id, {
+      t: product.type === "JURIS_PURCHASE" ? "JURIS" : "PLAN",
+      planType: product.planType,
+      billingCycle: product.billingCycle,
+      jurisAmount: product.jurisAmount,
+      promo: product.promo,
+      expirationDays: product.expirationDays,
+    });
+
+    // Transação PENDENTE criada no clique — aparece imediatamente na governança
+    // financeira (/dashboard/admin/transacoes) aguardando pagamento.
+    const { data: pending, error: pendingError } = await supabaseAdmin
+      .from("transacoes")
+      .insert([
+        {
+          advogado_id: user.id,
+          tipo: product.type,
+          valor: product.priceInCents / 100,
+          moeda: "BRL",
+          status: "pending",
+          juris_amount: product.jurisAmount,
+          stripe_session_id: orderReference,
+          cupom_id: product.promo ? null : reservation?.coupon?.id || null,
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select("id")
+      .single();
+
+    if (pendingError) {
+      throw new Error("Falha ao registrar a transação pendente.");
+    }
+    pendingTransactionId = pending.id;
+
+    if (reservation && product.promo) {
+      // Promoção de 1º mês não empilha com cupom — libera a reserva.
+      await releaseCouponReservation(
+        supabaseAdmin,
+        reservation.reservationToken,
+        user.id,
+      );
+      reservation = null;
+    } else if (reservation) {
+      await bindReservation(reservation.reservationToken, user.id, orderReference);
+    }
 
     const payload = {
       handle: checkoutHandle,
@@ -199,15 +347,12 @@ export async function POST(request) {
 
     const response = await fetch("https://api.checkout.infinitepay.io/links", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
 
     const responseText = await response.text();
     let data = {};
-
     try {
       data = JSON.parse(responseText);
     } catch {
@@ -219,29 +364,47 @@ export async function POST(request) {
         status: response.status,
         hasResponseBody: Boolean(responseText),
       });
-
-      return json(
-        {
-          success: false,
-          message: "Não foi possível gerar o link de pagamento.",
-        },
-        502,
+      throw Object.assign(
+        new Error("Não foi possível gerar o link de pagamento."),
+        { status: 502 },
       );
     }
 
     return json({
       success: true,
       url: data.url,
+      reference: orderReference,
       provider: "INFINITEPAY",
     });
   } catch (error) {
+    // Desfaz a transação pendente e libera a reserva do cupom em caso de falha
+    // antes do link ficar pronto.
+    if (pendingTransactionId && supabaseAdmin) {
+      await supabaseAdmin
+        .from("transacoes")
+        .delete()
+        .eq("id", pendingTransactionId);
+    }
+
+    if (reservation?.reservationToken && userId) {
+      await releaseCouponReservation(
+        supabaseAdmin,
+        reservation.reservationToken,
+        userId,
+      );
+    }
+
     console.error("[Checkout InfinitePay][POST] Erro:", error);
+    const status = Number(error?.status) || 500;
     return json(
       {
         success: false,
-        message: "Não foi possível iniciar o pagamento pela InfinitePay.",
+        message:
+          status < 500
+            ? error.message
+            : "Não foi possível iniciar o pagamento pela InfinitePay.",
       },
-      500,
+      status,
     );
   }
 }

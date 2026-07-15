@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   CalendarDays,
   FileText,
@@ -8,9 +9,11 @@ import {
   Loader2,
   MapPin,
   MessageCircleMore,
+  Share2,
   Siren,
   Video,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 import styles from "../Oportunidade.module.css";
 import { formatOpportunityDate, getInitials } from "../opportunityUtils";
@@ -25,6 +28,7 @@ export default function OpportunityCard({
   onView,
   onInterest,
 }) {
+  const [sharing, setSharing] = useState(false);
   const location = [item.city, item.state].filter(Boolean).join(" - ") || "Local não informado";
   const lawyers = item.negotiatingLawyers || [];
   const priority = item.priority || "NORMAL";
@@ -32,6 +36,44 @@ export default function OpportunityCard({
   const isEmergency = Boolean(item.isEmergency);
   const riskToLife = Boolean(item.riskToLife);
   const showPriorityBadge = priority !== "NORMAL";
+
+  async function handleShare() {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const response = await fetch(
+        `/api/advogado/oportunidades/${item.id}/compartilhar`,
+        { method: "POST" },
+      );
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Não foi possível gerar o link.");
+      }
+
+      const { shareUrl, description } = data.data;
+
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `${item.practiceArea} — Social Jurídico`,
+            text: description,
+            url: shareUrl,
+          });
+          return;
+        } catch (shareError) {
+          if (shareError?.name === "AbortError") return;
+        }
+      }
+
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Link do caso copiado para compartilhar.");
+    } catch (error) {
+      toast.error(error.message || "Não foi possível compartilhar este caso.");
+    } finally {
+      setSharing(false);
+    }
+  }
 
   return (
     <article
@@ -146,6 +188,20 @@ export default function OpportunityCard({
       </div>
 
       <footer className={styles.cardFooter}>
+        <button
+          type="button"
+          className={styles.iconButton}
+          onClick={handleShare}
+          disabled={sharing}
+          aria-label="Compartilhar caso"
+          title="Compartilhar caso"
+        >
+          {sharing ? (
+            <Loader2 size={15} className={styles.spinner} aria-hidden="true" />
+          ) : (
+            <Share2 size={15} aria-hidden="true" />
+          )}
+        </button>
         <button
           type="button"
           className={styles.buttonSecondary}

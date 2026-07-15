@@ -237,7 +237,10 @@ function deriveSourceStage(caseItem, interests) {
     String(item.status || "").toUpperCase(),
   );
 
-  if (status === "CONTRATADO" || interestStatuses.includes("HIRED")) {
+  if (
+    ["CONTRATADO", "EM_ANDAMENTO"].includes(status) ||
+    interestStatuses.includes("HIRED")
+  ) {
     return "HIRED";
   }
 

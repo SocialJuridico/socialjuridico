@@ -337,23 +337,33 @@ export function useCaseComposer({ onCreated }) {
     setAudioPreviewUrl(null);
   }, [audioPreviewUrl]);
 
-  const shareCase = useCallback(async (payload) => {
-    const siteUrl = "https://socialjuridico.com.br";
-    const text = `⚖️ NOVO CASO JURÍDICO PUBLICADO NO SOCIAL JURÍDICO\n\n📌 TÍTULO: ${payload.titulo}\n📝 DESCRIÇÃO: ${payload.descricao}\n\n🌐 Veja mais em: ${siteUrl}`;
+  const shareCase = useCallback(async (createdCase) => {
+    if (!createdCase?.id) return;
 
     try {
-      await navigator.clipboard.writeText(text);
-      toast.success("Texto do caso copiado para a publicação.");
-    } catch {
-      // O compartilhamento continua mesmo quando o clipboard não está disponível.
-    }
+      const response = await fetch(
+        `/api/client/cases/${createdCase.id}/share`,
+        { method: "POST" },
+      );
+      const data = await readJson(response);
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Não foi possível gerar o link.");
+      }
 
-    const shareUrl = `${siteUrl}/compartilhar?t=${encodeURIComponent(payload.titulo)}&d=${encodeURIComponent(payload.descricao.slice(0, 150))}`;
-    window.open(
-      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
-      "_blank",
-      "noopener,noreferrer,width=640,height=640",
-    );
+      const { shareUrl } = data.data;
+
+      // Link público com card/preview (og:image) e descrição anonimizada —
+      // mesmo comportamento do painel do advogado. Abre o sharer do Facebook
+      // já com a URL pública (o preview é montado pelo crawler a partir das
+      // meta tags og da página /oportunidades/[id]).
+      window.open(
+        `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+        "_blank",
+        "noopener,noreferrer,width=640,height=640",
+      );
+    } catch (error) {
+      toast.error(error.message || "Não foi possível compartilhar o caso.");
+    }
   }, []);
 
   const runAnalysis = useCallback(async () => {
@@ -477,10 +487,7 @@ export function useCaseComposer({ onCreated }) {
         }
 
         if (form.shareOnFacebook) {
-          await shareCase({
-            titulo: form.titulo,
-            descricao: form.descricao,
-          });
+          await shareCase(data.data);
         }
 
         setSuccess(true);

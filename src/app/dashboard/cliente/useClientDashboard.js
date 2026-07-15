@@ -681,22 +681,50 @@ export function useClientDashboard() {
   }, [modal]);
 
   const shareCase = useCallback(async (caseItem) => {
-    const siteUrl = "https://socialjuridico.com.br";
-    const description = String(caseItem.descricao || "").slice(0, 500);
-    const shareText = `⚖️ NOVO CASO JURÍDICO PUBLICADO NO SOCIAL JURÍDICO\n\n📌 TÍTULO: ${caseItem.titulo}\n📝 DESCRIÇÃO: ${description}\n\n🌐 Veja mais em: ${siteUrl}`;
+    if (!caseItem?.id) return;
 
     try {
-      await navigator.clipboard.writeText(shareText);
-    } catch {
-      // Compartilhamento continua mesmo sem clipboard.
-    }
+      const response = await fetch(
+        `/api/client/cases/${caseItem.id}/share`,
+        { method: "POST" },
+      );
+      const data = await response.json().catch(() => null);
 
-    const dynamicUrl = `${siteUrl}/compartilhar?t=${encodeURIComponent(caseItem.titulo)}&d=${encodeURIComponent(description.slice(0, 150))}`;
-    window.open(
-      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(dynamicUrl)}`,
-      "_blank",
-      "noopener,noreferrer,width=640,height=640",
-    );
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Não foi possível gerar o link.");
+      }
+
+      const { shareUrl, description } = data.data;
+
+      // Link público com card/preview (og:image) — mesmo comportamento do
+      // painel do advogado. A descrição é a versão anonimizada gerada por IA,
+      // sem dados sensíveis do relato original.
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: `${caseItem.titulo || "Meu caso"} — Social Jurídico`,
+            text: description,
+            url: shareUrl,
+          });
+          return;
+        } catch (shareError) {
+          if (shareError?.name === "AbortError") return;
+        }
+      }
+
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success("Link do caso copiado para compartilhar.");
+      } catch {
+        window.open(
+          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+          "_blank",
+          "noopener,noreferrer,width=640,height=640",
+        );
+      }
+    } catch (error) {
+      toast.error(error.message || "Não foi possível compartilhar este caso.");
+    }
   }, []);
 
   const restartTour = useCallback(() => {

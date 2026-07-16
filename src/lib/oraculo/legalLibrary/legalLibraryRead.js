@@ -20,7 +20,7 @@ export async function listLegalCollections() {
   }));
 }
 
-function buildUnitTree(units) {
+export function buildUnitTree(units) {
   const byId = new Map();
   const roots = [];
   for (const u of units) byId.set(u.id, { ...u, children: [] });

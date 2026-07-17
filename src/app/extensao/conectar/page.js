@@ -6,7 +6,25 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import styles from "./Conectar.module.css";
 
-const EXTENSION_ID = process.env.NEXT_PUBLIC_SJ_EXTENSION_ID || "";
+// Aceita múltiplos IDs separados por vírgula (ex.: ID da Web Store + ID da
+// cópia unpacked de desenvolvimento). A página tenta cada um em ordem.
+const EXTENSION_IDS = (process.env.NEXT_PUBLIC_SJ_EXTENSION_ID || "")
+  .split(",")
+  .map((id) => id.trim())
+  .filter(Boolean);
+
+function sendTokenToExtension(extensionId, payload) {
+  return new Promise((resolve) => {
+    try {
+      window.chrome.runtime.sendMessage(extensionId, payload, (response) => {
+        if (window.chrome.runtime.lastError || !response?.ok) resolve(false);
+        else resolve(true);
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+}
 
 // STATUS possíveis: "loading" | "no-session" | "no-extension" | "success" | "error"
 export default function ConectarExtensaoPage() {
@@ -23,28 +41,28 @@ export default function ConectarExtensaoPage() {
         return;
       }
 
-      if (!EXTENSION_ID || typeof window === "undefined" || !window.chrome?.runtime?.sendMessage) {
+      if (!EXTENSION_IDS.length || typeof window === "undefined" || !window.chrome?.runtime?.sendMessage) {
         if (!cancelled) setStatus("no-extension");
         return;
       }
 
-      window.chrome.runtime.sendMessage(
-        EXTENSION_ID,
-        {
-          type: "SJ_AUTH_TOKEN",
-          accessToken: session.access_token,
-          refreshToken: session.refresh_token,
-          expiresAt: session.expires_at,
-        },
-        (response) => {
-          if (cancelled) return;
-          if (window.chrome.runtime.lastError || !response?.ok) {
-            setStatus("no-extension");
-            return;
-          }
-          setStatus("success");
-        },
-      );
+      const payload = {
+        type: "SJ_AUTH_TOKEN",
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token,
+        expiresAt: session.expires_at,
+      };
+
+      let delivered = false;
+      for (const extensionId of EXTENSION_IDS) {
+        // eslint-disable-next-line no-await-in-loop
+        if (await sendTokenToExtension(extensionId, payload)) {
+          delivered = true;
+          break;
+        }
+      }
+
+      if (!cancelled) setStatus(delivered ? "success" : "no-extension");
     }
 
     connect().catch(() => !cancelled && setStatus("error"));

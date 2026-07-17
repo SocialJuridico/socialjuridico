@@ -13,7 +13,7 @@ const JSON_HEADERS = {
 const PROFILE_SELECT_FIELDS = {
   clientes: "id, name, email, role, phone, avatar, bio, created_at",
   advogados:
-    "id, name, email, role, phone, avatar, bio, oab, estado, specialties, verified, created_at, is_premium, balance, badges, avg_rating, total_ratings, consulta, tempo, valor, oab_verification_status, oab_warning_started_at, plan_type, plan_billing_cycle, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb, promo_start_used, promo_pro_used, escritorio_id, cargo",
+    "id, name, email, role, phone, avatar, bio, oab, estado, specialties, verified, created_at, is_premium, premium_expires_at, balance, badges, avg_rating, total_ratings, consulta, tempo, valor, oab_verification_status, oab_warning_started_at, plan_type, plan_billing_cycle, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb, promo_start_used, promo_pro_used, escritorio_id, cargo, saldo_creditos_ia_extensao, uso_interpretar_ia_extensao, interpretar_ia_periodo",
   admins: "id, name, email, role, phone, avatar, created_at",
 };
 
@@ -116,13 +116,17 @@ function validateProfilePayload(body) {
 }
 
 async function findProfileByIdOrEmail(db, finalUser, fields = "id") {
+  // Erro de banco (coluna inexistente, RLS, indisponibilidade) NUNCA pode ser
+  // tratado como "perfil não existe": ensureProfile criaria um cliente bogus
+  // para um advogado/admin real (incidente de 2026-07-17). Erro real → lança.
   for (const table of ["clientes", "advogados", "admins"]) {
     const { data, error } = await db
       .from(table)
       .select(fields === "profile" ? getSelectFields(table) : fields)
       .eq("id", finalUser.id)
       .maybeSingle();
-    if (data && !error) return { table, data };
+    if (error) throw new Error(`[perfil] Falha ao consultar ${table}: ${error.message}`);
+    if (data) return { table, data };
   }
 
   if (!finalUser.email) return null;
@@ -133,7 +137,8 @@ async function findProfileByIdOrEmail(db, finalUser, fields = "id") {
       .select(fields === "profile" ? getSelectFields(table) : fields)
       .eq("email", finalUser.email)
       .maybeSingle();
-    if (data && !error) return { table, data };
+    if (error) throw new Error(`[perfil] Falha ao consultar ${table} por email: ${error.message}`);
+    if (data) return { table, data };
   }
 
   return null;

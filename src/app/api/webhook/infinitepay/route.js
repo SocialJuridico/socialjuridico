@@ -92,6 +92,21 @@ function resolveProductByAmount(amountInCents) {
     };
   }
 
+  // Créditos do módulo "Interpretar com Social Jurídico" (extensão) — vendidos
+  // via links estáticos da loja InfinitePay, sem order_nsu embutido.
+  const aiCreditPackages = { 1000: 10, 1850: 20, 4500: 50 };
+  if (aiCreditPackages[amountInCents]) {
+    return {
+      type: "AI_CREDITS_PURCHASE",
+      planType: null,
+      billingCycle: null,
+      jurisAmount: 0,
+      aiCreditsAmount: aiCreditPackages[amountInCents],
+      promo: false,
+      expirationDays: 0,
+    };
+  }
+
   return null;
 }
 
@@ -221,9 +236,35 @@ async function incrementBalance(lawyerId, amount) {
   return newBalance;
 }
 
+async function incrementAiCredits(lawyerId, amount) {
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from("advogados")
+    .select("saldo_creditos_ia_extensao")
+    .eq("id", lawyerId)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    throw new Error("Perfil do advogado não localizado.");
+  }
+
+  const newBalance = Number(profile.saldo_creditos_ia_extensao || 0) + amount;
+  const { error } = await supabaseAdmin
+    .from("advogados")
+    .update({ saldo_creditos_ia_extensao: newBalance })
+    .eq("id", lawyerId);
+
+  if (error) throw new Error("Falha ao atualizar o saldo de créditos de IA.");
+  return newBalance;
+}
+
 async function applyProduct(lawyer, product) {
   if (product.type === "JURIS_PURCHASE") {
     const newBalance = await incrementBalance(lawyer.id, product.jurisAmount);
+    return { newBalance };
+  }
+
+  if (product.type === "AI_CREDITS_PURCHASE") {
+    const newBalance = await incrementAiCredits(lawyer.id, product.aiCreditsAmount);
     return { newBalance };
   }
 
@@ -259,6 +300,10 @@ async function sendConfirmationEmail(lawyer, product, newBalance) {
   if (!process.env.RESEND_API_KEY || !lawyer.email) return;
 
   try {
+    // Sem template dedicado ainda para créditos de IA — não manda e-mail
+    // incorreto (o crédito já foi aplicado, isso é só a notificação).
+    if (product.type === "AI_CREDITS_PURCHASE") return;
+
     if (product.type === "JURIS_PURCHASE") {
       await resend.emails.send({
         from: "Social Jurídico <contato@socialjuridico.com.br>",
@@ -398,7 +443,9 @@ export async function POST(request) {
       message:
         product.type === "JURIS_PURCHASE"
           ? `${product.jurisAmount} Juris creditados.`
-          : `Plano ${product.planType} ativado.`,
+          : product.type === "AI_CREDITS_PURCHASE"
+            ? `${product.aiCreditsAmount} créditos de IA creditados.`
+            : `Plano ${product.planType} ativado.`,
       provider: "INFINITEPAY",
     });
   } catch (error) {

@@ -13,7 +13,7 @@ export function normalizeLegalText(value) {
     .trim();
 }
 
-async function loadAliasMap() {
+export async function loadAliasMap() {
   if (!supabaseAdmin) return new Map();
   const { data } = await supabaseAdmin
     .from("oraculo_legal_collection_aliases")
@@ -64,7 +64,7 @@ export function parseArticleIntent(query, aliasMap) {
   return { collectionSlug, number };
 }
 
-async function findUnitByArticle(collectionSlug, number) {
+export async function findUnitByArticle(collectionSlug, number) {
   const { data: collection } = await supabaseAdmin
     .from("oraculo_legal_collections")
     .select("id, slug, title, short_title")

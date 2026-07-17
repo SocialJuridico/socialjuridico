@@ -1,8 +1,11 @@
 "use client";
 
-import { Coins, Menu } from "lucide-react";
+import { useState } from "react";
+import { Brain, Coins, Menu } from "lucide-react";
 
 import VerifiedBadge from "@/components/VerifiedBadge/VerifiedBadge";
+import AiCreditsPurchaseModal from "@/components/AiCreditsPurchase/AiCreditsPurchaseModal";
+import { getInterpretarAvailability } from "@/lib/extensaoInterpretarLimits";
 
 import { useLawyerSession } from "../LawyerSessionContext";
 import styles from "./LawyerShell.module.css";
@@ -14,6 +17,11 @@ export default function LawyerRouteTopBar({ title, subtitle, icon: Icon }) {
     setIsSidebarOpen,
     openJurisModal,
   } = useLawyerSession();
+  const [showAiCreditsModal, setShowAiCreditsModal] = useState(false);
+
+  // Consultas de IA disponíveis = cota grátis restante do mês (por plano) +
+  // créditos comprados na carteira da extensão.
+  const interpretarTotal = getInterpretarAvailability(profileData || {}).total;
 
   const safeName = userName || profileData?.name || "Advogado";
   const initials =
@@ -56,6 +64,20 @@ export default function LawyerRouteTopBar({ title, subtitle, icon: Icon }) {
             Comprar
           </button>
         </div>
+
+        <div className={styles.balance} aria-label="Saldo de consultas de IA da extensão">
+          <Brain size={15} aria-hidden="true" />
+          <span>{interpretarTotal} Consultas</span>
+          <button type="button" onClick={() => setShowAiCreditsModal(true)}>
+            Comprar
+          </button>
+        </div>
+
+        <AiCreditsPurchaseModal
+          isOpen={showAiCreditsModal}
+          onClose={() => setShowAiCreditsModal(false)}
+          lawyerEmail={profileData?.email}
+        />
 
         <div className={styles.identity}>
           <div className={styles.identityText}>

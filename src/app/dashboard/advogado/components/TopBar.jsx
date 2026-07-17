@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useDashboard } from "../DashboardContext";
 import styles from "../Dashboard.module.css";
 import {
@@ -21,12 +21,17 @@ import {
   BookOpen,
   Zap,
   Coins,
+  Brain,
   MessageSquare
 } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge/VerifiedBadge";
+import AiCreditsPurchaseModal from "@/components/AiCreditsPurchase/AiCreditsPurchaseModal";
+import { getInterpretarAvailability } from "@/lib/extensaoInterpretarLimits";
 
 export default function TopBar() {
   const { activeTab, profileData, setShowBuyModal, userName } = useDashboard();
+  const [showAiCreditsModal, setShowAiCreditsModal] = useState(false);
+  const interpretarTotal = getInterpretarAvailability(profileData || {}).total;
 
   return (
     <header className={styles.topBar}>
@@ -132,6 +137,25 @@ export default function TopBar() {
             Comprar
           </button>
         </div>
+
+        <div className={styles.jurisBadge}>
+          <Brain size={14} color="var(--brand-gold)" />
+          <span className={styles.jurisCount}>
+            {interpretarTotal} Consultas
+          </span>
+          <button
+            className={styles.buyJurisBtn}
+            onClick={() => setShowAiCreditsModal(true)}
+          >
+            Comprar
+          </button>
+        </div>
+
+        <AiCreditsPurchaseModal
+          isOpen={showAiCreditsModal}
+          onClose={() => setShowAiCreditsModal(false)}
+          lawyerEmail={profileData?.email}
+        />
 
         <div className={styles.userInfo}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

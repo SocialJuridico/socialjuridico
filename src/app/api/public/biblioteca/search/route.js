@@ -12,7 +12,7 @@ export async function GET(request) {
     const q = searchParams.get("q") || "";
 
     if (!supabaseAdmin || q.trim().length < 2) {
-      return NextResponse.json({ success: true, data: { query: q.trim(), results: [] } });
+      return NextResponse.json({ success: true, data: { query: q.trim(), article: null, results: [] } });
     }
 
     const { data: activeCollections } = await supabaseAdmin
@@ -21,22 +21,26 @@ export async function GET(request) {
       .eq("status", "ACTIVE");
     const activeSlugs = new Set((activeCollections || []).map((c) => c.slug));
 
-    const { query, results } = await searchLegalLibrary(q);
-    const publicResults = results
-      .filter((r) => activeSlugs.has(r.collectionSlug))
-      .map((r) => ({
-        unitId: r.unitId,
-        label: r.label,
-        heading: r.heading,
-        snippet: r.snippet,
-        collectionSlug: r.collectionSlug,
-        collectionTitle: r.collectionTitle,
-        collectionShort: r.collectionShort,
-      }));
+    const formatResult = (r) => ({
+      unitId: r.unitId,
+      label: r.label,
+      heading: r.heading,
+      snippet: r.snippet,
+      collectionSlug: r.collectionSlug,
+      collectionTitle: r.collectionTitle,
+      collectionShort: r.collectionShort,
+    });
 
-    return NextResponse.json({ success: true, data: { query, results: publicResults } });
+    const { query, article, results } = await searchLegalLibrary(q);
+    const publicResults = results.filter((r) => activeSlugs.has(r.collectionSlug)).map(formatResult);
+    // `article` = match exato por número de artigo (ex.: "art 14 cdc"), distinto de busca
+    // textual (FTS). Consumidores (ex.: extensão) usam isso pra navegar direto ao artigo
+    // em vez de mostrar uma lista de resultados.
+    const publicArticle = article && activeSlugs.has(article.collectionSlug) ? formatResult(article) : null;
+
+    return NextResponse.json({ success: true, data: { query, article: publicArticle, results: publicResults } });
   } catch (error) {
     console.error("Erro na API GET /api/public/biblioteca/search:", error);
-    return NextResponse.json({ success: false, data: { query: "", results: [] } }, { status: 500 });
+    return NextResponse.json({ success: false, data: { query: "", article: null, results: [] } }, { status: 500 });
   }
 }

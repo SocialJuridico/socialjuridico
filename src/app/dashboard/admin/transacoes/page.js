@@ -25,6 +25,7 @@ import styles from "./TransacoesAdmin.module.css";
 
 const PRODUCT_LABELS = {
   JURIS: "Pacote de Juris",
+  AI_CREDITS: "Créditos de IA (extensão)",
   START: "Plano START",
   PRO: "Plano PRO",
   ADDON: "Expansão",
@@ -553,6 +554,7 @@ export default function AdminTransacoesPage() {
             >
               <option value="ALL">Todos os produtos</option>
               <option value="JURIS">Pacotes de Juris</option>
+              <option value="AI_CREDITS">Créditos de IA (extensão)</option>
               <option value="START">Plano START</option>
               <option value="PRO">Plano PRO</option>
               <option value="ADDON">Expansões</option>

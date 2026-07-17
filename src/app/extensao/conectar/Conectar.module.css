@@ -1,0 +1,37 @@
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0c0c0f;
+  color: #f4f4f5;
+  padding: 24px;
+}
+
+.card {
+  max-width: 420px;
+  text-align: center;
+}
+
+.card h1 {
+  font-size: 20px;
+  margin: 0 0 10px;
+}
+
+.card p {
+  color: #a1a1aa;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 18px;
+}
+
+.button {
+  display: inline-block;
+  background: linear-gradient(180deg, #e6bd48, #d4af37);
+  color: #17130a;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+}

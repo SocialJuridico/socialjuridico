@@ -180,6 +180,22 @@ export function useAdminLawyers() {
             balance: Math.max(0, (lawyer.balance || 0) - Number(value || 0)),
           };
         }
+        if (action === "ADD_AI_CREDITS") {
+          return {
+            ...lawyer,
+            saldo_creditos_ia_extensao:
+              (lawyer.saldo_creditos_ia_extensao || 0) + Number(value || 0),
+          };
+        }
+        if (action === "REMOVE_AI_CREDITS") {
+          return {
+            ...lawyer,
+            saldo_creditos_ia_extensao: Math.max(
+              0,
+              (lawyer.saldo_creditos_ia_extensao || 0) - Number(value || 0),
+            ),
+          };
+        }
         if (action === "SET_OAB_STATUS") {
           return { ...lawyer, oab_verification_status: value };
         }

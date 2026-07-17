@@ -181,6 +181,7 @@ function ManageContent({ lawyer, busy, onAction }) {
   const [selectedPlan, setSelectedPlan] = useState("PRO");
   const [selectedDuration, setSelectedDuration] = useState(30);
   const [jurisAmount, setJurisAmount] = useState(10);
+  const [aiCreditsAmount, setAiCreditsAmount] = useState(10);
   const [oab, setOab] = useState(lawyer.oab || "");
   const [estado, setEstado] = useState(lawyer.estado || "");
   const [subPlan, setSubPlan] = useState("PRO");
@@ -357,6 +358,38 @@ function ManageContent({ lawyer, busy, onAction }) {
             type="button"
             className={styles.dangerManageButton}
             onClick={() => submit("REMOVE_JURIS", jurisAmount)}
+            disabled={busy}
+          >
+            Remover
+          </button>
+        </div>
+      </section>
+
+      <section className={styles.manageSection}>
+        <h3>Créditos de consulta IA (extensão)</h3>
+        <p>Saldo atual: {lawyer.saldo_creditos_ia_extensao || 0} créditos.</p>
+
+        <div className={styles.manageActionsRow}>
+          <input
+            type="number"
+            min="1"
+            max="100000"
+            value={aiCreditsAmount}
+            onChange={(event) => setAiCreditsAmount(event.target.value)}
+            disabled={busy}
+          />
+          <button
+            type="button"
+            className={styles.primaryManageButton}
+            onClick={() => submit("ADD_AI_CREDITS", aiCreditsAmount)}
+            disabled={busy}
+          >
+            Adicionar
+          </button>
+          <button
+            type="button"
+            className={styles.dangerManageButton}
+            onClick={() => submit("REMOVE_AI_CREDITS", aiCreditsAmount)}
             disabled={busy}
           >
             Remover

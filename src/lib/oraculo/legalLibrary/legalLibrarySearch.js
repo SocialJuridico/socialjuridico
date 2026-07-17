@@ -34,8 +34,14 @@ const ARTICLE_WORDS = /\b(art|artigo|arts|artigos)\b/;
  * Retorna { collectionSlug, number } ou null.
  */
 export function parseArticleIntent(query, aliasMap) {
-  const norm = normalizeLegalText(query);
-  if (!norm) return null;
+  const raw = normalizeLegalText(query);
+  if (!raw) return null;
+
+  // A normalização troca pontuação por espaço, quebrando o separador de milhar:
+  // "art. 1.583" -> "art 1 583". Sem rejuntar, o parse lia o artigo como "1"
+  // (incidente: Interpretar IA sempre devolvia Art. 1 do CC). Artigos brasileiros
+  // vão até 4 dígitos (ex.: CC art. 2046), então o milhar começa com 1 ou 2.
+  const norm = raw.replace(/\b([12])\s(\d{3})\b/g, "$1$2");
 
   const numberMatch = norm.match(/\b(\d{1,4})\b/);
   if (!numberMatch) return null;

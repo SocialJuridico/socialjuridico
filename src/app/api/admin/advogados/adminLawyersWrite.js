@@ -385,6 +385,26 @@ export async function updateAdminLawyer(request) {
       }
 
       updates.balance = Math.max(0, Number(lawyer.balance || 0) - amount);
+    } else if (action === "ADD_AI_CREDITS") {
+      const amount = normalizePositiveInteger(value);
+
+      if (!amount) {
+        return json({ success: false, message: "Valor de créditos de IA inválido." }, 400);
+      }
+
+      updates.saldo_creditos_ia_extensao =
+        Number(lawyer.saldo_creditos_ia_extensao || 0) + amount;
+    } else if (action === "REMOVE_AI_CREDITS") {
+      const amount = normalizePositiveInteger(value);
+
+      if (!amount) {
+        return json({ success: false, message: "Valor de créditos de IA inválido." }, 400);
+      }
+
+      updates.saldo_creditos_ia_extensao = Math.max(
+        0,
+        Number(lawyer.saldo_creditos_ia_extensao || 0) - amount,
+      );
     } else if (action === "SET_OAB_STATUS") {
       const status = String(value || "").toUpperCase();
 

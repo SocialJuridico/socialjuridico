@@ -5,6 +5,7 @@ import { Brain, Coins, Menu } from "lucide-react";
 
 import VerifiedBadge from "@/components/VerifiedBadge/VerifiedBadge";
 import AiCreditsPurchaseModal from "@/components/AiCreditsPurchase/AiCreditsPurchaseModal";
+import AiUsageHistoryModal from "@/components/AiUsageHistory/AiUsageHistoryModal";
 import { getInterpretarAvailability } from "@/lib/extensaoInterpretarLimits";
 
 import { useLawyerSession } from "../LawyerSessionContext";
@@ -18,6 +19,7 @@ export default function LawyerRouteTopBar({ title, subtitle, icon: Icon }) {
     openJurisModal,
   } = useLawyerSession();
   const [showAiCreditsModal, setShowAiCreditsModal] = useState(false);
+  const [showAiHistoryModal, setShowAiHistoryModal] = useState(false);
 
   // Consultas de IA disponíveis = cota grátis restante do mês (por plano) +
   // créditos comprados na carteira da extensão.
@@ -67,7 +69,14 @@ export default function LawyerRouteTopBar({ title, subtitle, icon: Icon }) {
 
         <div className={styles.balance} aria-label="Saldo de consultas de IA da extensão">
           <Brain size={15} aria-hidden="true" />
-          <span>{interpretarTotal} Consultas</span>
+          <button
+            type="button"
+            className={styles.balanceHistoryButton}
+            onClick={() => setShowAiHistoryModal(true)}
+            title="Ver histórico de consultas"
+          >
+            {interpretarTotal} Consultas
+          </button>
           <button type="button" onClick={() => setShowAiCreditsModal(true)}>
             Comprar
           </button>
@@ -77,6 +86,10 @@ export default function LawyerRouteTopBar({ title, subtitle, icon: Icon }) {
           isOpen={showAiCreditsModal}
           onClose={() => setShowAiCreditsModal(false)}
           lawyerEmail={profileData?.email}
+        />
+        <AiUsageHistoryModal
+          isOpen={showAiHistoryModal}
+          onClose={() => setShowAiHistoryModal(false)}
         />
 
         <div className={styles.identity}>

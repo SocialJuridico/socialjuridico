@@ -289,6 +289,20 @@
   cursor: pointer;
 }
 
+/* Contador clicável (abre histórico): parece o texto do saldo, não um botão. */
+.balance button.balanceHistoryButton {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.balance button.balanceHistoryButton:hover {
+  color: #fff;
+}
+
 .identity {
   gap: 10px;
 }

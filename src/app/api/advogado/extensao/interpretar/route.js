@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 
 import { requireInterpretarAccess, serializeAccess } from "@/lib/extensaoInterpretarAccess";
+import { recordInterpretarConsulta } from "@/lib/extensaoInterpretarLog";
 import { loadAliasMap, parseArticleIntent, findUnitByArticle } from "@/lib/oraculo/legalLibrary/legalLibrarySearch";
 
 const TEXT_MAX_LEN = 4000;
@@ -119,6 +120,13 @@ export async function POST(request) {
           : { saldo_creditos_ia_extensao: newWalletBalance },
       )
       .eq("id", access.profile.id);
+
+    // Registro de transparência (não-fatal): quando usou e como pagou.
+    await recordInterpretarConsulta({
+      advogadoId: access.profile.id,
+      origem: spendFromQuota ? "FREE" : "CREDITO",
+      resultadosCount: results.length,
+    });
 
     return NextResponse.json({
       success: true,

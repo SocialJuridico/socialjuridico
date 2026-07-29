@@ -13,6 +13,7 @@ import {
   Mail,
   Megaphone,
   MessageSquare,
+  Newspaper,
   PenLine,
   Scale,
   Shield,
@@ -63,6 +64,7 @@ export function createAdminSections(stats) {
         { title: "Minhas mensagens", value: "Recebidas", href: "/dashboard/admin/notificacoes", icon: Bell },
         { title: "Notificações geradas", value: stats.totalNotificacoes, href: "/dashboard/admin/comunicados", icon: Bell },
         { title: "Mensagens de casos", value: "Conversas", href: "/dashboard/admin/mensagens", icon: MessageSquare },
+        { title: "Central de Notícias", value: "Imagens das matérias", href: "/dashboard/admin/noticias", icon: Newspaper, tone: ADMIN_CARD_TONES.cyan },
       ],
     },
     {

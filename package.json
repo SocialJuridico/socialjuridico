@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "jest --config jest.config.js",
-    "legal:sync": "node scripts/legal-library/sync.mjs"
+    "legal:sync": "node scripts/legal-library/sync.mjs",
+    "news:seed": "node scripts/news/seed.mjs"
   },
   "dependencies": {
     "@babel/runtime": "^8.0.0",

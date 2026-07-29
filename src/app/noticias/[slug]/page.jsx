@@ -123,6 +123,43 @@ export default async function ArtigoPage({ params }) {
       logo: { "@type": "ImageObject", url: `${SITE_URL}/icon.png` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    inLanguage: "pt-BR",
+    isPartOf: { "@type": "WebSite", "@id": `${SITE_URL}/#website` },
+    ...(article.category?.name && { articleSection: article.category.name }),
+    ...(article.seo_keywords?.length && { keywords: article.seo_keywords.join(", ") }),
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Início",
+        item: SITE_URL,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Notícias",
+        item: `${SITE_URL}/noticias`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: article.category?.name || "Artigo",
+        item: article.category?.slug
+          ? `${SITE_URL}/noticias?categoria=${article.category.slug}`
+          : `${SITE_URL}/noticias`,
+      },
+      {
+        "@type": "ListItem",
+        position: 4,
+        name: article.title,
+        item: url,
+      },
+    ],
   };
 
   return (
@@ -131,7 +168,9 @@ export default async function ArtigoPage({ params }) {
 
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([jsonLd, breadcrumbJsonLd]),
+        }}
       />
 
       <article className={styles.article}>

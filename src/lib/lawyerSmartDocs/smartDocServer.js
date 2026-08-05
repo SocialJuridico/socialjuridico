@@ -1,7 +1,6 @@
 ﻿import crypto from "node:crypto";
 
-import OpenAI from "openai";
-
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
 import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 import { getUserPlanLimits } from "@/lib/planUtils";
@@ -11,9 +10,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { isClientUuid, normalizeClientText } from "@/lib/lawyerClients/clientValidation";
 import { parseSmartDocLegacyStoragePath } from "./smartDocValidation";
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 const SMARTDOC_PLANS = new Set([
   "START",
@@ -286,7 +283,7 @@ export async function classifySmartDocument(fileName) {
   if (!openai) return { type: "Outros", tags: ["Documento"] };
   try {
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",

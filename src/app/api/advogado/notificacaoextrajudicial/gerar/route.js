@@ -1,5 +1,4 @@
-﻿import OpenAI from "openai";
-
+﻿import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import { requireDocumentProtectionAccess } from "@/lib/lawyerDocumentProtection/documentProtectionServer";
 import { smartDocFailure, smartDocJson } from "@/lib/lawyerSmartDocs/smartDocServer";
@@ -7,9 +6,7 @@ import { smartDocFailure, smartDocJson } from "@/lib/lawyerSmartDocs/smartDocSer
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 const TONE_LABELS = Object.freeze({
   formal: "formal, objetivo e institucional",
@@ -92,7 +89,7 @@ export async function POST(request) {
     let completion;
     try {
       completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+        model: AI_MODEL,
         messages: [
           {
             role: "system",

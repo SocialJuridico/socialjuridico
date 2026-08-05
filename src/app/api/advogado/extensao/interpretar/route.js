@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 import { requireInterpretarAccess, serializeAccess } from "@/lib/extensaoInterpretarAccess";
 import { recordInterpretarConsulta } from "@/lib/extensaoInterpretarLog";
 import { loadAliasMap, parseArticleIntent, findUnitByArticle } from "@/lib/oraculo/legalLibrary/legalLibrarySearch";
@@ -8,9 +8,7 @@ import { loadAliasMap, parseArticleIntent, findUnitByArticle } from "@/lib/oracu
 const TEXT_MAX_LEN = 4000;
 const MAX_CITATIONS = 5;
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 function buildPrompt(text) {
   return `Você é um assistente jurídico. Leia o texto abaixo e identifique até ${MAX_CITATIONS} dispositivos legais brasileiros (lei + número de artigo) diretamente relevantes para ele.
@@ -28,7 +26,7 @@ TEXTO:
  * nunca devolvemos ao advogado um artigo que não confirmamos no banco. */
 async function interpretAndResolve(text, activeSlugs) {
   const completion = await openai.chat.completions.create({
-    model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+    model: AI_MODEL,
     messages: [
       { role: "system", content: "Você identifica dispositivos legais brasileiros relevantes a um texto, respondendo estritamente em JSON." },
       { role: "user", content: buildPrompt(text) },

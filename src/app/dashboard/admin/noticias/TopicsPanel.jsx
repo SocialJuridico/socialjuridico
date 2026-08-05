@@ -26,7 +26,7 @@ async function readJson(response) {
 // Traduz códigos técnicos da automação para mensagens claras ao admin.
 const GENERATE_ERROR_MESSAGES = {
   AI_UNAVAILABLE:
-    "IA indisponível: configure a variável OPENAI_API_KEY no ambiente.",
+    "IA indisponível: configure a chave da IA (GROQ_API_KEY) no ambiente.",
   AI_REQUEST_FAILED: "A IA recusou a requisição. Verifique a chave/modelo.",
   AI_EMPTY_RESPONSE: "A IA retornou vazio. Tente novamente.",
   AI_INVALID_JSON: "A IA retornou um formato inválido. Tente novamente.",

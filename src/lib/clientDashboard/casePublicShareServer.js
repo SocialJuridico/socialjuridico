@@ -1,13 +1,12 @@
-import OpenAI from "openai";
+import {
+  AI_MODEL,
+  getAIClientOrNull,
+  normalizeResponseFormat,
+} from "@/lib/ai/aiProvider";
 
-const CLASSIFY_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+const CLASSIFY_MODEL = AI_MODEL;
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL,
-    })
-  : null;
+const openai = getAIClientOrNull();
 
 const SHARE_SCHEMA = {
   name: "descricao_publica_caso_socialjuridico",
@@ -84,7 +83,10 @@ export async function generatePublicShareDescription({
           content: `ÁREA JURÍDICA: ${area || "não informada"}\nRELATO ORIGINAL:\n${relato}`,
         },
       ],
-      response_format: { type: "json_schema", json_schema: SHARE_SCHEMA },
+      response_format: normalizeResponseFormat(
+        { type: "json_schema", json_schema: SHARE_SCHEMA },
+        CLASSIFY_MODEL,
+      ),
     });
 
     let parsed = {};

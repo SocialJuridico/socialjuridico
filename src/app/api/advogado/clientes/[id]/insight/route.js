@@ -1,5 +1,3 @@
-import OpenAI from "openai";
-
 import {
   clientFailure,
   clientJson,
@@ -9,13 +7,12 @@ import {
   requireLawyerClientAccess,
 } from "@/lib/lawyerClients/clientServer";
 import { incrementUsage } from "@/lib/planUtils";
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 export async function POST(request, context) {
   try {
@@ -95,7 +92,7 @@ export async function POST(request, context) {
     };
 
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",
@@ -118,7 +115,7 @@ export async function POST(request, context) {
       requestId: body.requestId,
       clientId: client.id,
       action: "GENERATE_INSIGHT",
-      metadata: { model: process.env.OPENAI_MODEL || "gpt-4.1-mini" },
+      metadata: { model: AI_MODEL },
     });
 
     return clientJson({ success: true, insight });

@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+﻿import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 
 import { auditChatAction } from "./chatServer";
 import {
@@ -9,14 +9,13 @@ import {
 } from "./chatValidation";
 import { conversationQuery } from "./messageServer";
 
-const MODEL = process.env.CHAT_AI_MODEL || process.env.OPENAI_MODEL || "gpt-4.1-mini";
+const MODEL = process.env.CHAT_AI_MODEL || AI_MODEL;
 const GLOBAL_CACHE_MINUTES = 10;
 const HOURLY_REQUEST_LIMIT = 30;
 const CONTEXT_MESSAGE_LIMIT = 40;
 
 function openAiClient() {
-  if (!process.env.OPENAI_API_KEY) return null;
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL });
+  return getAIClientOrNull();
 }
 
 function cacheQuery(db, access, scope, messageId = null) {

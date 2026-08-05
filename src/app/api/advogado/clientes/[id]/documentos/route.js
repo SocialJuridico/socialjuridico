@@ -1,7 +1,6 @@
 ﻿import crypto from "node:crypto";
 
-import OpenAI from "openai";
-
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 import {
   clientFailure,
@@ -20,9 +19,7 @@ import { incrementUsage } from "@/lib/planUtils";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 function pathFromPublicUrl(value) {
   try {
@@ -41,7 +38,7 @@ async function classifyDocument(fileName) {
   if (!openai) return { type: "Outros", tags: ["Documento"] };
   try {
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",

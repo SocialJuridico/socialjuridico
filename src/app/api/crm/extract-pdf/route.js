@@ -1,5 +1,8 @@
-﻿import OpenAI from "openai";
-
+﻿import {
+  AI_MODEL,
+  AI_VISION_MODEL,
+  getAIClientOrNull,
+} from "@/lib/ai/aiProvider";
 import {
   clientFailure,
   clientJson,
@@ -21,9 +24,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_CAPTURE_BYTES = 15 * 1024 * 1024;
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 function safeFileName(value) {
   try {
@@ -196,7 +197,7 @@ export async function POST(request) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: isImage ? process.env.OPENAI_MODEL || "gpt-4.1-mini" : process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: isImage ? AI_VISION_MODEL : AI_MODEL,
       messages,
       response_format: { type: "json_object" },
       temperature: 0.1,

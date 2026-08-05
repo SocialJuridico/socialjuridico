@@ -1,5 +1,4 @@
-﻿import OpenAI from "openai";
-
+﻿import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 import {
   clientFailure,
   clientJson,
@@ -23,9 +22,7 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 export async function POST(request) {
   let access = null;
@@ -84,7 +81,7 @@ export async function POST(request) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",

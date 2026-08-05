@@ -1,13 +1,10 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+const openai = getAIClientOrNull();
 
 export async function GET(request) {
   try {
@@ -91,7 +88,7 @@ ${JSON.stringify(context, null, 2)}
 RESPONDA APENAS O INSIGHT, sem introduções.`;
 
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [
         { role: "system", content: "Você é um assistente jurídico experiente." },
         { role: "user", content: prompt }

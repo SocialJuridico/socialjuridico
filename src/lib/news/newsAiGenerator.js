@@ -1,10 +1,10 @@
 /**
  * Gerador de matérias por IA da Central de Notícias.
  *
- * Reutiliza o mesmo provedor de IA do Social Jurídico (OpenAI, configurado por
- * OPENAI_API_KEY / OPENAI_MODEL), seguindo o padrão de documentationAi.js e
- * das demais integrações do projeto (response_format json_object, sem fallback
- * silencioso de chave, sem logar segredos).
+ * Reutiliza o provedor de IA central do Social Jurídico (migração temporária
+ * para a Groq, configurável por AI_PROVIDER/GROQ_*), seguindo o padrão de
+ * documentationAi.js e das demais integrações do projeto (response_format
+ * json_object, sem fallback silencioso de chave, sem logar segredos).
  *
  * A partir de uma PAUTA (título + tipo editorial + briefing), a IA pesquisa
  * com seu conhecimento, redige a matéria completa em HTML e devolve os metadados
@@ -12,23 +12,17 @@
  * compliance existentes (newsUtils) antes de ser persistido.
  */
 
-import OpenAI from "openai";
-
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 import {
   EDITORIAL_TYPES,
   checkComplianceRisks,
   sanitizeEditorialHtml,
 } from "@/lib/news/newsUtils";
 
-export const NEWS_AI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+export const NEWS_AI_MODEL = AI_MODEL;
 export const NEWS_PROMPT_VERSION = "news-generator-v1";
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL,
-    })
-  : null;
+const openai = getAIClientOrNull();
 
 /**
  * Orientações editoriais por tipo de matéria (as 3 prioridades do produto).

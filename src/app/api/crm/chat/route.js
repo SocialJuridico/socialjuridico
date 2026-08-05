@@ -1,15 +1,12 @@
-import OpenAI from "openai";
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabaseServer';
 import { supabaseAdmin } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+const openai = getAIClientOrNull();
 
 async function getSessionUser(request) {
   if (request) {
@@ -154,7 +151,7 @@ export async function POST(request) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         ... (history || []).map(m => ({ role: m.role || 'user', content: m.content })),

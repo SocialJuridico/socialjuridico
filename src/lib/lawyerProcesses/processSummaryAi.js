@@ -1,15 +1,10 @@
-import OpenAI from "openai";
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 
 export async function generateProcessSummary(processRow, movements = [], parties = []) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return "Configure a chave da API do OpenAI/Gemini para gerar resumos de processos.";
+  const openai = getAIClientOrNull();
+  if (!openai) {
+    return "Configure a chave da API de IA para gerar resumos de processos.";
   }
-
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: process.env.OPENAI_BASE_URL,
-  });
 
   const prompt = `Você é um assistente jurídico de IA especializado em analisar e resumir processos judiciais no Brasil. Sua tarefa é fornecer um resumo estratégico e executivo do processo, destacando seu estado atual, decisões importantes e próximos passos recomendados.
 
@@ -41,7 +36,7 @@ RESPONDA APENAS O RESUMO ESTRUTURADO, sem introduções genéricas do tipo 'Aqui
 
   try {
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [
         { role: "system", content: "Você é um assistente jurídico sênior experiente." },
         { role: "user", content: prompt }

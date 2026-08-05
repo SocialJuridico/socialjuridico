@@ -1,15 +1,12 @@
 import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 import { checkAndNotifyLowBalance } from "@/lib/jurisHelper";
 import crypto from "crypto";
+import { AI_MODEL, getAIClientOrNull, isAIAvailable } from "@/lib/ai/aiProvider";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+const openai = getAIClientOrNull();
 
 // GET /api/crm/documents?client_id=... (se sem client_id, busca todos do advogado)
 export async function GET(request) {
@@ -168,13 +165,13 @@ export async function POST(request) {
     // 3. AI Processing (Auto-Tagging & Categorization) con OPENAI
     let aiData = { type: "Outros", tags: ["Documento"] };
     try {
-      if (process.env.OPENAI_API_KEY) {
+      if (isAIAvailable() && openai) {
         const aiPrompt = `Analise este arquivo jurídico: "${file.name}". 
         Determine o TIPO (Petição, Contrato, Sentença, Procuração, Outros) e gere 3 tags relevantes. 
         Responda EXCLUSIVAMENTE em formato JSON: {"type": "Tipo", "tags": ["tag1", "tag2", "tag3"]}`;
 
         const completion = await openai.chat.completions.create({
-          model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+          model: AI_MODEL,
           messages: [
             {
               role: "system",

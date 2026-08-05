@@ -1,16 +1,14 @@
-import OpenAI from "openai";
 import { GoogleGenAI } from "@google/genai";
 import { PDFDocument } from "pdf-lib";
 
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 import {
   normalizeDocumentationSchema,
   normalizePlatformText,
   slugifyPlatformContent,
 } from "./contentValidation";
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 const googleAI = process.env.OPENAI_API_KEY
   ? new GoogleGenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -284,7 +282,7 @@ export async function generateDocumentationFromPdf({ fileName, pages }) {
   }
 
   const completion = await openai.chat.completions.create({
-    model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+    model: AI_MODEL,
     response_format: { type: "json_object" },
     temperature: 0.1,
     messages: [
@@ -329,6 +327,6 @@ export async function generateDocumentationFromPdf({ fileName, pages }) {
     summary: normalizePlatformText(parsed.summary, 1200),
     contentType: allowedTypes.has(contentType) ? contentType : "ARTICLE",
     contentSchema: schema,
-    model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+    model: AI_MODEL,
   };
 }

@@ -1,7 +1,6 @@
 ﻿import crypto from "node:crypto";
 
-import OpenAI from "openai";
-
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -61,9 +60,7 @@ const ELIGIBLE_PLANS = new Set([
   "ENTERPRISE_PRO_PLUS",
 ]);
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 function redatorJson(payload, status = 200) {
   return Response.json(payload, {
@@ -537,7 +534,7 @@ export async function POST(request) {
     let completion;
     try {
       completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+        model: AI_MODEL,
         messages: [
           {
             role: "system",

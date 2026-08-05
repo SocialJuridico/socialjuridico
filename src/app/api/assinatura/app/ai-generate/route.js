@@ -1,4 +1,4 @@
-﻿import OpenAI from "openai";
+﻿import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 import { hasTrustedMutationOrigin } from "@/lib/publicAppOrigin";
 import {
   requireSignatureProductAccess,
@@ -16,9 +16,7 @@ const PLAN_AI_LIMITS = {
   UNLIMITED: null, // Unlimited
 };
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 export async function POST(request) {
   if (!hasTrustedMutationOrigin(request, { allowMissingOrigin: false })) {
@@ -77,7 +75,7 @@ export async function POST(request) {
 
     // Call OpenAI
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",

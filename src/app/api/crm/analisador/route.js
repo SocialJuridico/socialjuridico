@@ -1,11 +1,8 @@
 import { createClient } from "@/lib/supabaseServer";
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
+import { AI_VISION_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+const openai = getAIClientOrNull();
 
 export async function POST(request) {
   try {
@@ -35,7 +32,7 @@ export async function POST(request) {
       const base64Image = buffer.toString("base64");
 
       const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+        model: AI_VISION_MODEL,
         messages: [
           {
             role: "user",

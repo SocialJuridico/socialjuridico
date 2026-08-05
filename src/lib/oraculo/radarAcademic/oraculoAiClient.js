@@ -1,7 +1,11 @@
-import OpenAI from "openai";
+import {
+  AI_MODEL,
+  getAIClientOrNull,
+  normalizeResponseFormat,
+} from "@/lib/ai/aiProvider";
 
-// Mesma IA do Social Jurídico: OpenAI gpt-4.1-mini (configurável por env).
-export const ORACULO_AI_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+// Mesma IA do Social Jurídico: provedor central (migração temporária p/ Groq).
+export const ORACULO_AI_MODEL = AI_MODEL;
 export const ORACULO_AI_MODEL_VERSION = ORACULO_AI_MODEL;
 
 // Versões dos prompts (rastreabilidade — persistidas nas mensagens/casos).
@@ -10,12 +14,7 @@ export const SIMULATED_CLIENT_PROMPT_VERSION = "sim-client-v1";
 export const SIMULATED_FEEDBACK_PROMPT_VERSION = "sim-feedback-v1";
 export const RADAR_GENERATION_VERSION = "gen-v1";
 
-export const oraculoAi = process.env.OPENAI_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL,
-    })
-  : null;
+export const oraculoAi = getAIClientOrNull();
 
 export function isOraculoAiAvailable() {
   return Boolean(oraculoAi);
@@ -45,10 +44,13 @@ export async function callOraculoJson({
         { role: "system", content: system },
         { role: "user", content: user },
       ],
-      response_format: {
-        type: "json_schema",
-        json_schema: schema,
-      },
+      response_format: normalizeResponseFormat(
+        {
+          type: "json_schema",
+          json_schema: schema,
+        },
+        ORACULO_AI_MODEL,
+      ),
     });
 
     const raw = completion.choices?.[0]?.message?.content || "{}";

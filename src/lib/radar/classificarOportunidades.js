@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { AI_MODEL, getAIClientOrNull, isAIAvailable } from "@/lib/ai/aiProvider";
 
 /**
  * Classifica oportunidades públicas encontradas pelo Radar Jurídico.
@@ -10,11 +10,9 @@ export async function classificarOportunidades(oportunidadesBrutas) {
     return [];
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-
-  if (!apiKey) {
+  if (!isAIAvailable()) {
     console.log(
-      "[Radar] OPENAI_API_KEY ausente. Usando classificação conservadora local.",
+      "[Radar] IA não configurada. Usando classificação conservadora local.",
     );
 
     return oportunidadesBrutas.map((item) => {
@@ -42,7 +40,7 @@ export async function classificarOportunidades(oportunidadesBrutas) {
     });
   }
 
-  const openai = new OpenAI({ apiKey, baseURL: process.env.OPENAI_BASE_URL });
+  const openai = getAIClientOrNull();
 
   try {
     const listToClassify = oportunidadesBrutas.map((item, index) => ({
@@ -96,7 +94,7 @@ Formato:
 }`;
 
     const response = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [{ role: "user", content: prompt }],
       temperature: 0.1,
       response_format: { type: "json_object" },

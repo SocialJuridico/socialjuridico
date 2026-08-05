@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import {
   CLIENT_QUESTION_KEYS,
   LAWYER_QUESTION_KEYS,
@@ -8,14 +7,13 @@ import {
   json,
   requireAdminAccess,
 } from "../adminSurveys";
+import { AI_MODEL, getAIClientOrNull } from "@/lib/ai/aiProvider";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function getOpenAIClient() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-  return new OpenAI({ apiKey, baseURL: process.env.OPENAI_BASE_URL });
+  return getAIClientOrNull();
 }
 
 function formatFeedbacks(items, role, questionKeys) {
@@ -108,7 +106,7 @@ export async function POST() {
     }
 
     const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+      model: AI_MODEL,
       messages: [
         {
           role: "system",

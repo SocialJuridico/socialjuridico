@@ -1,21 +1,22 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
+import {
+  AI_MODEL,
+  AI_TRANSCRIBE_MODEL,
+  getAIClientOrNull,
+} from "@/lib/ai/aiProvider";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+const openai = getAIClientOrNull();
 
-const TRANSCRIBE_MODEL =
-  process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe";
-const MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+const TRANSCRIBE_MODEL = AI_TRANSCRIBE_MODEL;
+const MODEL = AI_MODEL;
 
 /**
  * POST /api/crm/voice-audio
- * Aceita um arquivo de áudio via FormData e processa em duas etapas com OpenAI:
- *   1. Transcrição do áudio (gpt-4o-mini-transcribe).
- *   2. Estruturação dos dados do cliente a partir da transcrição (gpt-4.1-mini).
+ * Aceita um arquivo de áudio via FormData e processa em duas etapas via o
+ * provedor de IA central (migração temporária para a Groq):
+ *   1. Transcrição do áudio (AI_TRANSCRIBE_MODEL, ex.: whisper-large-v3-turbo).
+ *   2. Estruturação dos dados do cliente a partir da transcrição (AI_MODEL).
  * Compatível com clientes mobile que enviam o token JWT no header Authorization.
  */
 export async function POST(request) {
@@ -39,10 +40,22 @@ export async function POST(request) {
       );
     }
 
+    if (!openai) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "O assistente jurídico está temporariamente indisponível. Tente novamente em alguns minutos.",
+        },
+        { status: 503 }
+      );
+    }
+
     // ── Etapa 1: transcrição do áudio ──
     const transcription = await openai.audio.transcriptions.create({
       file: audioFile,
       model: TRANSCRIBE_MODEL,
+      language: "pt",
     });
 
     const transcript = (transcription.text || "").trim();

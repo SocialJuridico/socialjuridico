@@ -1,7 +1,10 @@
 ﻿import crypto from "node:crypto";
 
-import OpenAI from "openai";
-
+import {
+  AI_MODEL,
+  getAIClientOrNull,
+  normalizeResponseFormat,
+} from "@/lib/ai/aiProvider";
 import { getAuthenticatedUser } from "@/lib/authServerUtils";
 import { getUserPlanLimits, incrementUsage } from "@/lib/planUtils";
 import { supabaseAdmin } from "@/lib/supabase";
@@ -23,9 +26,7 @@ const ELIGIBLE_PLANS = new Set([
   "ENTERPRISE_PRO_PLUS",
 ]);
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, baseURL: process.env.OPENAI_BASE_URL })
-  : null;
+const openai = getAIClientOrNull();
 
 const TRIAGEM_RESPONSE_SCHEMA = {
   name: "triagem_juridica_socialjuridico",
@@ -590,7 +591,7 @@ export async function POST(request) {
     let completion;
     try {
       completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || "gpt-4.1-mini",
+        model: AI_MODEL,
         messages: [
           {
             role: "system",
@@ -599,10 +600,13 @@ export async function POST(request) {
           },
           { role: "user", content: buildPrompt(payload.report) },
         ],
-        response_format: {
-          type: "json_schema",
-          json_schema: TRIAGEM_RESPONSE_SCHEMA,
-        },
+        response_format: normalizeResponseFormat(
+          {
+            type: "json_schema",
+            json_schema: TRIAGEM_RESPONSE_SCHEMA,
+          },
+          AI_MODEL,
+        ),
         temperature: 0.25,
       });
     } catch (aiError) {

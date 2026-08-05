@@ -4,10 +4,15 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import OpenAI from "openai";
 import { toFile } from "openai";
 import ffmpegStatic from "ffmpeg-static";
 
+import {
+  AI_MODEL,
+  AI_TRANSCRIBE_MODEL,
+  getAIClientOrNull,
+  normalizeResponseFormat,
+} from "@/lib/ai/aiProvider";
 import {
   SOCIAL_TYPE_GUIDE,
   normalizePriority,
@@ -28,16 +33,10 @@ const TRANSCRIBE_MAX_BYTES = 25 * 1024 * 1024;
 // couber, senão ignora a mídia na transcrição.
 const VIDEO_DOWNLOAD_MAX_BYTES = 200 * 1024 * 1024;
 
-const TRANSCRIBE_MODEL =
-  process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe";
-const CLASSIFY_MODEL = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+const TRANSCRIBE_MODEL = AI_TRANSCRIBE_MODEL;
+const CLASSIFY_MODEL = AI_MODEL;
 
-const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_BASE_URL,
-    })
-  : null;
+const openai = getAIClientOrNull();
 
 const CLASSIFICATION_SCHEMA = {
   name: "classificacao_social_socialjuridico",
@@ -189,6 +188,7 @@ async function transcribeAudioBlob(file) {
   const transcription = await openai.audio.transcriptions.create({
     file,
     model: TRANSCRIBE_MODEL,
+    language: "pt",
   });
   return (transcription.text || "").trim();
 }
@@ -374,10 +374,13 @@ export async function classifyCase({
           content: buildPrompt({ descricao: relatoEscrito, area, transcricao }),
         },
       ],
-      response_format: {
-        type: "json_schema",
-        json_schema: CLASSIFICATION_SCHEMA,
-      },
+      response_format: normalizeResponseFormat(
+        {
+          type: "json_schema",
+          json_schema: CLASSIFICATION_SCHEMA,
+        },
+        CLASSIFY_MODEL,
+      ),
     });
 
     let parsed = {};

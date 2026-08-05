@@ -1,16 +1,21 @@
-import OpenAI from "openai";
+import {
+  AI_MODEL,
+  getAIClientOrNull,
+  isAIAvailable,
+  normalizeResponseFormat,
+} from "@/lib/ai/aiProvider";
 
-// Separação absoluta de credenciais:
-//   OPENAI_API_KEY_ORACULO       -> Cliente Simulado (representa a pessoa)
-//   OPENAI_API_KEY_ORACULO_ANJO  -> Anjo Acadêmico (observa, valida, protege)
-// NUNCA usar OPENAI_API_KEY como fallback silencioso nessas funções.
+// Migração temporária OpenAI -> Groq.
+//
+// Originalmente havia separação absoluta de credenciais entre o Cliente
+// Simulado e o Anjo Acadêmico. Durante a migração para a Groq (chave única
+// GROQ_API_KEY), ambos passam a usar o mesmo provedor/credencial, mantendo
+// porém a separação lógica de responsabilidades (funções, prompts, schemas e
+// versões distintas). A separação por chave pode ser restaurada quando a
+// OpenAI voltar (AI_PROVIDER=openai).
 
-export const ORACULO_CLIENT_MODEL =
-  process.env.OPENAI_MODEL_ORACULO || process.env.OPENAI_MODEL || "gpt-4.1-mini";
-export const ORACULO_ANGEL_MODEL =
-  process.env.OPENAI_MODEL_ORACULO_ANJO ||
-  process.env.OPENAI_MODEL ||
-  "gpt-4.1-mini";
+export const ORACULO_CLIENT_MODEL = AI_MODEL;
+export const ORACULO_ANGEL_MODEL = AI_MODEL;
 
 // Versões de prompt/schema por responsabilidade (rastreabilidade).
 export const PROMPT_VERSIONS = {
@@ -42,56 +47,32 @@ export const AI_FEATURES = {
   ACADEMIC_ANGEL_PROFESSIONAL_SIMULATION_EVALUATION: "ACADEMIC_ANGEL_PROFESSIONAL_SIMULATION_EVALUATION",
 };
 
-let clientInstance = null;
-let angelInstance = null;
-
-function clientKey() {
-  const key = process.env.OPENAI_API_KEY_ORACULO;
-  return key && key.trim() ? key : null;
-}
-
-function angelKey() {
-  const key = process.env.OPENAI_API_KEY_ORACULO_ANJO;
-  return key && key.trim() ? key : null;
-}
-
 export function isClientAvailable() {
-  return Boolean(clientKey());
+  return isAIAvailable();
 }
 
 export function isAngelAvailable() {
-  return Boolean(angelKey());
+  return isAIAvailable();
 }
 
 /**
- * Cliente OpenAI do Cliente Simulado. Lança se a chave não estiver configurada
- * (sem fallback). Não retorna nem loga a chave.
+ * Cliente de IA do Cliente Simulado. Durante a migração, usa o provedor
+ * central (Groq). Lança se a chave não estiver configurada. Não loga a chave.
  */
 export function getOraculoClientOpenAI() {
-  const key = clientKey();
-  if (!key) throw new Error("OPENAI_API_KEY_ORACULO_NOT_CONFIGURED");
-  if (!clientInstance) {
-    clientInstance = new OpenAI({
-      apiKey: key,
-      baseURL: process.env.OPENAI_BASE_URL,
-    });
-  }
-  return clientInstance;
+  const client = getAIClientOrNull();
+  if (!client) throw new Error("ORACULO_AI_NOT_CONFIGURED");
+  return client;
 }
 
 /**
- * Cliente OpenAI do Anjo Acadêmico. Lança se a chave não estiver configurada.
+ * Cliente de IA do Anjo Acadêmico. Durante a migração, usa o provedor central
+ * (Groq). Lança se a chave não estiver configurada.
  */
 export function getOraculoAngelOpenAI() {
-  const key = angelKey();
-  if (!key) throw new Error("OPENAI_API_KEY_ORACULO_ANJO_NOT_CONFIGURED");
-  if (!angelInstance) {
-    angelInstance = new OpenAI({
-      apiKey: key,
-      baseURL: process.env.OPENAI_BASE_URL,
-    });
-  }
-  return angelInstance;
+  const client = getAIClientOrNull();
+  if (!client) throw new Error("ORACULO_ANGEL_AI_NOT_CONFIGURED");
+  return client;
 }
 
 function extractUsage(completion, model) {
@@ -116,7 +97,10 @@ async function callJson({ openai, model, system, user, schema, temperature = 0.3
         { role: "system", content: system },
         { role: "user", content: user },
       ],
-      response_format: { type: "json_schema", json_schema: schema },
+      response_format: normalizeResponseFormat(
+        { type: "json_schema", json_schema: schema },
+        model,
+      ),
     });
     const raw = completion.choices?.[0]?.message?.content || "{}";
     let parsed;

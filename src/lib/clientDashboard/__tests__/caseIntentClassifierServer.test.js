@@ -1,8 +1,8 @@
-// O módulo decide, na importação, se a IA está disponível a partir de
-// process.env.OPENAI_API_KEY. Este projeto carrega .env.local via next/jest,
-// então o teste precisa isolar o módulo (resetModules + require dinâmico)
-// para exercitar o caminho "sem IA" de forma determinística, sem depender do
-// ambiente local nem fazer chamadas reais à OpenAI.
+// O módulo decide, na importação, se a IA está disponível a partir do provedor
+// central (migração temporária para a Groq via GROQ_API_KEY). Este projeto
+// carrega .env.local via next/jest, então o teste precisa isolar o módulo
+// (resetModules + require dinâmico) para exercitar o caminho "sem IA" de forma
+// determinística, sem depender do ambiente local nem fazer chamadas reais.
 describe("classifyClosingIntent", () => {
   const baseParams = {
     respostas: {
@@ -15,10 +15,10 @@ describe("classifyClosingIntent", () => {
     descricao: "Relato de teste.",
   };
 
-  test("falls back to the deterministic score when OPENAI_API_KEY is absent", async () => {
+  test("falls back to the deterministic score when AI is unavailable", async () => {
     jest.resetModules();
-    const originalKey = process.env.OPENAI_API_KEY;
-    delete process.env.OPENAI_API_KEY;
+    const originalKey = process.env.GROQ_API_KEY;
+    delete process.env.GROQ_API_KEY;
 
     try {
       const { classifyClosingIntent } = require("../caseIntentClassifierServer");
@@ -29,15 +29,15 @@ describe("classifyClosingIntent", () => {
         meta: { justificativa: "", classifierError: "AI_UNAVAILABLE" },
       });
     } finally {
-      if (originalKey) process.env.OPENAI_API_KEY = originalKey;
+      if (originalKey) process.env.GROQ_API_KEY = originalKey;
       jest.resetModules();
     }
   });
 
   test("never throws even with empty answers", async () => {
     jest.resetModules();
-    const originalKey = process.env.OPENAI_API_KEY;
-    delete process.env.OPENAI_API_KEY;
+    const originalKey = process.env.GROQ_API_KEY;
+    delete process.env.GROQ_API_KEY;
 
     try {
       const { classifyClosingIntent } = require("../caseIntentClassifierServer");
@@ -47,7 +47,7 @@ describe("classifyClosingIntent", () => {
         expect.objectContaining({ intencaoFechamento: 0 }),
       );
     } finally {
-      if (originalKey) process.env.OPENAI_API_KEY = originalKey;
+      if (originalKey) process.env.GROQ_API_KEY = originalKey;
       jest.resetModules();
     }
   });

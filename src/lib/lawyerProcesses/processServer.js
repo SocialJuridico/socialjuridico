@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 
+import { isAIAvailable } from "@/lib/ai/aiProvider";
 import {
   clientFailure,
   clientJson,
@@ -310,7 +311,7 @@ export async function saveLocalProcessFromExternal(access, request, payload, ext
   let resumoIa = processData.resumo_ia || null;
   let resumoIaGerado = Boolean(processData.resumo_ia_gerado);
 
-  if (!resumoIa && process.env.OPENAI_API_KEY) {
+  if (!resumoIa && isAIAvailable()) {
     try {
       const partiesForSummary = extractParties(processData).map((item) => normalizePartyPayload(item));
       const movementsForSummary = (Array.isArray(processData.ultimas_movimentacoes) ? processData.ultimas_movimentacoes : []).map((m, idx) => serializeMovimento(m, idx));

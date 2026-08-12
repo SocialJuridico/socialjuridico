@@ -121,6 +121,30 @@ export default function MonitoramentoDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPro]);
 
+  // Polling defensivo: se o advogado optou por baixar processos mas a lista
+  // ainda está vazia (o download pode ter demorado ou concluído após o carregamento),
+  // recarregamos os dados periodicamente até que os processos apareçam.
+  useEffect(() => {
+    if (!isPro || loading) return;
+    if (!oabProcessosBaixados) return;
+    if (wizardStep !== null) return;
+    if (processes.length > 0) return;
+
+    let attempts = 0;
+    const maxAttempts = 6; // ~1 minuto (6 x 10s)
+    const intervalId = setInterval(() => {
+      attempts += 1;
+      if (attempts > maxAttempts) {
+        clearInterval(intervalId);
+        return;
+      }
+      loadData();
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPro, loading, oabProcessosBaixados, wizardStep, processes.length]);
+
   // Handle choice in first configuration wizard
   const handleWizardChoice = async (choice) => {
     if (wizardStep === 1) {
@@ -140,7 +164,14 @@ export default function MonitoramentoDashboard() {
           setOabProcessosBaixados(choice === "sim");
           setWizardStep(2);
           if (choice === "sim") {
-            toast.success("Iniciando a busca e download de seus processos. Continue respondendo...");
+            const downloaded = json.processes_downloaded;
+            if (typeof downloaded === "number" && downloaded > 0) {
+              toast.success(`${downloaded} processo(s) encontrado(s) na sua OAB. Continue respondendo...`);
+            } else if (downloaded === 0) {
+              toast("Nenhum processo localizado para a sua OAB no momento.", { icon: "ℹ️" });
+            } else {
+              toast.success("Busca de processos concluída. Continue respondendo...");
+            }
           }
         } else {
           toast.error(json.message || "Erro ao processar escolha.");

@@ -10,6 +10,103 @@ import { normalizeProcessNumber } from "@/lib/lawyerProcesses/processValidation"
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/**
+ * Extrai um array de uma resposta da API externa que pode aninhar a lista em
+ * diferentes chaves (ex.: { data: { processos: [...] } } ou { processos: [...] }).
+ *
+ * Retorna o primeiro array encontrado nas chaves informadas. Se `source` já for
+ * um array, ele é retornado diretamente. Caso contrário, devolve `null` para
+ * permitir encadear fallbacks com o operador `||`.
+ */
+function pickExternalList(source, keys = []) {
+  if (Array.isArray(source)) return source;
+  if (!source || typeof source !== "object") return null;
+
+  for (const key of keys) {
+    const value = source[key];
+    if (Array.isArray(value)) return value;
+  }
+  return null;
+}
+
+/**
+ * Consulta a API externa pelos processos vinculados à OAB e persiste até 20
+ * registros na tabela `lawyer_oab_processes`.
+ *
+ * Executado de forma SÍNCRONA (com await) no fluxo do POST para garantir que os
+ * processos já estejam disponíveis quando o front-end recarregar a lista. Em
+ * ambientes serverless, jobs "fire-and-forget" podem ser encerrados antes de
+ * concluir, o que fazia a tela ficar carregando sem nunca trazer resultados.
+ *
+ * Retorna a quantidade de processos efetivamente salvos.
+ */
+async function downloadOabProcesses(access, oabNumber, ufState) {
+  console.log(
+    `[OAB/Monitoramento] Iniciando download de processos da OAB para o advogado ${access.profile.id} (OAB: ${oabNumber}-${ufState})...`
+  );
+
+  const external = await callExternalProcessApi("/api/publico/oab/processos", {
+    oab: oabNumber,
+    uf: ufState,
+    estado: ufState,
+    numero: oabNumber,
+    numero_oab: oabNumber,
+  });
+
+  let rawList = [];
+  if (external.ok && external.payload?.success) {
+    // IMPORTANTE: a API externa retorna { success, data: { processos: [...] } }.
+    // Garantimos que `rawList` seja SEMPRE o array de processos e nunca o objeto
+    // de dados inteiro (que faria .slice() retornar vazio).
+    rawList =
+      pickExternalList(external.payload.data, ["processos"]) ||
+      pickExternalList(external.payload, ["processos", "data"]) ||
+      [];
+    console.log(`[OAB/Monitoramento] ${rawList.length} processos encontrados. Salvando até 20...`);
+  } else {
+    console.warn(
+      "[OAB/Monitoramento] A consulta de processos na API externa falhou ou retornou erro:",
+      external.payload
+    );
+  }
+
+  // Limita a 20 processos.
+  const limitList = rawList.slice(0, 20);
+  let savedCount = 0;
+
+  for (const p of limitList) {
+    const rawCnj = p?.numero_cnj || p?.numero || p?.numero_processo || p?.cnj || "";
+    const cnj = normalizeProcessNumber(rawCnj);
+
+    if (cnj) {
+      const { error: insertError } = await access.db
+        .from("lawyer_oab_processes")
+        .upsert(
+          {
+            lawyer_id: access.profile.id,
+            numero_cnj: cnj,
+            metadata: p,
+            monitored: false,
+            imported: false,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "lawyer_id,numero_cnj",
+          }
+        );
+
+      if (insertError) {
+        console.error(`[OAB/Monitoramento] Erro ao salvar o processo ${cnj}:`, insertError.message);
+      } else {
+        savedCount += 1;
+      }
+    }
+  }
+
+  console.log(`[OAB/Monitoramento] Download concluído. ${savedCount} processos salvos.`);
+  return savedCount;
+}
+
 export async function GET(request) {
   try {
     const access = await requireLawyerClientAccess(request, { requirePro: true });
@@ -46,7 +143,12 @@ export async function GET(request) {
         });
 
         if (external.ok && external.payload?.success) {
-          citations = external.payload.data || external.payload.eventos || [];
+          // A API externa pode retornar os eventos em formatos distintos.
+          // Priorizamos sempre um array; nunca atribuímos um objeto a `citations`.
+          const payloadData = external.payload.data;
+          citations = pickExternalList(payloadData, ["eventos", "citacoes", "processos"]) ||
+            pickExternalList(external.payload, ["eventos", "citacoes"]) ||
+            [];
         } else {
           console.warn("[OAB/Monitoramento][GET] A consulta de citações na API externa retornou erro:", external.payload);
         }
@@ -148,59 +250,16 @@ export async function POST(request) {
 
     if (updateError) throw updateError;
 
-    // If downloading processes is enabled, trigger background job
+    // Se o download de processos foi habilitado, executa a busca de forma
+    // síncrona (aguardando a conclusão) para que os processos já estejam
+    // disponíveis quando o front-end recarregar a lista.
+    let processesDownloaded = null;
     if (baixar_processos) {
-      // Run background job asynchronously
-      (async () => {
-        try {
-          console.log(`[OAB/Monitoramento][Background] Starting OAB processes download for lawyer ${access.profile.id} (OAB: ${oabNumber}-${ufState})...`);
-          
-          const external = await callExternalProcessApi("/api/publico/oab/processos", {
-            oab: oabNumber,
-            uf: ufState,
-            estado: ufState,
-            numero: oabNumber,
-            numero_oab: oabNumber
-          });
-
-          let rawList = [];
-          if (external.ok && external.payload?.success) {
-            rawList = external.payload.data || external.payload.processos || [];
-            console.log(`[OAB/Monitoramento][Background] Found ${rawList.length} processes. Storing up to 20...`);
-          } else {
-            console.warn("[OAB/Monitoramento][Background] A consulta de processos na API externa falhou ou retornou erro.");
-          }
-
-          // Limit to 20 processes
-          const limitList = rawList.slice(0, 20);
-          for (const p of limitList) {
-            const rawCnj = p.numero_cnj || p.numero || p.numero_processo || p.cnj || "";
-            const cnj = normalizeProcessNumber(rawCnj);
-            
-            if (cnj) {
-              const { error: insertError } = await access.db
-                .from("lawyer_oab_processes")
-                .upsert({
-                  lawyer_id: access.profile.id,
-                  numero_cnj: cnj,
-                  metadata: p,
-                  monitored: false,
-                  imported: false,
-                  updated_at: new Date().toISOString()
-                }, {
-                  onConflict: "lawyer_id,numero_cnj"
-                });
-
-              if (insertError) {
-                console.error(`[OAB/Monitoramento][Background] Insert error for process ${cnj}:`, insertError.message);
-              }
-            }
-          }
-          console.log("[OAB/Monitoramento][Background] Done inserting processes.");
-        } catch (bgError) {
-          console.error("[OAB/Monitoramento][Background] Error in background OAB download:", bgError);
-        }
-      })();
+      try {
+        processesDownloaded = await downloadOabProcesses(access, oabNumber, ufState);
+      } catch (downloadError) {
+        console.error("[OAB/Monitoramento] Erro ao baixar processos da OAB:", downloadError);
+      }
     }
 
     // Sincroniza a ativação ou desativação do monitoramento de citações da OAB na API externa
@@ -228,7 +287,8 @@ export async function POST(request) {
 
     return clientJson({
       success: true,
-      message: "Configurações atualizadas com sucesso."
+      message: "Configurações atualizadas com sucesso.",
+      processes_downloaded: processesDownloaded
     });
   } catch (error) {
     console.error("[OAB/Monitoramento][POST] Erro:", error);

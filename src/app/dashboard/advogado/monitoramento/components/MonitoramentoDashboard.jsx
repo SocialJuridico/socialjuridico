@@ -23,6 +23,82 @@ import LawyerDashboardShell from "../../components/LawyerDashboardShell";
 import toast from "react-hot-toast";
 import styles from "./Monitoramento.module.css";
 
+// Extract a flat, normalized list of parties from a saved OAB process metadata.
+// The n8n/backend payload stores parties as an object:
+//   metadata.partes = { ativa: [...], passiva: [...], todas: [...], outras: [...] }
+// Older/alternate payloads may store them as an array under metadata.partes,
+// nested under metadata.data.processo.partes, or as parte_principal/demais_partes.
+function extractPartiesFromMetadata(metadata = {}) {
+  const processData =
+    metadata.partes || metadata.capa || metadata.parte_ativa
+      ? metadata
+      : metadata.data?.processo || metadata.data || metadata.processo || metadata;
+
+  const raw = processData.partes;
+  let partes = [];
+
+  if (Array.isArray(raw)) {
+    // Legacy: partes already a flat array
+    partes = raw;
+  } else if (raw && typeof raw === "object") {
+    // Current structure: { ativa, passiva, todas, outras }
+    if (Array.isArray(raw.todas) && raw.todas.length) {
+      partes = raw.todas;
+    } else {
+      partes = [
+        ...(Array.isArray(raw.ativa) ? raw.ativa : []),
+        ...(Array.isArray(raw.passiva) ? raw.passiva : []),
+        ...(Array.isArray(raw.outras) ? raw.outras : []),
+      ];
+    }
+  }
+
+  // Fallback to parte_principal / demais_partes
+  if (!partes.length) {
+    if (processData.parte_principal) partes.push(processData.parte_principal);
+    if (Array.isArray(processData.demais_partes)) partes.push(...processData.demais_partes);
+  }
+
+  // Final fallback: build parties from the flat string fields parte_ativa/parte_passiva
+  if (!partes.length) {
+    if (processData.parte_ativa) {
+      partes.push({ nome: processData.parte_ativa, polo: "ativa", tipo: "parte_ativa" });
+    }
+    if (processData.parte_passiva) {
+      partes.push({ nome: processData.parte_passiva, polo: "passiva", tipo: "parte_passiva" });
+    }
+  }
+
+  return partes.filter(Boolean);
+}
+
+// Human-friendly label for a party's polo/side (Ativa / Passiva / Outra).
+function formatPoloLabel(party = {}) {
+  const value = String(party.polo || party.tipo_parte || party.tipo || "").toLowerCase();
+  if (value.includes("ativ")) return "Polo Ativo";
+  if (value.includes("passiv")) return "Polo Passivo";
+  if (value.includes("autor")) return "Polo Ativo";
+  if (value.includes("reu") || value.includes("réu")) return "Polo Passivo";
+  return "Parte";
+}
+
+// Resolve the display fields (classe / orgao) for a process card from metadata,
+// handling both the flat n8n structure (metadata.classe / metadata.orgao) and
+// the nested "capa" structure used elsewhere in the app.
+function getProcessCardInfo(metadata = {}) {
+  const processData =
+    metadata.capa || metadata.classe || metadata.orgao
+      ? metadata
+      : metadata.data?.processo || metadata.data || metadata.processo || metadata;
+  const capa = processData.capa || {};
+
+  const classe = capa.classe || processData.classe || null;
+  const orgao =
+    capa.orgao_julgador || processData.orgao || processData.orgao_julgador || null;
+
+  return { classe, orgao };
+}
+
 export default function MonitoramentoDashboard() {
   const { profileData, openPlansModal } = useLawyerSession();
   
@@ -305,14 +381,13 @@ export default function MonitoramentoDashboard() {
     setImportMode("new");
     // Pre-fill fields with possible parties in metadata
     const metadata = processItem.metadata || {};
-    const processData = (metadata.capa || metadata.partes) ? metadata : (metadata.data?.processo || metadata.data || metadata.processo || {});
-    const partes = processData.partes || [];
-    
+    const partes = extractPartiesFromMetadata(metadata);
+
     // Find a party that might be the client (e.g. polo ativo/principal)
-    const possibleClient = partes.find(p => String(p.polo || "").toLowerCase().includes("ativo") || String(p.tipo_parte || "").toLowerCase().includes("autor")) || partes[0];
-    
-    setNewClientName(possibleClient?.nome || possibleClient?.name || "");
-    setNewClientCpfCnpj(possibleClient?.documento || "");
+    const possibleClient = partes.find(p => String(p.polo || "").toLowerCase().includes("ativ") || String(p.tipo_parte || p.tipo || "").toLowerCase().includes("autor") || String(p.tipo_parte || p.tipo || "").toLowerCase().includes("ativ")) || partes[0] || null;
+
+    setNewClientName(possibleClient?.nome || possibleClient?.name || possibleClient?.razao_social || possibleClient?.razaoSocial || "");
+    setNewClientCpfCnpj(possibleClient?.documento || possibleClient?.cpf_cnpj || "");
     setNewClientEmail("");
     setNewClientPhone("");
   };
@@ -403,8 +478,7 @@ export default function MonitoramentoDashboard() {
   };
 
   const modalMetadata = showImportModal?.metadata || {};
-  const modalProcessData = (modalMetadata.capa || modalMetadata.partes) ? modalMetadata : (modalMetadata.data?.processo || modalMetadata.data || modalMetadata.processo || {});
-  const modalParties = modalProcessData.partes || [];
+  const modalParties = extractPartiesFromMetadata(modalMetadata);
 
   // Render Main Tabbed Dashboard UI
   return (
@@ -581,29 +655,39 @@ export default function MonitoramentoDashboard() {
               <div className={styles.processesGrid}>
                 {processes.map(item => {
                   const metadata = item.metadata || {};
-                  const processData = (metadata.capa || metadata.partes) ? metadata : (metadata.data?.processo || metadata.data || metadata.processo || {});
-                  const capa = processData.capa || {};
+                  const { classe, orgao } = getProcessCardInfo(metadata);
                   
                   return (
                     <div key={item.id} className={styles.processCard}>
-                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                      {/* Aba/lombada superior — simula a aba de uma pasta de autos */}
+                      <div className={styles.processFolderTab}>
                         <div className={styles.processFolderIcon}>
-                          <FolderOpen size={24} fill="currentColor" />
+                          <FolderOpen size={20} fill="currentColor" />
                         </div>
-                        <div style={{ flex: 1 }}>
-                          <div className={styles.processCnj}>
-                            {item.numero_cnj.replace(/^(\d{7})(\d{2})(\d{4})(\d)(\d{2})(\d{4})$/, "$1-$2.$3.$4.$5.$6")}
-                          </div>
-                          <div className={styles.processDetails}>
-                            <span><strong>Classe:</strong> {capa.classe || "Não identificada"}</span>
-                            <span><strong>Órgão:</strong> {capa.orgao_julgador || "Não identificado"}</span>
-                          </div>
+                        <span className={styles.processTabLabel}>Autos Processuais</span>
+                        <div className={styles.processBadges}>
+                          {item.monitored && <span className={`${styles.processBadge} ${styles.badgeMonitored}`}>Monitorado</span>}
+                          {item.imported && <span className={`${styles.processBadge} ${styles.badgeImported}`}>No CRM</span>}
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        {item.monitored && <span className={`${styles.processBadge} ${styles.badgeMonitored}`}>Monitorado</span>}
-                        {item.imported && <span className={`${styles.processBadge} ${styles.badgeImported}`}>No CRM</span>}
+                      {/* Corpo da capa — número do processo + campos de autuação */}
+                      <div className={styles.processFolderBody}>
+                        <div className={styles.processCnjLabel}>Número do Processo (CNJ)</div>
+                        <div className={styles.processCnj}>
+                          {metadata.numero_cnj_formatado || String(item.numero_cnj || "").replace(/^(\d{7})(\d{2})(\d{4})(\d)(\d{2})(\d{4})$/, "$1-$2.$3.$4.$5.$6")}
+                        </div>
+
+                        <div className={styles.processDetails}>
+                          <div className={styles.processField}>
+                            <span className={styles.processFieldLabel}>Classe</span>
+                            <span className={styles.processFieldValue}>{classe || "Não identificada"}</span>
+                          </div>
+                          <div className={styles.processField}>
+                            <span className={styles.processFieldLabel}>Órgão Julgador</span>
+                            <span className={styles.processFieldValue}>{orgao || "Não identificado"}</span>
+                          </div>
+                        </div>
                       </div>
 
                       <div className={styles.cardActions}>
@@ -893,7 +977,7 @@ export default function MonitoramentoDashboard() {
                               >
                                 <div className={styles.partySelectorInfo}>
                                   <strong>{p.nome || p.name}</strong>
-                                  <span>{p.polo || p.tipo_parte || "Parte"}</span>
+                                  <span>{formatPoloLabel(p)}</span>
                                 </div>
                                 {p.documento && (
                                   <span className={styles.partySelectorDoc}>

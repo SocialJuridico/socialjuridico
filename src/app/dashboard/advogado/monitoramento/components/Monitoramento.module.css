@@ -301,74 +301,184 @@
   margin-top: 16px;
 }
 
+/* ============================================================
+   Card estilo "Capa de Autos Processuais" (pasta física)
+   ============================================================ */
 .processCard {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.013));
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  border-radius: 18px;
-  padding: 20px;
+  background:
+    linear-gradient(160deg, rgba(38, 33, 20, 0.55), rgba(20, 20, 22, 0.35)),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.013));
+  border: 1px solid rgba(212, 175, 55, 0.16);
+  /* borda lateral esquerda = lombada encadernada dos autos */
+  border-left: 4px solid rgba(212, 175, 55, 0.55);
+  border-radius: 6px 16px 16px 6px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  transition: all 0.2s ease-in-out;
+  transition: all 0.22s ease-in-out;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.22),
+    inset 1px 0 0 rgba(212, 175, 55, 0.12);
+}
+
+/* "furos" de encadernação sutis na lombada */
+.processCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 14px,
+      rgba(0, 0, 0, 0.35) 14px,
+      rgba(0, 0, 0, 0.35) 22px
+    );
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 .processCard:hover {
-  transform: translateY(-2px);
-  border-color: rgba(212, 175, 55, 0.34);
-  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.28);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  transform: translateY(-3px);
+  border-color: rgba(212, 175, 55, 0.4);
+  border-left-color: rgba(226, 198, 93, 0.85);
+  box-shadow:
+    0 22px 55px rgba(0, 0, 0, 0.32),
+    inset 1px 0 0 rgba(212, 175, 55, 0.2);
+}
+
+/* --- Aba superior (guia da pasta) --- */
+.processFolderTab {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 18px 11px;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.14), rgba(212, 175, 55, 0.04));
+  border-bottom: 1px solid rgba(212, 175, 55, 0.18);
 }
 
 .processFolderIcon {
-  color: #d4af37;
-  opacity: 0.9;
+  color: #e2c65d;
+  display: inline-flex;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.processTabLabel {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #e2c65d;
+  white-space: nowrap;
+}
+
+.processBadges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+/* --- Corpo da capa (folha de rosto) --- */
+.processFolderBody {
+  padding: 16px 18px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+/* linha pontilhada separando cabeçalho dos campos, como uma folha carimbada */
+.processFolderBody::after {
+  content: "";
+  display: block;
+  height: 0;
+  margin: 12px 0 2px;
+  border-top: 1px dashed rgba(212, 175, 55, 0.22);
+}
+
+.processCnjLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(226, 198, 93, 0.75);
+  margin-bottom: 2px;
 }
 
 .processCnj {
-  font-size: 1rem;
+  font-size: 1.08rem;
   font-weight: 800;
   color: #ffffff;
+  letter-spacing: 0.02em;
   word-break: break-all;
+  font-variant-numeric: tabular-nums;
 }
 
 .processDetails {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.58);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+/* Cada metadado apresentado como campo de autuação */
+.processField {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.processFieldLabel {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(226, 198, 93, 0.68);
+}
+
+.processFieldValue {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.35;
 }
 
 .processBadge {
   align-self: flex-start;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.72rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
   font-weight: 750;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .badgeMonitored {
-  background: rgba(59, 130, 246, 0.12);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.16);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.35);
 }
 
 .badgeImported {
-  background: rgba(16, 185, 129, 0.12);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: rgba(16, 185, 129, 0.16);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 185, 129, 0.35);
 }
 
 .cardActions {
   display: flex;
   gap: 10px;
   margin-top: auto;
+  padding: 12px 18px 16px;
+  background: rgba(0, 0, 0, 0.18);
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 12px;
 }
 
 .btnAction {

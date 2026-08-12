@@ -9,6 +9,10 @@ import { normalizeProcessNumber } from "@/lib/lawyerProcesses/processValidation"
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// A busca de processos na API externa é síncrona e pode levar dezenas de
+// segundos (o timeout da chamada externa é de 45s). Ampliamos a duração máxima
+// da função para evitar que a requisição seja abortada antes de concluir.
+export const maxDuration = 60;
 
 /**
  * Extrai um array de uma resposta da API externa que pode aninhar a lista em
@@ -132,6 +136,37 @@ export async function GET(request) {
 
     const oabNumber = lawyer?.oab || "";
     const ufState = lawyer?.estado || "";
+
+    // Auto-cura: o advogado marcou que baixou os processos (oab_processos_baixados = true),
+    // porém a tabela está vazia. Isso acontece com perfis que ativaram o download antes da
+    // correção do parsing (que salvava 0 processos) ou caso a busca anterior tenha falhado.
+    // Nesses casos, disparamos uma nova busca síncrona para popular a lista.
+    if (
+      lawyer?.oab_processos_baixados &&
+      (!processes || processes.length === 0) &&
+      oabNumber &&
+      ufState
+    ) {
+      try {
+        const oabNormalized = normalizeOABNumber(oabNumber);
+        const ufNormalized = normalizeUF(ufState);
+        if (oabNormalized && ufNormalized) {
+          await downloadOabProcesses(access, oabNormalized, ufNormalized);
+
+          // Recarrega a lista após a re-sincronização.
+          const { data: refreshed, error: refreshError } = await access.db
+            .from("lawyer_oab_processes")
+            .select("*")
+            .eq("lawyer_id", access.profile.id)
+            .order("created_at", { ascending: false });
+
+          if (refreshError) throw refreshError;
+          processes = refreshed || [];
+        }
+      } catch (resyncError) {
+        console.error("[OAB/Monitoramento][GET] Falha ao re-sincronizar processos da OAB:", resyncError);
+      }
+    }
 
     // Fetch citations events from n8n API if monitoring is active
     let citations = [];

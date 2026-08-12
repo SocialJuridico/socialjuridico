@@ -7,21 +7,22 @@ import {
   GOOGLE_CALENDAR_NONCE_COOKIE,
   normalizeGoogleRedirect,
 } from "@/lib/lawyerAgenda/googleCalendarState";
+import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request) {
   try {
+    const appUrl = resolvePublicAppOrigin(request);
     const user = await getAuthenticatedUser(request);
     if (!user) {
-      return NextResponse.redirect(new URL("/login?error=unauthorized", request.url));
+      return NextResponse.redirect(new URL("/login?error=unauthorized", appUrl));
     }
 
     const redirectTo = normalizeGoogleRedirect(
       new URL(request.url).searchParams.get("redirectTo"),
     );
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
@@ -50,7 +51,10 @@ export async function GET(request) {
   } catch (error) {
     console.error("[Google Calendar OAuth][Start] Erro:", error);
     return NextResponse.redirect(
-      new URL("/dashboard/advogado/agenda?google_sync=error", request.url),
+      new URL(
+        "/dashboard/advogado/agenda?google_sync=error",
+        resolvePublicAppOrigin(request),
+      ),
     );
   }
 }

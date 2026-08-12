@@ -6,13 +6,15 @@ import {
   GOOGLE_CALENDAR_NONCE_COOKIE,
   verifyGoogleCalendarState,
 } from "@/lib/lawyerAgenda/googleCalendarState";
+import { resolvePublicAppOrigin } from "@/lib/publicAppOrigin";
 import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function redirectWithStatus(request, redirectTo, status) {
-  const target = new URL(redirectTo || "/dashboard/advogado/agenda", request.url);
+  const appUrl = resolvePublicAppOrigin(request);
+  const target = new URL(redirectTo || "/dashboard/advogado/agenda", appUrl);
   target.searchParams.set("google_sync", status);
   const response = NextResponse.redirect(target);
   response.cookies.set(GOOGLE_CALENDAR_NONCE_COOKIE, "", {
@@ -44,7 +46,7 @@ export async function GET(request) {
       return redirectWithStatus(request, redirectTo, "error");
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || url.origin;
+    const appUrl = resolvePublicAppOrigin(request);
     const oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,

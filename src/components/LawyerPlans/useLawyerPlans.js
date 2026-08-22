@@ -115,22 +115,11 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
           const preview = getIntroPromotionCoupon(plan.id);
           if (!preview?.code) return [plan.id, null];
 
-          if (plan.id === "PRO") {
-            return [plan.id, preview];
-          }
-
-          try {
-            const validated = await validateCouponCode(preview.code, true);
-            if (!hasExpectedIntroPrice(plan, validated)) {
-              console.warn(
-                `[LawyerPlans] Promoção ${preview.code} possui valor divergente.`,
-              );
-              return [plan.id, null];
-            }
-            return [plan.id, validated];
-          } catch {
-            return [plan.id, null];
-          }
+          // Cupons promocionais de 1º mês não precisam validação via API,
+          // pois são aplicados diretamente pelo backend via isPromoEligible.
+          // O backend resolve o preço final baseado em promoCents definido
+          // em planCatalog.js (START: R$ 10,99, PRO: R$ 39,99).
+          return [plan.id, preview];
         }),
       );
 

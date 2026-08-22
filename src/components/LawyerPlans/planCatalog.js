@@ -110,7 +110,7 @@ export function getIntroPromotionCoupon(planId) {
       id: null,
       code: "START_MES1_1099",
       percent_off: 0,
-      amount_off: 3000,
+      amount_off: 3000, // R$ 30,00 desconto: R$ 40,99 - R$ 30,00 = R$ 10,99
       stripe_coupon_id: null,
       promotional: true,
     };
@@ -120,9 +120,9 @@ export function getIntroPromotionCoupon(planId) {
     return {
       status: "preview",
       id: null,
-      code: "PRO_MES1_1099",
+      code: "PRO_MES1_3999",
       percent_off: 0,
-      amount_off: 11001,
+      amount_off: 11001, // R$ 110,01 desconto: R$ 150,00 - R$ 110,01 = R$ 39,99
       stripe_coupon_id: null,
       promotional: true,
     };

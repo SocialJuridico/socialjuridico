@@ -39,6 +39,10 @@
 
 manutencao.html
 
+# Deploy scripts (não versionar arquivos específicos de deploy)
+/update.sh
+/deploy.ps1
+
 # production
 /build
 
@@ -77,3 +81,4 @@ scratch_*.js
 fix_*.ps1
 fix_*.sh
 *.patch
+update_temp.sh

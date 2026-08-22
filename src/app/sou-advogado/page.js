@@ -443,12 +443,12 @@ export default function SouAdvogadoPage() {
 
             <div className={styles.priceBlock}>
               <span className={styles.priceCurrency}>R$</span>
-              <strong className={styles.priceValue}>87,90</strong>
+              <strong className={styles.priceValue}>150,00</strong>
               <span className={styles.pricePeriod}>/mês</span>
             </div>
 
             <p className={styles.promotionalPrice}>
-              Primeiro mês por <strong>R$ 10,99</strong>
+              Primeiro mês por <strong>R$ 39,99</strong>
             </p>
 
             <ul className={styles.planFeatures}>

@@ -1,9 +1,18 @@
 import { randomUUID } from "node:crypto";
-import { getJurisPackage, getLawyerPlan, getLawyerPlanPrice } from "@/lib/billing/catalog";
+import {
+  getAiCreditPackage,
+  getJurisPackage,
+  getLawyerPlan,
+  getLawyerPlanPrice,
+} from "@/lib/billing/catalog";
 
 function codeFromProduct(product) {
   if (product?.type === "JURIS_PURCHASE") {
     return `J${Number(product.jurisAmount || 0)}`;
+  }
+
+  if (product?.type === "AI_CREDITS_PURCHASE") {
+    return `A${Number(product.aiCreditsAmount || 0)}`;
   }
 
   const plan = String(product?.planType || "").toUpperCase();
@@ -32,6 +41,23 @@ function productFromCode(code) {
       planType: null,
       billingCycle: "AVULSO",
       jurisAmount: amount,
+      expirationDays: 0,
+      promo: false,
+      recurring: false,
+    };
+  }
+
+  if (/^A(10|20|50)$/.test(normalized)) {
+    const amount = Number(normalized.slice(1));
+    const pack = getAiCreditPackage(amount);
+    if (!pack) return null;
+    return {
+      type: "AI_CREDITS_PURCHASE",
+      referenceType: "AI_CREDITS",
+      planType: null,
+      billingCycle: "AVULSO",
+      jurisAmount: 0,
+      aiCreditsAmount: amount,
       expirationDays: 0,
       promo: false,
       recurring: false,

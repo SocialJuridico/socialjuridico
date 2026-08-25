@@ -29,19 +29,9 @@ export const LAWYER_PLANS = {
       { text: "Análise de jurisprudência", included: false },
     ],
     prices: {
-      AVULSO: {
-        value: 49.9,
-        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_AVULSO,
-      },
-      MONTHLY: {
-        value: 40.99,
-        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_MENSAL,
-      },
-      ANNUAL: {
-        value: 431.88,
-        monthly: 35.99,
-        priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_START_ANUAL,
-      },
+      AVULSO: { value: 49.9 },
+      MONTHLY: { value: 40.99 },
+      ANNUAL: { value: 431.88, monthly: 35.99 },
     },
   },
   PRO: {
@@ -66,19 +56,9 @@ export const LAWYER_PLANS = {
       { text: "Cadastramento automático de partes no CRM", included: true },
     ],
     prices: {
-      AVULSO: {
-        value: 210.0,
-        priceId: "PRO_AVULSO_INFINITE_PAY",
-      },
-      MONTHLY: {
-        value: 150.0,
-        priceId: "PRO_MENSAL_INFINITE_PAY",
-      },
-      ANNUAL: {
-        value: 1440.0,
-        monthly: 120.0,
-        priceId: "PRO_ANUAL_INFINITE_PAY",
-      },
+      AVULSO: { value: 210.0 },
+      MONTHLY: { value: 150.0 },
+      ANNUAL: { value: 1440.0, monthly: 120.0 },
     },
   },
 };
@@ -110,8 +90,7 @@ export function getIntroPromotionCoupon(planId) {
       id: null,
       code: "START_MES1_1099",
       percent_off: 0,
-      amount_off: 3000, // R$ 30,00 desconto: R$ 40,99 - R$ 30,00 = R$ 10,99
-      stripe_coupon_id: null,
+      amount_off: 3000,
       promotional: true,
     };
   }
@@ -122,8 +101,7 @@ export function getIntroPromotionCoupon(planId) {
       id: null,
       code: "PRO_MES1_3999",
       percent_off: 0,
-      amount_off: 11001, // R$ 110,01 desconto: R$ 150,00 - R$ 110,01 = R$ 39,99
-      stripe_coupon_id: null,
+      amount_off: 11001,
       promotional: true,
     };
   }

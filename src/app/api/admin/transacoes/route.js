@@ -132,6 +132,16 @@ function inferProduct(transaction) {
   return "OTHER";
 }
 
+function isSubscriptionFailureStatus(rawStatus) {
+  return [
+    "subscription_rejected",
+    "subscription_unpaid",
+    "subscription_failed",
+    "subscription_canceled",
+    "subscription_cancelled",
+  ].some((prefix) => rawStatus.startsWith(prefix));
+}
+
 function classifyFinancialStatus(transaction, provider) {
   const rawStatus = String(transaction.status || "").toLowerCase();
 
@@ -143,11 +153,41 @@ function classifyFinancialStatus(transaction, provider) {
     return "MANUAL";
   }
   if (rawStatus.includes("review")) return "REVIEW";
-  if (FAILED_STATUSES.has(rawStatus) || rawStatus.startsWith("error_")) {
+  if (
+    FAILED_STATUSES.has(rawStatus) ||
+    rawStatus.startsWith("error_") ||
+    isSubscriptionFailureStatus(rawStatus)
+  ) {
     return "FAILED";
   }
   if (CONFIRMED_STATUSES.has(rawStatus)) return "CONFIRMED";
   return "PENDING";
+}
+
+function statusLabel(transaction, financialStatus) {
+  const rawStatus = String(transaction.status || "").trim().toLowerCase();
+
+  if (
+    rawStatus === "subscription_activating" ||
+    rawStatus === "subscription_pending" ||
+    rawStatus === "subscription_pending_payment"
+  ) {
+    return "Assinatura criada · aguardando 1ª cobrança";
+  }
+
+  if (rawStatus === "subscription_active") {
+    return "Assinatura ativa · cobrança registrada separadamente";
+  }
+
+  if (isSubscriptionFailureStatus(rawStatus)) {
+    return "1ª cobrança não aprovada";
+  }
+
+  if (financialStatus === "CONFIRMED") return "Confirmada";
+  if (financialStatus === "MANUAL") return "Crédito manual";
+  if (financialStatus === "REVIEW") return "Revisão necessária";
+  if (financialStatus === "FAILED") return "Falhou";
+  return "Aguardando confirmação";
 }
 
 function getOperationalAlert(transaction, provider, financialStatus) {
@@ -323,6 +363,7 @@ export async function GET() {
         currency: String(transaction.moeda || "BRL").toUpperCase(),
         rawStatus: transaction.status || "unknown",
         financialStatus,
+        statusLabel: statusLabel(transaction, financialStatus),
         jurisAmount: Number(transaction.juris_amount || 0),
         provider,
         providerReference: maskProviderReference(

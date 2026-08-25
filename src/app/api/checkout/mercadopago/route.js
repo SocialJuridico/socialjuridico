@@ -7,6 +7,13 @@ import { assertLawyerPlanPurchaseAllowed } from "@/lib/lawyerPlans/planAccessSer
 import { hasLawyerPlanHistory } from "@/lib/billing/planHistoryServer";
 import { grantProvisionalPlanAccess } from "@/lib/billing/subscriptionProvisioningServer";
 import {
+  billingAddressValidationError,
+  mercadoPagoOrderItem,
+  mercadoPagoPayerAddress,
+  MERCADO_PAGO_STATEMENT_DESCRIPTOR,
+  normalizeBillingAddress,
+} from "@/lib/billing/billingAddress";
+import {
   COUPON_TYPES,
   releaseCouponReservation,
   reserveCouponForCheckout,
@@ -91,13 +98,34 @@ function mercadoPagoPayerEmail(request, userId, profileEmail, fallbackEmail) {
     .toLowerCase();
 }
 
-function sanitizePayer(payer, fallbackEmail) {
+function splitProfileName(value) {
+  const parts = String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return {
+    firstName: parts.shift() || "",
+    lastName: parts.join(" "),
+  };
+}
+
+function sanitizePayer(
+  payer,
+  fallbackEmail,
+  { profileName = "", billingAddress = null } = {},
+) {
   const safe = {
     email: String(fallbackEmail || "").trim().toLowerCase(),
   };
 
-  const firstName = String(payer?.first_name || payer?.firstName || "").trim();
-  const lastName = String(payer?.last_name || payer?.lastName || "").trim();
+  const profileNameParts = splitProfileName(profileName);
+  const firstName = String(
+    payer?.first_name || payer?.firstName || profileNameParts.firstName || "",
+  ).trim();
+  const lastName = String(
+    payer?.last_name || payer?.lastName || profileNameParts.lastName || "",
+  ).trim();
   const identificationType = String(payer?.identification?.type || "").trim();
   const identificationNumber = String(payer?.identification?.number || "")
     .replace(/\D/g, "")
@@ -110,6 +138,10 @@ function sanitizePayer(payer, fallbackEmail) {
       type: identificationType.slice(0, 10),
       number: identificationNumber,
     };
+  }
+
+  if (billingAddress) {
+    safe.address = mercadoPagoPayerAddress(billingAddress);
   }
 
   return safe;
@@ -127,6 +159,26 @@ function resolveOrderPaymentMethodType(paymentData, paymentMethodId) {
   }
 
   return "credit_card";
+}
+
+async function persistBillingAddress(user, billingAddress) {
+  if (!supabaseAdmin || !user?.id || !billingAddress) return;
+
+  const metadata = {
+    ...(user.user_metadata || {}),
+    billing_address: billingAddress,
+  };
+
+  const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
+    user_metadata: metadata,
+  });
+
+  if (error) {
+    console.warn(
+      "[Checkout/MercadoPago] Não foi possível memorizar o endereço de cobrança:",
+      error.message,
+    );
+  }
 }
 
 async function bindReservation(reservationToken, userId, reference) {
@@ -371,9 +423,6 @@ export async function POST(request) {
           })
           .eq("id", transactionId);
       } catch (provisionalError) {
-        // A assinatura já existe no Mercado Pago. Uma falha ao liberar o acesso
-        // provisório não pode apagar a referência financeira nem criar uma
-        // segunda assinatura em uma nova tentativa do usuário.
         console.error(
           "[Checkout/MercadoPago] Falha não fatal no acesso provisório:",
           provisionalError,
@@ -402,6 +451,23 @@ export async function POST(request) {
       });
     }
 
+    const billingAddress = normalizeBillingAddress(
+      body.billingAddress || user.user_metadata?.billing_address || {},
+      profile.estado,
+    );
+    const billingAddressError = billingAddressValidationError(
+      billingAddress,
+      profile.estado,
+    );
+
+    if (billingAddressError) {
+      const error = new Error(billingAddressError);
+      error.status = 422;
+      throw error;
+    }
+
+    await persistBillingAddress(user, billingAddress);
+
     const paymentMethodId = String(paymentData.payment_method_id || "").trim();
     if (!paymentMethodId) {
       const error = new Error("Selecione uma forma de pagamento.");
@@ -428,6 +494,7 @@ export async function POST(request) {
       }
 
       paymentMethod.token = token;
+      paymentMethod.statement_descriptor = MERCADO_PAGO_STATEMENT_DESCRIPTOR;
       const installments = Number(paymentData.installments || 1);
       paymentMethod.installments =
         Number.isInteger(installments) && installments > 0 ? installments : 1;
@@ -437,8 +504,13 @@ export async function POST(request) {
       type: "online",
       processing_mode: "automatic",
       external_reference: reference,
+      description: String(product.description || "Social Jurídico").slice(0, 150),
       total_amount: amount,
-      payer: sanitizePayer(paymentData.payer, payerEmail),
+      items: [mercadoPagoOrderItem(product)],
+      payer: sanitizePayer(paymentData.payer, payerEmail, {
+        profileName: profile.name,
+        billingAddress,
+      }),
       transactions: {
         payments: [
           {

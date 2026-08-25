@@ -20,8 +20,9 @@ export default function CouponsHeader({ coupons }) {
             <span className={styles.eyebrow}>Governança comercial e promocional</span>
             <h1>Cupons</h1>
             <p>
-              Controle descontos, disponibilidade, limites de utilização,
-              sincronização com Stripe e rastreabilidade administrativa.
+              Controle descontos, disponibilidade, limites de utilização e
+              rastreabilidade administrativa. O valor final é aplicado pelo
+              Social Jurídico no checkout do Mercado Pago.
             </p>
           </div>
         </div>

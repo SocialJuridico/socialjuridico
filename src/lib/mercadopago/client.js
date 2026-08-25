@@ -166,7 +166,11 @@ export function validateMercadoPagoWebhookSignature({
   const received = parts.v1;
   if (!ts || !received || !xRequestId || !dataId) return false;
 
-  const manifest = `id:${String(dataId)};request-id:${String(xRequestId)};ts:${String(ts)};`;
+  // O Mercado Pago exige que data.id alfanumérico seja normalizado para
+  // minúsculas antes de montar o manifesto HMAC. IDs numéricos não são
+  // afetados pelo toLowerCase(). Orders usam IDs como ORDTST.../ORD01....
+  const normalizedDataId = String(dataId).trim().toLowerCase();
+  const manifest = `id:${normalizedDataId};request-id:${String(xRequestId)};ts:${String(ts)};`;
   const expected = crypto
     .createHmac("sha256", secret)
     .update(manifest)

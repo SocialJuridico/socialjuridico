@@ -59,6 +59,37 @@ function validateOrigin(request) {
   return null;
 }
 
+function isMercadoPagoSandboxRequest(request) {
+  const configured = String(process.env.MERCADOPAGO_SANDBOX || "")
+    .trim()
+    .toLowerCase();
+
+  if (["1", "true", "yes"].includes(configured)) return true;
+  if (["0", "false", "no"].includes(configured)) return false;
+
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    "";
+  const hostname = String(host).split(":")[0].trim().toLowerCase();
+
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+function mercadoPagoPayerEmail(request, userId, profileEmail, fallbackEmail) {
+  if (isMercadoPagoSandboxRequest(request)) {
+    const suffix = String(userId || "sandbox")
+      .replace(/[^a-z0-9]/gi, "")
+      .slice(0, 20)
+      .toLowerCase();
+    return `buyer-${suffix || "sandbox"}@testuser.com`;
+  }
+
+  return String(profileEmail || fallbackEmail || "")
+    .trim()
+    .toLowerCase();
+}
+
 function sanitizePayer(payer, fallbackEmail) {
   const safe = {
     email: String(fallbackEmail || "").trim().toLowerCase(),
@@ -280,7 +311,12 @@ export async function POST(request) {
     const siteUrl = String(
       process.env.NEXT_PUBLIC_SITE_URL || "https://socialjuridico.com.br",
     ).replace(/\/$/, "");
-    const payerEmail = profile.email || user.email;
+    const payerEmail = mercadoPagoPayerEmail(
+      request,
+      user.id,
+      profile.email,
+      user.email,
+    );
 
     if (product.recurring) {
       const frequency = subscriptionFrequencyFor(product.billingCycle);

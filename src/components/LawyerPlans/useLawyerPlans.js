@@ -65,6 +65,18 @@ async function validateCouponCode(code, promotional = false) {
   return normalizeCouponResponse(data, code, promotional);
 }
 
+function isRecurringCycle(cycle) {
+  return ["MONTHLY", "ANNUAL"].includes(String(cycle || "").toUpperCase());
+}
+
+function withTotal(pricing, total, billingCycle) {
+  return {
+    ...pricing,
+    total,
+    display: billingCycle === "ANNUAL" ? total / 12 : total,
+  };
+}
+
 export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
   const [billingCycle, setBillingCycle] = useState("MONTHLY");
   const [couponCode, setCouponCode] = useState("");
@@ -87,18 +99,15 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
 
     let cancelled = false;
 
-    async function loadPromotions() {
-      const entries = Object.values(LAWYER_PLANS).map((plan) => {
-        if (!isIntroPromotionEligible(plan.id, "MONTHLY", profileData)) {
-          return [plan.id, null];
-        }
-        return [plan.id, getIntroPromotionCoupon(plan.id)];
-      });
+    const entries = Object.values(LAWYER_PLANS).map((plan) => {
+      if (!isIntroPromotionEligible(plan.id, "MONTHLY", profileData)) {
+        return [plan.id, null];
+      }
+      return [plan.id, getIntroPromotionCoupon(plan.id)];
+    });
 
-      if (!cancelled) setPromotionCoupons(Object.fromEntries(entries));
-    }
+    if (!cancelled) setPromotionCoupons(Object.fromEntries(entries));
 
-    void loadPromotions();
     return () => {
       cancelled = true;
     };
@@ -115,6 +124,7 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
     () =>
       Object.values(LAWYER_PLANS).map((plan) => {
         const priceInfo = plan.prices[billingCycle];
+        const basePricing = applyCouponToPrice(priceInfo, billingCycle, null);
         const promotionCoupon = promotionCoupons[plan.id] || null;
         const introEligible =
           !profilePending &&
@@ -122,30 +132,66 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
           Boolean(promotionCoupon) &&
           isIntroPromotionEligible(plan.id, billingCycle, profileData);
 
-        // Cupons comerciais continuam de uso único, portanto são aplicados no
-        // plano avulso. Recorrência é cobrada pelo Mercado Pago sem transformar
-        // um cupom pontual em desconto permanente.
-        const userCoupon = billingCycle === "AVULSO" ? coupon : null;
-        const previewCoupon = introEligible ? promotionCoupon : userCoupon;
-        let pricing = applyCouponToPrice(priceInfo, billingCycle, previewCoupon);
-
-        let rsDiscount = null;
+        const recurringCycle = isRecurringCycle(billingCycle);
         const rsRate = rsRateFor(plan.id);
-        const rsEligible =
-          isRs && rsRate > 0 && !introEligible && !userCoupon;
+        const rsSubscriptionEligible = isRs && recurringCycle && rsRate > 0;
+        const rsTotal = rsSubscriptionEligible
+          ? applyRsDiscountValue(basePricing.total, plan.id)
+          : basePricing.total;
 
-        if (rsEligible) {
-          const rsTotal = applyRsDiscountValue(pricing.total, plan.id);
-          pricing = {
-            ...pricing,
-            total: rsTotal,
-            display: billingCycle === "ANNUAL" ? rsTotal / 12 : rsTotal,
-          };
+        const renewalTotal = recurringCycle
+          ? rsSubscriptionEligible
+            ? rsTotal
+            : basePricing.total
+          : null;
+        const renewalPricing = renewalTotal === null
+          ? null
+          : withTotal(basePricing, renewalTotal, billingCycle);
+
+        let pricing = basePricing;
+        let previewCoupon = null;
+        let couponApplied = false;
+        let couponDeferredByPromo = false;
+        let rsDiscount = null;
+        let rsAppliesOnRenewal = false;
+
+        if (introEligible) {
+          previewCoupon = promotionCoupon;
+          pricing = applyCouponToPrice(
+            priceInfo,
+            billingCycle,
+            promotionCoupon,
+          );
+          couponDeferredByPromo = Boolean(coupon);
+          rsAppliesOnRenewal = rsSubscriptionEligible;
+        } else if (coupon) {
+          const couponPricing = applyCouponToPrice(
+            priceInfo,
+            billingCycle,
+            coupon,
+          );
+
+          // Cupom e OAB/RS não acumulam. A interface espelha a mesma regra do
+          // servidor e mostra sempre a melhor condição na primeira cobrança.
+          if (rsSubscriptionEligible && rsTotal <= couponPricing.total) {
+            pricing = withTotal(basePricing, rsTotal, billingCycle);
+            rsDiscount = {
+              rate: rsRate,
+              rateLabel: RS_DISCOUNT_LABELS[plan.id],
+              originalTotal: basePricing.total,
+            };
+          } else {
+            previewCoupon = coupon;
+            pricing = couponPricing;
+            couponApplied = true;
+            rsAppliesOnRenewal = rsSubscriptionEligible;
+          }
+        } else if (rsSubscriptionEligible) {
+          pricing = withTotal(basePricing, rsTotal, billingCycle);
           rsDiscount = {
             rate: rsRate,
             rateLabel: RS_DISCOUNT_LABELS[plan.id],
-            originalTotal: applyCouponToPrice(priceInfo, billingCycle, previewCoupon)
-              .total,
+            originalTotal: basePricing.total,
           };
         }
 
@@ -157,8 +203,14 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
           billingCycle,
           priceInfo,
           pricing,
+          renewalPricing,
+          recurringCycle,
           rsDiscount,
+          rsAppliesOnRenewal,
+          rsSubscriptionEligible,
           previewCoupon,
+          couponApplied,
+          couponDeferredByPromo,
           introEligible,
           annualSavings: calculateAnnualSavings(plan),
           profilePending,
@@ -192,11 +244,14 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
     try {
       const validatedCoupon = await validateCouponCode(code);
       setCoupon(validatedCoupon);
-      toast.success(
-        billingCycle === "AVULSO"
-          ? "Cupom aplicado com sucesso."
-          : "Cupom validado. Ele será aplicado no ciclo Avulso.",
-      );
+
+      if (billingCycle === "AVULSO") {
+        toast.success("Cupom aplicado com sucesso.");
+      } else {
+        toast.success(
+          "Cupom validado. Em assinaturas, o desconto vale na primeira cobrança e não acumula com promoção/OAB-RS.",
+        );
+      }
     } catch (error) {
       setCoupon(null);
       toast.error(error.message || "Não foi possível validar o cupom.");
@@ -225,16 +280,15 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
 
       setSelectingPlan(planCard.id);
       try {
-        const checkoutCoupon =
-          billingCycle === "AVULSO" && !planCard.introEligible ? coupon : null;
-
         await onSelectPlan?.({
           planId: planCard.id,
           billingCycle,
           amount: planCard.pricing?.total,
-          couponData: checkoutCoupon,
+          renewalAmount: planCard.renewalPricing?.total ?? null,
+          couponData: planCard.couponApplied ? coupon : null,
           juris: planCard.juris,
           isPromoEligible: Boolean(planCard.introEligible),
+          rsAppliesOnRenewal: Boolean(planCard.rsAppliesOnRenewal),
         });
       } catch (error) {
         console.error("[LawyerPlans] Falha ao selecionar plano:", error);

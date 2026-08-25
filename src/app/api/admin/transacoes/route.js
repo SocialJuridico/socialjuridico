@@ -1,4 +1,5 @@
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
+import { decodeBillingReference } from "@/lib/billing/reference";
 import { supabaseAdmin } from "@/lib/supabase";
 import { NextResponse } from "next/server";
 
@@ -51,16 +52,28 @@ function inferProvider(reference) {
 
   if (value.startsWith("affiliate_")) return "AFFILIATE_PROGRAM";
   if (value.startsWith("manual_")) return "MANUAL";
-  if (value.startsWith("cs_")) return "STRIPE_CHECKOUT";
-  if (value.startsWith("pi_")) return "STRIPE_PAYMENT_INTENT";
-  if (value.startsWith("seti_")) return "STRIPE_SETUP_INTENT";
+
+  // Referências novas do catálogo/checkout e pagamentos recorrentes.
+  if (
+    value.startsWith("sjm_") ||
+    value.startsWith("mp_pay_") ||
+    value.startsWith("mp_")
+  ) {
+    return "MERCADO_PAGO";
+  }
+
+  // Histórico legado permanece reconhecível para auditoria, mas não existe mais
+  // nenhum fluxo de compra novo usando estes provedores.
+  if (value.startsWith("cs_")) return "STRIPE_CHECKOUT_LEGACY";
+  if (value.startsWith("pi_")) return "STRIPE_PAYMENT_INTENT_LEGACY";
+  if (value.startsWith("seti_")) return "STRIPE_SETUP_INTENT_LEGACY";
   if (
     value.startsWith("sj_") ||
     value.startsWith("inf_") ||
     value.startsWith("ip_") ||
     value.startsWith("infinitepay_")
   ) {
-    return "INFINITEPAY";
+    return "INFINITEPAY_LEGACY";
   }
 
   return "UNKNOWN";
@@ -72,8 +85,16 @@ function maskProviderReference(value, provider) {
 
   const suffix = reference.slice(-4).replace(/[^a-z0-9]/gi, "•");
 
-  if (provider === "INFINITEPAY") {
-    return `InfinitePay ••••${suffix || "••••"}`;
+  if (provider === "MERCADO_PAGO") {
+    return `Mercado Pago ••••${suffix || "••••"}`;
+  }
+
+  if (provider === "INFINITEPAY_LEGACY") {
+    return `InfinitePay (histórico) ••••${suffix || "••••"}`;
+  }
+
+  if (provider.startsWith("STRIPE_")) {
+    return `Stripe (histórico) ••••${suffix || "••••"}`;
   }
 
   if (provider === "AFFILIATE_PROGRAM") {
@@ -85,13 +106,20 @@ function maskProviderReference(value, provider) {
   }
 
   if (reference.length <= 12) return `${reference.slice(0, 4)}••••`;
-
   return `${reference.slice(0, 7)}••••${suffix}`;
 }
 
 function inferProduct(transaction) {
   const type = String(transaction.tipo || "").toUpperCase();
   const jurisAmount = Number(transaction.juris_amount || 0);
+  const reference = String(transaction.stripe_session_id || "");
+
+  if (reference.startsWith("sjm_")) {
+    const decoded = decodeBillingReference(reference)?.product;
+    if (decoded?.type === "JURIS_PURCHASE") return "JURIS";
+    if (decoded?.type === "AI_CREDITS_PURCHASE") return "AI_CREDITS";
+    if (decoded?.type === "PRO_SUBSCRIPTION") return decoded.planType || "PLAN";
+  }
 
   if (type === "AFFILIATE_COMMISSION") return "AFFILIATE";
   if (type === "JURIS_PURCHASE") return "JURIS";
@@ -107,7 +135,7 @@ function inferProduct(transaction) {
 function classifyFinancialStatus(transaction, provider) {
   const rawStatus = String(transaction.status || "").toLowerCase();
 
-  if (provider === "STRIPE_SETUP_INTENT") return "REVIEW";
+  if (provider === "STRIPE_SETUP_INTENT_LEGACY") return "REVIEW";
   if (
     ["MANUAL", "AFFILIATE_PROGRAM"].includes(provider) &&
     CONFIRMED_STATUSES.has(rawStatus)
@@ -127,13 +155,12 @@ function getOperationalAlert(transaction, provider, financialStatus) {
 
   if (provider === "AFFILIATE_PROGRAM") return null;
 
-  if (provider === "STRIPE_SETUP_INTENT") {
+  if (provider === "STRIPE_SETUP_INTENT_LEGACY") {
     return {
       severity: "CRITICAL",
-      code: "SETUP_INTENT_AS_PAYMENT",
-      label: "SetupIntent registrado como pagamento",
-      recommendation:
-        "Validar a cobrança no Stripe. SetupIntent não comprova pagamento.",
+      code: "LEGACY_SETUP_INTENT_AS_PAYMENT",
+      label: "Registro histórico sem comprovação de cobrança",
+      recommendation: "Revisar o registro legado antes de qualquer ajuste manual.",
     };
   }
 
@@ -230,11 +257,7 @@ function summarize(transactions) {
     alertCount: summary.alertCount,
     uniqueCustomers: summary.customerIds.size,
     averageTicket: summary.positiveConfirmedCount
-      ? Number(
-          (
-            summary.confirmedGross / summary.positiveConfirmedCount
-          ).toFixed(2),
-        )
+      ? Number((summary.confirmedGross / summary.positiveConfirmedCount).toFixed(2))
       : 0,
     byProduct: summary.byProduct,
     byProvider: summary.byProvider,
@@ -308,11 +331,7 @@ export async function GET() {
         ),
         couponCode: transaction.cupom?.codigo || null,
         createdAt: transaction.created_at,
-        alert: getOperationalAlert(
-          transaction,
-          provider,
-          financialStatus,
-        ),
+        alert: getOperationalAlert(transaction, provider, financialStatus),
       };
     });
 
@@ -324,7 +343,7 @@ export async function GET() {
         privacy: {
           customerEmailMasked: true,
           providerReferenceMasked: true,
-          infinitePayOrderReferenceFullyProtected: true,
+          mercadoPagoReferenceProtected: true,
           cardDataStored: false,
         },
       },

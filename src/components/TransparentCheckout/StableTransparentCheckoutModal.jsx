@@ -102,6 +102,7 @@ export default function StableTransparentCheckoutModal({
 }) {
   const controllerRef = useRef(null);
   const successNotifiedRef = useRef(false);
+  const provisionalNotifiedRef = useRef(false);
   const mountedRef = useRef(false);
   const processingRef = useRef(false);
   const brickIdRef = useRef(
@@ -156,6 +157,12 @@ export default function StableTransparentCheckoutModal({
     }
   }, [isAiCredits, isPro, onClose, onPaymentSuccess]);
 
+  const notifyProvisionalAccess = useCallback(async () => {
+    if (provisionalNotifiedRef.current) return;
+    provisionalNotifiedRef.current = true;
+    await onPaymentSuccess?.({ provisional: true });
+  }, [onPaymentSuccess]);
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -170,6 +177,7 @@ export default function StableTransparentCheckoutModal({
   useEffect(() => {
     if (!isOpen) {
       successNotifiedRef.current = false;
+      provisionalNotifiedRef.current = false;
       processingRef.current = false;
       setBrickReady(false);
       setProcessing(false);
@@ -284,9 +292,10 @@ export default function StableTransparentCheckoutModal({
                   } else if (data.kind === "pix") {
                     toast.success("PIX gerado. Aguardando o pagamento.");
                   } else if (data.kind === "subscription") {
-                    toast.success(
-                      "Assinatura criada. Confirmando a primeira cobrança.",
-                    );
+                    toast.success("Assinatura criada com sucesso!");
+                    if (data.accessProvisioned) {
+                      await notifyProvisionalAccess();
+                    }
                   } else {
                     toast("Pagamento enviado para análise.");
                   }
@@ -345,6 +354,7 @@ export default function StableTransparentCheckoutModal({
     isPro,
     isPromoEligible,
     jurisAmount,
+    notifyProvisionalAccess,
     notifySuccess,
     planType,
     profileData?.email,
@@ -392,12 +402,17 @@ export default function StableTransparentCheckoutModal({
           return;
         }
 
+        if (data.accessProvisioned) {
+          await notifyProvisionalAccess();
+        }
+
         const status = normalizedStatus(data.status || data.subscriptionStatus);
         if (["rejected", "cancelled", "canceled"].includes(status)) {
           setError(
-            status === "rejected"
-              ? "O pagamento foi recusado pelo Mercado Pago. Tente outro cartão ou forma de pagamento."
-              : "O pagamento foi cancelado.",
+            data.activationMessage ||
+              (status === "rejected"
+                ? "A primeira cobrança não foi aprovada. Tente outro cartão ou forma de pagamento."
+                : "A assinatura foi cancelada."),
           );
         }
       } catch (pollError) {
@@ -419,6 +434,7 @@ export default function StableTransparentCheckoutModal({
     };
   }, [
     isOpen,
+    notifyProvisionalAccess,
     notifySuccess,
     result?.approved,
     result?.paymentId,
@@ -441,6 +457,11 @@ export default function StableTransparentCheckoutModal({
     Boolean(result?.approved) || normalizedStatus(result?.status) === "approved";
   const pixPending = result?.kind === "pix" && !approved;
   const subscriptionPending = result?.kind === "subscription" && !approved;
+  const subscriptionRejected =
+    subscriptionPending &&
+    ["rejected", "cancelled", "canceled"].includes(
+      normalizedStatus(result?.status || result?.subscriptionStatus),
+    );
 
   const successMessage = isPro
     ? "Seu plano foi atualizado automaticamente."
@@ -518,14 +539,27 @@ export default function StableTransparentCheckoutModal({
                 Aguardando confirmação do Mercado Pago...
               </div>
             </div>
+          ) : subscriptionRejected ? (
+            <div style={styles.statusPanel}>
+              <ShieldCheck size={40} />
+              <strong style={styles.statusTitle}>Cobrança não confirmada</strong>
+              <span style={styles.muted}>
+                {result?.activationMessage ||
+                  "A primeira cobrança não foi aprovada. Nenhum Juris foi creditado e o acesso provisório foi encerrado automaticamente."}
+              </span>
+            </div>
           ) : subscriptionPending ? (
             <div style={styles.statusPanel}>
-              <Loader2 size={38} style={styles.spinner} />
-              <strong style={styles.statusTitle}>Confirmando assinatura</strong>
+              <CheckCircle2 size={46} />
+              <strong style={styles.statusTitle}>Assinatura criada com sucesso</strong>
               <span style={styles.muted}>
-                Sua assinatura foi enviada ao Mercado Pago. O plano será ativado
-                automaticamente assim que a primeira cobrança for aprovada.
+                {result?.activationMessage ||
+                  "Seu cartão foi validado e sua assinatura foi criada. Estamos confirmando a primeira cobrança automaticamente."}
               </span>
+              <div style={styles.waitingLine}>
+                <Loader2 size={17} style={styles.spinner} />
+                Ativação em andamento · acompanhando a 1ª cobrança
+              </div>
             </div>
           ) : result ? (
             <div style={styles.statusPanel}>

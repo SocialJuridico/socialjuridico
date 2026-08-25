@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { isRsLawyer } from "@/lib/lawyerDiscount";
 import { assertLawyerPlanPurchaseAllowed } from "@/lib/lawyerPlans/planAccessServer";
 import { hasLawyerPlanHistory } from "@/lib/billing/planHistoryServer";
+import { grantProvisionalPlanAccess } from "@/lib/billing/subscriptionProvisioningServer";
 import {
   COUPON_TYPES,
   releaseCouponReservation,
@@ -233,9 +234,10 @@ export async function POST(request) {
     const paymentData = body.paymentData || {};
     const isJuris = Boolean(getJurisPackage(jurisAmount));
     const isAiCredits = Boolean(getAiCreditPackage(aiCreditsAmount));
+    let planAccess = null;
 
     if (!isJuris && !isAiCredits) {
-      assertLawyerPlanPurchaseAllowed(profile, planType);
+      planAccess = assertLawyerPlanPurchaseAllowed(profile, planType);
       profile.has_plan_history = await hasLawyerPlanHistory(
         supabaseAdmin,
         user.id,
@@ -348,17 +350,55 @@ export async function POST(request) {
         throw new Error("Mercado Pago não retornou o identificador da assinatura.");
       }
 
+      let provisional = {
+        granted: false,
+        reason: "PROVISIONING_NOT_ATTEMPTED",
+      };
+
+      try {
+        provisional = await grantProvisionalPlanAccess({
+          lawyerId: user.id,
+          product,
+          activePlan: planAccess?.activePlan || null,
+        });
+
+        await supabaseAdmin
+          .from("transacoes")
+          .update({
+            status: provisional.granted
+              ? "subscription_activating"
+              : "subscription_pending_payment",
+          })
+          .eq("id", transactionId);
+      } catch (provisionalError) {
+        // A assinatura já existe no Mercado Pago. Uma falha ao liberar o acesso
+        // provisório não pode apagar a referência financeira nem criar uma
+        // segunda assinatura em uma nova tentativa do usuário.
+        console.error(
+          "[Checkout/MercadoPago] Falha não fatal no acesso provisório:",
+          provisionalError,
+        );
+      }
+
       return json({
         success: true,
         provider: "MERCADOPAGO",
         kind: "subscription",
         reference,
         subscriptionId: subscription.id,
-        status: subscription.status || "authorized",
+        status: "activating",
+        providerStatus: subscription.status || "authorized",
         amount: product.priceInCents,
         renewalAmount: product.renewalPriceInCents,
         discountSource: product.discountSource,
         recurring: true,
+        approved: false,
+        accessProvisioned: Boolean(provisional.granted),
+        activationMessage: provisional.granted
+          ? `Sua assinatura foi criada e o plano ${product.planType} já está disponível provisoriamente. Os Juris serão creditados após a confirmação da primeira cobrança.`
+          : planAccess?.activePlan
+            ? `Sua assinatura foi criada. O plano ${planAccess.activePlan} continua ativo enquanto confirmamos a primeira cobrança do ${product.planType}.`
+            : "Sua assinatura foi criada. Estamos confirmando a primeira cobrança automaticamente.",
       });
     }
 

@@ -147,7 +147,7 @@ export async function POST(request) {
     const { data: profile, error: profileError } = await supabaseAdmin
       .from("advogados")
       .select(
-        "id, name, email, estado, oab, oab_verification_status, promo_start_used, promo_pro_used, plan_type, subscription_status",
+        "id, name, email, estado, oab, oab_verification_status, promo_start_used, promo_pro_used, plan_type, subscription_status, stripe_subscription_id",
       )
       .eq("id", user.id)
       .maybeSingle();
@@ -298,13 +298,11 @@ export async function POST(request) {
         throw new Error("Mercado Pago não retornou o identificador da assinatura.");
       }
 
-      await supabaseAdmin
-        .from("advogados")
-        .update({
-          stripe_subscription_id: `mp_${subscription.id}`,
-          subscription_status: "PENDING_PAYMENT",
-        })
-        .eq("id", user.id);
+      // Não substituímos stripe_subscription_id aqui. Em upgrade START -> PRO,
+      // esse campo ainda aponta para a assinatura START que precisa permanecer
+      // ativa até a primeira cobrança PRO ser aprovada. O fulfillment resolve a
+      // nova assinatura pelo external_reference, cancela a anterior e só então
+      // grava o novo ID Mercado Pago no perfil.
 
       return json({
         success: true,

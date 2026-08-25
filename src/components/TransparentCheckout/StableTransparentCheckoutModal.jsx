@@ -25,11 +25,9 @@ function loadMercadoPagoSdk() {
   mercadoPagoSdkPromise = new Promise((resolve, reject) => {
     const existing = document.getElementById("mercadopago-js-v2");
     if (existing) {
-      existing.addEventListener(
-        "load",
-        () => resolve(window.MercadoPago),
-        { once: true },
-      );
+      existing.addEventListener("load", () => resolve(window.MercadoPago), {
+        once: true,
+      });
       existing.addEventListener(
         "error",
         () => reject(new Error("Não foi possível carregar o Mercado Pago.")),
@@ -76,6 +74,7 @@ export default function StableTransparentCheckoutModal({
   isOpen,
   onClose,
   jurisAmount,
+  aiCreditsAmount,
   isPro = false,
   planType,
   billingCycle,
@@ -95,6 +94,7 @@ export default function StableTransparentCheckoutModal({
 
   const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
   const amount = Number(displayAmount || 0);
+  const isAiCredits = Number(aiCreditsAmount || 0) > 0;
   const recurring =
     Boolean(isPro) &&
     !isPromoEligible &&
@@ -110,20 +110,32 @@ export default function StableTransparentCheckoutModal({
             : "Mensal";
       return `Plano ${planType || "PRO"} · ${cycle} · ${formatBRL(amount)}`;
     }
+
+    if (isAiCredits) {
+      return `${aiCreditsAmount} consultas de IA · ${formatBRL(amount)}`;
+    }
+
     return `${jurisAmount} Juris · ${formatBRL(amount)}`;
-  }, [amount, billingCycle, isPro, jurisAmount, planType]);
+  }, [aiCreditsAmount, amount, billingCycle, isAiCredits, isPro, jurisAmount, planType]);
 
   const notifySuccess = useCallback(async () => {
     if (successNotifiedRef.current) return;
     successNotifiedRef.current = true;
-    toast.success(isPro ? "Plano ativado com sucesso!" : "Juris creditados com sucesso!");
+
+    toast.success(
+      isPro
+        ? "Plano ativado com sucesso!"
+        : isAiCredits
+          ? "Créditos de IA adicionados com sucesso!"
+          : "Juris creditados com sucesso!",
+    );
 
     try {
       await onPaymentSuccess?.();
     } finally {
       window.setTimeout(() => onClose?.(), 700);
     }
-  }, [isPro, onClose, onPaymentSuccess]);
+  }, [isAiCredits, isPro, onClose, onPaymentSuccess]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -227,9 +239,10 @@ export default function StableTransparentCheckoutModal({
                     body: JSON.stringify({
                       planType: isPro ? planType : null,
                       billingCycle: isPro ? billingCycle : null,
-                      jurisAmount: isPro ? 0 : jurisAmount,
+                      jurisAmount: isPro || isAiCredits ? 0 : jurisAmount,
+                      aiCreditsAmount: isAiCredits ? aiCreditsAmount : 0,
                       isPromoEligible: Boolean(isPromoEligible),
-                      internalCouponId: couponData?.id || null,
+                      internalCouponId: isAiCredits ? null : couponData?.id || null,
                       paymentData: formData,
                     }),
                   });
@@ -296,15 +309,18 @@ export default function StableTransparentCheckoutModal({
       }
     };
   }, [
+    aiCreditsAmount,
     amount,
     billingCycle,
     couponData?.id,
+    isAiCredits,
     isOpen,
     isPro,
     isPromoEligible,
     jurisAmount,
     notifySuccess,
     planType,
+    processing,
     profileData?.email,
     publicKey,
     recurring,
@@ -359,7 +375,10 @@ export default function StableTransparentCheckoutModal({
           );
         }
       } catch (pollError) {
-        console.warn("[MercadoPago/Status] Verificação temporariamente indisponível:", pollError);
+        console.warn(
+          "[MercadoPago/Status] Verificação temporariamente indisponível:",
+          pollError,
+        );
       } finally {
         inFlight = false;
       }
@@ -390,6 +409,12 @@ export default function StableTransparentCheckoutModal({
     Boolean(result?.approved) || normalizedStatus(result?.status) === "approved";
   const pixPending = result?.kind === "pix" && !approved;
   const subscriptionPending = result?.kind === "subscription" && !approved;
+
+  const successMessage = isPro
+    ? "Seu plano foi atualizado automaticamente."
+    : isAiCredits
+      ? "Seus créditos de IA já foram adicionados automaticamente."
+      : "Seus Juris já foram creditados automaticamente.";
 
   return (
     <div
@@ -427,11 +452,7 @@ export default function StableTransparentCheckoutModal({
             <div style={styles.statusPanel}>
               <CheckCircle2 size={54} />
               <strong style={styles.statusTitle}>Pagamento aprovado</strong>
-              <span style={styles.muted}>
-                {isPro
-                  ? "Seu plano foi atualizado automaticamente."
-                  : "Seus Juris já foram creditados automaticamente."}
-              </span>
+              <span style={styles.muted}>{successMessage}</span>
             </div>
           ) : pixPending ? (
             <div style={styles.statusPanel}>
@@ -496,7 +517,8 @@ export default function StableTransparentCheckoutModal({
 
               {!brickReady && !error && (
                 <div style={styles.loadingBox}>
-                  <Loader2 size={22} style={styles.spinner} /> Carregando formas de pagamento...
+                  <Loader2 size={22} style={styles.spinner} /> Carregando formas de
+                  pagamento...
                 </div>
               )}
 

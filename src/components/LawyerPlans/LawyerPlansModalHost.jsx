@@ -56,6 +56,7 @@ export default function LawyerPlansModalHost({
         planType={checkout?.planId || null}
         billingCycle={checkout?.billingCycle || null}
         displayAmount={checkout?.amount || null}
+        renewalAmount={checkout?.renewalAmount || null}
         isPromoEligible={Boolean(checkout?.isPromoEligible)}
         couponData={checkout?.couponData || null}
         profileData={profileData}

@@ -52,6 +52,7 @@ export default function JurisPurchaseModalHost({
         isOpen={Boolean(checkout)}
         onClose={closeCheckout}
         jurisAmount={checkout?.jurisAmount || null}
+        displayAmount={checkout?.amount || null}
         isPro={false}
         couponData={checkout?.couponData || null}
         profileData={profileData}

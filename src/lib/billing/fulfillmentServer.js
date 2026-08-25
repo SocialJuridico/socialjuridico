@@ -14,7 +14,10 @@ import {
   applyRsDiscountCents,
   isRsLawyer,
 } from "@/lib/lawyerDiscount";
-import { updateMercadoPagoSubscription } from "@/lib/mercadopago/client";
+import {
+  searchMercadoPagoSubscriptionsByEmail,
+  updateMercadoPagoSubscription,
+} from "@/lib/mercadopago/client";
 
 function cents(value) {
   return Math.round(Number(value || 0) * 100);
@@ -112,17 +115,67 @@ function calculateNextExpiration(currentExpiration, days, samePlan) {
   return new Date(base + Number(days || 0) * 86_400_000).toISOString();
 }
 
-function mercadoPagoSubscriptionId(lawyer, payment) {
-  const direct = String(
+function directPaymentSubscriptionId(payment) {
+  return String(
     payment?.metadata?.preapproval_id ||
       payment?.metadata?.subscription_id ||
       payment?.subscription_id ||
       "",
   ).trim();
-  if (direct) return direct;
+}
 
+function storedMercadoPagoSubscriptionId(lawyer) {
   const stored = String(lawyer?.stripe_subscription_id || "").trim();
   return stored.startsWith("mp_") ? stored.slice(3) : null;
+}
+
+async function resolveMercadoPagoSubscriptionId({
+  lawyer,
+  product,
+  payment,
+  reference,
+  explicitSubscriptionId = null,
+  firstRecurringCharge = false,
+}) {
+  const explicit = String(explicitSubscriptionId || "").trim();
+  if (explicit) return explicit;
+
+  const direct = directPaymentSubscriptionId(payment);
+  if (direct) return direct;
+
+  // Na primeira cobrança não usamos cegamente o ID salvo no perfil: em um
+  // upgrade START -> PRO ele ainda pertence à assinatura START. Localizamos a
+  // nova assinatura pelo mesmo external_reference da cobrança.
+  if (firstRecurringCharge && lawyer?.email) {
+    const search = await searchMercadoPagoSubscriptionsByEmail(lawyer.email);
+    const subscriptions = Array.isArray(search?.results) ? search.results : [];
+    const matching = subscriptions.filter(
+      (subscription) =>
+        String(subscription?.external_reference || "").trim() === reference,
+    );
+
+    const preferred =
+      matching.find((subscription) =>
+        ["authorized", "pending"].includes(
+          String(subscription?.status || "").toLowerCase(),
+        ),
+      ) || matching[0];
+
+    if (preferred?.id) return String(preferred.id);
+
+    throw new Error(
+      `Assinatura Mercado Pago da cobrança ${reference.slice(-8)} não localizada.`,
+    );
+  }
+
+  const stored = storedMercadoPagoSubscriptionId(lawyer);
+  if (stored) return stored;
+
+  if (product?.recurring) {
+    throw new Error("Assinatura Mercado Pago não localizada para a cobrança.");
+  }
+
+  return null;
 }
 
 function renewalPriceInCents(lawyer, product) {
@@ -139,14 +192,11 @@ function renewalPriceInCents(lawyer, product) {
 }
 
 async function normalizeNextSubscriptionCharge({
+  subscriptionId,
   lawyer,
   product,
-  payment,
   initialPaidCents,
 }) {
-  if (!product?.recurring) return null;
-
-  const subscriptionId = mercadoPagoSubscriptionId(lawyer, payment);
   const renewalCents = renewalPriceInCents(lawyer, product);
 
   if (!subscriptionId || !renewalCents || renewalCents === initialPaidCents) {
@@ -161,6 +211,34 @@ async function normalizeNextSubscriptionCharge({
   });
 
   return { subscriptionId, renewalCents, changed: true };
+}
+
+async function cancelPreviousSubscriptionOnUpgrade({
+  lawyer,
+  product,
+  newSubscriptionId,
+}) {
+  const currentPlan = String(lawyer?.plan_type || "").toUpperCase();
+  if (currentPlan !== "START" || product?.planType !== "PRO") {
+    return { cancelled: false };
+  }
+
+  const previousSubscriptionId = storedMercadoPagoSubscriptionId(lawyer);
+  if (
+    !previousSubscriptionId ||
+    previousSubscriptionId === String(newSubscriptionId || "")
+  ) {
+    return { cancelled: false };
+  }
+
+  await updateMercadoPagoSubscription(previousSubscriptionId, {
+    status: "canceled",
+  });
+
+  return {
+    cancelled: true,
+    previousSubscriptionId,
+  };
 }
 
 async function applyProduct(lawyer, product, { subscriptionId = null } = {}) {
@@ -193,8 +271,7 @@ async function applyProduct(lawyer, product, { subscriptionId = null } = {}) {
     balance: newBalance,
     subscription_status: "ACTIVE",
 
-    // Os campos históricos passam a representar a nova regra comercial:
-    // depois de ter qualquer START/PRO, nenhuma promoção de primeiro mês volta
+    // Depois de ter qualquer START/PRO, nenhuma promoção de primeiro mês volta
     // a ficar disponível, mesmo que o plano expire no futuro.
     promo_start_used: true,
     promo_pro_used: true,
@@ -289,7 +366,10 @@ async function claimOneTimeTransaction(transaction) {
   };
 }
 
-export async function fulfillMercadoPagoPayment(payment) {
+export async function fulfillMercadoPagoPayment(
+  payment,
+  { subscriptionId: explicitSubscriptionId = null } = {},
+) {
   if (!supabaseAdmin) throw new Error("Serviço financeiro indisponível.");
 
   const paymentId = String(payment?.id || "").trim();
@@ -419,16 +499,31 @@ export async function fulfillMercadoPagoPayment(payment) {
       lawyer = await loadLawyer(referenceTransaction.advogado_id);
     }
 
-    let subscriptionId = mercadoPagoSubscriptionId(lawyer, payment);
-
-    if (firstRecurringCharge) {
-      const normalized = await normalizeNextSubscriptionCharge({
+    let subscriptionId = null;
+    if (isRecurringPayment) {
+      subscriptionId = await resolveMercadoPagoSubscriptionId({
         lawyer,
         product,
         payment,
+        reference,
+        explicitSubscriptionId,
+        firstRecurringCharge,
+      });
+    }
+
+    if (firstRecurringCharge) {
+      await normalizeNextSubscriptionCharge({
+        subscriptionId,
+        lawyer,
+        product,
         initialPaidCents: paidCents,
       });
-      subscriptionId = normalized?.subscriptionId || subscriptionId;
+
+      await cancelPreviousSubscriptionOnUpgrade({
+        lawyer,
+        product,
+        newSubscriptionId: subscriptionId,
+      });
     }
 
     const { newBalance } = await applyProduct(lawyer, product, {
@@ -516,8 +611,13 @@ export async function syncMercadoPagoSubscription(subscription) {
           ? "CANCELED"
           : normalizedStatus.toUpperCase() || "PENDING";
 
+  // Só substitui o ID ativo do perfil depois que a assinatura já teve uma
+  // cobrança aprovada. Antes disso um upgrade ainda precisa preservar o ID da
+  // assinatura atual para poder cancelá-la com segurança.
   const update = { subscription_status: profileStatus };
-  if (subscription?.id) update.stripe_subscription_id = `mp_${subscription.id}`;
+  if (alreadyPaid && subscription?.id) {
+    update.stripe_subscription_id = `mp_${subscription.id}`;
+  }
 
   const { error } = await supabaseAdmin
     .from("advogados")

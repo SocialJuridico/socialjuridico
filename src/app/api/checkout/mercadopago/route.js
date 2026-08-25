@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabaseServer";
 import { supabaseAdmin } from "@/lib/supabase";
 import { isRsLawyer } from "@/lib/lawyerDiscount";
 import { assertLawyerPlanPurchaseAllowed } from "@/lib/lawyerPlans/planAccessServer";
+import { hasLawyerPlanHistory } from "@/lib/billing/planHistoryServer";
 import {
   COUPON_TYPES,
   releaseCouponReservation,
@@ -185,13 +186,25 @@ export async function POST(request) {
 
     if (!isJuris && !isAiCredits) {
       assertLawyerPlanPurchaseAllowed(profile, planType);
+      profile.has_plan_history = await hasLawyerPlanHistory(
+        supabaseAdmin,
+        user.id,
+        profile,
+      );
     }
 
-    const couponSupported =
+    const promoEligible =
+      !isJuris &&
       !isAiCredits &&
-      internalCouponId &&
-      (isJuris || billingCycle === "AVULSO") &&
-      !(billingCycle === "MONTHLY" && requestedPromo);
+      billingCycle === "MONTHLY" &&
+      requestedPromo &&
+      !profile.has_plan_history;
+
+    // Cupons são gerenciados pelo Social Jurídico. Eles podem ser usados em
+    // Juris, avulso e também na PRIMEIRA cobrança de mensal/anual. Promoção de
+    // primeiro mês não acumula com cupom.
+    const couponSupported =
+      !isAiCredits && Boolean(internalCouponId) && !promoEligible;
 
     if (couponSupported) {
       reservation = await reserveCouponForCheckout(supabaseAdmin, {
@@ -207,7 +220,7 @@ export async function POST(request) {
       billingCycle,
       jurisAmount,
       aiCreditsAmount,
-      requestedPromo,
+      requestedPromo: promoEligible,
       profile,
       isRs: isRsLawyer(profile),
       coupon: reservation?.coupon || null,
@@ -219,8 +232,21 @@ export async function POST(request) {
       throw error;
     }
 
+    // Se o advogado é OAB/RS e o benefício da parceria é melhor que o cupom,
+    // o backend usa a melhor condição e libera o cupom sem consumi-lo.
+    if (reservation && !product.couponApplied) {
+      await releaseCouponReservation(
+        supabaseAdmin,
+        reservation.reservationToken,
+        user.id,
+      );
+      reservation = null;
+    }
+
     if (!product.priceInCents || product.priceInCents < 50) {
-      const error = new Error("Valor de cobrança inválido.");
+      const error = new Error(
+        "O desconto deixa a cobrança abaixo do valor mínimo permitido.",
+      );
       error.status = 422;
       throw error;
     }
@@ -288,6 +314,8 @@ export async function POST(request) {
         subscriptionId: subscription.id,
         status: subscription.status || "authorized",
         amount: product.priceInCents,
+        renewalAmount: product.renewalPriceInCents,
+        discountSource: product.discountSource,
         recurring: true,
       });
     }
@@ -346,6 +374,7 @@ export async function POST(request) {
       status: payment.status,
       statusDetail: payment.status_detail || null,
       amount: product.priceInCents,
+      discountSource: product.discountSource,
       approved: fulfillment?.status === "approved",
       qrCode: transactionData.qr_code || null,
       qrCodeBase64: transactionData.qr_code_base64 || null,

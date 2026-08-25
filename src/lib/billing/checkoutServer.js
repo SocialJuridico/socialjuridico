@@ -4,16 +4,16 @@ import {
   getLawyerPlan,
   getLawyerPlanPrice,
 } from "@/lib/billing/catalog";
+import { profileHasPlanHistory } from "@/lib/billing/planEligibility";
 import {
   COUPON_TYPES,
   calculateDiscountedAmount,
 } from "@/lib/coupons/couponServer";
 import { applyRsDiscountCents } from "@/lib/lawyerDiscount";
 
-export function promoAlreadyUsed(profile, planType) {
-  return String(planType || "").toUpperCase() === "PRO"
-    ? Boolean(profile?.promo_pro_used)
-    : Boolean(profile?.promo_start_used);
+function recurringRsPrice(baseCents, planType, recurring, isRs) {
+  if (!recurring || !isRs) return Number(baseCents || 0);
+  return applyRsDiscountCents(baseCents, planType);
 }
 
 export function resolveCheckoutProduct({
@@ -40,16 +40,19 @@ export function resolveCheckoutProduct({
       recurring: false,
       priceInCents: aiPackage.cents,
       basePriceInCents: aiPackage.cents,
+      renewalPriceInCents: null,
       couponType: null,
+      couponApplied: false,
+      discountSource: null,
       description: `Pacote ${aiPackage.amount} consultas de IA`,
     };
   }
 
   const jurisPackage = getJurisPackage(jurisAmount);
-
   if (jurisPackage) {
-    let cents = jurisPackage.cents;
-    if (coupon) cents = calculateDiscountedAmount(cents, coupon);
+    const cents = coupon
+      ? calculateDiscountedAmount(jurisPackage.cents, coupon)
+      : jurisPackage.cents;
 
     return {
       type: "JURIS_PURCHASE",
@@ -63,7 +66,10 @@ export function resolveCheckoutProduct({
       recurring: false,
       priceInCents: cents,
       basePriceInCents: jurisPackage.cents,
+      renewalPriceInCents: null,
       couponType: COUPON_TYPES.JURIS,
+      couponApplied: Boolean(coupon),
+      discountSource: coupon ? "COUPON" : null,
       description: `Pacote ${jurisPackage.amount} Juris`,
     };
   }
@@ -75,11 +81,23 @@ export function resolveCheckoutProduct({
 
   if (!plan || !price) return null;
 
+  const recurring = Boolean(price.recurring);
+  const renewalPriceInCents = recurringRsPrice(
+    price.cents,
+    normalizedPlan,
+    recurring,
+    isRs,
+  );
+
   const promo =
     normalizedCycle === "MONTHLY" &&
     Boolean(requestedPromo) &&
-    !promoAlreadyUsed(profile, normalizedPlan);
+    !profileHasPlanHistory(profile);
 
+  // A promoção de primeiro mês é uma condição exclusiva para quem nunca teve
+  // START/PRO. No mensal ela já nasce como assinatura: a primeira cobrança usa
+  // o valor promocional e, após a aprovação, a recorrência é ajustada para o
+  // preço normal (ou OAB/RS) pelo fulfillment.
   if (promo) {
     return {
       type: "PRO_SUBSCRIPTION",
@@ -90,22 +108,43 @@ export function resolveCheckoutProduct({
       aiCreditsAmount: 0,
       expirationDays: price.days,
       promo: true,
-      recurring: false,
+      recurring: true,
       priceInCents: plan.promoCents,
       basePriceInCents: price.cents,
+      renewalPriceInCents,
       couponType: COUPON_TYPES.PLAN,
-      description: `Plano ${normalizedPlan} promocional - 30 dias`,
+      couponApplied: false,
+      discountSource: "PROMO",
+      description: `Plano ${normalizedPlan} promocional - primeiro mês`,
     };
   }
 
-  let cents = price.cents;
-  let discountSource = null;
+  const baseCents = price.cents;
+  const rsEligible = recurring && Boolean(isRs);
+  const rsCents = rsEligible
+    ? applyRsDiscountCents(baseCents, normalizedPlan)
+    : baseCents;
+  const couponCents = coupon
+    ? calculateDiscountedAmount(baseCents, coupon)
+    : baseCents;
 
-  if (coupon && normalizedCycle === "AVULSO") {
-    cents = calculateDiscountedAmount(cents, coupon);
-    discountSource = "COUPON";
-  } else if (isRs) {
-    cents = applyRsDiscountCents(cents, normalizedPlan);
+  let cents = baseCents;
+  let discountSource = null;
+  let couponApplied = false;
+
+  if (coupon) {
+    // Cupom e OAB/RS não acumulam. Na primeira cobrança o usuário sempre recebe
+    // a melhor condição. Se OAB/RS já for melhor, o cupom não é consumido.
+    if (rsEligible && rsCents <= couponCents) {
+      cents = rsCents;
+      discountSource = "OAB_RS";
+    } else {
+      cents = couponCents;
+      discountSource = "COUPON";
+      couponApplied = true;
+    }
+  } else if (rsEligible) {
+    cents = rsCents;
     discountSource = "OAB_RS";
   }
 
@@ -125,10 +164,12 @@ export function resolveCheckoutProduct({
     aiCreditsAmount: 0,
     expirationDays: price.days,
     promo: false,
-    recurring: Boolean(price.recurring),
+    recurring,
     priceInCents: cents,
-    basePriceInCents: price.cents,
+    basePriceInCents: baseCents,
+    renewalPriceInCents: recurring ? renewalPriceInCents : null,
     couponType: COUPON_TYPES.PLAN,
+    couponApplied,
     discountSource,
     description: `Plano ${normalizedPlan} ${cycleLabel}`,
   };

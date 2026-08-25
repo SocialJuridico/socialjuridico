@@ -17,7 +17,7 @@ export default function LawyerPlansModalHost({
   const checkoutKey = useMemo(
     () =>
       checkout
-        ? `${checkout.planId}-${checkout.billingCycle}-${checkout.priceId}`
+        ? `${checkout.planId}-${checkout.billingCycle}-${checkout.isPromoEligible ? "promo" : "normal"}`
         : "closed-plan-checkout",
     [checkout],
   );
@@ -52,8 +52,11 @@ export default function LawyerPlansModalHost({
         key={checkoutKey}
         isOpen={Boolean(checkout)}
         onClose={closeCheckout}
-        jurisAmount={checkout?.amount || null}
         isPro={Boolean(checkout)}
+        planType={checkout?.planId || null}
+        billingCycle={checkout?.billingCycle || null}
+        displayAmount={checkout?.amount || null}
+        isPromoEligible={Boolean(checkout?.isPromoEligible)}
         couponData={checkout?.couponData || null}
         profileData={profileData}
         onPaymentSuccess={handlePaymentSuccess}

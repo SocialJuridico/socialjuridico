@@ -28,6 +28,20 @@ export const PLAN_LIMITS = {
   },
 };
 
+const BLOCKED_SUBSCRIPTION_STATUSES = new Set([
+  "CANCELED",
+  "CANCELLED",
+  "UNPAID",
+  "BLOCKED",
+  "REJECTED",
+  "FAILED",
+]);
+
+const PROVISIONAL_SUBSCRIPTION_STATUSES = new Set([
+  "PENDING_PAYMENT",
+  "ACTIVATING",
+]);
+
 export function isPremiumPlanCurrentlyActive(profile = {}) {
   if (profile.is_premium !== true) return false;
 
@@ -36,6 +50,22 @@ export function isPremiumPlanCurrentlyActive(profile = {}) {
 
   const hasPaidPlan = rawPlanType === "START" || rawPlanType === "PRO" || rawPlanType === "FREE";
   if (!hasPaidPlan) return false;
+
+  const subscriptionStatus = String(profile.subscription_status || "")
+    .trim()
+    .toUpperCase();
+
+  if (BLOCKED_SUBSCRIPTION_STATUSES.has(subscriptionStatus)) return false;
+
+  // Uma assinatura recém-criada pode levar alguns minutos até gerar a primeira
+  // cobrança. Durante essa janela START/PRO têm acesso provisório, mas nenhum
+  // Juris é creditado até o pagamento ser efetivamente aprovado.
+  if (
+    PROVISIONAL_SUBSCRIPTION_STATUSES.has(subscriptionStatus) &&
+    ["START", "PRO"].includes(rawPlanType)
+  ) {
+    return true;
+  }
 
   if (!profile.premium_expires_at) return false;
   const expiresAt = new Date(profile.premium_expires_at);
@@ -56,7 +86,7 @@ export async function getUserPlanLimits(supabaseDb, userId) {
   let { data: user, error } = await supabaseDb
     .from("advogados")
     .select(
-      "plan_type, is_premium, premium_expires_at, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb",
+      "plan_type, is_premium, premium_expires_at, subscription_status, uso_redator_ia, uso_triagem, uso_agenda, uso_storage_mb, extra_redator_ia, extra_triagem, extra_storage_mb",
     )
     .eq("id", userId)
     .maybeSingle();

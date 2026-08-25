@@ -34,10 +34,18 @@ export default function LawyerPlansModalHost({
     [onClose],
   );
 
-  const handlePaymentSuccess = useCallback(async () => {
-    await onProfileRefresh?.();
-    setCheckout(null);
-  }, [onProfileRefresh]);
+  const handlePaymentSuccess = useCallback(
+    async (context = null) => {
+      await onProfileRefresh?.();
+
+      // Ao criar uma assinatura o acesso provisório precisa aparecer no painel
+      // sem fechar a tela que continua acompanhando a primeira cobrança.
+      if (context?.provisional) return;
+
+      setCheckout(null);
+    },
+    [onProfileRefresh],
+  );
 
   return (
     <>

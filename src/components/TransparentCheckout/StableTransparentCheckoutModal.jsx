@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   CheckCircle2,
   Clipboard,
@@ -70,6 +77,14 @@ function normalizedStatus(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function isRecurringCycle(value) {
+  return ["MONTHLY", "ANNUAL"].includes(
+    String(value || "")
+      .trim()
+      .toUpperCase(),
+  );
+}
+
 export default function StableTransparentCheckoutModal({
   isOpen,
   onClose,
@@ -79,6 +94,7 @@ export default function StableTransparentCheckoutModal({
   planType,
   billingCycle,
   displayAmount,
+  renewalAmount,
   isPromoEligible = false,
   couponData,
   profileData,
@@ -87,6 +103,11 @@ export default function StableTransparentCheckoutModal({
   const controllerRef = useRef(null);
   const successNotifiedRef = useRef(false);
   const mountedRef = useRef(false);
+  const processingRef = useRef(false);
+  const brickIdRef = useRef(
+    `sj-mp-payment-${Math.random().toString(36).slice(2, 10)}`,
+  );
+
   const [brickReady, setBrickReady] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
@@ -94,11 +115,9 @@ export default function StableTransparentCheckoutModal({
 
   const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
   const amount = Number(displayAmount || 0);
+  const nextAmount = Number(renewalAmount || 0);
   const isAiCredits = Number(aiCreditsAmount || 0) > 0;
-  const recurring =
-    Boolean(isPro) &&
-    !isPromoEligible &&
-    ["MONTHLY", "ANNUAL"].includes(String(billingCycle || "").toUpperCase());
+  const recurring = Boolean(isPro) && isRecurringCycle(billingCycle);
 
   const summary = useMemo(() => {
     if (isPro) {
@@ -145,8 +164,13 @@ export default function StableTransparentCheckoutModal({
   }, []);
 
   useEffect(() => {
+    processingRef.current = processing;
+  }, [processing]);
+
+  useEffect(() => {
     if (!isOpen) {
       successNotifiedRef.current = false;
+      processingRef.current = false;
       setBrickReady(false);
       setProcessing(false);
       setError("");
@@ -207,9 +231,7 @@ export default function StableTransparentCheckoutModal({
           customization: {
             paymentMethods,
             visual: {
-              style: {
-                theme: "dark",
-              },
+              style: { theme: "dark" },
             },
           },
           callbacks: {
@@ -224,11 +246,12 @@ export default function StableTransparentCheckoutModal({
             },
             onSubmit: ({ formData }) =>
               new Promise(async (resolve, reject) => {
-                if (processing) {
+                if (processingRef.current) {
                   resolve();
                   return;
                 }
 
+                processingRef.current = true;
                 setProcessing(true);
                 setError("");
 
@@ -261,7 +284,9 @@ export default function StableTransparentCheckoutModal({
                   } else if (data.kind === "pix") {
                     toast.success("PIX gerado. Aguardando o pagamento.");
                   } else if (data.kind === "subscription") {
-                    toast.success("Assinatura criada. Confirmando a primeira cobrança.");
+                    toast.success(
+                      "Assinatura criada. Confirmando a primeira cobrança.",
+                    );
                   } else {
                     toast("Pagamento enviado para análise.");
                   }
@@ -271,11 +296,13 @@ export default function StableTransparentCheckoutModal({
                   console.error("[MercadoPago/Checkout] Falha:", submitError);
                   if (mountedRef.current) {
                     setError(
-                      submitError.message || "Não foi possível processar o pagamento.",
+                      submitError.message ||
+                        "Não foi possível processar o pagamento.",
                     );
                   }
                   reject(submitError);
                 } finally {
+                  processingRef.current = false;
                   if (mountedRef.current) setProcessing(false);
                 }
               }),
@@ -284,7 +311,7 @@ export default function StableTransparentCheckoutModal({
 
         localController = await bricksBuilder.create(
           "payment",
-          "sj-mercadopago-payment-brick",
+          brickIdRef.current,
           settings,
         );
         controllerRef.current = localController;
@@ -320,7 +347,6 @@ export default function StableTransparentCheckoutModal({
     jurisAmount,
     notifySuccess,
     planType,
-    processing,
     profileData?.email,
     publicKey,
     recurring,
@@ -391,7 +417,13 @@ export default function StableTransparentCheckoutModal({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [isOpen, notifySuccess, result]);
+  }, [
+    isOpen,
+    notifySuccess,
+    result?.approved,
+    result?.paymentId,
+    result?.subscriptionId,
+  ]);
 
   const copyPix = useCallback(async () => {
     if (!result?.qrCode) return;
@@ -403,7 +435,7 @@ export default function StableTransparentCheckoutModal({
     }
   }, [result?.qrCode]);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
   const approved =
     Boolean(result?.approved) || normalizedStatus(result?.status) === "approved";
@@ -416,7 +448,7 @@ export default function StableTransparentCheckoutModal({
       ? "Seus créditos de IA já foram adicionados automaticamente."
       : "Seus Juris já foram creditados automaticamente.";
 
-  return (
+  const checkout = (
     <div
       style={styles.overlay}
       onMouseDown={(event) => {
@@ -472,7 +504,11 @@ export default function StableTransparentCheckoutModal({
               )}
 
               {result.qrCode && (
-                <button type="button" style={styles.primaryButton} onClick={copyPix}>
+                <button
+                  type="button"
+                  style={styles.primaryButton}
+                  onClick={copyPix}
+                >
                   <Clipboard size={17} /> Copiar PIX copia e cola
                 </button>
               )}
@@ -508,12 +544,27 @@ export default function StableTransparentCheckoutModal({
 
               {recurring && (
                 <div style={styles.infoBox}>
-                  Renovação automática via cartão. Você poderá cancelar a
-                  assinatura sem perder o período já pago.
+                  {isPromoEligible ? (
+                    <>
+                      Primeira cobrança promocional de <strong>{formatBRL(amount)}</strong>.
+                      {nextAmount > 0 && (
+                        <> Próximas cobranças: <strong>{formatBRL(nextAmount)}</strong>.</>
+                      )}
+                    </>
+                  ) : couponData ? (
+                    <>
+                      O cupom vale nesta primeira cobrança.
+                      {nextAmount > 0 && (
+                        <> Próximas cobranças: <strong>{formatBRL(nextAmount)}</strong>.</>
+                      )}
+                    </>
+                  ) : (
+                    <>Renovação automática via cartão no ciclo selecionado.</>
+                  )}
                 </div>
               )}
 
-              <div id="sj-mercadopago-payment-brick" style={styles.brickContainer} />
+              <div id={brickIdRef.current} style={styles.brickContainer} />
 
               {!brickReady && !error && (
                 <div style={styles.loadingBox}>
@@ -534,23 +585,32 @@ export default function StableTransparentCheckoutModal({
       </section>
     </div>
   );
+
+  // O portal é obrigatório: alguns cabeçalhos/sidebars do dashboard criam
+  // stacking contexts próprios. Sem portal, um modal fixed pode ficar preso,
+  // deslocado ou cortado acima do viewport, especialmente no checkout da extensão.
+  return createPortal(checkout, document.body);
 }
 
 const styles = {
   overlay: {
     position: "fixed",
     inset: 0,
-    zIndex: 100000,
-    display: "grid",
-    placeItems: "center",
-    padding: 16,
+    zIndex: 2147483000,
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    overflowY: "auto",
+    overscrollBehavior: "contain",
+    padding: "16px",
     background: "rgba(3, 6, 15, 0.84)",
     backdropFilter: "blur(8px)",
   },
   modal: {
     width: "min(100%, 620px)",
-    maxHeight: "calc(100vh - 28px)",
+    maxHeight: "calc(100dvh - 32px)",
     overflowY: "auto",
+    margin: "0 auto",
     border: "1px solid rgba(212, 175, 55, 0.28)",
     borderRadius: 18,
     background: "#0f1420",
@@ -558,11 +618,15 @@ const styles = {
     boxShadow: "0 24px 80px rgba(0,0,0,.55)",
   },
   header: {
+    position: "sticky",
+    top: 0,
+    zIndex: 2,
     display: "flex",
     justifyContent: "space-between",
     gap: 16,
     padding: "20px 22px",
     borderBottom: "1px solid rgba(255,255,255,.08)",
+    background: "#0f1420",
   },
   title: {
     display: "flex",
@@ -573,6 +637,7 @@ const styles = {
   },
   subtitle: { margin: "6px 0 0", color: "#a8b0c2", fontSize: 14 },
   closeButton: {
+    flex: "0 0 auto",
     width: 38,
     height: 38,
     display: "grid",

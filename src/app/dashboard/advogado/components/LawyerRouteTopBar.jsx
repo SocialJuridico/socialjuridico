@@ -17,12 +17,11 @@ export default function LawyerRouteTopBar({ title, subtitle, icon: Icon }) {
     userName,
     setIsSidebarOpen,
     openJurisModal,
+    refreshProfile,
   } = useLawyerSession();
   const [showAiCreditsModal, setShowAiCreditsModal] = useState(false);
   const [showAiHistoryModal, setShowAiHistoryModal] = useState(false);
 
-  // Consultas de IA disponíveis = cota grátis restante do mês (por plano) +
-  // créditos comprados na carteira da extensão.
   const interpretarTotal = getInterpretarAvailability(profileData || {}).total;
 
   const safeName = userName || profileData?.name || "Advogado";
@@ -86,6 +85,8 @@ export default function LawyerRouteTopBar({ title, subtitle, icon: Icon }) {
           isOpen={showAiCreditsModal}
           onClose={() => setShowAiCreditsModal(false)}
           lawyerEmail={profileData?.email}
+          profileData={profileData}
+          onProfileRefresh={refreshProfile}
         />
         <AiUsageHistoryModal
           isOpen={showAiHistoryModal}

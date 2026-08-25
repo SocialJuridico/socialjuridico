@@ -10,6 +10,12 @@ import {
   normalizedMercadoPagoOrderStatus,
 } from "@/lib/billing/mercadoPagoOrderServer";
 import {
+  isSubscriptionChargeFailure,
+  rollbackProvisionalPlanAccess,
+  subscriptionInvoicePaymentStatus,
+} from "@/lib/billing/subscriptionProvisioningServer";
+import {
+  getMercadoPagoAuthorizedPayment,
   getMercadoPagoOrder,
   getMercadoPagoPayment,
   getMercadoPagoSubscription,
@@ -24,6 +30,17 @@ function json(payload, status = 200) {
     status,
     headers: { "Cache-Control": "no-store" },
   });
+}
+
+async function referenceFromAuthorizedPayment(invoice) {
+  const direct = String(invoice?.external_reference || "").trim();
+  if (direct) return direct;
+
+  const subscriptionId = String(invoice?.preapproval_id || "").trim();
+  if (!subscriptionId) return "";
+
+  const subscription = await getMercadoPagoSubscription(subscriptionId);
+  return String(subscription?.external_reference || "").trim();
 }
 
 export async function POST(request) {
@@ -71,14 +88,65 @@ export async function POST(request) {
     }
 
     if (type === "payment") {
-      // Mantido para cobranças geradas pela API de Assinaturas.
+      // Cobranças da API de Assinaturas também materializam objetos da Payments
+      // API. O objeto é sempre buscado novamente no Mercado Pago antes de agir.
       const payment = await getMercadoPagoPayment(dataId);
       const result = await fulfillMercadoPagoPayment(payment);
+      const reference = String(payment?.external_reference || "").trim();
+
+      if (
+        reference &&
+        result?.status !== "approved" &&
+        isSubscriptionChargeFailure(payment?.status)
+      ) {
+        await rollbackProvisionalPlanAccess({
+          reference,
+          failureStatus: payment.status,
+        });
+      }
 
       return json({
         success: true,
         handled: result?.handled !== false,
         status: payment?.status || null,
+        duplicate: Boolean(result?.duplicate),
+      });
+    }
+
+    if (type === "subscription_authorized_payment") {
+      // Evento específico das faturas de assinatura. Ele permite ligar a
+      // primeira cobrança ao preapproval sem depender apenas de uma busca por
+      // external_reference.
+      const invoice = await getMercadoPagoAuthorizedPayment(dataId);
+      const subscriptionId = String(invoice?.preapproval_id || "").trim();
+      const linkedPaymentId = String(invoice?.payment?.id || "").trim();
+      const reference = await referenceFromAuthorizedPayment(invoice);
+      let result = { handled: true };
+      let status = subscriptionInvoicePaymentStatus(invoice);
+
+      if (linkedPaymentId) {
+        const payment = await getMercadoPagoPayment(linkedPaymentId);
+        status = String(payment?.status || status || "").toLowerCase();
+        result = await fulfillMercadoPagoPayment(payment, {
+          subscriptionId: subscriptionId || null,
+        });
+      }
+
+      if (
+        reference &&
+        result?.status !== "approved" &&
+        isSubscriptionChargeFailure(status)
+      ) {
+        await rollbackProvisionalPlanAccess({
+          reference,
+          failureStatus: status,
+        });
+      }
+
+      return json({
+        success: true,
+        handled: result?.handled !== false,
+        status: status || null,
         duplicate: Boolean(result?.duplicate),
       });
     }
@@ -90,6 +158,18 @@ export async function POST(request) {
     ) {
       const subscription = await getMercadoPagoSubscription(dataId);
       const result = await syncMercadoPagoSubscription(subscription);
+      const subscriptionStatus = String(subscription?.status || "").toLowerCase();
+      const reference = String(subscription?.external_reference || "").trim();
+
+      if (
+        reference &&
+        ["cancelled", "canceled"].includes(subscriptionStatus)
+      ) {
+        await rollbackProvisionalPlanAccess({
+          reference,
+          failureStatus: subscriptionStatus,
+        });
+      }
 
       return json({
         success: true,
@@ -120,6 +200,7 @@ export async function GET() {
     success: true,
     provider: "MERCADOPAGO",
     checkoutApi: "ORDERS",
+    subscriptions: "PREAPPROVAL",
     webhook: "ready",
   });
 }

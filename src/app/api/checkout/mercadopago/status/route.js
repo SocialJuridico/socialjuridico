@@ -7,6 +7,12 @@ import {
   syncMercadoPagoSubscription,
 } from "@/lib/billing/fulfillmentServer";
 import {
+  fulfillMercadoPagoOrder,
+  isMercadoPagoOrderApproved,
+  mercadoPagoOrderCheckoutData,
+} from "@/lib/billing/mercadoPagoOrderServer";
+import {
+  getMercadoPagoOrder,
   getMercadoPagoPayment,
   getMercadoPagoSubscription,
   searchMercadoPagoPaymentsByReference,
@@ -56,19 +62,50 @@ export async function GET(request) {
     }
 
     const url = new URL(request.url);
+    const orderId = String(url.searchParams.get("orderId") || "").trim();
     const paymentId = String(url.searchParams.get("paymentId") || "").trim();
     const subscriptionId = String(
       url.searchParams.get("subscriptionId") || "",
     ).trim();
+    const effectiveOrderId =
+      orderId || (/^ORD/i.test(paymentId) ? paymentId : "");
 
-    if (!paymentId && !subscriptionId) {
+    if (!effectiveOrderId && !paymentId && !subscriptionId) {
       return json(
         { success: false, message: "Identificador do pagamento ausente." },
         400,
       );
     }
 
+    if (effectiveOrderId) {
+      const order = await getMercadoPagoOrder(effectiveOrderId);
+      const reference = String(order?.external_reference || "").trim();
+      if (!reference) {
+        return json(
+          { success: false, message: "Order sem referência." },
+          422,
+        );
+      }
+
+      await assertReferenceOwner(reference, user.id);
+
+      const fulfillment = isMercadoPagoOrderApproved(order)
+        ? await fulfillMercadoPagoOrder(order)
+        : null;
+      const checkoutData = mercadoPagoOrderCheckoutData(order);
+
+      return json({
+        success: true,
+        kind:
+          checkoutData.paymentMethodId === "pix" ? "pix" : "card",
+        ...checkoutData,
+        approved: fulfillment?.status === "approved",
+      });
+    }
+
     if (paymentId) {
+      // Compatibilidade com cobranças da API de Assinaturas, que ainda gera
+      // eventos/objetos da Payments API.
       const payment = await getMercadoPagoPayment(paymentId);
       const reference = String(payment?.external_reference || "").trim();
       if (!reference) {
@@ -115,9 +152,6 @@ export async function GET(request) {
     const payments = Array.isArray(search?.results) ? search.results : [];
     let approvedPayment = null;
 
-    // Processa todos os pagamentos aprovados encontrados. A entrega é idempotente,
-    // então isto também recupera uma eventual notificação perdida. O ID explícito
-    // da assinatura evita qualquer ambiguidade durante upgrade START -> PRO.
     for (const payment of [...payments].reverse()) {
       if (String(payment?.status || "").toLowerCase() !== "approved") continue;
       const result = await fulfillMercadoPagoPayment(payment, {

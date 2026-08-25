@@ -21,11 +21,10 @@ function parseResponseBody(text) {
   }
 }
 
-export async function mercadoPagoRequest(path, {
-  method = "GET",
-  body,
-  idempotencyKey,
-} = {}) {
+export async function mercadoPagoRequest(
+  path,
+  { method = "GET", body, idempotencyKey } = {},
+) {
   const headers = {
     Authorization: `Bearer ${accessToken()}`,
     "Content-Type": "application/json",
@@ -69,6 +68,16 @@ export function getMercadoPagoPayment(paymentId) {
   return mercadoPagoRequest(`/v1/payments/${encodeURIComponent(String(paymentId))}`);
 }
 
+export function searchMercadoPagoPaymentsByReference(reference) {
+  const query = new URLSearchParams({
+    external_reference: String(reference),
+    sort: "date_created",
+    criteria: "desc",
+    limit: "20",
+  });
+  return mercadoPagoRequest(`/v1/payments/search?${query.toString()}`);
+}
+
 export function getMercadoPagoSubscription(subscriptionId) {
   return mercadoPagoRequest(`/preapproval/${encodeURIComponent(String(subscriptionId))}`);
 }
@@ -86,6 +95,13 @@ export function createMercadoPagoSubscription(body) {
     method: "POST",
     body,
   });
+}
+
+export function updateMercadoPagoSubscription(subscriptionId, body) {
+  return mercadoPagoRequest(
+    `/preapproval/${encodeURIComponent(String(subscriptionId))}`,
+    { method: "PUT", body },
+  );
 }
 
 export function validateMercadoPagoWebhookSignature({

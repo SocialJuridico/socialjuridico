@@ -5,6 +5,12 @@ import {
   syncMercadoPagoSubscription,
 } from "@/lib/billing/fulfillmentServer";
 import {
+  fulfillMercadoPagoOrder,
+  isMercadoPagoOrderApproved,
+  normalizedMercadoPagoOrderStatus,
+} from "@/lib/billing/mercadoPagoOrderServer";
+import {
+  getMercadoPagoOrder,
   getMercadoPagoPayment,
   getMercadoPagoSubscription,
   validateMercadoPagoWebhookSignature,
@@ -50,7 +56,22 @@ export async function POST(request) {
 
     const type = String(payload?.type || "").trim().toLowerCase();
 
+    if (type === "order") {
+      const order = await getMercadoPagoOrder(dataId);
+      const result = isMercadoPagoOrderApproved(order)
+        ? await fulfillMercadoPagoOrder(order)
+        : { handled: true };
+
+      return json({
+        success: true,
+        handled: result?.handled !== false,
+        status: normalizedMercadoPagoOrderStatus(order),
+        duplicate: Boolean(result?.duplicate),
+      });
+    }
+
     if (type === "payment") {
+      // Mantido para cobranças geradas pela API de Assinaturas.
       const payment = await getMercadoPagoPayment(dataId);
       const result = await fulfillMercadoPagoPayment(payment);
 
@@ -77,10 +98,6 @@ export async function POST(request) {
       });
     }
 
-    // As cobranças autorizadas da assinatura também geram evento `payments`.
-    // Esse evento de pagamento é o gatilho financeiro que efetivamente entrega
-    // o plano/Juris, portanto os demais tópicos podem ser reconhecidos aqui sem
-    // duplicar crédito.
     return json({
       success: true,
       handled: false,
@@ -102,6 +119,7 @@ export async function GET() {
   return json({
     success: true,
     provider: "MERCADOPAGO",
+    checkoutApi: "ORDERS",
     webhook: "ready",
   });
 }

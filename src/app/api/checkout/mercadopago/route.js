@@ -511,6 +511,10 @@ export async function POST(request) {
         profileName: profile.name,
         billingAddress,
       }),
+      additional_info: {
+        "payer.registration_date": new Date(user.created_at).toISOString(),
+        "payer.authentication_type": "WEB",
+      },
       transactions: {
         payments: [
           {

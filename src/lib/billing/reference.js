@@ -86,7 +86,10 @@ function productFromCode(code) {
     jurisAmount: plan.juris,
     expirationDays: price.days,
     promo,
-    recurring: Boolean(price.recurring) && !promo,
+    // Promo mensal continua sendo uma assinatura. A primeira cobrança usa o
+    // valor promocional; o fulfillment ajusta as próximas cobranças depois que
+    // o primeiro pagamento é confirmado.
+    recurring: Boolean(price.recurring),
   };
 }
 

@@ -1,3 +1,5 @@
+import { profileHasPlanHistory } from "@/lib/billing/planEligibility";
+
 export const BILLING_CYCLES = [
   { id: "AVULSO", label: "Avulso" },
   { id: "MONTHLY", label: "Mensal" },
@@ -75,12 +77,14 @@ export function getActiveLawyerPlan(profile) {
 }
 
 export function isIntroPromotionEligible(planId, billingCycle, profile) {
-  if (billingCycle !== "MONTHLY") return false;
+  const normalizedPlan = String(planId || "").trim().toUpperCase();
+  if (!["START", "PRO"].includes(normalizedPlan)) return false;
+  if (String(billingCycle || "").toUpperCase() !== "MONTHLY") return false;
 
-  const activePlan = getActiveLawyerPlan(profile);
-  if (activePlan === "PRO") return false;
-  if (activePlan === "START") return planId === "PRO";
-  return planId === "START" || planId === "PRO";
+  // Regra comercial: a promoção existe apenas para quem NUNCA teve START nem
+  // PRO. Se o advogado já teve qualquer um dos planos, as duas promoções ficam
+  // indisponíveis — inclusive em upgrade START -> PRO.
+  return !profileHasPlanHistory(profile);
 }
 
 export function getIntroPromotionCoupon(planId) {

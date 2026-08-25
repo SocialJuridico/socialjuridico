@@ -1,4 +1,5 @@
 import {
+  getAiCreditPackage,
   getJurisPackage,
   getLawyerPlan,
   getLawyerPlanPrice,
@@ -19,11 +20,31 @@ export function resolveCheckoutProduct({
   planType,
   billingCycle,
   jurisAmount,
+  aiCreditsAmount,
   requestedPromo,
   profile,
   isRs,
   coupon,
 }) {
+  const aiPackage = getAiCreditPackage(aiCreditsAmount);
+  if (aiPackage) {
+    return {
+      type: "AI_CREDITS_PURCHASE",
+      referenceType: "AI_CREDITS",
+      planType: null,
+      billingCycle: "AVULSO",
+      jurisAmount: 0,
+      aiCreditsAmount: aiPackage.amount,
+      expirationDays: 0,
+      promo: false,
+      recurring: false,
+      priceInCents: aiPackage.cents,
+      basePriceInCents: aiPackage.cents,
+      couponType: null,
+      description: `Pacote ${aiPackage.amount} consultas de IA`,
+    };
+  }
+
   const jurisPackage = getJurisPackage(jurisAmount);
 
   if (jurisPackage) {
@@ -36,6 +57,7 @@ export function resolveCheckoutProduct({
       planType: null,
       billingCycle: "AVULSO",
       jurisAmount: jurisPackage.amount,
+      aiCreditsAmount: 0,
       expirationDays: 0,
       promo: false,
       recurring: false,
@@ -65,6 +87,7 @@ export function resolveCheckoutProduct({
       planType: normalizedPlan,
       billingCycle: "MONTHLY",
       jurisAmount: plan.juris,
+      aiCreditsAmount: 0,
       expirationDays: price.days,
       promo: true,
       recurring: false,
@@ -78,9 +101,6 @@ export function resolveCheckoutProduct({
   let cents = price.cents;
   let discountSource = null;
 
-  // Mantém a regra comercial anterior: cupom de plano só afeta compra avulsa.
-  // Assinaturas recorrentes usam o preço recorrente, com desconto OAB/RS quando
-  // elegível, evitando transformar um cupom de uso único em desconto eterno.
   if (coupon && normalizedCycle === "AVULSO") {
     cents = calculateDiscountedAmount(cents, coupon);
     discountSource = "COUPON";
@@ -102,6 +122,7 @@ export function resolveCheckoutProduct({
     planType: normalizedPlan,
     billingCycle: normalizedCycle,
     jurisAmount: plan.juris,
+    aiCreditsAmount: 0,
     expirationDays: price.days,
     promo: false,
     recurring: Boolean(price.recurring),

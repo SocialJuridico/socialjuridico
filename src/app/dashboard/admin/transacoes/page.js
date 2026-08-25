@@ -37,14 +37,16 @@ const STATUS_LABELS = {
   MANUAL: "Crédito manual",
   REVIEW: "Revisão necessária",
   FAILED: "Falhou",
-  PENDING: "Pendente",
+  PENDING: "Aguardando confirmação",
 };
 
 const PROVIDER_LABELS = {
-  STRIPE_CHECKOUT: "Stripe Checkout",
-  STRIPE_PAYMENT_INTENT: "Stripe PaymentIntent",
-  STRIPE_SETUP_INTENT: "Stripe SetupIntent",
-  INFINITEPAY: "InfinitePay",
+  MERCADO_PAGO: "Mercado Pago",
+  AFFILIATE_PROGRAM: "Programa de afiliados",
+  STRIPE_CHECKOUT_LEGACY: "Stripe Checkout (histórico)",
+  STRIPE_PAYMENT_INTENT_LEGACY: "Stripe PaymentIntent (histórico)",
+  STRIPE_SETUP_INTENT_LEGACY: "Stripe SetupIntent (histórico)",
+  INFINITEPAY_LEGACY: "InfinitePay (histórico)",
   MANUAL: "Operação manual",
   UNKNOWN: "Origem não identificada",
 };
@@ -79,6 +81,14 @@ function formatDate(value) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);
+}
+
+function transactionStatusLabel(transaction) {
+  return (
+    transaction?.statusLabel ||
+    STATUS_LABELS[transaction?.financialStatus] ||
+    "Indefinido"
+  );
 }
 
 function calculateSummary(items) {
@@ -238,7 +248,7 @@ export default function AdminTransacoesPage() {
         transaction.providerReference,
         transaction.couponCode,
         PRODUCT_LABELS[transaction.product],
-        STATUS_LABELS[transaction.financialStatus],
+        transactionStatusLabel(transaction),
         PROVIDER_LABELS[transaction.provider],
       ].some((value) =>
         String(value || "").toLowerCase().includes(term),
@@ -261,7 +271,7 @@ export default function AdminTransacoesPage() {
 
   async function syncStripe() {
     setSyncing(true);
-    const toastId = toast.loading("Conciliando lançamentos com o Stripe...");
+    const toastId = toast.loading("Conciliando lançamentos históricos...");
 
     try {
       const response = await fetch("/api/admin/transacoes/sync", {
@@ -285,7 +295,7 @@ export default function AdminTransacoesPage() {
       toast.error(
         error instanceof Error
           ? error.message
-          : "Erro ao conciliar com o Stripe.",
+          : "Erro ao conciliar lançamentos históricos.",
         { id: toastId },
       );
     } finally {
@@ -346,7 +356,7 @@ export default function AdminTransacoesPage() {
         PRODUCT_LABELS[transaction.product] || "Outro",
         PROVIDER_LABELS[transaction.provider] || "Não identificada",
         formatCurrency(transaction.amount, transaction.currency),
-        STATUS_LABELS[transaction.financialStatus] || "Indefinido",
+        transactionStatusLabel(transaction),
         transaction.couponCode || "-",
         transaction.providerReference,
       ]),
@@ -406,8 +416,8 @@ export default function AdminTransacoesPage() {
                 Transações e conciliação
               </h1>
               <p>
-                Receita confirmada, créditos manuais, falhas de processamento e
-                operações registradas por Stripe e InfinitePay em um único painel.
+                Receita confirmada, assinaturas em ativação, créditos manuais e
+                histórico financeiro em um único painel.
               </p>
             </div>
 
@@ -429,13 +439,13 @@ export default function AdminTransacoesPage() {
                 className={styles.syncButton}
                 onClick={syncStripe}
                 disabled={syncing || refreshing}
-                title="A conciliação por API está disponível para o Stripe. O InfinitePay é atualizado pelo webhook."
+                title="Concilia registros históricos mantidos para auditoria."
               >
                 <RefreshCw
                   size={16}
                   className={syncing ? styles.spinning : undefined}
                 />
-                {syncing ? "Conciliando..." : "Conciliar Stripe"}
+                {syncing ? "Conciliando..." : "Conciliar histórico"}
               </button>
               <button
                 type="button"
@@ -518,7 +528,7 @@ export default function AdminTransacoesPage() {
             <div>
               <span>Falhas</span>
               <strong>{visibleSummary.failedCount}</strong>
-              <small>{visibleSummary.pendingCount} ainda pendentes</small>
+              <small>{visibleSummary.pendingCount} aguardando confirmação</small>
             </div>
           </article>
 
@@ -574,7 +584,7 @@ export default function AdminTransacoesPage() {
               <option value="MANUAL">Créditos manuais</option>
               <option value="REVIEW">Em revisão</option>
               <option value="FAILED">Falhas</option>
-              <option value="PENDING">Pendentes</option>
+              <option value="PENDING">Aguardando confirmação</option>
             </select>
           </label>
 
@@ -586,10 +596,12 @@ export default function AdminTransacoesPage() {
               aria-label="Filtrar por operadora"
             >
               <option value="ALL">Todas as operadoras</option>
-              <option value="INFINITEPAY">InfinitePay</option>
-              <option value="STRIPE_CHECKOUT">Stripe Checkout</option>
-              <option value="STRIPE_PAYMENT_INTENT">Stripe PaymentIntent</option>
-              <option value="STRIPE_SETUP_INTENT">Stripe SetupIntent</option>
+              <option value="MERCADO_PAGO">Mercado Pago</option>
+              <option value="INFINITEPAY_LEGACY">InfinitePay (histórico)</option>
+              <option value="STRIPE_CHECKOUT_LEGACY">Stripe Checkout (histórico)</option>
+              <option value="STRIPE_PAYMENT_INTENT_LEGACY">Stripe PaymentIntent (histórico)</option>
+              <option value="STRIPE_SETUP_INTENT_LEGACY">Stripe SetupIntent (histórico)</option>
+              <option value="AFFILIATE_PROGRAM">Programa de afiliados</option>
               <option value="MANUAL">Operação manual</option>
               <option value="UNKNOWN">Não identificada</option>
             </select>
@@ -625,11 +637,12 @@ export default function AdminTransacoesPage() {
             {filteredTransactions.length} de {transactions.length} registros
           </span>
           <span>
-            Stripe:{" "}
-            {(visibleSummary.byProvider.STRIPE_CHECKOUT || 0) +
-              (visibleSummary.byProvider.STRIPE_PAYMENT_INTENT || 0)}{" "}
-            · InfinitePay: {visibleSummary.byProvider.INFINITEPAY || 0} · Manual:{" "}
-            {visibleSummary.byProvider.MANUAL || 0}
+            Mercado Pago: {visibleSummary.byProvider.MERCADO_PAGO || 0} · Histórico legado:{" "}
+            {(visibleSummary.byProvider.STRIPE_CHECKOUT_LEGACY || 0) +
+              (visibleSummary.byProvider.STRIPE_PAYMENT_INTENT_LEGACY || 0) +
+              (visibleSummary.byProvider.STRIPE_SETUP_INTENT_LEGACY || 0) +
+              (visibleSummary.byProvider.INFINITEPAY_LEGACY || 0)}{" "}
+            · Manual: {visibleSummary.byProvider.MANUAL || 0}
           </span>
         </div>
 
@@ -711,8 +724,7 @@ export default function AdminTransacoesPage() {
                             {transaction.financialStatus !== "CONFIRMED" && (
                               <AlertTriangle size={13} />
                             )}
-                            {STATUS_LABELS[transaction.financialStatus] ||
-                              "Indefinido"}
+                            {transactionStatusLabel(transaction)}
                           </span>
                           {transaction.alert && (
                             <small

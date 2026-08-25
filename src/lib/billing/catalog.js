@@ -4,6 +4,12 @@ export const JURIS_PACKAGES = Object.freeze({
   50: { amount: 50, cents: 3990 },
 });
 
+export const AI_CREDIT_PACKAGES = Object.freeze({
+  10: { amount: 10, cents: 1000 },
+  20: { amount: 20, cents: 1850 },
+  50: { amount: 50, cents: 4500 },
+});
+
 export const LAWYER_PLAN_PRICING = Object.freeze({
   START: {
     id: "START",
@@ -29,6 +35,10 @@ export const LAWYER_PLAN_PRICING = Object.freeze({
 
 export function getJurisPackage(amount) {
   return JURIS_PACKAGES[Number(amount)] || null;
+}
+
+export function getAiCreditPackage(amount) {
+  return AI_CREDIT_PACKAGES[Number(amount)] || null;
 }
 
 export function getLawyerPlan(planType) {

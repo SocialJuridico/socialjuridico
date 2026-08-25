@@ -1,7 +1,16 @@
 import { decodeBillingReference } from "@/lib/billing/reference";
 import { supabaseAdmin } from "@/lib/supabase";
 
-const PROVISIONAL_STATUSES = new Set(["PENDING_PAYMENT", "ACTIVATING"]);
+const ROLLBACK_ELIGIBLE_STATUSES = new Set([
+  "PENDING_PAYMENT",
+  "ACTIVATING",
+  "CANCELED",
+  "CANCELLED",
+  "UNPAID",
+  "REJECTED",
+  "FAILED",
+]);
+
 const FAILURE_STATUSES = new Set([
   "rejected",
   "failed",
@@ -10,6 +19,7 @@ const FAILURE_STATUSES = new Set([
   "refunded",
   "charged_back",
   "chargeback",
+  "unpaid",
 ]);
 
 function normalizeStatus(value) {
@@ -114,17 +124,43 @@ export async function rollbackProvisionalPlanAccess({
 
   const profileStatus = String(lawyer.subscription_status || "").toUpperCase();
   const profilePlan = String(lawyer.plan_type || "").toUpperCase();
+  const targetPlan = String(product.planType || "").toUpperCase();
+  const finalStatus = String(failureStatus || "UNPAID").toUpperCase();
 
-  // Upgrades não entram aqui: o plano anterior fica ACTIVE enquanto a nova
-  // assinatura aguarda a primeira cobrança.
+  // Em upgrade START -> PRO o perfil continua apontando para o plano antigo até
+  // a primeira cobrança do PRO. Se a nova assinatura falhar, apenas restauramos
+  // o status do plano anterior e mantemos assinatura, vencimento e benefícios.
   if (
-    !PROVISIONAL_STATUSES.has(profileStatus) ||
-    profilePlan !== String(product.planType).toUpperCase()
+    ["START", "PRO"].includes(profilePlan) &&
+    profilePlan !== targetPlan
+  ) {
+    const { error: restoreError } = await supabaseAdmin
+      .from("advogados")
+      .update({ subscription_status: "ACTIVE" })
+      .eq("id", transaction.advogado_id);
+
+    if (restoreError) {
+      throw new Error("Não foi possível restaurar o plano anterior após a falha.");
+    }
+
+    await supabaseAdmin
+      .from("transacoes")
+      .update({ status: `subscription_${normalizeStatus(finalStatus)}` })
+      .eq("id", transaction.id);
+
+    return {
+      rolledBack: true,
+      reason: "UPGRADE_FAILED_PREVIOUS_PLAN_PRESERVED",
+    };
+  }
+
+  if (
+    !ROLLBACK_ELIGIBLE_STATUSES.has(profileStatus) ||
+    profilePlan !== targetPlan
   ) {
     return { rolledBack: false, reason: "NO_PROVISIONAL_ACCESS" };
   }
 
-  const finalStatus = String(failureStatus || "UNPAID").toUpperCase();
   const { error: updateError } = await supabaseAdmin
     .from("advogados")
     .update({

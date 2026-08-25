@@ -18,9 +18,14 @@ import {
   subscriptionFrequencyFor,
 } from "@/lib/billing/catalog";
 import { encodeBillingReference } from "@/lib/billing/reference";
-import { fulfillMercadoPagoPayment } from "@/lib/billing/fulfillmentServer";
 import {
-  createMercadoPagoPayment,
+  fulfillMercadoPagoOrder,
+  isMercadoPagoOrderApproved,
+  mercadoPagoOrderCheckoutData,
+  normalizedMercadoPagoOrderStatus,
+} from "@/lib/billing/mercadoPagoOrderServer";
+import {
+  createMercadoPagoOrder,
   createMercadoPagoSubscription,
 } from "@/lib/mercadopago/client";
 
@@ -76,6 +81,20 @@ function sanitizePayer(payer, fallbackEmail) {
   }
 
   return safe;
+}
+
+function resolveOrderPaymentMethodType(paymentData, paymentMethodId) {
+  if (paymentMethodId === "pix") return "bank_transfer";
+
+  const type = String(paymentData?.payment_type_id || "")
+    .trim()
+    .toLowerCase();
+
+  if (["credit_card", "debit_card", "prepaid_card"].includes(type)) {
+    return type;
+  }
+
+  return "credit_card";
 }
 
 async function bindReservation(reservationToken, userId, reference) {
@@ -200,9 +219,6 @@ export async function POST(request) {
       requestedPromo &&
       !profile.has_plan_history;
 
-    // Cupons são gerenciados pelo Social Jurídico. Eles podem ser usados em
-    // Juris, avulso e também na PRIMEIRA cobrança de mensal/anual. Promoção de
-    // primeiro mês não acumula com cupom.
     const couponSupported =
       !isAiCredits && Boolean(internalCouponId) && !promoEligible;
 
@@ -232,8 +248,6 @@ export async function POST(request) {
       throw error;
     }
 
-    // Se o advogado é OAB/RS e o benefício da parceria é melhor que o cupom,
-    // o backend usa a melhor condição e libera o cupom sem consumi-lo.
     if (reservation && !product.couponApplied) {
       await releaseCouponReservation(
         supabaseAdmin,
@@ -298,12 +312,6 @@ export async function POST(request) {
         throw new Error("Mercado Pago não retornou o identificador da assinatura.");
       }
 
-      // Não substituímos stripe_subscription_id aqui. Em upgrade START -> PRO,
-      // esse campo ainda aponta para a assinatura START que precisa permanecer
-      // ativa até a primeira cobrança PRO ser aprovada. O fulfillment resolve a
-      // nova assinatura pelo external_reference, cancela a anterior e só então
-      // grava o novo ID Mercado Pago no perfil.
-
       return json({
         success: true,
         provider: "MERCADOPAGO",
@@ -325,58 +333,76 @@ export async function POST(request) {
       throw error;
     }
 
-    const paymentPayload = {
-      transaction_amount: centsToBRL(product.priceInCents),
-      description: product.description,
-      payment_method_id: paymentMethodId,
-      external_reference: reference,
-      notification_url: `${siteUrl}/api/webhook/mercadopago`,
-      payer: sanitizePayer(paymentData.payer, payerEmail),
+    const paymentMethodType = resolveOrderPaymentMethodType(
+      paymentData,
+      paymentMethodId,
+    );
+    const amount = (Number(product.priceInCents) / 100).toFixed(2);
+    const paymentMethod = {
+      id: paymentMethodId,
+      type: paymentMethodType,
     };
 
-    const token = String(paymentData.token || "").trim();
-    if (token) paymentPayload.token = token;
-
-    const installments = Number(paymentData.installments || 1);
     if (paymentMethodId !== "pix") {
-      paymentPayload.installments =
+      const token = String(paymentData.token || "").trim();
+      if (!token) {
+        const error = new Error("Token do cartão não foi gerado.");
+        error.status = 422;
+        throw error;
+      }
+
+      paymentMethod.token = token;
+      const installments = Number(paymentData.installments || 1);
+      paymentMethod.installments =
         Number.isInteger(installments) && installments > 0 ? installments : 1;
     }
 
-    const issuerId = String(paymentData.issuer_id || "").trim();
-    if (issuerId) paymentPayload.issuer_id = issuerId;
+    const orderPayload = {
+      type: "online",
+      processing_mode: "automatic",
+      external_reference: reference,
+      total_amount: amount,
+      payer: sanitizePayer(paymentData.payer, payerEmail),
+      transactions: {
+        payments: [
+          {
+            amount,
+            payment_method: paymentMethod,
+          },
+        ],
+      },
+    };
 
-    const payment = await createMercadoPagoPayment(paymentPayload, reference);
-    if (!payment?.id) {
-      throw new Error("Mercado Pago não retornou o identificador do pagamento.");
+    if (paymentMethodId !== "pix") {
+      orderPayload.capture_mode = "automatic";
+    }
+
+    const order = await createMercadoPagoOrder(orderPayload, reference);
+    if (!order?.id) {
+      throw new Error("Mercado Pago não retornou o identificador da order.");
     }
 
     let fulfillment = null;
-    if (String(payment.status || "").toLowerCase() === "approved") {
-      fulfillment = await fulfillMercadoPagoPayment(payment);
+    if (isMercadoPagoOrderApproved(order)) {
+      fulfillment = await fulfillMercadoPagoOrder(order);
     } else {
       await supabaseAdmin
         .from("transacoes")
-        .update({ status: String(payment.status || "pending").toLowerCase() })
+        .update({ status: normalizedMercadoPagoOrderStatus(order) })
         .eq("id", transactionId);
     }
 
-    const transactionData = payment?.point_of_interaction?.transaction_data || {};
+    const checkoutData = mercadoPagoOrderCheckoutData(order);
 
     return json({
       success: true,
       provider: "MERCADOPAGO",
       kind: paymentMethodId === "pix" ? "pix" : "card",
       reference,
-      paymentId: payment.id,
-      status: payment.status,
-      statusDetail: payment.status_detail || null,
+      ...checkoutData,
       amount: product.priceInCents,
       discountSource: product.discountSource,
       approved: fulfillment?.status === "approved",
-      qrCode: transactionData.qr_code || null,
-      qrCodeBase64: transactionData.qr_code_base64 || null,
-      ticketUrl: transactionData.ticket_url || null,
     });
   } catch (error) {
     if (transactionId && supabaseAdmin) {

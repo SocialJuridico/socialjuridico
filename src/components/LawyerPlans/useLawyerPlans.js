@@ -19,17 +19,6 @@ import {
   RS_DISCOUNT_LABELS,
 } from "@/lib/lawyerDiscount";
 
-// Links de assinatura recorrente hospedados na InfinitePay (auto-débito). NÃO
-// têm webhook — o administrador dá baixa manual em /dashboard/admin/advogados.
-// Usados quando o advogado renova (mensal, já usou a promo de 1º mês) ou compra
-// o ciclo anual. Promo de 1º mês e avulso continuam via API (com webhook).
-const HOSTED_SUBSCRIPTION = {
-  START_MONTHLY: "https://invoice.infinitepay.io/plans/plataforma-social/on4FAZawRE",
-  START_ANNUAL: "https://invoice.infinitepay.io/plans/plataforma-social/LFlFfOViE9",
-  PRO_MONTHLY: "https://invoice.infinitepay.io/plans/plataforma-social/tkDa1iSpch",
-  PRO_ANNUAL: "https://invoice.infinitepay.io/plans/plataforma-social/nrJhBb2yJQ",
-};
-
 function normalizeCouponResponse(data, fallbackCode, promotional = false) {
   const code = String(data?.codigo || fallbackCode || "")
     .trim()
@@ -52,7 +41,6 @@ function normalizeCouponResponse(data, fallbackCode, promotional = false) {
       data?.desconto_tipo === "FIXO"
         ? Number(data?.valor || 0) * 100
         : Number(data?.amount_off || 0),
-    stripe_coupon_id: null,
     promotional,
   };
 }
@@ -77,13 +65,7 @@ async function validateCouponCode(code, promotional = false) {
   return normalizeCouponResponse(data, code, promotional);
 }
 
-function hasExpectedIntroPrice(plan, coupon) {
-  const pricing = applyCouponToPrice(plan.prices.MONTHLY, "MONTHLY", coupon);
-  const expected = plan.id === "PRO" ? 39.99 : 10.99;
-  return Math.abs(pricing.total - expected) <= 0.01;
-}
-
-export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
+export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
   const [billingCycle, setBillingCycle] = useState("MONTHLY");
   const [couponCode, setCouponCode] = useState("");
   const [coupon, setCoupon] = useState(null);
@@ -106,22 +88,12 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
     let cancelled = false;
 
     async function loadPromotions() {
-      const entries = await Promise.all(
-        Object.values(LAWYER_PLANS).map(async (plan) => {
-          if (!isIntroPromotionEligible(plan.id, "MONTHLY", profileData)) {
-            return [plan.id, null];
-          }
-
-          const preview = getIntroPromotionCoupon(plan.id);
-          if (!preview?.code) return [plan.id, null];
-
-          // Cupons promocionais de 1º mês não precisam validação via API,
-          // pois são aplicados diretamente pelo backend via isPromoEligible.
-          // O backend resolve o preço final baseado em promoCents definido
-          // em planCatalog.js (START: R$ 10,99, PRO: R$ 39,99).
-          return [plan.id, preview];
-        }),
-      );
+      const entries = Object.values(LAWYER_PLANS).map((plan) => {
+        if (!isIntroPromotionEligible(plan.id, "MONTHLY", profileData)) {
+          return [plan.id, null];
+        }
+        return [plan.id, getIntroPromotionCoupon(plan.id)];
+      });
 
       if (!cancelled) setPromotionCoupons(Object.fromEntries(entries));
     }
@@ -146,27 +118,22 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
         const promotionCoupon = promotionCoupons[plan.id] || null;
         const introEligible =
           !profilePending &&
-          !coupon &&
           billingCycle === "MONTHLY" &&
           Boolean(promotionCoupon) &&
           isIntroPromotionEligible(plan.id, billingCycle, profileData);
-        const previewCoupon = introEligible ? promotionCoupon : coupon;
+
+        // Cupons comerciais continuam de uso único, portanto são aplicados no
+        // plano avulso. Recorrência é cobrada pelo Mercado Pago sem transformar
+        // um cupom pontual em desconto permanente.
+        const userCoupon = billingCycle === "AVULSO" ? coupon : null;
+        const previewCoupon = introEligible ? promotionCoupon : userCoupon;
         let pricing = applyCouponToPrice(priceInfo, billingCycle, previewCoupon);
 
-        // Desconto de parceria OAB/RS: só quando a cobrança daquele caminho
-        // realmente aplica o desconto (não empilha com promo/cupom). PRO
-        // recorrente depende do link RS configurado por ambiente.
         let rsDiscount = null;
         const rsRate = rsRateFor(plan.id);
-        // Desconto OAB/RS só no AVULSO (cobrado pela nossa API, que aplica o
-        // desconto no servidor). Recorrente usa link hospedado com preço cheio,
-        // então não exibimos RS nesses ciclos para não enganar o valor.
         const rsEligible =
-          isRs &&
-          rsRate > 0 &&
-          !introEligible &&
-          !coupon &&
-          billingCycle === "AVULSO";
+          isRs && rsRate > 0 && !introEligible && !userCoupon;
+
         if (rsEligible) {
           const rsTotal = applyRsDiscountValue(pricing.total, plan.id);
           pricing = {
@@ -198,7 +165,6 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
           isCurrent,
           isDowngrade,
           selectable: !profilePending && !isCurrent && !isDowngrade,
-          // Preço é derivado no servidor (planType + ciclo) — não depende de priceId.
           configured: true,
         };
       }),
@@ -226,14 +192,18 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
     try {
       const validatedCoupon = await validateCouponCode(code);
       setCoupon(validatedCoupon);
-      toast.success("Cupom aplicado com sucesso.");
+      toast.success(
+        billingCycle === "AVULSO"
+          ? "Cupom aplicado com sucesso."
+          : "Cupom validado. Ele será aplicado no ciclo Avulso.",
+      );
     } catch (error) {
       setCoupon(null);
       toast.error(error.message || "Não foi possível validar o cupom.");
     } finally {
       setValidatingCoupon(false);
     }
-  }, [couponCode, profilePending, validatingCoupon]);
+  }, [billingCycle, couponCode, profilePending, validatingCoupon]);
 
   const selectPlan = useCallback(
     async (planCard) => {
@@ -253,39 +223,10 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
         return;
       }
 
-      // Assinatura recorrente (renovação mensal já sem promo, ou anual): abre o
-      // link hospedado da InfinitePay (auto-débito). Sem webhook — o admin dá
-      // baixa manual. A promo de 1º mês (mensal) e o avulso seguem pela API.
-      const isRecurring =
-        billingCycle === "ANNUAL" ||
-        (billingCycle === "MONTHLY" && !planCard.introEligible);
-
-      if (isRecurring) {
-        const hostedUrl = HOSTED_SUBSCRIPTION[`${planCard.id}_${billingCycle}`];
-        if (!hostedUrl) {
-          toast.error("Link de assinatura indisponível para este plano.");
-          return;
-        }
-        window.open(hostedUrl, "_blank", "noopener,noreferrer");
-        onClose?.();
-        return;
-      }
-
-      // Promo de 1º mês (mensal) e avulso: link gerado pela nossa API, com
-      // transação pendente e order_nsu — o webhook atribui e ativa o plano.
       setSelectingPlan(planCard.id);
       try {
-        // Cupom do usuário (não empilha com promo de 1º mês).
-        const checkoutCoupon = planCard.introEligible ? null : coupon;
-
-        window.localStorage.setItem("sj_selected_plan_type", planCard.id);
-        window.localStorage.setItem("sj_selected_billing", billingCycle);
-        window.localStorage.setItem(
-          "sj_selected_promo",
-          planCard.introEligible ? "1" : "0",
-        );
-        window.localStorage.removeItem("sj_selected_addon_type");
-        window.localStorage.removeItem("sj_selected_price_id");
+        const checkoutCoupon =
+          billingCycle === "AVULSO" && !planCard.introEligible ? coupon : null;
 
         await onSelectPlan?.({
           planId: planCard.id,
@@ -293,6 +234,7 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
           amount: planCard.pricing?.total,
           couponData: checkoutCoupon,
           juris: planCard.juris,
+          isPromoEligible: Boolean(planCard.introEligible),
         });
       } catch (error) {
         console.error("[LawyerPlans] Falha ao selecionar plano:", error);
@@ -303,7 +245,7 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan, onClose }) {
         setSelectingPlan(null);
       }
     },
-    [billingCycle, coupon, onClose, onSelectPlan, profilePending, selectingPlan],
+    [billingCycle, coupon, onSelectPlan, profilePending, selectingPlan],
   );
 
   return {

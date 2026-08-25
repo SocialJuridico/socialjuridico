@@ -58,6 +58,7 @@ export function mercadoPagoOrderItem(product) {
   const price = (Number(product?.priceInCents || 0) / 100).toFixed(2);
   const planType = String(product?.planType || "").toUpperCase();
   const cycle = String(product?.billingCycle || "AVULSO").toUpperCase();
+  const title = cleanText(product?.description || "Social Jurídico", 150);
 
   let externalCode = "SOCIAL_JURIDICO";
   if (product?.type === "JURIS_PURCHASE") {
@@ -70,7 +71,8 @@ export function mercadoPagoOrderItem(product) {
 
   return {
     external_code: externalCode.slice(0, 50),
-    title: cleanText(product?.description || "Social Jurídico", 150),
+    title,
+    description: title,
     category_id: "services",
     quantity: 1,
     unit_price: price,

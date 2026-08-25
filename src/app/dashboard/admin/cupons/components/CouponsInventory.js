@@ -78,7 +78,7 @@ export default function CouponsInventory({ coupons }) {
         <div>
           <span className={styles.eyebrow}>Inventário promocional</span>
           <h2 id="inventario-title">Cupons configurados</h2>
-          <p>Consulte disponibilidade, consumo e vínculo operacional.</p>
+          <p>Consulte disponibilidade, consumo e regras comerciais.</p>
         </div>
         <span className={styles.resultCount}>
           {coupons.filtered.length} resultado(s)
@@ -90,7 +90,7 @@ export default function CouponsInventory({ coupons }) {
           <Search size={16} aria-hidden="true" />
           <input
             type="search"
-            placeholder="Buscar por código, descrição ou referência Stripe..."
+            placeholder="Buscar por código ou descrição..."
             value={coupons.search}
             onChange={(event) => coupons.setSearch(event.target.value)}
           />
@@ -208,19 +208,27 @@ export default function CouponsInventory({ coupons }) {
                 <div className={styles.metricsGrid}>
                   <div>
                     <ShoppingCart size={14} aria-hidden="true" />
-                    <span><strong>{coupon.total_usos}</strong> uso(s)</span>
+                    <span>
+                      <strong>{coupon.total_usos}</strong> uso(s)
+                    </span>
                   </div>
                   <div>
                     <Users size={14} aria-hidden="true" />
-                    <span><strong>{coupon.usuarios_unicos}</strong> usuário(s)</span>
+                    <span>
+                      <strong>{coupon.usuarios_unicos}</strong> usuário(s)
+                    </span>
                   </div>
                   <div>
                     <TimerReset size={14} aria-hidden="true" />
-                    <span><strong>{coupon.reservas_ativas}</strong> reserva(s)</span>
+                    <span>
+                      <strong>{coupon.reservas_ativas}</strong> reserva(s)
+                    </span>
                   </div>
                   <div>
                     <Gauge size={14} aria-hidden="true" />
-                    <span><strong>{coupon.limite_por_usuario}</strong> por usuário</span>
+                    <span>
+                      <strong>{coupon.limite_por_usuario}</strong> por usuário
+                    </span>
                   </div>
                 </div>
 
@@ -228,7 +236,9 @@ export default function CouponsInventory({ coupons }) {
                   <div className={styles.progressBlock}>
                     <div>
                       <span>Consumo total</span>
-                      <strong>{coupon.total_usos}/{coupon.limite_total}</strong>
+                      <strong>
+                        {coupon.total_usos}/{coupon.limite_total}
+                      </strong>
                     </div>
                     <span className={styles.progressTrack}>
                       <span style={{ width: `${progress}%` }} />
@@ -246,8 +256,8 @@ export default function CouponsInventory({ coupons }) {
                     <dd>{formatDateTime(coupon.expira_em)}</dd>
                   </div>
                   <div>
-                    <dt>Stripe</dt>
-                    <dd>{coupon.stripe_coupon_id || "Sem vínculo"}</dd>
+                    <dt>Processamento</dt>
+                    <dd>Social Jurídico + Mercado Pago</dd>
                   </div>
                 </dl>
 

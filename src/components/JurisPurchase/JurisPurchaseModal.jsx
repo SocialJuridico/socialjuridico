@@ -25,7 +25,6 @@ function normalizeCoupon(data, fallbackCode) {
       .toUpperCase(),
     discountType: String(data?.desconto_tipo || "").toUpperCase(),
     value: Number(data?.valor || 0),
-    stripe_coupon_id: data?.stripe_coupon_id || null,
   };
 }
 
@@ -129,6 +128,7 @@ export default function JurisPurchaseModal({
     try {
       await onSelectPackage?.({
         jurisAmount: item.amount,
+        amount: item.finalPrice,
         couponData: coupon,
       });
     } catch (error) {

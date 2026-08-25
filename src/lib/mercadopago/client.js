@@ -21,6 +21,17 @@ function parseResponseBody(text) {
   }
 }
 
+function providerMessage(data) {
+  const firstError = Array.isArray(data?.errors) ? data.errors[0] : null;
+  return (
+    firstError?.message ||
+    firstError?.code ||
+    data?.message ||
+    data?.error ||
+    "Falha ao comunicar com o Mercado Pago."
+  );
+}
+
 export async function mercadoPagoRequest(
   path,
   { method = "GET", body, idempotencyKey } = {},
@@ -48,13 +59,12 @@ export async function mercadoPagoRequest(
       method,
       status: response.status,
       cause: data?.cause,
+      errors: data?.errors,
       message: data?.message,
       error: data?.error,
     });
 
-    const error = new Error(
-      data?.message || data?.error || "Falha ao comunicar com o Mercado Pago.",
-    );
+    const error = new Error(providerMessage(data));
     error.status = response.status >= 400 && response.status < 500 ? 422 : 502;
     error.providerStatus = response.status;
     error.providerData = data;
@@ -64,6 +74,21 @@ export async function mercadoPagoRequest(
   return data;
 }
 
+// Checkout Transparente via Orders API (aplicação principal do Social Jurídico).
+export function createMercadoPagoOrder(body, idempotencyKey) {
+  return mercadoPagoRequest("/v1/orders", {
+    method: "POST",
+    body,
+    idempotencyKey,
+  });
+}
+
+export function getMercadoPagoOrder(orderId) {
+  return mercadoPagoRequest(`/v1/orders/${encodeURIComponent(String(orderId))}`);
+}
+
+// Payments API permanece apenas para eventos/cobranças gerados pela API de
+// Assinaturas. Compras avulsas novas não passam mais por /v1/payments.
 export function getMercadoPagoPayment(paymentId) {
   return mercadoPagoRequest(`/v1/payments/${encodeURIComponent(String(paymentId))}`);
 }
@@ -90,14 +115,6 @@ export function searchMercadoPagoSubscriptionsByEmail(payerEmail) {
     limit: "20",
   });
   return mercadoPagoRequest(`/preapproval/search?${query.toString()}`);
-}
-
-export function createMercadoPagoPayment(body, idempotencyKey) {
-  return mercadoPagoRequest("/v1/payments", {
-    method: "POST",
-    body,
-    idempotencyKey,
-  });
 }
 
 export function createMercadoPagoSubscription(body) {

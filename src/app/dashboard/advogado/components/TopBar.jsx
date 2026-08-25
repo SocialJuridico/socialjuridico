@@ -22,14 +22,20 @@ import {
   Zap,
   Coins,
   Brain,
-  MessageSquare
+  MessageSquare,
 } from "lucide-react";
 import VerifiedBadge from "@/components/VerifiedBadge/VerifiedBadge";
 import AiCreditsPurchaseModal from "@/components/AiCreditsPurchase/AiCreditsPurchaseModal";
 import { getInterpretarAvailability } from "@/lib/extensaoInterpretarLimits";
 
 export default function TopBar() {
-  const { activeTab, profileData, setShowBuyModal, userName } = useDashboard();
+  const {
+    activeTab,
+    profileData,
+    setShowBuyModal,
+    userName,
+    refreshProfile,
+  } = useDashboard();
   const [showAiCreditsModal, setShowAiCreditsModal] = useState(false);
   const interpretarTotal = getInterpretarAvailability(profileData || {}).total;
 
@@ -96,31 +102,31 @@ export default function TopBar() {
                 ? "Declarei Interesse"
                 : activeTab === "minhas-mensagens"
                   ? "Minhas Mensagens"
-                : activeTab === "crm"
-                  ? "CRM & KYC"
-                  : activeTab === "docs"
-                    ? "Smart Docs"
-                    : activeTab === "blindagem"
-                      ? "Blindagem de Documentos"
-                    : activeTab === "redator"
-                      ? "Redator IA"
-                      : activeTab === "calculadora"
-                        ? "Calculadora"
-                        : activeTab === "juris"
-                          ? "Jurisprudência"
-                          : activeTab === "agenda"
-                            ? "Agenda"
-                            : activeTab === "triagem"
-                              ? "Triagem"
-                              : activeTab === "cartao-visitas"
-                                ? "Cartão Digital"
-                                : activeTab === "perfil"
-                                  ? "Perfil"
-                                  : activeTab === "comunicacao"
-                                    ? "Comunicação Interna"
-                                    : activeTab?.startsWith("anuncios-")
-                                      ? `Anúncios: ${activeTab.split("-")[1]}`
-                                      : "Documentação"}
+                  : activeTab === "crm"
+                    ? "CRM & KYC"
+                    : activeTab === "docs"
+                      ? "Smart Docs"
+                      : activeTab === "blindagem"
+                        ? "Blindagem de Documentos"
+                        : activeTab === "redator"
+                          ? "Redator IA"
+                          : activeTab === "calculadora"
+                            ? "Calculadora"
+                            : activeTab === "juris"
+                              ? "Jurisprudência"
+                              : activeTab === "agenda"
+                                ? "Agenda"
+                                : activeTab === "triagem"
+                                  ? "Triagem"
+                                  : activeTab === "cartao-visitas"
+                                    ? "Cartão Digital"
+                                    : activeTab === "perfil"
+                                      ? "Perfil"
+                                      : activeTab === "comunicacao"
+                                        ? "Comunicação Interna"
+                                        : activeTab?.startsWith("anuncios-")
+                                          ? `Anúncios: ${activeTab.split("-")[1]}`
+                                          : "Documentação"}
         </span>
       </div>
 
@@ -155,12 +161,18 @@ export default function TopBar() {
           isOpen={showAiCreditsModal}
           onClose={() => setShowAiCreditsModal(false)}
           lawyerEmail={profileData?.email}
+          profileData={profileData}
+          onProfileRefresh={refreshProfile}
         />
 
         <div className={styles.userInfo}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span className={styles.userName} style={{ margin: 0 }}>{userName}</span>
-            {profileData?.oab_verification_status === "VERIFIED" && <VerifiedBadge size={16} />}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span className={styles.userName} style={{ margin: 0 }}>
+              {userName}
+            </span>
+            {profileData?.oab_verification_status === "VERIFIED" && (
+              <VerifiedBadge size={16} />
+            )}
           </div>
           <span className={styles.userOAB}>
             {profileData?.oab || "OAB Pendente"}

@@ -12,6 +12,7 @@ import {
 import { resolveCheckoutProduct } from "@/lib/billing/checkoutServer";
 import {
   centsToBRL,
+  getAiCreditPackage,
   getJurisPackage,
   subscriptionFrequencyFor,
 } from "@/lib/billing/catalog";
@@ -86,9 +87,7 @@ async function bindReservation(reservationToken, userId, reference) {
   });
 
   if (error || data !== true) {
-    const bindError = new Error(
-      "Não foi possível vincular o cupom ao pagamento.",
-    );
+    const bindError = new Error("Não foi possível vincular o cupom ao pagamento.");
     bindError.status = ["PGRST202", "42883"].includes(error?.code) ? 503 : 409;
     throw bindError;
   }
@@ -177,16 +176,19 @@ export async function POST(request) {
       .trim()
       .toUpperCase();
     const jurisAmount = Number(body.jurisAmount || 0);
+    const aiCreditsAmount = Number(body.aiCreditsAmount || 0);
     const internalCouponId = String(body.internalCouponId || "").trim() || null;
     const requestedPromo = Boolean(body.isPromoEligible);
     const paymentData = body.paymentData || {};
     const isJuris = Boolean(getJurisPackage(jurisAmount));
+    const isAiCredits = Boolean(getAiCreditPackage(aiCreditsAmount));
 
-    if (!isJuris) {
+    if (!isJuris && !isAiCredits) {
       assertLawyerPlanPurchaseAllowed(profile, planType);
     }
 
     const couponSupported =
+      !isAiCredits &&
       internalCouponId &&
       (isJuris || billingCycle === "AVULSO") &&
       !(billingCycle === "MONTHLY" && requestedPromo);
@@ -204,6 +206,7 @@ export async function POST(request) {
       planType,
       billingCycle,
       jurisAmount,
+      aiCreditsAmount,
       requestedPromo,
       profile,
       isRs: isRsLawyer(profile),

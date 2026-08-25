@@ -82,3 +82,4 @@ fix_*.ps1
 fix_*.sh
 *.patch
 update_temp.sh
+Deploy.md

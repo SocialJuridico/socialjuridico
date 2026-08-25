@@ -1,42 +1,35 @@
 import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 
+import { fulfillMercadoPagoPayment, syncMercadoPagoSubscription } from "@/lib/billing/fulfillmentServer";
 import { renovacaoPlanoTemplate } from "@/lib/emailTemplates";
+import {
+  getMercadoPagoSubscription,
+  searchMercadoPagoPaymentsByReference,
+} from "@/lib/mercadopago/client";
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
 
-// Links de assinatura recorrente hospedados na InfinitePay (conta PJ).
-const SUBSCRIPTION_LINKS = {
-  PRO_MONTHLY: "https://invoice.infinitepay.io/plans/plataforma-social/tkDa1iSpch",
-  PRO_ANNUAL: "https://invoice.infinitepay.io/plans/plataforma-social/nrJhBb2yJQ",
-  START_MONTHLY: "https://invoice.infinitepay.io/plans/plataforma-social/on4FAZawRE",
-  START_ANNUAL: "https://invoice.infinitepay.io/plans/plataforma-social/LFlFfOViE9",
-};
-
-const SUBSCRIPTION_VALOR = {
-  PRO_MONTHLY: "R$ 150,00/mês",
-  PRO_ANNUAL: "R$ 1.440,00/ano",
-  START_MONTHLY: "R$ 40,99/mês",
-  START_ANNUAL: "R$ 431,88/ano",
-};
-
-function resolveSubscription(lawyer) {
-  const plan = String(lawyer.plan_type || "").toUpperCase();
-  if (!["PRO", "START"].includes(plan)) return null;
-
-  const cycle =
-    String(lawyer.plan_billing_cycle || "").toUpperCase() === "ANNUAL"
-      ? "ANNUAL"
-      : "MONTHLY";
-  const key = `${plan}_${cycle}`;
-
-  if (!SUBSCRIPTION_LINKS[key]) return null;
-  return { url: SUBSCRIPTION_LINKS[key], valor: SUBSCRIPTION_VALOR[key], planType: plan };
-}
-
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const SITE_URL = String(
+  process.env.NEXT_PUBLIC_SITE_URL || "https://socialjuridico.com.br",
+).replace(/\/$/, "");
+
+const PLAN_VALUE_LABELS = {
+  START: {
+    MONTHLY: "R$ 40,99/mês",
+    ANNUAL: "R$ 431,88/ano",
+    AVULSO: "R$ 49,90 por 30 dias",
+  },
+  PRO: {
+    MONTHLY: "R$ 150,00/mês",
+    ANNUAL: "R$ 1.440,00/ano",
+    AVULSO: "R$ 210,00 por 30 dias",
+  },
+};
 
 function isAuthorizedCronRequest(request, expectedSecret) {
   const { searchParams } = new URL(request.url);
@@ -60,13 +53,67 @@ function daysUntil(expiresAt, now) {
   return Math.ceil((expiresAt.getTime() - now.getTime()) / 86_400_000);
 }
 
+function subscriptionIdFromLawyer(lawyer) {
+  const value = String(lawyer?.stripe_subscription_id || "").trim();
+  return value.startsWith("mp_") ? value.slice(3) : null;
+}
+
+function isMercadoPagoRecurring(lawyer) {
+  const cycle = String(lawyer?.plan_billing_cycle || "").toUpperCase();
+  const status = String(lawyer?.subscription_status || "").toUpperCase();
+  return (
+    Boolean(subscriptionIdFromLawyer(lawyer)) &&
+    ["MONTHLY", "ANNUAL"].includes(cycle) &&
+    !["CANCELED", "CANCELLED", "BLOCKED", "UNPAID"].includes(status)
+  );
+}
+
+async function reconcileRecurringSubscription(db, lawyer) {
+  const subscriptionId = subscriptionIdFromLawyer(lawyer);
+  if (!subscriptionId) return { reconciled: false, authorized: false };
+
+  try {
+    const subscription = await getMercadoPagoSubscription(subscriptionId);
+    await syncMercadoPagoSubscription(subscription);
+
+    const reference = String(subscription?.external_reference || "").trim();
+    if (reference) {
+      const search = await searchMercadoPagoPaymentsByReference(reference);
+      const payments = Array.isArray(search?.results) ? search.results : [];
+
+      for (const payment of [...payments].reverse()) {
+        if (String(payment?.status || "").toLowerCase() !== "approved") continue;
+        await fulfillMercadoPagoPayment(payment);
+      }
+    }
+
+    const { data: refreshed } = await db
+      .from("advogados")
+      .select("premium_expires_at, subscription_status, is_premium, plan_type")
+      .eq("id", lawyer.id)
+      .maybeSingle();
+
+    return {
+      reconciled: true,
+      authorized: String(subscription?.status || "").toLowerCase() === "authorized",
+      refreshed: refreshed || null,
+    };
+  } catch (error) {
+    console.error(
+      `[cron/verificar-planos] Falha ao conciliar assinatura Mercado Pago ${lawyer.id}:`,
+      error,
+    );
+    return { reconciled: false, authorized: false };
+  }
+}
+
 async function notifyPlanExpired(db, lawyer, nowStr) {
   await db.from("notificacoes").insert([
     {
       id: crypto.randomUUID(),
       user_id: lawyer.id,
       titulo: "Assinatura expirada",
-      mensagem: `Prezado(a) Dr(a), sua assinatura do plano ${lawyer.plan_type} expirou. Renove agora para reativar o acesso as ferramentas premium.`,
+      mensagem: `Prezado(a) Dr(a), sua assinatura do plano ${lawyer.plan_type} expirou. Renove dentro do Social Jurídico para reativar o acesso às ferramentas premium.`,
       tipo: "PLANO_EXPIRADO",
       meta: JSON.stringify({
         expired: true,
@@ -81,7 +128,7 @@ async function notifyPlanExpired(db, lawyer, nowStr) {
     await sendPushNotification({
       userIds: [lawyer.id],
       title: "Assinatura expirada",
-      message: `Sua assinatura do plano ${lawyer.plan_type} expirou. Renove agora para reativar seu acesso.`,
+      message: `Sua assinatura do plano ${lawyer.plan_type} expirou. Renove dentro do Social Jurídico para reativar seu acesso.`,
       url: "/dashboard/advogado",
     });
   } catch (error) {
@@ -96,20 +143,20 @@ function warningMessage(lawyer, daysRemaining) {
   if (daysRemaining === 3) {
     return {
       title: "Seu plano expira em 3 dias",
-      message: `Prezado(a) ${lawyer.name || "Dr(a)"}, sua assinatura do plano ${lawyer.plan_type} expira em 3 dias. Renove agora para nao perder o acesso as funcionalidades exclusivas.`,
+      message: `Prezado(a) ${lawyer.name || "Dr(a)"}, seu plano ${lawyer.plan_type} expira em 3 dias. A renovação pode ser feita diretamente dentro do Social Jurídico.`,
     };
   }
 
   if (daysRemaining === 2) {
     return {
       title: "Seu plano expira em 2 dias",
-      message: `Prezado(a) ${lawyer.name || "Dr(a)"}, sua assinatura do plano ${lawyer.plan_type} expira em 2 dias. Evite a interrupcao no atendimento de novos casos.`,
+      message: `Prezado(a) ${lawyer.name || "Dr(a)"}, seu plano ${lawyer.plan_type} expira em 2 dias. Evite a interrupção no acesso às ferramentas.`,
     };
   }
 
   return {
-    title: "Ultimo dia de assinatura",
-    message: `Prezado(a) ${lawyer.name || "Dr(a)"}, hoje e o ultimo dia da sua assinatura do plano ${lawyer.plan_type}. Renove imediatamente para garantir seu acesso.`,
+    title: "Último dia de assinatura",
+    message: `Prezado(a) ${lawyer.name || "Dr(a)"}, hoje é o último dia do seu plano ${lawyer.plan_type}. Renove diretamente no Social Jurídico para manter seu acesso.`,
   };
 }
 
@@ -136,14 +183,14 @@ async function alreadySentWarning(db, lawyerId, daysRemaining, expiresAtIso) {
 }
 
 async function notifyPlanExpiring(db, lawyer, daysRemaining, nowStr) {
-  const alreadySent = await alreadySentWarning(
-    db,
-    lawyer.id,
-    daysRemaining,
-    lawyer.premium_expires_at,
-  );
-
-  if (alreadySent) {
+  if (
+    await alreadySentWarning(
+      db,
+      lawyer.id,
+      daysRemaining,
+      lawyer.premium_expires_at,
+    )
+  ) {
     return false;
   }
 
@@ -198,23 +245,24 @@ async function alreadySentRenewalEmail(db, lawyerId, expiresAtIso) {
 async function sendRenewalEmail(db, lawyer, nowStr) {
   if (!process.env.RESEND_API_KEY || !lawyer.email) return false;
 
-  const sub = resolveSubscription(lawyer);
-  if (!sub?.url) return false;
-
   if (await alreadySentRenewalEmail(db, lawyer.id, lawyer.premium_expires_at)) {
     return false;
   }
 
+  const plan = String(lawyer.plan_type || "START").toUpperCase();
+  const cycle = String(lawyer.plan_billing_cycle || "AVULSO").toUpperCase();
+  const valueLabel = PLAN_VALUE_LABELS[plan]?.[cycle] || "Consulte no painel";
+
   await resend.emails.send({
     from: "Social Jurídico <contato@socialjuridico.com.br>",
     to: [lawyer.email],
-    subject: `Seu plano ${sub.planType} vence em breve — renove agora`,
+    subject: `Seu plano ${plan} vence em breve`,
     html: renovacaoPlanoTemplate({
       lawyerName: lawyer.name || "Advogado",
-      planType: sub.planType,
+      planType: plan,
       daysRemaining: 5,
-      valorTexto: sub.valor,
-      ctaUrl: sub.url,
+      valorTexto: valueLabel,
+      ctaUrl: `${SITE_URL}/dashboard/advogado`,
     }),
   });
 
@@ -223,7 +271,7 @@ async function sendRenewalEmail(db, lawyer, nowStr) {
       id: crypto.randomUUID(),
       user_id: lawyer.id,
       titulo: "Lembrete de renovação enviado",
-      mensagem: `Enviamos um email lembrando que seu plano ${sub.planType} vence em 5 dias.`,
+      mensagem: `Enviamos um email lembrando que seu plano ${plan} vence em 5 dias. A renovação é feita dentro do Social Jurídico.`,
       tipo: "PLANO_RENOVACAO_EMAIL",
       meta: JSON.stringify({
         days_remaining: 5,
@@ -235,7 +283,6 @@ async function sendRenewalEmail(db, lawyer, nowStr) {
   ]);
 
   if (error) throw error;
-
   return true;
 }
 
@@ -262,14 +309,12 @@ export async function GET(request) {
     const { data: premiumLawyers, error: fetchError } = await db
       .from("advogados")
       .select(
-        "id, name, email, is_premium, premium_expires_at, plan_type, plan_billing_cycle, subscription_status",
+        "id, name, email, is_premium, premium_expires_at, plan_type, plan_billing_cycle, subscription_status, stripe_subscription_id",
       )
       .eq("is_premium", true)
       .not("premium_expires_at", "is", null);
 
-    if (fetchError) {
-      throw fetchError;
-    }
+    if (fetchError) throw fetchError;
 
     const now = new Date();
     const nowStr = now.toISOString();
@@ -277,18 +322,42 @@ export async function GET(request) {
     let expiredCount = 0;
     let notifiedCount = 0;
     let emailedCount = 0;
+    let reconciledCount = 0;
     let invalidExpirationCount = 0;
 
     for (const lawyer of premiumLawyers || []) {
       processedCount += 1;
 
-      const expiresAt = parseDate(lawyer.premium_expires_at);
+      let expiresAt = parseDate(lawyer.premium_expires_at);
       if (!expiresAt) {
         invalidExpirationCount += 1;
         console.warn(
           `[cron/verificar-planos] Data invalida para advogado ${lawyer.id}: ${lawyer.premium_expires_at}`,
         );
         continue;
+      }
+
+      const recurring = isMercadoPagoRecurring(lawyer);
+
+      if (expiresAt.getTime() <= now.getTime() && recurring) {
+        const reconciliation = await reconcileRecurringSubscription(db, lawyer);
+        if (reconciliation.reconciled) reconciledCount += 1;
+
+        const refreshedExpiry = parseDate(
+          reconciliation.refreshed?.premium_expires_at,
+        );
+        if (refreshedExpiry && refreshedExpiry.getTime() > now.getTime()) {
+          continue;
+        }
+
+        // Uma assinatura ainda autorizada ganha uma janela operacional de 24h
+        // para que a cobrança/notificação assíncrona chegue antes do downgrade.
+        if (
+          reconciliation.authorized &&
+          now.getTime() - expiresAt.getTime() < 86_400_000
+        ) {
+          continue;
+        }
       }
 
       if (expiresAt.getTime() <= now.getTime()) {
@@ -314,23 +383,21 @@ export async function GET(request) {
         continue;
       }
 
-      // Assinatura cancelada: não renova nem envia lembrete de renovação. O
-      // acesso segue até expirar (tratado acima); aqui apenas ignoramos os
-      // avisos/CTAs de renovação para não incomodar quem já cancelou.
       const canceled = [
         "CANCELED",
         "CANCELLED",
         "BLOCKED",
         "UNPAID",
       ].includes(String(lawyer.subscription_status || "").toUpperCase());
-      if (canceled) {
-        continue;
-      }
+      if (canceled) continue;
+
+      // Assinaturas Mercado Pago são renovadas automaticamente. Não enviamos
+      // CTA de compra nem alertas de expiração enquanto a recorrência está ativa.
+      if (recurring) continue;
 
       const diffDays = daysUntil(expiresAt, now);
       const daysRemaining = diffDays === 0 ? 1 : diffDays;
 
-      // 5 dias antes: email de renovação com o link da assinatura (Resend).
       if (daysRemaining === 5) {
         try {
           const sent = await sendRenewalEmail(db, lawyer, nowStr);
@@ -343,9 +410,7 @@ export async function GET(request) {
         }
       }
 
-      if (![1, 2, 3].includes(daysRemaining)) {
-        continue;
-      }
+      if (![1, 2, 3].includes(daysRemaining)) continue;
 
       try {
         const sent = await notifyPlanExpiring(
@@ -369,6 +434,7 @@ export async function GET(request) {
       expired: expiredCount,
       notified: notifiedCount,
       emailed: emailedCount,
+      reconciled: reconciledCount,
       invalidExpiration: invalidExpirationCount,
       message: "Verificacao de expiracao concluida com sucesso.",
     });

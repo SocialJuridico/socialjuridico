@@ -13,13 +13,50 @@ import {
   Clipboard,
   CreditCard,
   Loader2,
+  MapPin,
   QrCode,
   ShieldCheck,
   X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
+import {
+  billingAddressValidationError,
+  EMPTY_BILLING_ADDRESS,
+  normalizeBillingAddress,
+} from "@/lib/billing/billingAddress";
+
 let mercadoPagoSdkPromise = null;
+
+const BRAZIL_STATES = [
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+];
 
 function loadMercadoPagoSdk() {
   if (typeof window === "undefined") {
@@ -105,12 +142,23 @@ export default function StableTransparentCheckoutModal({
   const provisionalNotifiedRef = useRef(false);
   const mountedRef = useRef(false);
   const processingRef = useRef(false);
+  const billingAddressRef = useRef({
+    ...EMPTY_BILLING_ADDRESS,
+    state: String(profileData?.estado || "")
+      .trim()
+      .toUpperCase()
+      .slice(0, 2),
+  });
   const brickIdRef = useRef(
     `sj-mp-payment-${Math.random().toString(36).slice(2, 10)}`,
   );
 
   const [brickReady, setBrickReady] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [billingProfileLoading, setBillingProfileLoading] = useState(false);
+  const [billingAddress, setBillingAddress] = useState(
+    billingAddressRef.current,
+  );
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
@@ -136,7 +184,15 @@ export default function StableTransparentCheckoutModal({
     }
 
     return `${jurisAmount} Juris · ${formatBRL(amount)}`;
-  }, [aiCreditsAmount, amount, billingCycle, isAiCredits, isPro, jurisAmount, planType]);
+  }, [
+    aiCreditsAmount,
+    amount,
+    billingCycle,
+    isAiCredits,
+    isPro,
+    jurisAmount,
+    planType,
+  ]);
 
   const notifySuccess = useCallback(async () => {
     if (successNotifiedRef.current) return;
@@ -163,6 +219,28 @@ export default function StableTransparentCheckoutModal({
     await onPaymentSuccess?.({ provisional: true });
   }, [onPaymentSuccess]);
 
+  const updateBillingField = useCallback((field, value) => {
+    let normalizedValue = value;
+
+    if (field === "zipCode") {
+      normalizedValue = String(value || "")
+        .replace(/\D/g, "")
+        .slice(0, 8);
+    } else if (field === "state") {
+      normalizedValue = String(value || "")
+        .replace(/[^a-z]/gi, "")
+        .toUpperCase()
+        .slice(0, 2);
+    }
+
+    setBillingAddress((current) => {
+      const next = { ...current, [field]: normalizedValue };
+      billingAddressRef.current = next;
+      return next;
+    });
+    setError("");
+  }, []);
+
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -175,12 +253,55 @@ export default function StableTransparentCheckoutModal({
   }, [processing]);
 
   useEffect(() => {
+    billingAddressRef.current = billingAddress;
+  }, [billingAddress]);
+
+  useEffect(() => {
+    if (!isOpen || recurring) return undefined;
+
+    let cancelled = false;
+    setBillingProfileLoading(true);
+
+    async function loadBillingAddress() {
+      try {
+        const response = await fetch(
+          "/api/checkout/mercadopago/billing-profile",
+          { cache: "no-store" },
+        );
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.success || cancelled) return;
+
+        const address = normalizeBillingAddress(
+          data.address || {},
+          profileData?.estado,
+        );
+        billingAddressRef.current = address;
+        setBillingAddress(address);
+      } catch (loadError) {
+        console.warn(
+          "[MercadoPago/BillingProfile] Endereço não carregado:",
+          loadError,
+        );
+      } finally {
+        if (!cancelled) setBillingProfileLoading(false);
+      }
+    }
+
+    void loadBillingAddress();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, profileData?.estado, recurring]);
+
+  useEffect(() => {
     if (!isOpen) {
       successNotifiedRef.current = false;
       provisionalNotifiedRef.current = false;
       processingRef.current = false;
       setBrickReady(false);
       setProcessing(false);
+      setBillingProfileLoading(false);
       setError("");
       setResult(null);
       return undefined;
@@ -259,6 +380,25 @@ export default function StableTransparentCheckoutModal({
                   return;
                 }
 
+                const checkoutBillingAddress = recurring
+                  ? null
+                  : normalizeBillingAddress(
+                      billingAddressRef.current,
+                      profileData?.estado,
+                    );
+                const addressError = checkoutBillingAddress
+                  ? billingAddressValidationError(
+                      checkoutBillingAddress,
+                      profileData?.estado,
+                    )
+                  : null;
+
+                if (addressError) {
+                  setError(addressError);
+                  reject(new Error(addressError));
+                  return;
+                }
+
                 processingRef.current = true;
                 setProcessing(true);
                 setError("");
@@ -273,7 +413,10 @@ export default function StableTransparentCheckoutModal({
                       jurisAmount: isPro || isAiCredits ? 0 : jurisAmount,
                       aiCreditsAmount: isAiCredits ? aiCreditsAmount : 0,
                       isPromoEligible: Boolean(isPromoEligible),
-                      internalCouponId: isAiCredits ? null : couponData?.id || null,
+                      internalCouponId: isAiCredits
+                        ? null
+                        : couponData?.id || null,
+                      billingAddress: checkoutBillingAddress,
                       paymentData: formData,
                     }),
                   });
@@ -358,6 +501,7 @@ export default function StableTransparentCheckoutModal({
     notifySuccess,
     planType,
     profileData?.email,
+    profileData?.estado,
     publicKey,
     recurring,
     result,
@@ -551,7 +695,9 @@ export default function StableTransparentCheckoutModal({
           ) : subscriptionPending ? (
             <div style={styles.statusPanel}>
               <CheckCircle2 size={46} />
-              <strong style={styles.statusTitle}>Assinatura criada com sucesso</strong>
+              <strong style={styles.statusTitle}>
+                Assinatura criada com sucesso
+              </strong>
               <span style={styles.muted}>
                 {result?.activationMessage ||
                   "Seu cartão foi validado e sua assinatura foi criada. Estamos confirmando a primeira cobrança automaticamente."}
@@ -564,7 +710,9 @@ export default function StableTransparentCheckoutModal({
           ) : result ? (
             <div style={styles.statusPanel}>
               <Loader2 size={38} style={styles.spinner} />
-              <strong style={styles.statusTitle}>Pagamento em processamento</strong>
+              <strong style={styles.statusTitle}>
+                Pagamento em processamento
+              </strong>
               <span style={styles.muted}>
                 Estamos consultando o Mercado Pago automaticamente. Você não
                 precisa sair do Social Jurídico.
@@ -580,22 +728,140 @@ export default function StableTransparentCheckoutModal({
                 <div style={styles.infoBox}>
                   {isPromoEligible ? (
                     <>
-                      Primeira cobrança promocional de <strong>{formatBRL(amount)}</strong>.
+                      Primeira cobrança promocional de{" "}
+                      <strong>{formatBRL(amount)}</strong>.
                       {nextAmount > 0 && (
-                        <> Próximas cobranças: <strong>{formatBRL(nextAmount)}</strong>.</>
+                        <>
+                          {" "}
+                          Próximas cobranças:{" "}
+                          <strong>{formatBRL(nextAmount)}</strong>.
+                        </>
                       )}
                     </>
                   ) : couponData ? (
                     <>
                       O cupom vale nesta primeira cobrança.
                       {nextAmount > 0 && (
-                        <> Próximas cobranças: <strong>{formatBRL(nextAmount)}</strong>.</>
+                        <>
+                          {" "}
+                          Próximas cobranças:{" "}
+                          <strong>{formatBRL(nextAmount)}</strong>.
+                        </>
                       )}
                     </>
                   ) : (
                     <>Renovação automática via cartão no ciclo selecionado.</>
                   )}
                 </div>
+              )}
+
+              {!recurring && (
+                <section style={styles.billingBox}>
+                  <div style={styles.billingHeading}>
+                    <MapPin size={17} />
+                    <div>
+                      <strong>Endereço de cobrança</strong>
+                      <span>
+                        Usado na análise antifraude e enviado ao Mercado Pago.
+                        Depois da primeira compra, fica preenchido automaticamente.
+                      </span>
+                    </div>
+                  </div>
+
+                  {billingProfileLoading ? (
+                    <div style={styles.billingLoading}>
+                      <Loader2 size={17} style={styles.spinner} />
+                      Carregando endereço salvo...
+                    </div>
+                  ) : (
+                    <div style={styles.billingFields}>
+                      <label style={styles.billingField}>
+                        <span style={styles.billingLabel}>CEP</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="postal-code"
+                          value={billingAddress.zipCode}
+                          onChange={(event) =>
+                            updateBillingField("zipCode", event.target.value)
+                          }
+                          placeholder="00000000"
+                          maxLength={8}
+                          disabled={processing}
+                          style={styles.billingInput}
+                        />
+                      </label>
+
+                      <label style={styles.billingField}>
+                        <span style={styles.billingLabel}>UF</span>
+                        <select
+                          autoComplete="address-level1"
+                          value={billingAddress.state}
+                          onChange={(event) =>
+                            updateBillingField("state", event.target.value)
+                          }
+                          disabled={processing}
+                          style={styles.billingInput}
+                        >
+                          <option value="">UF</option>
+                          {BRAZIL_STATES.map((state) => (
+                            <option key={state} value={state}>
+                              {state}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label style={styles.billingFieldWide}>
+                        <span style={styles.billingLabel}>Rua</span>
+                        <input
+                          type="text"
+                          autoComplete="address-line1"
+                          value={billingAddress.streetName}
+                          onChange={(event) =>
+                            updateBillingField("streetName", event.target.value)
+                          }
+                          placeholder="Nome da rua"
+                          maxLength={120}
+                          disabled={processing}
+                          style={styles.billingInput}
+                        />
+                      </label>
+
+                      <label style={styles.billingField}>
+                        <span style={styles.billingLabel}>Número</span>
+                        <input
+                          type="text"
+                          autoComplete="address-line2"
+                          value={billingAddress.streetNumber}
+                          onChange={(event) =>
+                            updateBillingField("streetNumber", event.target.value)
+                          }
+                          placeholder="123"
+                          maxLength={20}
+                          disabled={processing}
+                          style={styles.billingInput}
+                        />
+                      </label>
+
+                      <label style={styles.billingFieldWide}>
+                        <span style={styles.billingLabel}>Cidade</span>
+                        <input
+                          type="text"
+                          autoComplete="address-level2"
+                          value={billingAddress.city}
+                          onChange={(event) =>
+                            updateBillingField("city", event.target.value)
+                          }
+                          placeholder="Sua cidade"
+                          maxLength={80}
+                          disabled={processing}
+                          style={styles.billingInput}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </section>
               )}
 
               <div id={brickIdRef.current} style={styles.brickContainer} />
@@ -620,9 +886,6 @@ export default function StableTransparentCheckoutModal({
     </div>
   );
 
-  // O portal é obrigatório: alguns cabeçalhos/sidebars do dashboard criam
-  // stacking contexts próprios. Sem portal, um modal fixed pode ficar preso,
-  // deslocado ou cortado acima do viewport, especialmente no checkout da extensão.
   return createPortal(checkout, document.body);
 }
 
@@ -701,6 +964,63 @@ const styles = {
     color: "#d8dbe4",
     fontSize: 13,
     lineHeight: 1.5,
+  },
+  billingBox: {
+    marginBottom: 18,
+    padding: 14,
+    border: "1px solid rgba(255,255,255,.09)",
+    borderRadius: 12,
+    background: "rgba(255,255,255,.025)",
+  },
+  billingHeading: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 9,
+    marginBottom: 13,
+    color: "#dfe3ec",
+  },
+  billingFields: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) 110px",
+    gap: 10,
+  },
+  billingField: {
+    display: "grid",
+    gap: 6,
+    minWidth: 0,
+  },
+  billingFieldWide: {
+    display: "grid",
+    gridColumn: "1 / -1",
+    gap: 6,
+    minWidth: 0,
+  },
+  billingLabel: {
+    color: "#aeb5c4",
+    fontSize: 11,
+    fontWeight: 700,
+  },
+  billingInput: {
+    width: "100%",
+    minWidth: 0,
+    height: 42,
+    padding: "0 11px",
+    border: "1px solid rgba(255,255,255,.12)",
+    borderRadius: 9,
+    outline: "none",
+    background: "#0a0f1a",
+    color: "#f5f5f5",
+    fontSize: 13,
+    boxSizing: "border-box",
+  },
+  billingLoading: {
+    minHeight: 70,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    color: "#a8b0c2",
+    fontSize: 12,
   },
   brickContainer: { minHeight: 180 },
   loadingBox: {

@@ -131,6 +131,22 @@ export function updateMercadoPagoSubscription(subscriptionId, body) {
   );
 }
 
+// A API de Assinaturas possui uma camada própria de faturas
+// (/authorized_payments). Ela é a fonte mais direta para descobrir se a primeira
+// cobrança já foi gerada, aprovada ou recusada.
+export function getMercadoPagoAuthorizedPayment(authorizedPaymentId) {
+  return mercadoPagoRequest(
+    `/authorized_payments/${encodeURIComponent(String(authorizedPaymentId))}`,
+  );
+}
+
+export function searchMercadoPagoAuthorizedPaymentsBySubscription(subscriptionId) {
+  const query = new URLSearchParams({
+    preapproval_id: String(subscriptionId),
+  });
+  return mercadoPagoRequest(`/authorized_payments/search?${query.toString()}`);
+}
+
 export function validateMercadoPagoWebhookSignature({
   xSignature,
   xRequestId,

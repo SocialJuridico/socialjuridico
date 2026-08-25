@@ -39,7 +39,10 @@ async function assertReferenceOwner(reference, userId) {
 export async function GET(request) {
   try {
     if (!supabaseAdmin) {
-      return json({ success: false, message: "Serviço financeiro indisponível." }, 503);
+      return json(
+        { success: false, message: "Serviço financeiro indisponível." },
+        503,
+      );
     }
 
     const supabase = createClient();
@@ -54,7 +57,9 @@ export async function GET(request) {
 
     const url = new URL(request.url);
     const paymentId = String(url.searchParams.get("paymentId") || "").trim();
-    const subscriptionId = String(url.searchParams.get("subscriptionId") || "").trim();
+    const subscriptionId = String(
+      url.searchParams.get("subscriptionId") || "",
+    ).trim();
 
     if (!paymentId && !subscriptionId) {
       return json(
@@ -67,7 +72,10 @@ export async function GET(request) {
       const payment = await getMercadoPagoPayment(paymentId);
       const reference = String(payment?.external_reference || "").trim();
       if (!reference) {
-        return json({ success: false, message: "Pagamento sem referência." }, 422);
+        return json(
+          { success: false, message: "Pagamento sem referência." },
+          422,
+        );
       }
 
       await assertReferenceOwner(reference, user.id);
@@ -76,7 +84,8 @@ export async function GET(request) {
         String(payment.status || "").toLowerCase() === "approved"
           ? await fulfillMercadoPagoPayment(payment)
           : null;
-      const transactionData = payment?.point_of_interaction?.transaction_data || {};
+      const transactionData =
+        payment?.point_of_interaction?.transaction_data || {};
 
       return json({
         success: true,
@@ -93,7 +102,10 @@ export async function GET(request) {
     const subscription = await getMercadoPagoSubscription(subscriptionId);
     const reference = String(subscription?.external_reference || "").trim();
     if (!reference) {
-      return json({ success: false, message: "Assinatura sem referência." }, 422);
+      return json(
+        { success: false, message: "Assinatura sem referência." },
+        422,
+      );
     }
 
     await assertReferenceOwner(reference, user.id);
@@ -104,10 +116,13 @@ export async function GET(request) {
     let approvedPayment = null;
 
     // Processa todos os pagamentos aprovados encontrados. A entrega é idempotente,
-    // então isto também recupera uma eventual notificação perdida.
+    // então isto também recupera uma eventual notificação perdida. O ID explícito
+    // da assinatura evita qualquer ambiguidade durante upgrade START -> PRO.
     for (const payment of [...payments].reverse()) {
       if (String(payment?.status || "").toLowerCase() !== "approved") continue;
-      const result = await fulfillMercadoPagoPayment(payment);
+      const result = await fulfillMercadoPagoPayment(payment, {
+        subscriptionId,
+      });
       if (result?.status === "approved") approvedPayment = payment;
     }
 

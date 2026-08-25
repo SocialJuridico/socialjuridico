@@ -37,7 +37,7 @@ async function loadLawyer(lawyerId) {
   const { data, error } = await supabaseAdmin
     .from("advogados")
     .select(
-      "id, name, email, balance, plan_type, plan_billing_cycle, premium_expires_at, promo_start_used, promo_pro_used, stripe_subscription_id",
+      "id, name, email, balance, saldo_creditos_ia_extensao, plan_type, plan_billing_cycle, is_premium, premium_expires_at, promo_start_used, promo_pro_used, stripe_subscription_id, subscription_status",
     )
     .eq("id", lawyerId)
     .maybeSingle();
@@ -72,6 +72,28 @@ async function incrementBalance(lawyerId, amount) {
   return newBalance;
 }
 
+async function incrementAiCredits(lawyerId, amount) {
+  const { data, error: readError } = await supabaseAdmin
+    .from("advogados")
+    .select("saldo_creditos_ia_extensao")
+    .eq("id", lawyerId)
+    .maybeSingle();
+
+  if (readError || !data) {
+    throw new Error("Falha ao consultar saldo de créditos de IA.");
+  }
+
+  const newBalance =
+    Number(data.saldo_creditos_ia_extensao || 0) + Number(amount || 0);
+  const { error } = await supabaseAdmin
+    .from("advogados")
+    .update({ saldo_creditos_ia_extensao: newBalance })
+    .eq("id", lawyerId);
+
+  if (error) throw new Error("Falha ao creditar consultas de IA.");
+  return newBalance;
+}
+
 function calculateNextExpiration(currentExpiration, days, samePlan) {
   const now = Date.now();
   const current = currentExpiration ? new Date(currentExpiration).getTime() : 0;
@@ -82,6 +104,14 @@ function calculateNextExpiration(currentExpiration, days, samePlan) {
 async function applyProduct(lawyer, product, { subscriptionId = null } = {}) {
   if (product.type === "JURIS_PURCHASE") {
     const newBalance = await incrementBalance(lawyer.id, product.jurisAmount);
+    return { newBalance };
+  }
+
+  if (product.type === "AI_CREDITS_PURCHASE") {
+    const newBalance = await incrementAiCredits(
+      lawyer.id,
+      product.aiCreditsAmount,
+    );
     return { newBalance };
   }
 
@@ -100,8 +130,8 @@ async function applyProduct(lawyer, product, { subscriptionId = null } = {}) {
     subscription_status: "ACTIVE",
   };
 
-  // Campo legado mantido temporariamente para compatibilidade do banco atual.
-  // O valor passa a ser explicitamente prefixado para não ser confundido com Stripe.
+  // Campos de banco com nome legado são mantidos nesta fase para preservar os
+  // usuários existentes. Novos IDs ficam prefixados com mp_.
   if (subscriptionId) update.stripe_subscription_id = `mp_${subscriptionId}`;
 
   if (product.promo) {
@@ -121,6 +151,8 @@ async function sendConfirmationEmail(lawyer, product, newBalance) {
   if (!process.env.RESEND_API_KEY || !lawyer.email) return;
 
   try {
+    if (product.type === "AI_CREDITS_PURCHASE") return;
+
     if (product.type === "JURIS_PURCHASE") {
       await resend.emails.send({
         from: "Social Jurídico <contato@socialjuridico.com.br>",
@@ -162,6 +194,33 @@ async function consumeCoupon(referenceTransaction, lawyerId, reference) {
   } catch (error) {
     console.error("[Billing] Falha não fatal ao consumir cupom:", error);
   }
+}
+
+async function claimOneTimeTransaction(transaction) {
+  if (transaction.status === "succeeded") {
+    return { claimed: false, duplicate: true };
+  }
+
+  if (["processing", "error_updating_balance"].includes(transaction.status)) {
+    return { claimed: false, duplicate: false };
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("transacoes")
+    .update({ status: "processing" })
+    .eq("id", transaction.id)
+    .eq("status", transaction.status)
+    .select("id")
+    .maybeSingle();
+
+  if (error) throw new Error("Falha ao reservar processamento da transação.");
+  if (data) return { claimed: true, duplicate: false };
+
+  const latest = await getReferenceTransaction(transaction.stripe_session_id);
+  return {
+    claimed: false,
+    duplicate: latest?.status === "succeeded",
+  };
 }
 
 export async function fulfillMercadoPagoPayment(payment) {
@@ -208,7 +267,7 @@ export async function fulfillMercadoPagoPayment(payment) {
   }
 
   if (status !== "approved") {
-    if (!isRecurringPayment) {
+    if (!isRecurringPayment && !["processing", "succeeded"].includes(referenceTransaction.status)) {
       await supabaseAdmin
         .from("transacoes")
         .update({ status: status || "pending" })
@@ -245,20 +304,26 @@ export async function fulfillMercadoPagoPayment(payment) {
           if (duplicate?.status === "succeeded") {
             return { handled: true, duplicate: true, status: "approved" };
           }
-        } else {
-          throw new Error("Falha ao registrar cobrança recorrente.");
+          return { handled: true, status: "processing" };
         }
-      } else {
-        recurringTransactionId = data.id;
+        throw new Error("Falha ao registrar cobrança recorrente.");
       }
+      recurringTransactionId = data.id;
+    } else if (existing.status === "processing") {
+      return { handled: true, status: "processing" };
+    } else if (existing.status === "error_updating_balance") {
+      return { handled: true, status: "manual_review" };
     } else {
       recurringTransactionId = existing.id;
     }
   } else {
-    await supabaseAdmin
-      .from("transacoes")
-      .update({ status: "processing" })
-      .eq("id", referenceTransaction.id);
+    const claim = await claimOneTimeTransaction(referenceTransaction);
+    if (claim.duplicate) {
+      return { handled: true, duplicate: true, status: "approved" };
+    }
+    if (!claim.claimed) {
+      return { handled: true, status: "processing" };
+    }
   }
 
   try {
@@ -271,12 +336,10 @@ export async function fulfillMercadoPagoPayment(payment) {
     const { newBalance } = await applyProduct(lawyer, product, { subscriptionId });
 
     if (isRecurringPayment) {
-      if (recurringTransactionId) {
-        await supabaseAdmin
-          .from("transacoes")
-          .update({ status: "succeeded" })
-          .eq("id", recurringTransactionId);
-      }
+      await supabaseAdmin
+        .from("transacoes")
+        .update({ status: "succeeded" })
+        .eq("id", recurringTransactionId);
       await supabaseAdmin
         .from("transacoes")
         .update({ status: "subscription_active" })
@@ -323,9 +386,12 @@ export async function syncMercadoPagoSubscription(subscription) {
   if (!transaction) return { handled: false };
 
   const normalizedStatus = String(subscription?.status || "").toLowerCase();
+  const alreadyPaid = transaction.status === "subscription_active";
   const profileStatus =
     normalizedStatus === "authorized"
-      ? "ACTIVE"
+      ? alreadyPaid
+        ? "ACTIVE"
+        : "PENDING_PAYMENT"
       : normalizedStatus === "paused"
         ? "PAUSED"
         : normalizedStatus === "cancelled" || normalizedStatus === "canceled"
@@ -342,15 +408,12 @@ export async function syncMercadoPagoSubscription(subscription) {
 
   if (error) throw new Error("Falha ao sincronizar status da assinatura.");
 
-  await supabaseAdmin
-    .from("transacoes")
-    .update({
-      status:
-        profileStatus === "ACTIVE"
-          ? "subscription_active"
-          : `subscription_${profileStatus.toLowerCase()}`,
-    })
-    .eq("id", transaction.id);
+  if (!alreadyPaid || profileStatus !== "ACTIVE") {
+    await supabaseAdmin
+      .from("transacoes")
+      .update({ status: `subscription_${profileStatus.toLowerCase()}` })
+      .eq("id", transaction.id);
+  }
 
   return { handled: true, status: profileStatus };
 }

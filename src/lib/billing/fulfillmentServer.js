@@ -5,7 +5,16 @@ import {
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
 import { decodeBillingReference } from "@/lib/billing/reference";
+import {
+  centsToBRL,
+  getLawyerPlanPrice,
+} from "@/lib/billing/catalog";
 import { consumeCouponUsage } from "@/lib/coupons/couponServer";
+import {
+  applyRsDiscountCents,
+  isRsLawyer,
+} from "@/lib/lawyerDiscount";
+import { updateMercadoPagoSubscription } from "@/lib/mercadopago/client";
 
 function cents(value) {
   return Math.round(Number(value || 0) * 100);
@@ -14,7 +23,9 @@ function cents(value) {
 async function getReferenceTransaction(reference) {
   const { data, error } = await supabaseAdmin
     .from("transacoes")
-    .select("id, advogado_id, tipo, valor, status, juris_amount, cupom_id, stripe_session_id")
+    .select(
+      "id, advogado_id, tipo, valor, status, juris_amount, cupom_id, stripe_session_id",
+    )
     .eq("stripe_session_id", reference)
     .maybeSingle();
 
@@ -37,7 +48,7 @@ async function loadLawyer(lawyerId) {
   const { data, error } = await supabaseAdmin
     .from("advogados")
     .select(
-      "id, name, email, balance, saldo_creditos_ia_extensao, plan_type, plan_billing_cycle, is_premium, premium_expires_at, promo_start_used, promo_pro_used, stripe_subscription_id, subscription_status",
+      "id, name, email, estado, oab, oab_verification_status, balance, saldo_creditos_ia_extensao, plan_type, plan_billing_cycle, is_premium, premium_expires_at, promo_start_used, promo_pro_used, stripe_subscription_id, subscription_status",
     )
     .eq("id", lawyerId)
     .maybeSingle();
@@ -101,6 +112,57 @@ function calculateNextExpiration(currentExpiration, days, samePlan) {
   return new Date(base + Number(days || 0) * 86_400_000).toISOString();
 }
 
+function mercadoPagoSubscriptionId(lawyer, payment) {
+  const direct = String(
+    payment?.metadata?.preapproval_id ||
+      payment?.metadata?.subscription_id ||
+      payment?.subscription_id ||
+      "",
+  ).trim();
+  if (direct) return direct;
+
+  const stored = String(lawyer?.stripe_subscription_id || "").trim();
+  return stored.startsWith("mp_") ? stored.slice(3) : null;
+}
+
+function renewalPriceInCents(lawyer, product) {
+  if (!product?.recurring) return null;
+
+  const price = getLawyerPlanPrice(product.planType, product.billingCycle);
+  if (!price) return null;
+
+  if (isRsLawyer(lawyer)) {
+    return applyRsDiscountCents(price.cents, product.planType);
+  }
+
+  return price.cents;
+}
+
+async function normalizeNextSubscriptionCharge({
+  lawyer,
+  product,
+  payment,
+  initialPaidCents,
+}) {
+  if (!product?.recurring) return null;
+
+  const subscriptionId = mercadoPagoSubscriptionId(lawyer, payment);
+  const renewalCents = renewalPriceInCents(lawyer, product);
+
+  if (!subscriptionId || !renewalCents || renewalCents === initialPaidCents) {
+    return { subscriptionId, renewalCents, changed: false };
+  }
+
+  await updateMercadoPagoSubscription(subscriptionId, {
+    auto_recurring: {
+      transaction_amount: centsToBRL(renewalCents),
+      currency_id: "BRL",
+    },
+  });
+
+  return { subscriptionId, renewalCents, changed: true };
+}
+
 async function applyProduct(lawyer, product, { subscriptionId = null } = {}) {
   if (product.type === "JURIS_PURCHASE") {
     const newBalance = await incrementBalance(lawyer.id, product.jurisAmount);
@@ -115,8 +177,10 @@ async function applyProduct(lawyer, product, { subscriptionId = null } = {}) {
     return { newBalance };
   }
 
-  const samePlan = String(lawyer.plan_type || "").toUpperCase() === product.planType;
-  const newBalance = Number(lawyer.balance || 0) + Number(product.jurisAmount || 0);
+  const samePlan =
+    String(lawyer.plan_type || "").toUpperCase() === product.planType;
+  const newBalance =
+    Number(lawyer.balance || 0) + Number(product.jurisAmount || 0);
   const update = {
     plan_type: product.planType,
     plan_billing_cycle: product.billingCycle,
@@ -128,15 +192,17 @@ async function applyProduct(lawyer, product, { subscriptionId = null } = {}) {
     ),
     balance: newBalance,
     subscription_status: "ACTIVE",
+
+    // Os campos históricos passam a representar a nova regra comercial:
+    // depois de ter qualquer START/PRO, nenhuma promoção de primeiro mês volta
+    // a ficar disponível, mesmo que o plano expire no futuro.
+    promo_start_used: true,
+    promo_pro_used: true,
   };
 
   // Campos de banco com nome legado são mantidos nesta fase para preservar os
   // usuários existentes. Novos IDs ficam prefixados com mp_.
   if (subscriptionId) update.stripe_subscription_id = `mp_${subscriptionId}`;
-
-  if (product.promo) {
-    update[product.planType === "PRO" ? "promo_pro_used" : "promo_start_used"] = true;
-  }
 
   const { error } = await supabaseAdmin
     .from("advogados")
@@ -242,19 +308,36 @@ export async function fulfillMercadoPagoPayment(payment) {
     return { handled: false, reason: "REFERENCE_NOT_FOUND" };
   }
 
+  const isRecurringPayment = Boolean(product.recurring);
+  const firstRecurringCharge =
+    isRecurringPayment && referenceTransaction.status !== "subscription_active";
+
+  let lawyer = null;
+  let expectedCents = cents(referenceTransaction.valor);
+
+  // A referência guarda o valor da primeira cobrança. Depois que a assinatura
+  // está ativa, as próximas cobranças precisam ser validadas contra o preço de
+  // renovação (normal ou OAB/RS), não contra a promoção/cupom inicial.
+  if (isRecurringPayment && !firstRecurringCharge) {
+    lawyer = await loadLawyer(referenceTransaction.advogado_id);
+    expectedCents = renewalPriceInCents(lawyer, product) || expectedCents;
+  }
+
   const paidCents = cents(payment.transaction_amount);
-  const expectedCents = cents(referenceTransaction.valor);
-  if (paidCents !== expectedCents || String(payment.currency_id || "BRL") !== "BRL") {
+  if (
+    paidCents !== expectedCents ||
+    String(payment.currency_id || "BRL").toUpperCase() !== "BRL"
+  ) {
     console.error("[Billing] Pagamento Mercado Pago com valor divergente", {
       paymentId,
       paidCents,
       expectedCents,
       currency: payment.currency_id,
+      firstRecurringCharge,
     });
     return { handled: false, reason: "AMOUNT_MISMATCH" };
   }
 
-  const isRecurringPayment = Boolean(product.recurring);
   const providerReference = `mp_pay_${paymentId}`;
 
   if (isRecurringPayment) {
@@ -267,7 +350,10 @@ export async function fulfillMercadoPagoPayment(payment) {
   }
 
   if (status !== "approved") {
-    if (!isRecurringPayment && !["processing", "succeeded"].includes(referenceTransaction.status)) {
+    if (
+      !isRecurringPayment &&
+      !["processing", "succeeded"].includes(referenceTransaction.status)
+    ) {
       await supabaseAdmin
         .from("transacoes")
         .update({ status: status || "pending" })
@@ -326,14 +412,29 @@ export async function fulfillMercadoPagoPayment(payment) {
     }
   }
 
+  let productApplied = false;
+
   try {
-    const lawyer = await loadLawyer(referenceTransaction.advogado_id);
-    const subscriptionId =
-      payment?.metadata?.preapproval_id ||
-      payment?.metadata?.subscription_id ||
-      payment?.subscription_id ||
-      null;
-    const { newBalance } = await applyProduct(lawyer, product, { subscriptionId });
+    if (!lawyer) {
+      lawyer = await loadLawyer(referenceTransaction.advogado_id);
+    }
+
+    let subscriptionId = mercadoPagoSubscriptionId(lawyer, payment);
+
+    if (firstRecurringCharge) {
+      const normalized = await normalizeNextSubscriptionCharge({
+        lawyer,
+        product,
+        payment,
+        initialPaidCents: paidCents,
+      });
+      subscriptionId = normalized?.subscriptionId || subscriptionId;
+    }
+
+    const { newBalance } = await applyProduct(lawyer, product, {
+      subscriptionId,
+    });
+    productApplied = true;
 
     if (isRecurringPayment) {
       await supabaseAdmin
@@ -344,6 +445,10 @@ export async function fulfillMercadoPagoPayment(payment) {
         .from("transacoes")
         .update({ status: "subscription_active" })
         .eq("id", referenceTransaction.id);
+
+      if (firstRecurringCharge) {
+        await consumeCoupon(referenceTransaction, lawyer.id, reference);
+      }
     } else {
       await supabaseAdmin
         .from("transacoes")
@@ -362,12 +467,25 @@ export async function fulfillMercadoPagoPayment(payment) {
       newBalance,
     };
   } catch (error) {
-    const targetId = isRecurringPayment ? recurringTransactionId : referenceTransaction.id;
+    const targetId = isRecurringPayment
+      ? recurringTransactionId
+      : referenceTransaction.id;
+
     if (targetId) {
-      await supabaseAdmin
-        .from("transacoes")
-        .update({ status: "error_updating_balance" })
-        .eq("id", targetId);
+      if (isRecurringPayment && !productApplied) {
+        // Falha antes de entregar o benefício: remove a trava desta tentativa
+        // para permitir que o webhook/status faça nova tentativa com segurança.
+        await supabaseAdmin
+          .from("transacoes")
+          .delete()
+          .eq("id", targetId)
+          .eq("status", "processing");
+      } else {
+        await supabaseAdmin
+          .from("transacoes")
+          .update({ status: "error_updating_balance" })
+          .eq("id", targetId);
+      }
     }
     throw error;
   }

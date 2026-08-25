@@ -4,7 +4,7 @@ export const COUPON_TYPES = Object.freeze({
 });
 
 const COUPON_SELECT =
-  "id, codigo, tipo, desconto_tipo, valor, limite_por_usuario, limite_total, starts_at, expira_em, ativo, description, stripe_coupon_id, archived_at, updated_at";
+  "id, codigo, tipo, desconto_tipo, valor, limite_por_usuario, limite_total, starts_at, expira_em, ativo, description, archived_at, updated_at";
 
 const RESERVATION_REASON_MESSAGES = {
   NOT_FOUND: "Cupom não encontrado.",
@@ -99,14 +99,6 @@ function assertCouponWindow(coupon, expectedType, now = new Date()) {
   if (expiresAt && expiresAt <= now) {
     throw couponError("Este cupom já expirou.", 409, "COUPON_EXPIRED");
   }
-
-  if (!String(coupon.stripe_coupon_id || "").trim()) {
-    throw couponError(
-      "Este cupom está sem vínculo com o provedor de pagamentos.",
-      503,
-      "COUPON_PROVIDER_MISSING",
-    );
-  }
 }
 
 async function loadCoupon(db, { couponId, code }) {
@@ -138,6 +130,7 @@ async function loadCoupon(db, { couponId, code }) {
 }
 
 async function countCouponConsumption(db, couponId, userId) {
+  const now = new Date().toISOString();
   const [userUses, totalUses, userReservations, totalReservations] =
     await Promise.all([
       db
@@ -155,13 +148,13 @@ async function countCouponConsumption(db, couponId, userId) {
         .eq("cupom_id", couponId)
         .eq("advogado_id", userId)
         .eq("status", "RESERVED")
-        .gt("expires_at", new Date().toISOString()),
+        .gt("expires_at", now),
       db
         .from("cupom_reservas")
         .select("id", { count: "exact", head: true })
         .eq("cupom_id", couponId)
         .eq("status", "RESERVED")
-        .gt("expires_at", new Date().toISOString()),
+        .gt("expires_at", now),
     ]);
 
   const firstError = [userUses, totalUses, userReservations, totalReservations].find(

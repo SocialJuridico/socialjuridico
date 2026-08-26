@@ -182,7 +182,7 @@ async function persistBillingAddress(user, billingAddress) {
 }
 
 async function bindReservation(reservationToken, userId, reference) {
-  if (!reservationToken) return;
+  if (!reservationToken) return false;
 
   const { data, error } = await supabaseAdmin.rpc("bind_coupon_reservation", {
     p_token: reservationToken,
@@ -190,11 +190,23 @@ async function bindReservation(reservationToken, userId, reference) {
     p_checkout_reference: reference,
   });
 
-  if (error || data !== true) {
-    const bindError = new Error("Não foi possível vincular o cupom ao pagamento.");
-    bindError.status = ["PGRST202", "42883"].includes(error?.code) ? 503 : 409;
-    throw bindError;
+  if (!error && data === true) return true;
+
+  // Compatibilidade com bancos que já possuem a governança de reserva de cupom,
+  // mas ainda não receberam a RPC de vínculo criada durante a migração de gateway.
+  // A transação já guarda cupom_id e o fulfillment registra o uso após pagamento
+  // aprovado, portanto a ausência desta RPC não deve bloquear uma venda válida.
+  if (["PGRST202", "42883"].includes(error?.code)) {
+    console.warn(
+      "[Checkout/MercadoPago] bind_coupon_reservation ausente; seguindo em modo compatibilidade.",
+      { reference: String(reference || "").slice(-12) },
+    );
+    return false;
   }
+
+  const bindError = new Error("Não foi possível vincular o cupom ao pagamento.");
+  bindError.status = 409;
+  throw bindError;
 }
 
 async function createReferenceTransaction({ userId, product, reference, couponId }) {

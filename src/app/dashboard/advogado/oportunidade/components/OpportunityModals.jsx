@@ -12,7 +12,10 @@ import {
 } from "lucide-react";
 
 import styles from "../Oportunidade.module.css";
-import { formatOpportunityDate } from "../opportunityUtils";
+import {
+  buildOpportunityDossier,
+  formatOpportunityDate,
+} from "../opportunityUtils";
 import {
   PRIORITY_LABELS,
   SOCIAL_TYPE_LABELS,
@@ -45,23 +48,82 @@ function ModalFrame({ children, className = "", onClose, busy, labelledBy }) {
   );
 }
 
+function DetailList({ items, ordered = false }) {
+  if (!items?.length) return null;
+  const Tag = ordered ? "ol" : "ul";
+
+  return (
+    <Tag className={ordered ? styles.nextStepsList : styles.dossierBulletList}>
+      {items.map((item, index) => (
+        <li
+          key={`${typeof item === "string" ? item : item?.titulo || item?.descricao}-${index}`}
+          className={ordered ? styles.nextStepItem : styles.dossierBulletItem}
+        >
+          {typeof item === "string" ? (
+            item
+          ) : (
+            <>
+              {item?.titulo && <strong>{item.titulo}</strong>}
+              {item?.descricao && <span>{item.descricao}</span>}
+            </>
+          )}
+        </li>
+      ))}
+    </Tag>
+  );
+}
+
 export function OpportunityDetailsModal({ item, busy, onClose, onInterest }) {
   if (!item) return null;
   const location = [item.city, item.state].filter(Boolean).join(" - ") || "Local não informado";
   const priority = item.priority || "NORMAL";
   const isSocial = Boolean(item.isSocial);
-  const nextSteps = Array.isArray(item.nextSteps) ? item.nextSteps : [];
+  const dossier = buildOpportunityDossier(item);
   const showClassification =
     priority !== "NORMAL" || isSocial || Boolean(item.priorityReason);
+  const hasStructuredOverview =
+    dossier.keyFacts.length > 0 ||
+    dossier.questions.length > 0 ||
+    dossier.references.length > 0 ||
+    dossier.mentionedDocuments.length > 0;
 
   return (
-    <ModalFrame onClose={onClose} busy={busy} labelledBy="opportunity-detail-title">
+    <ModalFrame
+      className={styles.detailsModal}
+      onClose={onClose}
+      busy={busy}
+      labelledBy="opportunity-detail-title"
+    >
       {(closeRef) => (
         <>
-          <header className={styles.modalHeader}>
-            <div>
+          <header className={`${styles.modalHeader} ${styles.detailsModalHeader}`}>
+            <div className={styles.modalHeaderContent}>
+              <div className={styles.modalHeaderTags}>
+                <span className={styles.areaBadge}>{item.practiceArea}</span>
+                {item.status === "NEGOCIANDO" && (
+                  <span className={styles.statusBadge}>Em negociação</span>
+                )}
+                {Number.isFinite(item.intencaoFechamento) && (
+                  <span className={styles.intentBadge}>
+                    {item.intencaoFechamento}% intenção
+                  </span>
+                )}
+              </div>
               <h2 id="opportunity-detail-title">{item.title}</h2>
-              <p>{item.practiceArea}</p>
+              <div className={styles.detailHeaderMeta}>
+                <span>
+                  <MapPin size={14} aria-hidden="true" /> {location}
+                </span>
+                <span>
+                  <CalendarDays size={14} aria-hidden="true" />
+                  {formatOpportunityDate(item.createdAt)}
+                </span>
+                <span>
+                  {item.negotiatingLawyers?.length > 0
+                    ? `${item.negotiatingLawyers.length} profissional(is) em negociação`
+                    : "Nenhuma negociação iniciada"}
+                </span>
+              </div>
             </div>
             <button
               ref={closeRef}
@@ -75,16 +137,70 @@ export function OpportunityDetailsModal({ item, busy, onClose, onInterest }) {
             </button>
           </header>
 
-          <div className={styles.modalBody}>
-            <div className={styles.cardMeta}>
-              <span>
-                <MapPin size={14} aria-hidden="true" /> {location}
-              </span>
-              <span>
-                <CalendarDays size={14} aria-hidden="true" />
-                {formatOpportunityDate(item.createdAt)}
-              </span>
-            </div>
+          <div className={`${styles.modalBody} ${styles.detailsModalBody}`}>
+            {dossier.summary && (
+              <section className={styles.summaryCard}>
+                <span className={styles.sectionKicker}>Resumo do caso</span>
+                <p>{dossier.summary}</p>
+              </section>
+            )}
+
+            {hasStructuredOverview && (
+              <div className={styles.dossierGrid}>
+                {dossier.keyFacts.length > 0 && (
+                  <section className={styles.dossierCard}>
+                    <h3>Dados principais</h3>
+                    <dl className={styles.factList}>
+                      {dossier.keyFacts.map((fact, index) => (
+                        <div key={`${fact.label}-${index}`} className={styles.factRow}>
+                          <dt>{fact.label}</dt>
+                          <dd>{fact.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                )}
+
+                {dossier.questions.length > 0 && (
+                  <section className={styles.dossierCard}>
+                    <h3>Questões identificadas no relato</h3>
+                    <DetailList items={dossier.questions} />
+                  </section>
+                )}
+
+                {dossier.mentionedDocuments.length > 0 && (
+                  <section className={styles.dossierCard}>
+                    <h3>Documentos informados</h3>
+                    <DetailList items={dossier.mentionedDocuments} />
+                    <p className={styles.sourceDisclaimer}>
+                      Itens mencionados pelo cliente no relato. A existência, integridade e
+                      conteúdo desses documentos ainda precisam ser verificados pelo profissional.
+                    </p>
+                  </section>
+                )}
+
+                {dossier.references.length > 0 && (
+                  <section className={styles.dossierCard}>
+                    <h3>Processos e referências mencionadas</h3>
+                    <dl className={styles.referenceList}>
+                      {dossier.references.map((reference, index) => (
+                        <div key={`${reference.label}-${reference.value}-${index}`}>
+                          <dt>{reference.label}</dt>
+                          <dd>{reference.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                )}
+              </div>
+            )}
+
+            <section className={`${styles.detailSection} ${styles.fullNarrativeSection}`}>
+              <h3>Relato completo do cliente</h3>
+              <p>
+                {dossier.narrative || "O cliente não informou uma descrição detalhada."}
+              </p>
+            </section>
 
             {showClassification && (
               <section
@@ -92,7 +208,7 @@ export function OpportunityDetailsModal({ item, busy, onClose, onInterest }) {
                   isSocial ? styles.classificationSocial : ""
                 }`.trim()}
               >
-                <h3>Classificação por IA</h3>
+                <h3>Classificação preliminar</h3>
                 <div className={styles.classificationTags}>
                   {priority !== "NORMAL" && (
                     <span
@@ -127,24 +243,21 @@ export function OpportunityDetailsModal({ item, busy, onClose, onInterest }) {
               </section>
             )}
 
-            <section className={styles.detailSection}>
-              <h3>Relato do cliente</h3>
-              <p>
-                {item.description || "O cliente não informou uma descrição detalhada."}
-              </p>
-            </section>
+            {dossier.attentionPoints.length > 0 && (
+              <section className={`${styles.detailSection} ${styles.attentionBox}`}>
+                <h3>Pontos de atenção</h3>
+                <DetailList items={dossier.attentionPoints} />
+              </section>
+            )}
 
-            {nextSteps.length > 0 && (
+            {dossier.nextSteps.length > 0 && (
               <section className={styles.detailSection}>
                 <h3>Próximos passos sugeridos</h3>
-                <ol className={styles.nextStepsList}>
-                  {nextSteps.map((step, index) => (
-                    <li key={index} className={styles.nextStepItem}>
-                      {step.titulo && <strong>{step.titulo}</strong>}
-                      {step.descricao && <span>{step.descricao}</span>}
-                    </li>
-                  ))}
-                </ol>
+                <DetailList items={dossier.nextSteps} ordered />
+                <p className={styles.sourceDisclaimer}>
+                  Sugestões de organização inicial. A estratégia jurídica deve ser definida pelo
+                  advogado após a conferência dos fatos e documentos.
+                </p>
               </section>
             )}
 
@@ -155,19 +268,9 @@ export function OpportunityDetailsModal({ item, busy, onClose, onInterest }) {
               </section>
             )}
 
-            {item.negotiatingLawyers?.length > 0 && (
-              <section className={styles.detailSection}>
-                <h3>Negociação em andamento</h3>
-                <p>
-                  {item.negotiatingLawyers.length} profissional(is) já iniciou(aram)
-                  negociação. O caso permanece disponível enquanto não houver contratação.
-                </p>
-              </section>
-            )}
-
             {item.attachments?.length > 0 && (
               <section className={styles.detailSection}>
-                <h3>Documentos enviados</h3>
+                <h3>Documentos enviados na plataforma</h3>
                 <div className={styles.attachmentList}>
                   {item.attachments.map((attachment, index) => (
                     <a
@@ -206,23 +309,28 @@ export function OpportunityDetailsModal({ item, busy, onClose, onInterest }) {
             )}
           </div>
 
-          <footer className={styles.modalFooter}>
-            <button
-              type="button"
-              className={styles.buttonSecondary}
-              onClick={onClose}
-              disabled={busy}
-            >
-              Voltar
-            </button>
-            <button
-              type="button"
-              className={styles.button}
-              onClick={() => onInterest(item)}
-              disabled={busy}
-            >
-              Tenho interesse
-            </button>
+          <footer className={`${styles.modalFooter} ${styles.detailsModalFooter}`}>
+            <div className={styles.modalFooterNote}>
+              Analise os dados antes de manifestar interesse. O cliente será notificado pela plataforma.
+            </div>
+            <div className={styles.modalFooterActions}>
+              <button
+                type="button"
+                className={styles.buttonSecondary}
+                onClick={onClose}
+                disabled={busy}
+              >
+                Fechar
+              </button>
+              <button
+                type="button"
+                className={styles.button}
+                onClick={() => onInterest(item)}
+                disabled={busy}
+              >
+                Tenho interesse
+              </button>
+            </div>
           </footer>
         </>
       )}

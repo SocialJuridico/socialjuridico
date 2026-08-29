@@ -595,7 +595,9 @@
 }
 
 .modal {
+  display: flex;
   overflow: hidden;
+  flex-direction: column;
   width: min(760px, 100%);
   max-height: min(88vh, 860px);
   border: 1px solid rgba(212, 175, 55, 0.22);
@@ -639,9 +641,10 @@
 
 .modalBody {
   display: grid;
+  flex: 1 1 auto;
   gap: 18px;
   overflow-y: auto;
-  max-height: calc(88vh - 142px);
+  min-height: 0;
   padding: 21px;
 }
 
@@ -698,6 +701,7 @@
 
 .modalFooter {
   display: flex;
+  flex: 0 0 auto;
   justify-content: flex-end;
   gap: 9px;
   padding: 15px 21px;
@@ -1178,4 +1182,296 @@
   background: rgba(74, 222, 128, 0.12);
   color: #86efac;
   border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+/* ===== Dossiê completo da oportunidade ===== */
+.detailsModal {
+  width: min(1040px, 100%);
+  max-height: min(92vh, 980px);
+}
+
+.detailsModalHeader {
+  padding: 20px 24px 18px;
+  background:
+    linear-gradient(135deg, rgba(212, 175, 55, 0.08), transparent 52%),
+    rgba(255, 255, 255, 0.012);
+}
+
+.modalHeaderContent {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.modalHeaderTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.detailHeaderMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  color: rgba(255, 255, 255, 0.48);
+  font-size: 0.72rem;
+}
+
+.detailHeaderMeta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.detailsModalBody {
+  gap: 20px;
+  padding: 22px 24px 26px;
+  scrollbar-gutter: stable;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.095), rgba(212, 175, 55, 0.025));
+}
+
+.sectionKicker {
+  color: #e7ca68;
+  font-size: 0.67rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summaryCard p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.88rem;
+  line-height: 1.68;
+}
+
+.dossierGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dossierCard {
+  display: grid;
+  align-content: start;
+  gap: 11px;
+  min-width: 0;
+  padding: 15px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.dossierCard h3,
+.attentionBox h3 {
+  margin: 0;
+  color: #e7ca68;
+  font-size: 0.72rem;
+  letter-spacing: 0.065em;
+  text-transform: uppercase;
+}
+
+.factList,
+.referenceList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.factRow,
+.referenceList > div {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.42fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.factRow:last-child,
+.referenceList > div:last-child {
+  border-bottom: 0;
+}
+
+.factRow dt,
+.referenceList dt {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.factRow dd,
+.referenceList dd {
+  min-width: 0;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.referenceList dd {
+  color: #f0d979;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 0.72rem;
+}
+
+.dossierBulletList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dossierBulletItem {
+  position: relative;
+  padding-left: 16px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.dossierBulletItem::before {
+  content: "";
+  position: absolute;
+  top: 0.62em;
+  left: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #d4af37;
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.09);
+}
+
+.sourceDisclaimer {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-size: 0.69rem !important;
+  line-height: 1.55 !important;
+}
+
+.fullNarrativeSection {
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.fullNarrativeSection p {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.85rem;
+  line-height: 1.75;
+}
+
+.attentionBox {
+  padding: 15px 16px;
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 14px;
+  background: rgba(251, 191, 36, 0.045);
+}
+
+.detailsModalFooter {
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  background: rgba(17, 17, 17, 0.98);
+  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.22);
+}
+
+.modalFooterNote {
+  max-width: 560px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+.modalFooterActions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 9px;
+}
+
+.modalFooterActions .button,
+.modalFooterActions .buttonSecondary {
+  min-width: 128px;
+}
+
+@media (max-width: 820px) {
+  .dossierGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .detailsModalFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modalFooterNote {
+    max-width: none;
+  }
+
+  .modalFooterActions {
+    width: 100%;
+  }
+
+  .modalFooterActions > * {
+    flex: 1;
+  }
+}
+
+@media (max-width: 720px) {
+  .detailsModal {
+    width: 100%;
+    max-height: 94vh;
+  }
+
+  .detailsModalHeader {
+    padding: 17px 16px 15px;
+  }
+
+  .detailsModalBody {
+    padding: 16px;
+  }
+
+  .summaryCard,
+  .dossierCard,
+  .fullNarrativeSection,
+  .attentionBox {
+    border-radius: 12px;
+  }
+
+  .factRow,
+  .referenceList > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .detailsModalFooter {
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 480px) {
+  .detailHeaderMeta {
+    gap: 7px 12px;
+  }
+
+  .modalFooterActions {
+    flex-direction: column-reverse;
+  }
+
+  .modalFooterActions > * {
+    width: 100%;
+  }
 }

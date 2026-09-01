@@ -35,6 +35,27 @@ export async function POST(request) {
     return NextResponse.redirect(loginUrl, 303);
   }
 
+  if (
+    decision === "approve" &&
+    !user.user_metadata?.name &&
+    typeof user.user_metadata?.full_name === "string" &&
+    user.user_metadata.full_name.trim()
+  ) {
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: {
+        ...user.user_metadata,
+        name: user.user_metadata.full_name.trim(),
+      },
+    });
+
+    if (metadataError) {
+      console.error("[OAuth Decision] Falha ao preparar nome do perfil:", {
+        authorizationId,
+        error: metadataError.message,
+      });
+    }
+  }
+
   const result =
     decision === "approve"
       ? await supabase.auth.oauth.approveAuthorization(authorizationId)

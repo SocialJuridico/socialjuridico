@@ -40,6 +40,20 @@ function ErrorState({ message }) {
   );
 }
 
+function getProfileName(user) {
+  const candidates = [user?.user_metadata?.name, user?.user_metadata?.full_name];
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    const value = candidate.trim();
+    if (!value) continue;
+    if (user?.email && value.toLowerCase() === user.email.toLowerCase()) continue;
+    return value;
+  }
+
+  return "";
+}
+
 export default async function OAuthConsentPage({ searchParams }) {
   const params = await searchParams;
   const authorizationId =
@@ -57,6 +71,27 @@ export default async function OAuthConsentPage({ searchParams }) {
 
   if (!user || userError) {
     redirect(`/oauth/login?authorization_id=${encodeURIComponent(authorizationId)}`);
+  }
+
+  let userName = getProfileName(user);
+
+  // O OAuth Server do Supabase usa especificamente user_metadata.name para
+  // preencher o claim OIDC `name` quando o scope `profile` é concedido.
+  // O Social Jurídico historicamente salva o nome em `full_name`, então
+  // hidratamos `name` apenas durante o fluxo OAuth sem alterar os demais
+  // fluxos da plataforma. Isso também corrige contas antigas automaticamente.
+  if (!user.user_metadata?.name && userName) {
+    const { data: updatedAuth, error: updateError } = await supabase.auth.updateUser({
+      data: {
+        name: userName,
+      },
+    });
+
+    if (updateError) {
+      console.warn("[OAuth Consent] Não foi possível hidratar o claim name:", updateError.message);
+    } else {
+      userName = getProfileName(updatedAuth?.user || user) || userName;
+    }
   }
 
   const { data: authDetails, error: authorizationError } =
@@ -83,8 +118,7 @@ export default async function OAuthConsentPage({ searchParams }) {
     .map((scope) => scope.trim())
     .filter(Boolean);
 
-  const userName =
-    user.user_metadata?.full_name || user.user_metadata?.name || user.email || "Sua conta";
+  const displayName = userName || user.email || "Sua conta";
 
   return (
     <main className={styles.page}>
@@ -110,7 +144,7 @@ export default async function OAuthConsentPage({ searchParams }) {
             <div className={styles.identity}>
               <CircleUserRound className={styles.identityIcon} size={27} aria-hidden="true" />
               <div>
-                <strong>{userName}</strong>
+                <strong>{displayName}</strong>
                 <span>{user.email}</span>
               </div>
             </div>

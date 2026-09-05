@@ -21,8 +21,19 @@ function parseResponseBody(text) {
   }
 }
 
+function firstProviderPayment(data) {
+  const payments = data?.data?.transactions?.payments;
+  return Array.isArray(payments) ? payments[0] || null : null;
+}
+
 function providerMessage(data) {
   const firstError = Array.isArray(data?.errors) ? data.errors[0] : null;
+  const firstPayment = firstProviderPayment(data);
+
+  if (firstPayment?.status_detail === "processing_error") {
+    return "Não foi possível processar o pagamento no Mercado Pago. Tente novamente em alguns instantes.";
+  }
+
   return (
     firstError?.message ||
     firstError?.code ||
@@ -30,6 +41,44 @@ function providerMessage(data) {
     data?.error ||
     "Falha ao comunicar com o Mercado Pago."
   );
+}
+
+function providerDiagnostics(data) {
+  const payments = data?.data?.transactions?.payments;
+  const safePayments = Array.isArray(payments)
+    ? payments.map((payment) => ({
+        id: payment?.id || null,
+        amount: payment?.amount || null,
+        reference_id: payment?.reference_id || payment?.reference?.id || null,
+        status: payment?.status || null,
+        status_detail: payment?.status_detail || null,
+        payment_method: payment?.payment_method
+          ? {
+              id: payment.payment_method.id || null,
+              type: payment.payment_method.type || null,
+            }
+          : null,
+      }))
+    : null;
+
+  return {
+    cause: data?.cause,
+    errors: data?.errors,
+    message: data?.message,
+    error: data?.error,
+    order: data?.data
+      ? {
+          id: data.data.id || null,
+          type: data.data.type || null,
+          external_reference: data.data.external_reference || null,
+          status: data.data.status || null,
+          status_detail: data.data.status_detail || null,
+          total_amount: data.data.total_amount || null,
+          total_paid_amount: data.data.total_paid_amount || null,
+          transactions: safePayments ? { payments: safePayments } : null,
+        }
+      : null,
+  };
 }
 
 export async function mercadoPagoRequest(
@@ -54,19 +103,30 @@ export async function mercadoPagoRequest(
   const data = parseResponseBody(text);
 
   if (!response.ok) {
-    console.error("[MercadoPago] API error", {
-      path,
-      method,
-      status: response.status,
-      cause: data?.cause,
-      errors: data?.errors,
-      message: data?.message,
-      error: data?.error,
-    });
+    const requestId =
+      response.headers.get("x-request-id") ||
+      response.headers.get("x-requestid") ||
+      null;
+
+    console.error(
+      "[MercadoPago] API error",
+      JSON.stringify(
+        {
+          path,
+          method,
+          status: response.status,
+          requestId,
+          ...providerDiagnostics(data),
+        },
+        null,
+        2,
+      ),
+    );
 
     const error = new Error(providerMessage(data));
     error.status = response.status >= 400 && response.status < 500 ? 422 : 502;
     error.providerStatus = response.status;
+    error.providerRequestId = requestId;
     error.providerData = data;
     throw error;
   }

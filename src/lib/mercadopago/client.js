@@ -81,6 +81,41 @@ function providerDiagnostics(data) {
   };
 }
 
+function isPixOrder(body) {
+  const payments = body?.transactions?.payments;
+  if (!Array.isArray(payments) || payments.length === 0) return false;
+
+  return payments.every(
+    (payment) =>
+      String(payment?.payment_method?.id || "").trim().toLowerCase() === "pix",
+  );
+}
+
+function minimalPixOrderPayload(body) {
+  const payments = Array.isArray(body?.transactions?.payments)
+    ? body.transactions.payments
+    : [];
+
+  return {
+    type: body?.type || "online",
+    processing_mode: body?.processing_mode || "automatic",
+    external_reference: String(body?.external_reference || "").trim(),
+    total_amount: String(body?.total_amount || "").trim(),
+    payer: {
+      email: String(body?.payer?.email || "").trim().toLowerCase(),
+    },
+    transactions: {
+      payments: payments.map((payment) => ({
+        amount: String(payment?.amount || body?.total_amount || "").trim(),
+        payment_method: {
+          id: "pix",
+          type: "bank_transfer",
+        },
+      })),
+    },
+  };
+}
+
 export async function mercadoPagoRequest(
   path,
   { method = "GET", body, idempotencyKey } = {},
@@ -136,9 +171,15 @@ export async function mercadoPagoRequest(
 
 // Checkout Transparente via Orders API (aplicação principal do Social Jurídico).
 export function createMercadoPagoOrder(body, idempotencyKey) {
+  // O Pix usa deliberadamente o payload mínimo validado em produção.
+  // Dados enriquecidos de payer/items/additional_info continuam disponíveis
+  // para cartão, mas não são enviados no Pix porque estavam provocando
+  // processing_error antes mesmo da geração do QR Code.
+  const payload = isPixOrder(body) ? minimalPixOrderPayload(body) : body;
+
   return mercadoPagoRequest("/v1/orders", {
     method: "POST",
-    body,
+    body: payload,
     idempotencyKey,
   });
 }

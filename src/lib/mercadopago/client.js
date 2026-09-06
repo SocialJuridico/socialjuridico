@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { recurringProviderFailure } from "@/lib/billing/mercadoPagoRecurring";
 
 const API_BASE = "https://api.mercadopago.com";
 
@@ -143,6 +144,24 @@ export async function mercadoPagoRequest(
       response.headers.get("x-requestid") ||
       null;
 
+    // The subscription API can return identity or card information inside
+    // arbitrary error objects. Only the explicit diagnostic allowlist is logged.
+    if (path === "/preapproval") {
+      const safeError = recurringProviderFailure({
+        message: data?.message,
+        status: response.status >= 400 && response.status < 500 ? 422 : 502,
+        providerStatus: response.status,
+        providerRequestId: requestId,
+        providerData: data,
+      });
+      console.error("[MercadoPago] API error", {
+        path,
+        method,
+        ...safeError.providerDiagnostics,
+      });
+      throw safeError;
+    }
+
     console.error(
       "[MercadoPago] API error",
       JSON.stringify(
@@ -218,10 +237,11 @@ export function searchMercadoPagoSubscriptionsByEmail(payerEmail) {
   return mercadoPagoRequest(`/preapproval/search?${query.toString()}`);
 }
 
-export function createMercadoPagoSubscription(body) {
+export function createMercadoPagoSubscription(body, idempotencyKey) {
   return mercadoPagoRequest("/preapproval", {
     method: "POST",
     body,
+    idempotencyKey,
   });
 }
 

@@ -5,7 +5,6 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { isRsLawyer } from "@/lib/lawyerDiscount";
 import { assertLawyerPlanPurchaseAllowed } from "@/lib/lawyerPlans/planAccessServer";
 import { hasLawyerPlanHistory } from "@/lib/billing/planHistoryServer";
-import { grantProvisionalPlanAccess } from "@/lib/billing/subscriptionProvisioningServer";
 import {
   billingAddressValidationError,
   mercadoPagoOrderItem,
@@ -23,7 +22,6 @@ import {
   centsToBRL,
   getAiCreditPackage,
   getJurisPackage,
-  subscriptionFrequencyFor,
 } from "@/lib/billing/catalog";
 import { encodeBillingReference } from "@/lib/billing/reference";
 import {
@@ -32,10 +30,12 @@ import {
   mercadoPagoOrderCheckoutData,
   normalizedMercadoPagoOrderStatus,
 } from "@/lib/billing/mercadoPagoOrderServer";
+import { createMercadoPagoOrder } from "@/lib/mercadopago/client";
 import {
-  createMercadoPagoOrder,
-  createMercadoPagoSubscription,
-} from "@/lib/mercadopago/client";
+  assertNoUnresolvedRecurringAttempt,
+  createRecurringCheckout,
+} from "@/lib/billing/mercadoPagoRecurringServer";
+import { validateRecurringPaymentData } from "@/lib/billing/mercadoPagoRecurring";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -298,15 +298,18 @@ export async function POST(request) {
     const paymentData = body.paymentData || {};
     const isJuris = Boolean(getJurisPackage(jurisAmount));
     const isAiCredits = Boolean(getAiCreditPackage(aiCreditsAmount));
-    let planAccess = null;
 
     if (!isJuris && !isAiCredits) {
-      planAccess = assertLawyerPlanPurchaseAllowed(profile, planType);
+      assertLawyerPlanPurchaseAllowed(profile, planType);
       profile.has_plan_history = await hasLawyerPlanHistory(
         supabaseAdmin,
         user.id,
         profile,
       );
+
+      if (["MONTHLY", "ANNUAL"].includes(billingCycle)) {
+        await assertNoUnresolvedRecurringAttempt(user.id);
+      }
     }
 
     const promoEligible =
@@ -362,6 +365,20 @@ export async function POST(request) {
       throw error;
     }
 
+    const siteUrl = String(
+      process.env.NEXT_PUBLIC_SITE_URL || "https://socialjuridico.com.br",
+    ).replace(/\/$/, "");
+    const payerEmail = mercadoPagoPayerEmail(
+      request,
+      user.id,
+      profile.email,
+      user.email,
+    );
+
+    if (product.recurring) {
+      validateRecurringPaymentData(paymentData, payerEmail);
+    }
+
     const reference = encodeBillingReference(product);
     transactionId = await createReferenceTransaction({
       userId: user.id,
@@ -374,93 +391,17 @@ export async function POST(request) {
       await bindReservation(reservation.reservationToken, user.id, reference);
     }
 
-    const siteUrl = String(
-      process.env.NEXT_PUBLIC_SITE_URL || "https://socialjuridico.com.br",
-    ).replace(/\/$/, "");
-    const payerEmail = mercadoPagoPayerEmail(
-      request,
-      user.id,
-      profile.email,
-      user.email,
-    );
-
     if (product.recurring) {
-      const frequency = subscriptionFrequencyFor(product.billingCycle);
-      const cardToken = String(paymentData.token || "").trim();
-
-      if (!frequency || !cardToken) {
-        const error = new Error(
-          "Assinaturas recorrentes exigem um cartão de crédito válido.",
-        );
-        error.status = 422;
-        throw error;
-      }
-
-      const subscription = await createMercadoPagoSubscription({
-        reason: product.description,
-        external_reference: reference,
-        payer_email: payerEmail,
-        card_token_id: cardToken,
-        auto_recurring: {
-          ...frequency,
-          transaction_amount: centsToBRL(product.priceInCents),
-          currency_id: "BRL",
-        },
-        back_url: `${siteUrl}/dashboard/advogado`,
-        status: "authorized",
-      });
-
-      if (!subscription?.id) {
-        throw new Error("Mercado Pago não retornou o identificador da assinatura.");
-      }
-
-      let provisional = {
-        granted: false,
-        reason: "PROVISIONING_NOT_ATTEMPTED",
-      };
-
-      try {
-        provisional = await grantProvisionalPlanAccess({
-          lawyerId: user.id,
-          product,
-          activePlan: planAccess?.activePlan || null,
-        });
-
-        await supabaseAdmin
-          .from("transacoes")
-          .update({
-            status: provisional.granted
-              ? "subscription_activating"
-              : "subscription_pending_payment",
-          })
-          .eq("id", transactionId);
-      } catch (provisionalError) {
-        console.error(
-          "[Checkout/MercadoPago] Falha não fatal no acesso provisório:",
-          provisionalError,
-        );
-      }
-
-      return json({
-        success: true,
-        provider: "MERCADOPAGO",
-        kind: "subscription",
+      const result = await createRecurringCheckout({
+        userId: user.id,
+        product,
         reference,
-        subscriptionId: subscription.id,
-        status: "activating",
-        providerStatus: subscription.status || "authorized",
-        amount: product.priceInCents,
-        renewalAmount: product.renewalPriceInCents,
-        discountSource: product.discountSource,
-        recurring: true,
-        approved: false,
-        accessProvisioned: Boolean(provisional.granted),
-        activationMessage: provisional.granted
-          ? `Sua assinatura foi criada e o plano ${product.planType} já está disponível provisoriamente. Os Juris serão creditados após a confirmação da primeira cobrança.`
-          : planAccess?.activePlan
-            ? `Sua assinatura foi criada. O plano ${planAccess.activePlan} continua ativo enquanto confirmamos a primeira cobrança do ${product.planType}.`
-            : "Sua assinatura foi criada. Estamos confirmando a primeira cobrança automaticamente.",
+        transactionId,
+        paymentData,
+        payerEmail,
+        siteUrl,
       });
+      return json(result);
     }
 
     const billingAddress = normalizeBillingAddress(
@@ -569,11 +510,11 @@ export async function POST(request) {
       approved: fulfillment?.status === "approved",
     });
   } catch (error) {
-    if (transactionId && supabaseAdmin) {
+    if (transactionId && supabaseAdmin && !error?.preserveTransaction) {
       await supabaseAdmin.from("transacoes").delete().eq("id", transactionId);
     }
 
-    if (reservation?.reservationToken && userId && supabaseAdmin) {
+    if (reservation?.reservationToken && userId && supabaseAdmin && !error?.preserveTransaction) {
       await releaseCouponReservation(
         supabaseAdmin,
         reservation.reservationToken,
@@ -581,7 +522,18 @@ export async function POST(request) {
       );
     }
 
-    console.error("[Checkout/MercadoPago] Erro:", error);
+    // Never log an entire recurring provider error: it may contain card or
+    // identification data. The provider client already emitted safe diagnostics.
+    if (error?.preserveTransaction) {
+      console.error("[Checkout/MercadoPago/Recurring] Erro:", {
+        status: error.status || 500,
+        providerStatus: error.providerStatus || null,
+        requestId: error.providerRequestId || null,
+        code: error.providerCode || null,
+      });
+    } else {
+      console.error("[Checkout/MercadoPago] Erro:", error);
+    }
     const status = Number(error?.status) || 500;
 
     return json(
@@ -591,6 +543,7 @@ export async function POST(request) {
           status < 500
             ? error.message
             : "Não foi possível processar o pagamento no Mercado Pago.",
+        ...(error?.preserveTransaction ? { retryable: false, requestId: error.providerRequestId || null } : {}),
       },
       status,
     );

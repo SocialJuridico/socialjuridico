@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 
 import StableTransparentCheckoutModal from "@/components/TransparentCheckout/StableTransparentCheckoutModal";
+import RecurringCheckoutModal from "@/components/TransparentCheckout/RecurringCheckoutModal";
 
 import LawyerPlansModal from "./LawyerPlansModal";
 
@@ -38,14 +39,33 @@ export default function LawyerPlansModalHost({
     async (context = null) => {
       await onProfileRefresh?.();
 
-      // Ao criar uma assinatura o acesso provisório precisa aparecer no painel
-      // sem fechar a tela que continua acompanhando a primeira cobrança.
+      // O fluxo avulso continua com seu contrato existente. A assinatura
+      // recorrente só chama este callback após confirmar a primeira cobrança.
       if (context?.provisional) return;
 
       setCheckout(null);
     },
     [onProfileRefresh],
   );
+
+  const recurring = checkout && ["MONTHLY", "ANNUAL"].includes(
+    String(checkout.billingCycle || "").toUpperCase(),
+  );
+
+  const checkoutProps = {
+    key: checkoutKey,
+    isOpen: Boolean(checkout),
+    onClose: closeCheckout,
+    isPro: Boolean(checkout),
+    planType: checkout?.planId || null,
+    billingCycle: checkout?.billingCycle || null,
+    displayAmount: checkout?.amount || null,
+    renewalAmount: checkout?.renewalAmount || null,
+    isPromoEligible: Boolean(checkout?.isPromoEligible),
+    couponData: checkout?.couponData || null,
+    profileData,
+    onPaymentSuccess: handlePaymentSuccess,
+  };
 
   return (
     <>
@@ -56,20 +76,11 @@ export default function LawyerPlansModalHost({
         onSelectPlan={handleSelectPlan}
       />
 
-      <StableTransparentCheckoutModal
-        key={checkoutKey}
-        isOpen={Boolean(checkout)}
-        onClose={closeCheckout}
-        isPro={Boolean(checkout)}
-        planType={checkout?.planId || null}
-        billingCycle={checkout?.billingCycle || null}
-        displayAmount={checkout?.amount || null}
-        renewalAmount={checkout?.renewalAmount || null}
-        isPromoEligible={Boolean(checkout?.isPromoEligible)}
-        couponData={checkout?.couponData || null}
-        profileData={profileData}
-        onPaymentSuccess={handlePaymentSuccess}
-      />
+      {recurring ? (
+        <RecurringCheckoutModal {...checkoutProps} />
+      ) : (
+        <StableTransparentCheckoutModal {...checkoutProps} />
+      )}
     </>
   );
 }

@@ -1,0 +1,61 @@
+name: Mercado Pago recurring validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/lib/billing/mercadoPagoRecurring*"
+      - "src/lib/mercadopago/client.js"
+      - "src/app/api/checkout/mercadopago/**"
+      - "src/components/TransparentCheckout/RecurringCheckoutModal*"
+      - "src/components/LawyerPlans/LawyerPlansModalHost.jsx"
+      - ".github/workflows/mercadopago-recurring-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CI: "true"
+      NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co"
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-anon-placeholder"
+      SUPABASE_SERVICE_ROLE_KEY: "ci-service-placeholder"
+      NEXT_PUBLIC_SITE_URL: "https://example.com"
+      NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: "TEST-ci-placeholder"
+      MERCADOPAGO_ACCESS_TOKEN: "TEST-ci-placeholder"
+      MERCADOPAGO_SANDBOX: "true"
+      NEXT_PUBLIC_STRIPE_PUBLIC_KEY: "ci-stripe-placeholder"
+      OPENAI_API_KEY: "ci-openai-placeholder"
+      RESEND_API_KEY: "ci-resend-placeholder"
+      AUDIT_IP_SALT: "ci-audit-placeholder"
+      OFFICE_SESSION_SECRET: "ci-office-session-placeholder"
+      GOOGLE_OAUTH_STATE_SECRET: "ci-google-state-placeholder"
+      NEXT_PUBLIC_APP_URL: "https://example.com"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.5"
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test recurring checkout
+        run: npm test -- --runInBand src/lib/billing/mercadoPagoRecurring.test.js
+      - name: Lint recurring checkout
+        run: >-
+          npx eslint
+          src/lib/billing/mercadoPagoRecurring.js
+          src/lib/billing/mercadoPagoRecurringServer.js
+          src/lib/billing/mercadoPagoRecurring.test.js
+          src/lib/mercadopago/client.js
+          src/app/api/checkout/mercadopago/route.js
+          src/app/api/checkout/mercadopago/recurring-config/route.js
+          src/app/api/checkout/mercadopago/recurring-attempt/route.js
+          src/components/TransparentCheckout/RecurringCheckoutModal.jsx
+          src/components/LawyerPlans/LawyerPlansModalHost.jsx
+      - name: Build
+        run: npm run build

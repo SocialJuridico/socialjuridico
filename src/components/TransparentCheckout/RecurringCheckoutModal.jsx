@@ -229,7 +229,7 @@ export default function RecurringCheckoutModal({
 
   if (!isOpen || typeof document === "undefined") return null;
   const processing = stage === "submitting";
-  const canRetry = stage === "blocked" && !result && Boolean(configuration);
+  const canRetry = stage === "blocked" && !result && Boolean(configuration) && !submitting.current;
 
   return createPortal(
     <div className={styles.overlay} onMouseDown={(event) => {

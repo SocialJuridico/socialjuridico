@@ -1,4 +1,8 @@
-import { createMercadoPagoSubscription } from "@/lib/mercadopago/client";
+import {
+  createMercadoPagoSubscription,
+  searchMercadoPagoPaymentsByReference,
+  searchMercadoPagoSubscriptionsByEmail,
+} from "@/lib/mercadopago/client";
 import { supabaseAdmin } from "@/lib/supabase";
 import {
   buildRecurringSubscriptionPayload,
@@ -17,16 +21,18 @@ const UNRESOLVED = [
 export async function assertNoUnresolvedRecurringAttempt(lawyerId) {
   const { data, error } = await supabaseAdmin
     .from("transacoes")
-    .select("id")
+    .select("id, stripe_session_id")
     .eq("advogado_id", lawyerId)
     .in("status", UNRESOLVED)
     .limit(1);
   if (error) throw new Error("Não foi possível verificar as tentativas anteriores.");
   if (data?.length) {
-    throw recurringCheckoutError(
+    const blocked = recurringCheckoutError(
       "Existe uma assinatura ainda em confirmação. Verifique a tentativa anterior antes de iniciar outra cobrança.",
       409,
     );
+    blocked.checkoutReference = data[0].stripe_session_id;
+    throw blocked;
   }
 }
 
@@ -38,8 +44,37 @@ async function setAttemptStatus(transactionId, status) {
   if (error) throw new Error("Não foi possível atualizar o estado financeiro da assinatura.");
 }
 
+export async function findRecurringAttempt({ userId, reference, payerEmail }) {
+  const { data: transaction, error } = await supabaseAdmin
+    .from("transacoes")
+    .select("id, status, stripe_session_id")
+    .eq("advogado_id", userId)
+    .eq("stripe_session_id", reference)
+    .maybeSingle();
+  if (error) throw new Error("Não foi possível consultar a tentativa financeira.");
+  if (!transaction) throw recurringCheckoutError("Tentativa não localizada.", 404);
+
+  const subscriptions = await searchMercadoPagoSubscriptionsByEmail(payerEmail);
+  const matching = (Array.isArray(subscriptions?.results) ? subscriptions.results : [])
+    .filter((subscription) => String(subscription?.external_reference || "") === reference);
+  if (matching.length > 1) {
+    throw recurringCheckoutError("Mais de uma assinatura encontrada. É necessária reconciliação antes de outra cobrança.", 409);
+  }
+  if (matching[0]?.id) {
+    return { reference, subscriptionId: matching[0].id, paymentId: null, status: transaction.status };
+  }
+
+  const search = await searchMercadoPagoPaymentsByReference(reference);
+  const payments = Array.isArray(search?.results) ? search.results : [];
+  return {
+    reference,
+    subscriptionId: null,
+    paymentId: payments[0]?.id || null,
+    status: transaction.status,
+  };
+}
+
 export async function createRecurringCheckout({
-  userId,
   product,
   reference,
   transactionId,
@@ -69,22 +104,22 @@ export async function createRecurringCheckout({
     // payment attempt on retry; uncertain requests must be reconciled first.
     subscription = await createMercadoPagoSubscription(payload, reference);
   } catch (error) {
-    const status = error?.providerStatus >= 400 && error?.providerStatus < 500
-      ? "subscription_rejected"
-      : "subscription_reconciliation_required";
+    // A provider error is not proof that no subscription or charge was created.
+    // Keep the reference until the provider state has been reconciled.
     try {
-      await setAttemptStatus(transactionId, status);
+      await setAttemptStatus(transactionId, "subscription_reconciliation_required");
     } catch {
-      // Keep the original provider failure, but never delete its reference.
       console.error("[Checkout/MercadoPago/Recurring] Não foi possível atualizar o estado financeiro.", { reference });
     }
     error.preserveTransaction = true;
+    error.checkoutReference = reference;
     throw error;
   }
 
   if (!subscription?.id) {
     const error = recurringCheckoutError("A assinatura precisa ser reconciliada antes de uma nova tentativa.", 502);
     error.preserveTransaction = true;
+    error.checkoutReference = reference;
     throw error;
   }
 
@@ -92,6 +127,7 @@ export async function createRecurringCheckout({
     await setAttemptStatus(transactionId, "subscription_pending_payment");
   } catch (error) {
     error.preserveTransaction = true;
+    error.checkoutReference = reference;
     throw error;
   }
 

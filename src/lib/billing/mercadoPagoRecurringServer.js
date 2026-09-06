@@ -16,6 +16,7 @@ const UNRESOLVED = [
   "subscription_pending_payment",
   "subscription_activating",
   "subscription_reconciliation_required",
+  "subscription_authorized",
 ];
 
 export async function assertNoUnresolvedRecurringAttempt(lawyerId) {
@@ -23,6 +24,7 @@ export async function assertNoUnresolvedRecurringAttempt(lawyerId) {
     .from("transacoes")
     .select("id, stripe_session_id")
     .eq("advogado_id", lawyerId)
+    .eq("tipo", "PRO_SUBSCRIPTION")
     .in("status", UNRESOLVED)
     .limit(1);
   if (error) throw new Error("Não foi possível verificar as tentativas anteriores.");
@@ -36,11 +38,12 @@ export async function assertNoUnresolvedRecurringAttempt(lawyerId) {
   }
 }
 
-async function setAttemptStatus(transactionId, status) {
+async function setAttemptStatus(transactionId, status, expectedStatuses = UNRESOLVED) {
   const { error } = await supabaseAdmin
     .from("transacoes")
     .update({ status })
-    .eq("id", transactionId);
+    .eq("id", transactionId)
+    .in("status", expectedStatuses);
   if (error) throw new Error("Não foi possível atualizar o estado financeiro da assinatura.");
 }
 
@@ -61,7 +64,7 @@ export async function findRecurringAttempt({ userId, reference, payerEmail }) {
     throw recurringCheckoutError("Mais de uma assinatura encontrada. É necessária reconciliação antes de outra cobrança.", 409);
   }
   if (matching[0]?.id) {
-    return { reference, subscriptionId: matching[0].id, paymentId: null, status: transaction.status };
+    return { reference, subscriptionId: matching[0].id, paymentId: null, status: transaction.status, retryable: false };
   }
 
   const search = await searchMercadoPagoPaymentsByReference(reference);
@@ -71,6 +74,7 @@ export async function findRecurringAttempt({ userId, reference, payerEmail }) {
     subscriptionId: null,
     paymentId: payments[0]?.id || null,
     status: transaction.status,
+    retryable: false,
   };
 }
 
@@ -91,8 +95,6 @@ export async function createRecurringCheckout({
     siteUrl,
   });
 
-  // Only allowlisted metadata is emitted. Card tokens and identification values
-  // are never persisted or logged by this checkout.
   console.info("[Checkout/MercadoPago/Recurring] Request", {
     reference,
     ...recurringCheckoutDiagnostics({ product, paymentData, payerEmail: email }),
@@ -100,12 +102,10 @@ export async function createRecurringCheckout({
 
   let subscription = null;
   try {
-    // The reference is stable for this provider submission. It is not a new
-    // payment attempt on retry; uncertain requests must be reconciled first.
     subscription = await createMercadoPagoSubscription(payload, reference);
   } catch (error) {
-    // A provider error is not proof that no subscription or charge was created.
-    // Keep the reference until the provider state has been reconciled.
+    // An HTTP error does not prove that no charge was created. Never delete
+    // the reference, reuse the token, or make a second POST automatically.
     try {
       await setAttemptStatus(transactionId, "subscription_reconciliation_required");
     } catch {
@@ -131,8 +131,6 @@ export async function createRecurringCheckout({
     throw error;
   }
 
-  // Creating a subscription is not proof that its first charge was approved.
-  // The existing webhook/status fulfillment remains responsible for activation.
   return {
     success: true,
     provider: "MERCADOPAGO",

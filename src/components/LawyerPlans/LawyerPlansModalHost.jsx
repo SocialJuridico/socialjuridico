@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 
 import StableTransparentCheckoutModal from "@/components/TransparentCheckout/StableTransparentCheckoutModal";
 import RecurringCheckoutModal from "@/components/TransparentCheckout/RecurringCheckoutModal";
@@ -31,6 +32,7 @@ export default function LawyerPlansModalHost({
     async (selection) => {
       if (!selection) return;
       onClose();
+      toast.loading("Redirecionando para o Mercado Pago...", { id: "mp-redirect" });
       try {
         const response = await fetch("/api/checkout/mercadopago", {
           method: "POST",
@@ -49,9 +51,11 @@ export default function LawyerPlansModalHost({
           window.location.href = data.checkoutUrl;
           return;
         }
-        setCheckout(selection);
-      } catch {
-        setCheckout(selection);
+        toast.dismiss("mp-redirect");
+        toast.error(data?.message || "Não foi possível iniciar o pagamento no Mercado Pago.");
+      } catch (error) {
+        toast.dismiss("mp-redirect");
+        toast.error(error?.message || "Erro de conexão ao acessar o gateway de pagamento.");
       }
     },
     [onClose],

@@ -81,4 +81,16 @@ describe("Mercado Pago recurring checkout", () => {
     expect(failure.message).toContain("confirmar a criação");
     expect(failure.providerMessageCode).toBeNull();
   });
+
+  test("mercadoPagoOrderItem and mercadoPagoPreferenceItem return numeric unit_price", () => {
+    const { mercadoPagoOrderItem, mercadoPagoPreferenceItem } = require("./billingAddress");
+    const testProduct = { priceInCents: 12750, description: "Plano PRO Mensal", planType: "PRO", billingCycle: "MONTHLY" };
+    const orderItem = mercadoPagoOrderItem(testProduct);
+    const prefItem = mercadoPagoPreferenceItem(testProduct);
+
+    expect(typeof orderItem.unit_price).toBe("number");
+    expect(orderItem.unit_price).toBe(127.5);
+    expect(typeof prefItem.unit_price).toBe("number");
+    expect(prefItem.unit_price).toBe(127.5);
+  });
 });

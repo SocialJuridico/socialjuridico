@@ -9,6 +9,7 @@ import {
   billingAddressValidationError,
   mercadoPagoOrderItem,
   mercadoPagoPayerAddress,
+  mercadoPagoPreferenceItem,
   MERCADO_PAGO_STATEMENT_DESCRIPTOR,
   normalizeBillingAddress,
 } from "@/lib/billing/billingAddress";
@@ -400,6 +401,51 @@ export async function POST(request) {
 
     if (reservation) {
       await bindReservation(reservation.reservationToken, user.id, reference);
+    }
+
+    const hasDirectToken = Boolean(paymentData?.token || paymentData?.payment_method_id);
+
+    if (!hasDirectToken) {
+      const preferencePayload = {
+        items: [mercadoPagoPreferenceItem(product)],
+        payer: {
+          email: payerEmail,
+          name: profile.name || undefined,
+        },
+        external_reference: reference,
+        back_urls: {
+          success: `${siteUrl}/dashboard/advogado`,
+          failure: `${siteUrl}/dashboard/advogado`,
+          pending: `${siteUrl}/dashboard/advogado`,
+        },
+        auto_return: "approved",
+      };
+
+      const preference = await createMercadoPagoPreference(
+        preferencePayload,
+        reference,
+      );
+      const isSandbox = isMercadoPagoSandboxRequest(request);
+      const checkoutUrl = isSandbox
+        ? (preference?.sandbox_init_point || preference?.init_point)
+        : (preference?.init_point || preference?.sandbox_init_point);
+
+      if (checkoutUrl) {
+        return json({
+          success: true,
+          provider: "MERCADOPAGO",
+          kind: "preference",
+          reference,
+          preferenceId: preference.id,
+          checkoutUrl,
+          init_point: checkoutUrl,
+          sandbox_init_point: preference.sandbox_init_point || null,
+          amount: product.priceInCents,
+          discountSource: product.discountSource,
+          approved: false,
+          activationMessage: "Redirecionando para o Mercado Pago...",
+        });
+      }
     }
 
     if (product.recurring) {

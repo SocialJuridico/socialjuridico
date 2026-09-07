@@ -55,7 +55,7 @@ export function mercadoPagoPayerAddress(input = {}, fallbackState = "") {
 }
 
 export function mercadoPagoOrderItem(product) {
-  const price = (Number(product?.priceInCents || 0) / 100).toFixed(2);
+  const price = Number((Number(product?.priceInCents || 0) / 100).toFixed(2));
   const planType = String(product?.planType || "").toUpperCase();
   const cycle = String(product?.billingCycle || "AVULSO").toUpperCase();
   const title = cleanText(product?.description || "Social Jurídico", 150);
@@ -75,6 +75,18 @@ export function mercadoPagoOrderItem(product) {
     description: title,
     category_id: "services",
     quantity: 1,
+    unit_price: price,
+  };
+}
+
+export function mercadoPagoPreferenceItem(product) {
+  const price = Number((Number(product?.priceInCents || 0) / 100).toFixed(2));
+  const title = cleanText(product?.description || "Social Jurídico", 150);
+
+  return {
+    title,
+    quantity: 1,
+    currency_id: "BRL",
     unit_price: price,
   };
 }

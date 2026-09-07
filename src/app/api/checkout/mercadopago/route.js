@@ -403,6 +403,19 @@ export async function POST(request) {
       await bindReservation(reservation.reservationToken, user.id, reference);
     }
 
+    if (product.recurring) {
+      const result = await createRecurringCheckout({
+        userId: user.id,
+        product,
+        reference,
+        transactionId,
+        paymentData,
+        payerEmail,
+        siteUrl,
+      });
+      return json(result);
+    }
+
     const hasDirectToken = Boolean(paymentData?.token || paymentData?.payment_method_id);
 
     if (!hasDirectToken) {
@@ -413,6 +426,7 @@ export async function POST(request) {
           name: profile.name || undefined,
         },
         external_reference: reference,
+        statement_descriptor: MERCADO_PAGO_STATEMENT_DESCRIPTOR,
         back_urls: {
           success: `${siteUrl}/dashboard/advogado`,
           failure: `${siteUrl}/dashboard/advogado`,
@@ -446,19 +460,6 @@ export async function POST(request) {
           activationMessage: "Redirecionando para o Mercado Pago...",
         });
       }
-    }
-
-    if (product.recurring) {
-      const result = await createRecurringCheckout({
-        userId: user.id,
-        product,
-        reference,
-        transactionId,
-        paymentData,
-        payerEmail,
-        siteUrl,
-      });
-      return json(result);
     }
 
     const billingAddress = normalizeBillingAddress(

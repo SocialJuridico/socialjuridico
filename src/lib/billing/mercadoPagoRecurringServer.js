@@ -153,10 +153,6 @@ export async function createRecurringCheckout({
     payerEmail: email,
     cardToken: token,
     siteUrl,
-    payerIdentification:
-      paymentData?.payer?.identification ||
-      paymentData?.cardholder?.identification ||
-      paymentData?.identification,
   });
 
   console.info("[Checkout/MercadoPago/Recurring] Request", {

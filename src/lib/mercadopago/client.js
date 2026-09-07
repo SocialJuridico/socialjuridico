@@ -31,9 +31,23 @@ function firstProviderPayment(data) {
 function providerMessage(data) {
   const firstError = Array.isArray(data?.errors) ? data.errors[0] : null;
   const firstPayment = firstProviderPayment(data);
+  const statusDetail = String(firstPayment?.status_detail || "").toLowerCase();
+  const errorDetails = String(JSON.stringify(firstError?.details || [])).toLowerCase();
 
-  if (firstPayment?.status_detail === "processing_error") {
+  if (
+    statusDetail === "high_risk" ||
+    statusDetail === "cc_rejected_high_risk" ||
+    errorDetails.includes("high_risk")
+  ) {
+    return "O pagamento foi recusado pelo sistema de segurança/antifraude do Mercado Pago. Tente utilizar outro cartão ou o Pix.";
+  }
+
+  if (statusDetail === "processing_error") {
     return "Não foi possível processar o pagamento no Mercado Pago. Tente novamente em alguns instantes.";
+  }
+
+  if (firstError?.message === "The following transactions failed") {
+    return "O pagamento não pôde ser aprovado pelo Mercado Pago. Verifique os dados do cartão ou tente via Pix.";
   }
 
   return (

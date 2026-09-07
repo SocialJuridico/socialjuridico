@@ -1,6 +1,8 @@
-# Mercado Pago — Diagnóstico definitivo: falta de 3DS 2.0
+# Hipótese histórica de 3DS — diagnóstico não confirmado
 
-## Causa raiz (CONFIRMADA)
+> Revisão em 07/09/2026: este documento é mantido como histórico, não como orientação de implementação. A afirmação de causa confirmada abaixo foi retirada: os registros consultados comprovam `cc_rejected_high_risk`, mas não o motivo interno que acionou a análise de risco. As instruções sobre `/v1/payments` não podem ser transferidas automaticamente para `/preapproval` ou `/v1/orders`. Não executar a proposta de cobrar a primeira parcela separadamente sem um desenho validado de recorrência e prevenção de duplicidade. Consulte [a investigação atual com evidências de produção](./INVESTIGACAO-2026-09-07.md).
+
+## Hipótese anterior (não comprovada; texto histórico)
 
 Cartões de crédito são recusados (`CC_VAL_433` / `cc_rejected_high_risk`) porque
 **nosso checkout não implementa o 3-D Secure 2.0 (3DS)**. PIX funciona porque não

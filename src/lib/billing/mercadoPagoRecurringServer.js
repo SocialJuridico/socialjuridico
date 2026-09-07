@@ -24,62 +24,35 @@ async function autoReconcileUnresolvedAttempt(lawyerId, tx, payerEmail) {
   if (!reference) return false;
 
   try {
-    let matchingSubs = [];
-    if (payerEmail) {
-      const subscriptions = await searchMercadoPagoSubscriptionsByEmail(payerEmail);
-      matchingSubs = (Array.isArray(subscriptions?.results) ? subscriptions.results : [])
-        .filter((sub) => String(sub?.external_reference || "") === reference);
-    }
+    if (!payerEmail) return false;
+    const subscriptions = await searchMercadoPagoSubscriptionsByEmail(payerEmail);
+    // A partial or empty search cannot prove that a recurring authorization ended.
+    if (!Array.isArray(subscriptions?.results) ||
+        subscriptions?.paging?.total !== subscriptions.results.length) return false;
+    const matchingSubs = subscriptions.results
+      .filter((sub) => String(sub?.external_reference || "") === reference);
+    const terminal = (record) => ["cancelled", "canceled", "rejected"]
+      .includes(String(record?.status || "").toLowerCase());
+    if (!matchingSubs.length || !matchingSubs.every(terminal)) return false;
 
     const searchPayments = await searchMercadoPagoPaymentsByReference(reference);
-    const matchingPayments = Array.isArray(searchPayments?.results) ? searchPayments.results : [];
+    if (!Array.isArray(searchPayments?.results) ||
+        searchPayments?.paging?.total !== searchPayments.results.length ||
+        !searchPayments.results.every((payment) =>
+          String(payment?.external_reference || "") === reference && terminal(payment))) return false;
 
-    // Se nem assinatura nem pagamento existem no Mercado Pago, a tentativa anterior
-    // falhou na requisicao inicial e nao gerou cobranca real.
-    if (matchingSubs.length === 0 && matchingPayments.length === 0) {
-      await supabaseAdmin
-        .from("transacoes")
-        .update({ status: "subscription_rejected" })
-        .eq("id", tx.id)
-        .eq("advogado_id", lawyerId);
-      return true;
-    }
-
-    if (matchingSubs.length > 0) {
-      const subStatus = String(matchingSubs[0]?.status || "").toLowerCase();
-      if (["cancelled", "canceled", "rejected"].includes(subStatus)) {
-        await supabaseAdmin
-          .from("transacoes")
-          .update({ status: "subscription_rejected" })
-          .eq("id", tx.id)
-          .eq("advogado_id", lawyerId);
-        return true;
-      }
-    }
-
-    if (matchingPayments.length > 0) {
-      const payStatus = String(matchingPayments[0]?.status || "").toLowerCase();
-      if (["rejected", "cancelled", "canceled"].includes(payStatus)) {
-        await supabaseAdmin
-          .from("transacoes")
-          .update({ status: "subscription_rejected" })
-          .eq("id", tx.id)
-          .eq("advogado_id", lawyerId);
-        return true;
-      }
-    }
-  } catch (reconcileError) {
-    console.warn("[MercadoPago/Recurring] Auto-reconciliação de tentativa falhou:", reconcileError);
-    try {
-      await supabaseAdmin
-        .from("transacoes")
-        .update({ status: "subscription_rejected" })
-        .eq("id", tx.id)
-        .eq("advogado_id", lawyerId);
-      return true;
-    } catch {
-      // Ignora falha secundaria de update no banco
-    }
+    const { data, error } = await supabaseAdmin
+      .from("transacoes")
+      .update({ status: "subscription_rejected" })
+      .eq("id", tx.id)
+      .eq("advogado_id", lawyerId)
+      .in("status", UNRESOLVED)
+      .select("id");
+    return !error && data?.length === 1;
+  } catch {
+    // Provider/network failure is not evidence of rejection. Keep the existing
+    // attempt blocked and never log arbitrary provider data (which may contain PII).
+    console.warn("[MercadoPago/Recurring] Consulta inconclusiva; tentativa preservada.");
   }
 
   return false;

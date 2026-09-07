@@ -70,6 +70,16 @@ async function autoReconcileUnresolvedAttempt(lawyerId, tx, payerEmail) {
     }
   } catch (reconcileError) {
     console.warn("[MercadoPago/Recurring] Auto-reconciliação de tentativa falhou:", reconcileError);
+    try {
+      await supabaseAdmin
+        .from("transacoes")
+        .update({ status: "subscription_rejected" })
+        .eq("id", tx.id)
+        .eq("advogado_id", lawyerId);
+      return true;
+    } catch {
+      // Ignora falha secundaria de update no banco
+    }
   }
 
   return false;

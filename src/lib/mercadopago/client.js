@@ -245,8 +245,6 @@ export function getMercadoPagoSubscription(subscriptionId) {
 export function searchMercadoPagoSubscriptionsByEmail(payerEmail) {
   const query = new URLSearchParams({
     payer_email: String(payerEmail || "").trim().toLowerCase(),
-    sort: "date_created",
-    criteria: "desc",
     limit: "20",
   });
   return mercadoPagoRequest(`/preapproval/search?${query.toString()}`);

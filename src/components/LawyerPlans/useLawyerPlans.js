@@ -134,13 +134,13 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
 
         const recurringCycle = isRecurringCycle(billingCycle);
         const rsRate = rsRateFor(plan.id);
-        const rsSubscriptionEligible = isRs && recurringCycle && rsRate > 0;
-        const rsTotal = rsSubscriptionEligible
+        const rsPlanEligible = isRs && rsRate > 0;
+        const rsTotal = rsPlanEligible
           ? applyRsDiscountValue(basePricing.total, plan.id)
           : basePricing.total;
 
         const renewalTotal = recurringCycle
-          ? rsSubscriptionEligible
+          ? rsPlanEligible
             ? rsTotal
             : basePricing.total
           : null;
@@ -163,7 +163,7 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
             promotionCoupon,
           );
           couponDeferredByPromo = Boolean(coupon);
-          rsAppliesOnRenewal = rsSubscriptionEligible;
+          rsAppliesOnRenewal = recurringCycle && rsPlanEligible;
         } else if (coupon) {
           const couponPricing = applyCouponToPrice(
             priceInfo,
@@ -173,7 +173,7 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
 
           // Cupom e OAB/RS não acumulam. A interface espelha a mesma regra do
           // servidor e mostra sempre a melhor condição na primeira cobrança.
-          if (rsSubscriptionEligible && rsTotal <= couponPricing.total) {
+          if (rsPlanEligible && rsTotal <= couponPricing.total) {
             pricing = withTotal(basePricing, rsTotal, billingCycle);
             rsDiscount = {
               rate: rsRate,
@@ -184,9 +184,9 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
             previewCoupon = coupon;
             pricing = couponPricing;
             couponApplied = true;
-            rsAppliesOnRenewal = rsSubscriptionEligible;
+            rsAppliesOnRenewal = recurringCycle && rsPlanEligible;
           }
-        } else if (rsSubscriptionEligible) {
+        } else if (rsPlanEligible) {
           pricing = withTotal(basePricing, rsTotal, billingCycle);
           rsDiscount = {
             rate: rsRate,
@@ -207,7 +207,7 @@ export function useLawyerPlans({ isOpen, profileData, onSelectPlan }) {
           recurringCycle,
           rsDiscount,
           rsAppliesOnRenewal,
-          rsSubscriptionEligible,
+          rsPlanEligible,
           previewCoupon,
           couponApplied,
           couponDeferredByPromo,

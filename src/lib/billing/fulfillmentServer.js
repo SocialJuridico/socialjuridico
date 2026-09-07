@@ -600,6 +600,13 @@ export async function syncMercadoPagoSubscription(subscription) {
 
   const normalizedStatus = String(subscription?.status || "").toLowerCase();
   const alreadyPaid = transaction.status === "subscription_active";
+  // A delayed legacy event must not replace the state of a newer Stripe plan.
+  if (alreadyPaid) {
+    const lawyer = await loadLawyer(transaction.advogado_id);
+    if (lawyer.stripe_subscription_id && lawyer.stripe_subscription_id !== `mp_${subscription.id}`) {
+      return { handled: false, reason: "SUPERSEDED_SUBSCRIPTION" };
+    }
+  }
   const profileStatus =
     normalizedStatus === "authorized"
       ? alreadyPaid

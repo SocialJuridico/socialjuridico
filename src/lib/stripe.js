@@ -1,4 +1,5 @@
 import { updateMercadoPagoSubscription } from "@/lib/mercadopago/client";
+import { stripeClient } from "@/lib/billing/stripeClient";
 
 function legacyProviderError(subscriptionId) {
   const error = new Error(
@@ -8,13 +9,12 @@ function legacyProviderError(subscriptionId) {
   return error;
 }
 
-// Compatibilidade temporária para o fluxo LGPD antigo, que ainda importa
-// `stripe.subscriptions.cancel`. Não há SDK, chave ou chamada Stripe aqui.
-// Novas assinaturas são identificadas por `mp_<preapprovalId>`.
+// Compatibilidade LGPD: sub_ pertence à Stripe; mp_ identifica o Mercado Pago.
 export const stripe = {
   subscriptions: {
     async cancel(subscriptionReference) {
       const value = String(subscriptionReference || "").trim();
+      if (value.startsWith("sub_")) return stripeClient().subscriptions.cancel(value);
       if (!value.startsWith("mp_") || value.length <= 3) {
         throw legacyProviderError(value);
       }

@@ -75,6 +75,10 @@
 .error { margin-top: 14px; padding: 12px 14px; border: 1px solid #713333; border-radius: 8px; background: #2c1515; color: #fecaca; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .secondary { width: 100%; margin-top: 14px; padding: 12px; border: 1px solid #404040; border-radius: 8px; background: #1b1b1b; color: #fff; cursor: pointer; font: inherit; font-size: 13px; }
 .secondary:hover { background: #252525; }
+.primary { width: 100%; margin-top: 16px; padding: 14px; border: 0; border-radius: 8px; background: #e7bd66; color: #16120b; cursor: pointer; font: inherit; font-weight: 700; }
+.primary:disabled, .secondary:disabled { opacity: .5; cursor: not-allowed; }
+.secondary[aria-pressed="true"] { border-color: #e7bd66; background: #30281b; }
+.primary:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .close:focus-visible, .secondary:focus-visible { outline: 2px solid #c4c4c4; outline-offset: 3px; }
 @media (max-width: 480px) { .overlay { padding: 8px; } .header, .body { padding: 16px; } .header h2 { font-size: 16px; } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

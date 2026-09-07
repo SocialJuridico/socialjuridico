@@ -10,6 +10,8 @@ import {
 import { sendPushNotification } from "@/lib/pushNotifications";
 import { resend } from "@/lib/resend";
 import { supabaseAdmin } from "@/lib/supabase";
+import { stripeClient } from "@/lib/billing/stripeClient";
+import { fulfillHybridInvoice } from "@/lib/billing/hybridCheckoutServer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,6 +68,23 @@ function isMercadoPagoRecurring(lawyer) {
     ["MONTHLY", "ANNUAL"].includes(cycle) &&
     !["CANCELED", "CANCELLED", "BLOCKED", "UNPAID"].includes(status)
   );
+}
+
+async function reconcileStripeSubscription(db, lawyer) {
+  try {
+    const stripe = stripeClient();
+    const subscription = await stripe.subscriptions.retrieve(lawyer.stripe_subscription_id);
+    if (subscription.metadata?.checkout_id) {
+      const invoices = await stripe.invoices.list({subscription:subscription.id,status:"paid",limit:100});
+      for (const invoice of [...invoices.data].reverse()) await fulfillHybridInvoice(invoice.id);
+    }
+    const {data,error} = await db.from("advogados").select("premium_expires_at").eq("id",lawyer.id).single();
+    if (error) throw error;
+    return {reconciled:true,authorized:subscription.status === "active",refreshed:data};
+  } catch {
+    console.warn("[Billing/Stripe] Reconciliação temporariamente indisponível.");
+    return {reconciled:false,authorized:true};
+  }
 }
 
 async function reconcileRecurringSubscription(db, lawyer) {
@@ -337,10 +356,14 @@ export async function GET(request) {
         continue;
       }
 
-      const recurring = isMercadoPagoRecurring(lawyer);
+      const stripeRecurring = String(lawyer.stripe_subscription_id || "").startsWith("sub_") &&
+        !["CANCELED","CANCELLED","UNPAID","BLOCKED"].includes(String(lawyer.subscription_status || "").toUpperCase());
+      const recurring = isMercadoPagoRecurring(lawyer) || stripeRecurring;
 
       if (expiresAt.getTime() <= now.getTime() && recurring) {
-        const reconciliation = await reconcileRecurringSubscription(db, lawyer);
+        const reconciliation = stripeRecurring
+          ? await reconcileStripeSubscription(db,lawyer)
+          : await reconcileRecurringSubscription(db, lawyer);
         if (reconciliation.reconciled) reconciledCount += 1;
 
         const refreshedExpiry = parseDate(

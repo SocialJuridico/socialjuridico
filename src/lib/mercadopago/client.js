@@ -123,6 +123,7 @@ function minimalPixOrderPayload(body) {
     transactions: {
       payments: payments.map((payment) => ({
         amount: String(payment?.amount || body?.total_amount || "").trim(),
+        ...(payment?.expiration_time ? { expiration_time: payment.expiration_time } : {}),
         payment_method: {
           id: "pix",
           type: "bank_transfer",

@@ -1,10 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import toast from "react-hot-toast";
 
 import StableTransparentCheckoutModal from "@/components/TransparentCheckout/StableTransparentCheckoutModal";
-import RecurringCheckoutModal from "@/components/TransparentCheckout/RecurringCheckoutModal";
 
 import LawyerPlansModal from "./LawyerPlansModal";
 
@@ -31,32 +29,8 @@ export default function LawyerPlansModalHost({
   const handleSelectPlan = useCallback(
     async (selection) => {
       if (!selection) return;
-      onClose();
-      toast.loading("Redirecionando para o Mercado Pago...", { id: "mp-redirect" });
-      try {
-        const response = await fetch("/api/checkout/mercadopago", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            planType: selection.planId,
-            billingCycle: selection.billingCycle,
-            jurisAmount: 0,
-            aiCreditsAmount: 0,
-            isPromoEligible: Boolean(selection.isPromoEligible),
-            internalCouponId: selection.couponData?.id || null,
-          }),
-        });
-        const data = await response.json().catch(() => null);
-        if (data?.checkoutUrl) {
-          window.location.href = data.checkoutUrl;
-          return;
-        }
-        toast.dismiss("mp-redirect");
-        toast.error(data?.message || "Não foi possível iniciar o pagamento no Mercado Pago.");
-      } catch (error) {
-        toast.dismiss("mp-redirect");
-        toast.error(error?.message || "Erro de conexão ao acessar o gateway de pagamento.");
-      }
+      setCheckout(selection);
+      onClose?.();
     },
     [onClose],
   );
@@ -74,9 +48,6 @@ export default function LawyerPlansModalHost({
     [onProfileRefresh],
   );
 
-  const recurring = checkout && ["MONTHLY", "ANNUAL"].includes(
-    String(checkout.billingCycle || "").toUpperCase(),
-  );
 
   const checkoutProps = {
     isOpen: Boolean(checkout),
@@ -101,11 +72,7 @@ export default function LawyerPlansModalHost({
         onSelectPlan={handleSelectPlan}
       />
 
-      {recurring ? (
-        <RecurringCheckoutModal key={checkoutKey} {...checkoutProps} />
-      ) : (
-        <StableTransparentCheckoutModal key={checkoutKey} {...checkoutProps} />
-      )}
+      <StableTransparentCheckoutModal key={checkoutKey} {...checkoutProps} />
     </>
   );
 }

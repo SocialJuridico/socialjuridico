@@ -1,4 +1,5 @@
 import { fulfillMercadoPagoPayment } from "@/lib/billing/fulfillmentServer";
+import { fulfillHybridPix } from "@/lib/billing/hybridCheckoutServer";
 
 function firstPayment(order) {
   const payments = order?.transactions?.payments;
@@ -68,5 +69,9 @@ export function normalizeMercadoPagoOrderForFulfillment(order) {
 }
 
 export async function fulfillMercadoPagoOrder(order) {
+  if (String(order?.external_reference || "").startsWith("sjh_")) {
+    const result = await fulfillHybridPix(order);
+    return { ...result, handled: true, status: result?.approved ? "approved" : "pending" };
+  }
   return fulfillMercadoPagoPayment(normalizeMercadoPagoOrderForFulfillment(order));
 }

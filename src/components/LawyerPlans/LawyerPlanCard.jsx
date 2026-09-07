@@ -108,7 +108,7 @@ export default function LawyerPlanCard({
 
       {plan.rsDiscount && (
         <span className={styles.promoNotice}>
-          <Sparkles size={13} aria-hidden="true" /> Desconto OAB/RS de {plan.rsDiscount.rateLabel} aplicado à assinatura
+          <Sparkles size={13} aria-hidden="true" /> Desconto OAB/RS de {plan.rsDiscount.rateLabel} aplicado ao plano
         </span>
       )}
 

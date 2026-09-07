@@ -101,6 +101,9 @@ export function maskEmail(value) {
 
 export function inferPaymentProvider(reference) {
   const value = String(reference || "").toLowerCase();
+  if (value.startsWith("stripe_invoice_")) return "STRIPE_INVOICE";
+  if (value.startsWith("stripe_pi_")) return "STRIPE_PAYMENT_INTENT";
+  if (value.startsWith("mp_")) return "MERCADO_PAGO";
 
   if (value.startsWith("cs_")) return "STRIPE_CHECKOUT";
   if (value.startsWith("pi_")) return "STRIPE_PAYMENT_INTENT";

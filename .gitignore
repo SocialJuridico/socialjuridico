@@ -13,12 +13,16 @@
 !.yarn/versions
 /supabaseteste
 /scripts
+!/scripts/
+/scripts/*
+!/scripts/billing/
 /mobile
 /database
 !/database/
 /database/*
 !/database/migrations/
 /database/migrations/*
+!/database/migrations/20260907_hybrid_checkout.sql
 !/database/migrations/20260617_signature_saas_accounts.sql
 !/database/migrations/__tests__/
 /database/migrations/__tests__/*

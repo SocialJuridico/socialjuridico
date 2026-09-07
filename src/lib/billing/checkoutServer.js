@@ -120,7 +120,7 @@ export function resolveCheckoutProduct({
   }
 
   const baseCents = price.cents;
-  const rsEligible = recurring && Boolean(isRs);
+  const rsEligible = Boolean(isRs);
   const rsCents = rsEligible
     ? applyRsDiscountCents(baseCents, normalizedPlan)
     : baseCents;

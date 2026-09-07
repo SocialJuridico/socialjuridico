@@ -52,6 +52,8 @@ function inferProvider(reference) {
 
   if (value.startsWith("affiliate_")) return "AFFILIATE_PROGRAM";
   if (value.startsWith("manual_")) return "MANUAL";
+  if (value.startsWith("stripe_invoice_")) return "STRIPE_INVOICE";
+  if (value.startsWith("stripe_pi_")) return "STRIPE_PAYMENT_INTENT";
 
   // Referências novas do catálogo/checkout e pagamentos recorrentes.
   if (
@@ -94,7 +96,7 @@ function maskProviderReference(value, provider) {
   }
 
   if (provider.startsWith("STRIPE_")) {
-    return `Stripe (histórico) ••••${suffix || "••••"}`;
+    return `Stripe${provider.endsWith("_LEGACY") ? " (histórico)" : ""} ••••${suffix || "••••"}`;
   }
 
   if (provider === "AFFILIATE_PROGRAM") {

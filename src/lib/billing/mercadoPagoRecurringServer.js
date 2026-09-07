@@ -72,10 +72,11 @@ export async function assertNoUnresolvedRecurringAttempt(lawyerId, payerEmail = 
     const unblocked = await autoReconcileUnresolvedAttempt(lawyerId, tx, payerEmail);
     if (!unblocked) {
       const blocked = recurringCheckoutError(
-        "Existe uma assinatura ainda em confirmação. Verifique a tentativa anterior antes de iniciar outra cobrança.",
+        "O Mercado Pago ainda não confirmou o encerramento da tentativa anterior. Tente verificar novamente. Se ela continuar pendente, será necessário encerrá-la no Mercado Pago antes de criar outra assinatura.",
         409,
       );
       blocked.checkoutReference = tx.stripe_session_id;
+      blocked.code = "LEGACY_PENDING";
       throw blocked;
     }
   }

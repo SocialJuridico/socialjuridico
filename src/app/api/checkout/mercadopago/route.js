@@ -31,6 +31,7 @@ import {
   normalizedMercadoPagoOrderStatus,
 } from "@/lib/billing/mercadoPagoOrderServer";
 import { createMercadoPagoOrder } from "@/lib/mercadopago/client";
+import { getSandboxTestBuyerEmail } from "@/lib/mercadopago/credentials";
 import {
   assertNoUnresolvedRecurringAttempt,
   createRecurringCheckout,
@@ -84,8 +85,11 @@ function isMercadoPagoSandboxRequest(request) {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
-function mercadoPagoPayerEmail(request, userId, profileEmail, fallbackEmail) {
+async function mercadoPagoPayerEmail(request, userId, profileEmail, fallbackEmail) {
   if (isMercadoPagoSandboxRequest(request)) {
+    const sandboxEmail = await getSandboxTestBuyerEmail();
+    if (sandboxEmail) return sandboxEmail;
+
     const suffix = String(userId || "sandbox")
       .replace(/[^a-z0-9]/gi, "")
       .slice(0, 20)
@@ -299,6 +303,13 @@ export async function POST(request) {
     const isJuris = Boolean(getJurisPackage(jurisAmount));
     const isAiCredits = Boolean(getAiCreditPackage(aiCreditsAmount));
 
+    const payerEmail = await mercadoPagoPayerEmail(
+      request,
+      user.id,
+      profile.email,
+      user.email,
+    );
+
     if (!isJuris && !isAiCredits) {
       assertLawyerPlanPurchaseAllowed(profile, planType);
       profile.has_plan_history = await hasLawyerPlanHistory(
@@ -308,7 +319,7 @@ export async function POST(request) {
       );
 
       if (["MONTHLY", "ANNUAL"].includes(billingCycle)) {
-        await assertNoUnresolvedRecurringAttempt(user.id);
+        await assertNoUnresolvedRecurringAttempt(user.id, payerEmail);
       }
     }
 
@@ -368,12 +379,6 @@ export async function POST(request) {
     const siteUrl = String(
       process.env.NEXT_PUBLIC_SITE_URL || "https://socialjuridico.com.br",
     ).replace(/\/$/, "");
-    const payerEmail = mercadoPagoPayerEmail(
-      request,
-      user.id,
-      profile.email,
-      user.email,
-    );
 
     if (product.recurring) {
       validateRecurringPaymentData(paymentData, payerEmail);

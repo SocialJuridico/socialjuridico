@@ -162,7 +162,18 @@ export default function StableTransparentCheckoutModal({
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  const publicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
+  // Em sandbox (NEXT_PUBLIC_MERCADOPAGO_SANDBOX=true) usa a public key de teste
+  // (TEST-...); caso contrario usa a de producao. Ambas ficam embutidas no build
+  // porque sao NEXT_PUBLIC. Ao desligar o sandbox e rebuildar, volta a producao.
+  const sandboxClient = ["1", "true", "yes"].includes(
+    String(process.env.NEXT_PUBLIC_MERCADOPAGO_SANDBOX || "")
+      .trim()
+      .toLowerCase(),
+  );
+  const publicKey =
+    sandboxClient && process.env.NEXT_PUBLIC_MERCADOPAGO_TEST_PUBLIC_KEY
+      ? process.env.NEXT_PUBLIC_MERCADOPAGO_TEST_PUBLIC_KEY
+      : process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY;
   const amount = Number(displayAmount || 0);
   const nextAmount = Number(renewalAmount || 0);
   const isAiCredits = Number(aiCreditsAmount || 0) > 0;
@@ -353,9 +364,12 @@ export default function StableTransparentCheckoutModal({
         const settings = {
           initialization: {
             amount,
-            payer: profileData?.email
-              ? { email: String(profileData.email).trim().toLowerCase() }
-              : undefined,
+            payer: {
+              ...(profileData?.email
+                ? { email: String(profileData.email).trim().toLowerCase() }
+                : {}),
+              entityType: "individual",
+            },
           },
           customization: {
             paymentMethods,
@@ -576,6 +590,7 @@ export default function StableTransparentCheckoutModal({
       cancelled = true;
       window.clearInterval(interval);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isOpen,
     notifyProvisionalAccess,
@@ -583,6 +598,7 @@ export default function StableTransparentCheckoutModal({
     result?.approved,
     result?.paymentId,
     result?.subscriptionId,
+    result?.status,
   ]);
 
   const copyPix = useCallback(async () => {
@@ -661,6 +677,7 @@ export default function StableTransparentCheckoutModal({
               </span>
 
               {result.qrCodeBase64 && (
+                /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={pixImageSource(result.qrCodeBase64)}
                   alt="QR Code PIX"

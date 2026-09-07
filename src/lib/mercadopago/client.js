@@ -1,10 +1,11 @@
 import crypto from "node:crypto";
 import { recurringProviderFailure } from "@/lib/billing/mercadoPagoRecurring";
+import { mercadoPagoAccessToken } from "@/lib/mercadopago/credentials";
 
 const API_BASE = "https://api.mercadopago.com";
 
 function accessToken() {
-  const token = String(process.env.MERCADOPAGO_ACCESS_TOKEN || "").trim();
+  const token = mercadoPagoAccessToken();
   if (!token) {
     const error = new Error("Mercado Pago não configurado no servidor.");
     error.status = 503;

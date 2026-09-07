@@ -1,5 +1,26 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Empacotamento autocontido: gera `.next/standalone/server.js` com apenas o
+  // que e necessario em runtime. Permite fazer o BUILD LOCAL e enviar so o
+  // resultado para a VPS (que nao aguenta rodar `next build` sem estourar a RAM).
+  output: "standalone",
+  // Exclui do trace do standalone pastas de workspace/documentacao que NAO sao
+  // runtime, evitando inchar `.next/standalone` (que chegava a ~180MB com elas).
+  outputFileTracingExcludes: {
+    "/*": [
+      "database/**",
+      "divulgacao-notebooklm/**",
+      "docs/**",
+      "graphify-out/**",
+      "laudosEDocumentos/**",
+      "Legado/**",
+      "scratch/**",
+      "supabaseteste/**",
+      "mobile/**",
+      "**/*.md",
+      "**/*.patch",
+    ],
+  },
   poweredByHeader: false,
   images: {
     remotePatterns: [

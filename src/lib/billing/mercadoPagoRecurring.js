@@ -38,13 +38,21 @@ export function validateRecurringPaymentData(paymentData, payerEmail) {
   return { email, token };
 }
 
-export function buildRecurringSubscriptionPayload({ product, reference, payerEmail, cardToken, siteUrl }) {
+export function sanitizePayerIdentification(identification) {
+  if (!identification) return null;
+  const type = String(identification.type || "").trim().toUpperCase();
+  const number = String(identification.number || "").replace(/\D/g, "").slice(0, 20);
+  if (!type || !number) return null;
+  return { type: type.slice(0, 10), number };
+}
+
+export function buildRecurringSubscriptionPayload({ product, reference, payerEmail, cardToken, siteUrl, payerIdentification }) {
   const frequency = subscriptionFrequencyFor(product?.billingCycle);
   const cents = Number(product?.priceInCents);
   if (!frequency || !Number.isSafeInteger(cents) || cents < 50) {
     throw recurringCheckoutError("Valor ou ciclo da assinatura inválido.");
   }
-  return {
+  const payload = {
     reason: String(product.description || "Social Jurídico").slice(0, 150),
     external_reference: reference,
     payer_email: payerEmail,
@@ -57,6 +65,13 @@ export function buildRecurringSubscriptionPayload({ product, reference, payerEma
     back_url: `${siteUrl}/dashboard/advogado`,
     status: "authorized",
   };
+
+  const identification = sanitizePayerIdentification(payerIdentification);
+  if (identification) {
+    payload.payer = { email: payerEmail, identification };
+  }
+
+  return payload;
 }
 
 function safeCode(value) {

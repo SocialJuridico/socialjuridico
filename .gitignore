@@ -42,6 +42,11 @@ manutencao.html
 # Deploy scripts (não versionar arquivos específicos de deploy)
 /update.sh
 /deploy.ps1
+/update-standalone.sh
+/deploy-standalone.ps1
+/.deploy
+/.deploy_incoming
+/.deploy_backup
 
 # production
 /build

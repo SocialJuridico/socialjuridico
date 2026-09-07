@@ -53,7 +53,6 @@ export default function LawyerPlansModalHost({
   );
 
   const checkoutProps = {
-    key: checkoutKey,
     isOpen: Boolean(checkout),
     onClose: closeCheckout,
     isPro: Boolean(checkout),
@@ -77,9 +76,9 @@ export default function LawyerPlansModalHost({
       />
 
       {recurring ? (
-        <RecurringCheckoutModal {...checkoutProps} />
+        <RecurringCheckoutModal key={checkoutKey} {...checkoutProps} />
       ) : (
-        <StableTransparentCheckoutModal {...checkoutProps} />
+        <StableTransparentCheckoutModal key={checkoutKey} {...checkoutProps} />
       )}
     </>
   );

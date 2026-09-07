@@ -19,22 +19,82 @@ const UNRESOLVED = [
   "subscription_authorized",
 ];
 
-export async function assertNoUnresolvedRecurringAttempt(lawyerId) {
+async function autoReconcileUnresolvedAttempt(lawyerId, tx, payerEmail) {
+  const reference = tx.stripe_session_id;
+  if (!reference) return false;
+
+  try {
+    let matchingSubs = [];
+    if (payerEmail) {
+      const subscriptions = await searchMercadoPagoSubscriptionsByEmail(payerEmail);
+      matchingSubs = (Array.isArray(subscriptions?.results) ? subscriptions.results : [])
+        .filter((sub) => String(sub?.external_reference || "") === reference);
+    }
+
+    const searchPayments = await searchMercadoPagoPaymentsByReference(reference);
+    const matchingPayments = Array.isArray(searchPayments?.results) ? searchPayments.results : [];
+
+    // Se nem assinatura nem pagamento existem no Mercado Pago, a tentativa anterior
+    // falhou na requisicao inicial e nao gerou cobranca real.
+    if (matchingSubs.length === 0 && matchingPayments.length === 0) {
+      await supabaseAdmin
+        .from("transacoes")
+        .update({ status: "subscription_rejected" })
+        .eq("id", tx.id)
+        .eq("advogado_id", lawyerId);
+      return true;
+    }
+
+    if (matchingSubs.length > 0) {
+      const subStatus = String(matchingSubs[0]?.status || "").toLowerCase();
+      if (["cancelled", "canceled", "rejected"].includes(subStatus)) {
+        await supabaseAdmin
+          .from("transacoes")
+          .update({ status: "subscription_rejected" })
+          .eq("id", tx.id)
+          .eq("advogado_id", lawyerId);
+        return true;
+      }
+    }
+
+    if (matchingPayments.length > 0) {
+      const payStatus = String(matchingPayments[0]?.status || "").toLowerCase();
+      if (["rejected", "cancelled", "canceled"].includes(payStatus)) {
+        await supabaseAdmin
+          .from("transacoes")
+          .update({ status: "subscription_rejected" })
+          .eq("id", tx.id)
+          .eq("advogado_id", lawyerId);
+        return true;
+      }
+    }
+  } catch (reconcileError) {
+    console.warn("[MercadoPago/Recurring] Auto-reconciliação de tentativa falhou:", reconcileError);
+  }
+
+  return false;
+}
+
+export async function assertNoUnresolvedRecurringAttempt(lawyerId, payerEmail = null) {
   const { data, error } = await supabaseAdmin
     .from("transacoes")
-    .select("id, stripe_session_id")
+    .select("id, stripe_session_id, status")
     .eq("advogado_id", lawyerId)
     .eq("tipo", "PRO_SUBSCRIPTION")
-    .in("status", UNRESOLVED)
-    .limit(1);
+    .in("status", UNRESOLVED);
   if (error) throw new Error("Não foi possível verificar as tentativas anteriores.");
-  if (data?.length) {
-    const blocked = recurringCheckoutError(
-      "Existe uma assinatura ainda em confirmação. Verifique a tentativa anterior antes de iniciar outra cobrança.",
-      409,
-    );
-    blocked.checkoutReference = data[0].stripe_session_id;
-    throw blocked;
+  if (!data?.length) return;
+
+  for (const tx of data) {
+    const unblocked = await autoReconcileUnresolvedAttempt(lawyerId, tx, payerEmail);
+    if (!unblocked) {
+      const blocked = recurringCheckoutError(
+        "Existe uma assinatura ainda em confirmação. Verifique a tentativa anterior antes de iniciar outra cobrança.",
+        409,
+      );
+      blocked.checkoutReference = tx.stripe_session_id;
+      throw blocked;
+    }
   }
 }
 
@@ -93,6 +153,10 @@ export async function createRecurringCheckout({
     payerEmail: email,
     cardToken: token,
     siteUrl,
+    payerIdentification:
+      paymentData?.payer?.identification ||
+      paymentData?.cardholder?.identification ||
+      paymentData?.identification,
   });
 
   console.info("[Checkout/MercadoPago/Recurring] Request", {

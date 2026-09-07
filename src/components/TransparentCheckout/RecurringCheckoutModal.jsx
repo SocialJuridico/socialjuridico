@@ -116,7 +116,10 @@ export default function RecurringCheckoutModal({
         localController = await mp.bricks().create("payment", brickId.current, {
           initialization: {
             amount: Number(displayAmount),
-            payer: { email: configuration.payerEmail },
+            payer: {
+              email: configuration.payerEmail,
+              entityType: "individual",
+            },
           },
           customization: {
             paymentMethods: { creditCard: "all" },

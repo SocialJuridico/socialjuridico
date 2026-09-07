@@ -201,12 +201,17 @@ export async function createRecurringCheckout({
     throw error;
   }
 
+  const checkoutUrl = subscription.init_point || subscription.sandbox_init_point || null;
+
   return {
     success: true,
     provider: "MERCADOPAGO",
     kind: "subscription",
     reference,
     subscriptionId: subscription.id,
+    checkoutUrl,
+    init_point: checkoutUrl,
+    sandbox_init_point: subscription.sandbox_init_point || null,
     status: "activating",
     providerStatus: subscription.status || "pending",
     amount: product.priceInCents,
@@ -215,6 +220,6 @@ export async function createRecurringCheckout({
     recurring: true,
     approved: false,
     accessProvisioned: false,
-    activationMessage: "Assinatura criada. Aguardando a confirmação da primeira cobrança para ativar o plano e creditar os Juris.",
+    activationMessage: "Redirecionando para o Mercado Pago...",
   };
 }

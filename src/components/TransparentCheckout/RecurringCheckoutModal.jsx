@@ -160,6 +160,10 @@ export default function RecurringCheckoutModal({
                 if (!response.ok || !data?.success) {
                   throw new Error(data?.message || "Não foi possível confirmar a assinatura. Verifique a tentativa anterior antes de tentar novamente.");
                 }
+                if (data.checkoutUrl) {
+                  window.location.href = data.checkoutUrl;
+                  return;
+                }
                 if (cancelled) return;
                 setResult(data);
                 setStage(data.approved ? "approved" : "pending");

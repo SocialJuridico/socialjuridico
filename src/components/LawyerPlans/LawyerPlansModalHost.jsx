@@ -29,8 +29,30 @@ export default function LawyerPlansModalHost({
 
   const handleSelectPlan = useCallback(
     async (selection) => {
-      setCheckout(selection);
+      if (!selection) return;
       onClose();
+      try {
+        const response = await fetch("/api/checkout/mercadopago", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            planType: selection.planId,
+            billingCycle: selection.billingCycle,
+            jurisAmount: 0,
+            aiCreditsAmount: 0,
+            isPromoEligible: Boolean(selection.isPromoEligible),
+            internalCouponId: selection.couponData?.id || null,
+          }),
+        });
+        const data = await response.json().catch(() => null);
+        if (data?.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        setCheckout(selection);
+      } catch {
+        setCheckout(selection);
+      }
     },
     [onClose],
   );

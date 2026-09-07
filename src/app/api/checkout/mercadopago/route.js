@@ -30,7 +30,10 @@ import {
   mercadoPagoOrderCheckoutData,
   normalizedMercadoPagoOrderStatus,
 } from "@/lib/billing/mercadoPagoOrderServer";
-import { createMercadoPagoOrder } from "@/lib/mercadopago/client";
+import {
+  createMercadoPagoOrder,
+  createMercadoPagoPreference,
+} from "@/lib/mercadopago/client";
 import { getSandboxTestBuyerEmail } from "@/lib/mercadopago/credentials";
 import {
   assertNoUnresolvedRecurringAttempt,
@@ -368,9 +371,12 @@ export async function POST(request) {
       reservation = null;
     }
 
-    if (!product.priceInCents || product.priceInCents < 50) {
+    const minPriceCents = product.recurring ? 500 : 50;
+    if (!product.priceInCents || product.priceInCents < minPriceCents) {
       const error = new Error(
-        "O desconto deixa a cobrança abaixo do valor mínimo permitido.",
+        product.recurring
+          ? "O valor da primeira cobrança da assinatura deve ser de no mínimo R$ 5,00."
+          : "O desconto deixa a cobrança abaixo do valor mínimo permitido.",
       );
       error.status = 422;
       throw error;
@@ -428,9 +434,43 @@ export async function POST(request) {
 
     const paymentMethodId = String(paymentData.payment_method_id || "").trim();
     if (!paymentMethodId) {
-      const error = new Error("Selecione uma forma de pagamento.");
-      error.status = 422;
-      throw error;
+      const preferencePayload = {
+        items: [mercadoPagoOrderItem(product)],
+        payer: {
+          email: payerEmail,
+          name: profile.name || undefined,
+        },
+        external_reference: reference,
+        back_urls: {
+          success: `${siteUrl}/dashboard/advogado`,
+          failure: `${siteUrl}/dashboard/advogado`,
+          pending: `${siteUrl}/dashboard/advogado`,
+        },
+        auto_return: "approved",
+      };
+
+      const preference = await createMercadoPagoPreference(
+        preferencePayload,
+        reference,
+      );
+      const checkoutUrl =
+        preference?.init_point || preference?.sandbox_init_point || null;
+
+      if (checkoutUrl) {
+        return json({
+          success: true,
+          provider: "MERCADOPAGO",
+          kind: "preference",
+          reference,
+          preferenceId: preference.id,
+          checkoutUrl,
+          init_point: checkoutUrl,
+          amount: product.priceInCents,
+          discountSource: product.discountSource,
+          approved: false,
+          activationMessage: "Redirecionando para o Mercado Pago...",
+        });
+      }
     }
 
     const paymentMethodType = resolveOrderPaymentMethodType(

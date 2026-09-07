@@ -21,19 +21,12 @@ export function recurringCheckoutError(message, status = 422) {
 export function validateRecurringPaymentData(paymentData, payerEmail) {
   const email = normalizeRecurringEmail(payerEmail);
   const submittedEmail = normalizeRecurringEmail(paymentData?.payer?.email);
-  const token = typeof paymentData?.token === "string" ? paymentData.token.trim() : "";
+  const token = typeof paymentData?.token === "string" ? paymentData.token.trim() : null;
   if (!EMAIL.test(email)) {
     throw recurringCheckoutError("E-mail de cobrança inválido. Atualize seu cadastro antes de continuar.");
   }
   if (submittedEmail && submittedEmail !== email) {
     throw recurringCheckoutError("O e-mail do pagamento não corresponde ao cadastro. Reabra o checkout para atualizar os dados.");
-  }
-  if (!token) {
-    throw recurringCheckoutError("Não foi possível gerar um token de cartão válido. Reabra o checkout.");
-  }
-  const methodType = String(paymentData?.payment_type_id || "").toLowerCase();
-  if (methodType && methodType !== "credit_card") {
-    throw recurringCheckoutError("Assinaturas recorrentes exigem cartão de crédito.");
   }
   return { email, token };
 }
@@ -52,19 +45,24 @@ export function buildRecurringSubscriptionPayload({ product, reference, payerEma
   if (!frequency || !Number.isSafeInteger(cents) || cents < 50) {
     throw recurringCheckoutError("Valor ou ciclo da assinatura inválido.");
   }
-  return {
+  const payload = {
     reason: String(product.description || "Social Jurídico").slice(0, 150),
     external_reference: reference,
     payer_email: payerEmail,
-    card_token_id: cardToken,
     auto_recurring: {
       ...frequency,
       transaction_amount: centsToBRL(cents),
       currency_id: "BRL",
     },
     back_url: `${siteUrl}/dashboard/advogado`,
-    status: "authorized",
+    status: cardToken ? "authorized" : "pending",
   };
+
+  if (cardToken) {
+    payload.card_token_id = cardToken;
+  }
+
+  return payload;
 }
 
 function safeCode(value) {

@@ -442,6 +442,10 @@ export default function StableTransparentCheckoutModal({
                     );
                   }
 
+                  if (data.checkoutUrl) {
+                    window.location.href = data.checkoutUrl;
+                    return;
+                  }
                   if (mountedRef.current) setResult(data);
 
                   if (data.approved) {

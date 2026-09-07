@@ -250,6 +250,14 @@ export function searchMercadoPagoSubscriptionsByEmail(payerEmail) {
   return mercadoPagoRequest(`/preapproval/search?${query.toString()}`);
 }
 
+export function createMercadoPagoPreference(body, idempotencyKey) {
+  return mercadoPagoRequest("/checkout/preferences", {
+    method: "POST",
+    body,
+    idempotencyKey,
+  });
+}
+
 export function createMercadoPagoSubscription(body, idempotencyKey) {
   return mercadoPagoRequest("/preapproval", {
     method: "POST",

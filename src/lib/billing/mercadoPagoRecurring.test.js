@@ -38,10 +38,9 @@ describe("Mercado Pago recurring checkout", () => {
     expect(() => buildRecurringSubscriptionPayload(args(product("MONTHLY", NaN)))).toThrow();
   });
 
-  test("rejects missing tokens and mismatched payer emails", () => {
-    expect(() => validateRecurringPaymentData({ payer }, payer.email)).toThrow();
+  test("handles mismatched payer emails and optional tokens for Checkout Pro", () => {
+    expect(validateRecurringPaymentData({ payer }, payer.email)).toEqual({ email: payer.email, token: null });
     expect(() => validateRecurringPaymentData({ ...paymentData, payer: { email: "other@example.com" } }, payer.email)).toThrow();
-    expect(() => validateRecurringPaymentData({ ...paymentData, payment_type_id: "debit_card" }, payer.email)).toThrow();
     expect(validateRecurringPaymentData(paymentData, "BUYER@example.com")).toEqual({ email: payer.email, token: paymentData.token });
   });
 

@@ -5,13 +5,15 @@ import { assertLawyerPlanPurchaseAllowed } from "@/lib/lawyerPlans/planAccessSer
 import { hasLawyerPlanHistory } from "./planHistoryServer";
 import { getJurisPackage, getAiCreditPackage } from "./catalog";
 import { COUPON_TYPES, reserveCouponForCheckout, releaseCouponReservation, consumeCouponUsage } from "@/lib/coupons/couponServer";
-import { createMercadoPagoOrder, getMercadoPagoOrder, updateMercadoPagoSubscription } from "@/lib/mercadopago/client";
+import { createMercadoPagoOrder, getMercadoPagoOrder, cancelMercadoPagoOrder, getMercadoPagoSubscription, updateMercadoPagoSubscription } from "@/lib/mercadopago/client";
 import { stripeClient, stripePublicKey } from "./stripeClient";
 import { assertNoUnresolvedRecurringAttempt } from "./mercadoPagoRecurringServer";
 import { checkoutError, checkoutReference, checkoutIdFromReference, configuredStripePrice, stripeLineItem, initialDiscount } from "./hybridPayment";
 
 const TABLE = "billing_checkouts";
 const objectId = (value) => typeof value === "string" ? value : value?.id;
+const ended = (status) => ["expired","cancelled","canceled"].includes(status);
+const checkoutIdValid = (id) => /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id || "");
 
 export async function loadHybridCheckout(id, owner) {
   if (!id) return null;
@@ -26,7 +28,43 @@ async function updateCheckout(id, patch) {
   if (error) throw checkoutError("Não foi possível registrar o estado do pagamento.", 503);
 }
 
-export async function createHybridCheckout(user, body) {
+export async function cancelHybridCheckout(row) {
+  if (!row.provider_id) throw checkoutError("Esta tentativa ainda está sendo preparada. Aguarde alguns instantes e tente novamente.",409);
+  const processing = () => Object.assign(checkoutError("O pagamento anterior já foi concluído ou está em processamento. Verifique a confirmação antes de trocar.",409),{code:"CHECKOUT_PROCESSING"});
+  if (row.status === "paid") throw processing();
+  if (row.method === "card") {
+    const stripe = stripeClient();
+    let session = await stripe.checkout.sessions.retrieve(row.provider_id);
+    if (session.id !== row.provider_id || session.client_reference_id !== checkoutReference(row.id)) throw new Error("SESSION_MISMATCH");
+    if (session.status !== "expired") {
+      if (session.status !== "open" || session.payment_status !== "unpaid" || session.subscription) throw processing();
+      if (session.payment_intent) {
+        const intent = await stripe.paymentIntents.retrieve(objectId(session.payment_intent));
+        if (["processing","succeeded","requires_capture"].includes(intent.status)) throw processing();
+      }
+      try { await stripe.checkout.sessions.expire(session.id,{}, {idempotencyKey:`${row.id}:expire`}); }
+      catch { /* Re-read after a timeout or a concurrent payment/expiration. */ }
+      session = await stripe.checkout.sessions.retrieve(row.provider_id);
+      if (session.status !== "expired") throw processing();
+    }
+  } else {
+    let order = await getMercadoPagoOrder(row.provider_id);
+    if (order.id !== row.provider_id || order.external_reference !== checkoutReference(row.id)) throw new Error("PIX_CHECKOUT_MISMATCH");
+    if (!ended(order.status)) {
+      if (!["created","action_required"].includes(order.status) ||
+          (order.transactions?.payments || []).some(payment=>["approved","processed","processing","in_process","authorized"].includes(payment.status))) throw processing();
+      try { await cancelMercadoPagoOrder(order.id,`${row.id}:cancel`); }
+      catch { /* Do not unlock until the provider confirms cancellation. */ }
+      order = await getMercadoPagoOrder(row.provider_id);
+      if (!ended(order.status)) throw processing();
+    }
+  }
+  await updateCheckout(row.id,{status:"cancelled"});
+  if (row.coupon_token) await releaseCouponReservation(db,row.coupon_token,row.advogado_id);
+  return {success:true,checkoutId:row.id,status:"cancelled",approved:false};
+}
+
+export async function createHybridCheckout(user, body, reconciled = false) {
   if (!/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(body.requestId || "")) throw checkoutError("Identificador da tentativa inválido.", 400);
   if (!["card", "pix"].includes(body.method)) throw checkoutError("Escolha cartão ou Pix.");
   if (body.method === "card") stripePublicKey();
@@ -42,6 +80,12 @@ export async function createHybridCheckout(user, body) {
     throw checkoutError("Selecione um único produto válido.",400);
   }
   const isPlan = !juris && !ai;
+  if (body.replaceCheckoutId) {
+    if (!isPlan || !checkoutIdValid(body.replaceCheckoutId)) throw checkoutError("Tentativa anterior inválida.",400);
+    const previous = await loadHybridCheckout(body.replaceCheckoutId,user.id);
+    if (!previous || previous.product.type !== "PRO_SUBSCRIPTION") throw checkoutError("Tentativa anterior não localizada.",404);
+    await cancelHybridCheckout(previous);
+  }
   if (isPlan) {
     assertLawyerPlanPurchaseAllowed(profile, body.planType);
     profile.has_plan_history = await hasLawyerPlanHistory(db, user.id, profile);
@@ -74,13 +118,19 @@ export async function createHybridCheckout(user, body) {
         reservation = null;
         const concurrent = await loadHybridCheckout(body.requestId,user.id);
         if (concurrent) return openHybridCheckout(concurrent);
-        const {data:open} = await db.from(TABLE).select("*").eq("advogado_id",user.id)
-          .in("status",["creating","pending"]).eq("method",body.method).limit(10);
-        const matching=(open || []).find(attempt=>attempt.product.type === product.type &&
+        const {data:open,error:openError} = await db.from(TABLE).select("*").eq("advogado_id",user.id)
+          .in("status",["creating","pending"]).eq("product->>type","PRO_SUBSCRIPTION").limit(1);
+        if (openError || !open?.length) throw checkoutError("A tentativa foi atualizada. Tente novamente.",409);
+        const previous = open[0];
+        const current = await hybridCheckoutStatus(previous,{includeClientSecret:false});
+        if (current.approved) throw Object.assign(checkoutError("O pagamento anterior foi confirmado. Atualize a página para ver seu plano.",409),{code:"CHECKOUT_PAID"});
+        if (ended(current.status) && !reconciled) return createHybridCheckout(user,{...body,replaceCheckoutId:null},true);
+        const matching=(open || []).find(attempt=>attempt.method === body.method && attempt.product.type === product.type &&
           attempt.product.planType === product.planType && attempt.product.billingCycle === product.billingCycle &&
           attempt.product.priceInCents === product.priceInCents && attempt.coupon_id === row.coupon_id);
         if (matching) return openHybridCheckout(matching);
-        throw checkoutError("Há um checkout de plano em aberto. Conclua ou expire a tentativa anterior antes de iniciar outra.",409);
+        throw Object.assign(checkoutError("Você tem uma tentativa anterior aberta. Você pode encerrá-la e continuar com a opção escolhida.",409),
+          {code:"CHECKOUT_OPEN",previousCheckout:{id:previous.id,planType:previous.product.planType,billingCycle:previous.product.billingCycle,method:previous.method}});
       }
       throw checkoutError("Não foi possível registrar a tentativa de pagamento.",503);
     }
@@ -94,7 +144,7 @@ export async function createHybridCheckout(user, body) {
 }
 
 async function openHybridCheckout(row) {
-  if (["expired","cancelled"].includes(row.status)) throw checkoutError("Este checkout expirou. Abra uma nova tentativa.",409);
+  if (ended(row.status)) throw Object.assign(checkoutError("Esta tentativa foi encerrada. Você já pode iniciar outra.",409),{code:"CHECKOUT_EXPIRED"});
   if (row.provider_id) return hybridCheckoutStatus(row);
   if (Date.now() - new Date(row.created_at).getTime() > 55*60*1000) {
     throw checkoutError("A abertura desta tentativa precisa ser reconciliada antes de tentar novamente.",409);
@@ -135,7 +185,10 @@ async function deliver(row, key, amount, firstCharge, subscriptionId = null, per
   // Cancellation is idempotent and happens only after a verified paid object.
   if (firstCharge && row.previous_subscription_id && row.previous_subscription_id !== subscriptionId) {
     const old = row.previous_subscription_id;
-    if (old.startsWith("mp_")) await updateMercadoPagoSubscription(old.slice(3),{status:"canceled"});
+    if (old.startsWith("mp_")) {
+      const previous = await getMercadoPagoSubscription(old.slice(3));
+      if (!["canceled","cancelled"].includes(previous.status)) await updateMercadoPagoSubscription(old.slice(3),{status:"cancelled"});
+    }
     else if (old.startsWith("sub_")) {
       const previous = await stripeClient().subscriptions.retrieve(old);
       if (previous.status !== "canceled") await stripeClient().subscriptions.cancel(old);
@@ -185,7 +238,7 @@ export async function fulfillHybridPix(order) {
   return deliver(row,`mp_order_${order.id}`,amount,true);
 }
 
-export async function hybridCheckoutStatus(row) {
+export async function hybridCheckoutStatus(row, {includeClientSecret = true} = {}) {
   const base = {success:true,checkoutId:row.id,method:row.method,amount:row.product.priceInCents};
   if (!row.provider_id) return {...base,approved:false,status:"creating"};
   if (row.method === "pix") {
@@ -214,7 +267,7 @@ export async function hybridCheckoutStatus(row) {
   }
   if (session.status === "expired") await updateCheckout(row.id,{status:"expired"});
   return {...base,approved:Boolean(fulfilled?.approved),status:session.status,
-    ...(session.status === "open" ? {clientSecret:session.client_secret,publicKey:stripePublicKey(session.livemode)} : {})};
+    ...(session.status === "open" && includeClientSecret ? {clientSecret:session.client_secret,publicKey:stripePublicKey(session.livemode)} : {})};
 }
 
 export async function handleStripeBillingEvent(event) {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabaseServer";
-import { createHybridCheckout, loadHybridCheckout, hybridCheckoutStatus } from "@/lib/billing/hybridCheckoutServer";
+import { createHybridCheckout, loadHybridCheckout, hybridCheckoutStatus, cancelHybridCheckout } from "@/lib/billing/hybridCheckoutServer";
 
 const json = (data,status=200) => NextResponse.json(data,{status,headers:{"Cache-Control":"no-store"}});
 export const runtime = "nodejs";
@@ -14,10 +14,17 @@ export async function POST(request) {
     const {data:{user}} = await createClient().auth.getUser();
     if (!user) return json({message:"Não autorizado."},401);
     const body = await request.json();
+    if (body.action === "cancel") {
+      if (!/^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(body.checkoutId || "")) return json({message:"Identificador inválido."},400);
+      const row = await loadHybridCheckout(body.checkoutId,user.id);
+      if (!row) return json({message:"Pagamento não localizado."},404);
+      return json(await cancelHybridCheckout(row));
+    }
     return json(await createHybridCheckout(user,body));
   } catch (error) {
     console.error("[HybridCheckout] Falha",{code:error.code || error.type || "CHECKOUT_FAILED",status:error.status || 503});
-    return json({success:false,code:error.code || "CHECKOUT_FAILED",message:error.status?error.message:"Não foi possível confirmar a abertura do checkout. Consulte esta tentativa antes de iniciar outra."},error.status || 503);
+    return json({success:false,code:error.code || "CHECKOUT_FAILED",previousCheckout:error.previousCheckout,
+      message:error.status?error.message:"Não foi possível confirmar a abertura do checkout. Consulte esta tentativa antes de iniciar outra."},error.status || 503);
   }
 }
 export async function GET(request) {

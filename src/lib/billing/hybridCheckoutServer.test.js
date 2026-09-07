@@ -3,12 +3,13 @@ jest.mock("@/lib/billing/stripeClient",()=>({stripeClient:jest.fn(),stripePublic
 jest.mock("./mercadoPagoRecurringServer",()=>({assertNoUnresolvedRecurringAttempt:jest.fn()}));
 jest.mock("@/lib/lawyerPlans/planAccessServer",()=>({assertLawyerPlanPurchaseAllowed:jest.fn()}));
 jest.mock("./planHistoryServer",()=>({hasLawyerPlanHistory:jest.fn(async()=>false)}));
-jest.mock("@/lib/mercadopago/client",()=>({createMercadoPagoOrder:jest.fn(),getMercadoPagoOrder:jest.fn(),updateMercadoPagoSubscription:jest.fn()}));
+jest.mock("@/lib/mercadopago/client",()=>({createMercadoPagoOrder:jest.fn(),getMercadoPagoOrder:jest.fn(),getMercadoPagoSubscription:jest.fn(),updateMercadoPagoSubscription:jest.fn()}));
 jest.mock("@/lib/coupons/couponServer",()=>({COUPON_TYPES:{},consumeCouponUsage:jest.fn()}));
 import {supabaseAdmin as db} from "@/lib/supabase";
 import {stripeClient} from "./stripeClient";
 import {fulfillHybridPix,fulfillHybridInvoice,handleStripeBillingEvent,createHybridCheckout} from "./hybridCheckoutServer";
 import {assertNoUnresolvedRecurringAttempt} from "./mercadoPagoRecurringServer";
+import {getMercadoPagoSubscription,updateMercadoPagoSubscription} from "@/lib/mercadopago/client";
 const id="00000000-0000-0000-0000-000000000001";
 let row;let stripe;
 beforeEach(()=>{
@@ -49,6 +50,13 @@ test.each(["amount","method","order"])("rejects a Pix %s mismatch",async(kind)=>
 test("approved Pix uses the atomic receipt function",async()=>{
   await expect(fulfillHybridPix(pix())).resolves.toEqual({approved:true});
   expect(db.rpc).toHaveBeenCalledWith("fulfill_hybrid_checkout",expect.objectContaining({p_provider_key:"mp_order_ORD_fixture",p_amount_cents:990}));
+});
+
+test("a previously canceled legacy subscription does not block delivery of the new purchase",async()=>{
+  row.previous_subscription_id="mp_previous";
+  getMercadoPagoSubscription.mockResolvedValue({id:"previous",status:"cancelled"});
+  await expect(fulfillHybridPix(pix())).resolves.toEqual({approved:true});
+  expect(updateMercadoPagoSubscription).not.toHaveBeenCalled();
 });
 test("a paid Stripe invoice is retrieved and checked before delivery",async()=>{
   row={id,method:"card",product:{recurring:true,priceInCents:3999,renewalPriceInCents:15000}};

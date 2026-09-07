@@ -58,3 +58,30 @@ test("a Stripe configuration failure leaves Pix selectable",async()=>{
   expect(screen.getByRole("button",{name:"Pix"})).toBeEnabled();
   expect(screen.queryByText("Formulário do cartão")).not.toBeInTheDocument();
 });
+
+test("a plan conflict offers replacement and submits it only after the user chooses",async()=>{
+  const previousId="00000000-0000-0000-0000-000000000001";
+  let posts=0;
+  fetch.mockImplementation(async(_url,options)=>{
+    if(options?.method==="POST"&&++posts===1)return {ok:false,json:async()=>({code:"CHECKOUT_OPEN",previousCheckout:{id:previousId,planType:"PRO",method:"card"}})};
+    return {ok:true,json:async()=>({method:"pix",qrCode:"NEW_PIX",amount:4491,status:"action_required"})};
+  });
+  render(<HybridCheckoutModal {...props} isPro planType="START" billingCycle="AVULSO"/>);
+  fireEvent.click(screen.getByRole("button",{name:"Pix"}));
+  fireEvent.click(screen.getByRole("button",{name:"Gerar Pix"}));
+  const replace=await screen.findByRole("button",{name:"Encerrar anterior e continuar"});
+  expect(posts).toBe(1);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  fireEvent.click(replace);
+  await screen.findByLabelText("Pix Copia e Cola");
+  expect(JSON.parse(fetch.mock.calls.filter(([,o])=>o?.method==="POST")[1][1].body)).toMatchObject({replaceCheckoutId:previousId,method:"pix",planType:"START"});
+});
+
+test("an ended stored attempt allows a fresh choice instead of an endless retry",async()=>{
+  fetch.mockResolvedValue({ok:false,json:async()=>({code:"CHECKOUT_EXPIRED",message:"Encerrado"})});
+  render(<HybridCheckoutModal {...props}/>);
+  fireEvent.click(screen.getByRole("button",{name:"Continuar com cartão"}));
+  await waitFor(()=>expect(screen.getByRole("button",{name:"Pix"})).toBeEnabled());
+  expect(sessionStorage.length).toBe(0);
+  expect(screen.queryByRole("button",{name:"Retomar esta tentativa"})).not.toBeInTheDocument();
+});

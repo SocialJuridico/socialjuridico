@@ -58,6 +58,9 @@
 .status strong { font-size: 18px; }
 .status p { margin: 0; color: #bbb; font-size: 14px; line-height: 1.7; }
 .error { margin: 0; padding: 14px; border: 1px solid #71433e; border-radius: 10px; background: #2a1918; color: #f2c1ba; font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.notice { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid #51432a; border-radius: 12px; background: #211d15; }
+.notice strong { color: #f0d59f; font-size: 14px; }
+.notice p { margin: 0; color: #c9c1b1; font-size: 13px; line-height: 1.7; }
 .security { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 0; padding-top: 4px; color: #929292; font-size: 11px; line-height: 1.6; text-align: center; }
 .spinner { flex-shrink: 0; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

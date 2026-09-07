@@ -49,7 +49,7 @@ As credenciais disponíveis são de produção. Testes automatizados usaram prov
 
 ## Verificação local
 
-62 testes em oito suítes passaram, incluindo interface, preços/descontos, confirmação Pix, confirmação de fatura e assinatura do webhook. Análise estática dos arquivos modificados passou. Compilação de produção passou (há um aviso preexistente de rastreamento de arquivos em `caseClassifierServer.js`).
+75 testes em nove suítes passaram, incluindo interface, preços/descontos, confirmação Pix, confirmação de fatura e assinatura do webhook. Análise estática dos arquivos modificados passou. Compilação de produção passou (há um aviso preexistente de rastreamento de arquivos em `caseClassifierServer.js`).
 
 Comandos reproduzíveis:
 
@@ -72,3 +72,11 @@ O checkout híbrido agora consulta a reconciliação das assinaturas antigas, li
 A configuração local verificada tinha chave secreta live e pública test. A validação impede criar sessões com essa combinação; substituir NEXT_PUBLIC_STRIPE_PUBLIC_KEY pela chave pública live da mesma conta e reiniciar/republicar. Não houve alteração das credenciais nem consulta das tentativas reais nesta correção, conforme escolha do usuário.
 
 CSS próprio do modal híbrido: seleção de método, campo Pix, QR Code, mensagens, foco e largura do formulário Stripe. Testes de interface usam respostas simuladas, sem cobranças.
+
+## Troca de plano ou forma de pagamento
+
+Conflitos com outro checkout de plano aberto agora retornam CHECKOUT_OPEN com a identificação da tentativa pertencente ao usuário autenticado. O modal oferece Encerrar anterior e continuar. A substituição só avança após expiração confirmada da sessão Stripe ou cancelamento confirmado da order Pix. Pagamentos pagos ou em processamento não são substituídos. Sessões já expiradas são reconciliadas e deixam de bloquear automaticamente; o índice de uma tentativa aberta por plano permanece protegendo contra concorrência.
+
+Também há Encerrar tentativa e escolher novamente no checkout aberto. UUIDs encerrados são removidos do armazenamento da aba, evitando ciclos de retomada. A chave pública Stripe não é necessária para consultar o estado de uma sessão anterior ao trocar para Pix.
+
+A API real de assinaturas do Mercado Pago rejeitou canceled e aceitou cancelled. A normalização foi centralizada e o fulfillment não tenta cancelar de novo uma assinatura legada já encerrada.

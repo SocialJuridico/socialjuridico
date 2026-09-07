@@ -23,12 +23,14 @@ function Checkout({onClose,isPro,planType,billingCycle,jurisAmount,aiCreditsAmou
   const [data,setData] = useState(null);
   const [error,setError] = useState("");
   const [errorCode,setErrorCode] = useState("");
+  const [previousCheckout,setPreviousCheckout] = useState(null);
   const [busy,setBusy] = useState(false);
   const [waiting,setWaiting] = useState(Boolean(initialId));
   const [copied,setCopied] = useState(false);
   const [id,setId] = useState(initialId || null);
   const complete = useRef(false);
   const inFlight = useRef(false);
+  const version = useRef(0);
   const callback = useRef(onPaymentSuccess);
   const dialog = useRef(null);
   useEffect(()=>{callback.current=onPaymentSuccess;},[onPaymentSuccess]);
@@ -46,18 +48,20 @@ function Checkout({onClose,isPro,planType,billingCycle,jurisAmount,aiCreditsAmou
     }
   },[storageKey]);
   const check = useCallback(async () => {
-    if (!id || inFlight.current || complete.current) return;
+    if (!id || busy || inFlight.current || complete.current) return;
     inFlight.current=true;
+    const requestVersion=version.current;
     try {
       const response=await fetch(`${endpoint}?checkout=${encodeURIComponent(id)}`,{cache:"no-store"});
       const result=await response.json();
+      if (requestVersion!==version.current) return;
       if (!response.ok) throw new Error(result.message);
       setError("");setErrorCode("");
       await accept(result);
       if (["expired","cancelled","canceled"].includes(result.status)) {setWaiting(false);sessionStorage.removeItem(storageKey);}
-    } catch (failure) {setError(failure.message || "A confirmação ainda não está disponível.");}
+    } catch (failure) {if(requestVersion===version.current)setError(failure.message || "A confirmação ainda não está disponível.");}
     finally {inFlight.current=false;}
-  },[id,accept,storageKey]);
+  },[id,busy,accept,storageKey]);
   useEffect(()=>{
     if (!id || ["expired","cancelled","canceled"].includes(data?.status) || (!waiting && data?.method !== "pix")) return;
     void check(); const timer=setInterval(check,4000);return()=>clearInterval(timer);
@@ -79,7 +83,23 @@ function Checkout({onClose,isPro,planType,billingCycle,jurisAmount,aiCreditsAmou
     window.addEventListener("keydown",closeOnEscape);
     return()=>{window.removeEventListener("keydown",closeOnEscape);document.body.style.overflow=overflow;previous?.focus?.();};
   },[onClose]);
-  async function start() {
+  function resetAttempt() {
+    version.current+=1;
+    sessionStorage.removeItem(storageKey);
+    setId(null);setData(null);setWaiting(false);setCopied(false);setError("");setErrorCode("");setPreviousCheckout(null);
+  }
+  async function changePayment() {
+    if (busy || !id) return;
+    setBusy(true);setError("");version.current+=1;
+    try {
+      const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"cancel",checkoutId:id})});
+      const result=await response.json();
+      if (!response.ok) throw new Error(result.message);
+      resetAttempt();
+    } catch(failure) {setError(failure.message || "Não foi possível encerrar esta tentativa. Verifique o pagamento.");}
+    finally {setBusy(false);}
+  }
+  async function start(replaceCheckoutId = null) {
     if (busy) return;
     setBusy(true);setError("");setErrorCode("");
     const requestId=sessionStorage.getItem(storageKey) || crypto.randomUUID();
@@ -88,17 +108,24 @@ function Checkout({onClose,isPro,planType,billingCycle,jurisAmount,aiCreditsAmou
       const response=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({requestId,method,planType:isPro?planType:null,billingCycle:isPro?billingCycle:null,
           jurisAmount:isPro||aiCreditsAmount?0:jurisAmount,aiCreditsAmount:aiCreditsAmount||0,
-          isPromoEligible:Boolean(isPromoEligible),internalCouponId:couponData?.id||null})});
+          isPromoEligible:Boolean(isPromoEligible),internalCouponId:couponData?.id||null,replaceCheckoutId})});
       const result=await response.json();
       if (!response.ok) {
         setErrorCode(result.code || "");
+        if (result.code === "CHECKOUT_OPEN" && result.previousCheckout) {
+          setPreviousCheckout(result.previousCheckout);setId(null);return;
+        }
+        if (result.code === "CHECKOUT_EXPIRED") {
+          resetAttempt();return;
+        }
         // These preflight failures did not create a new checkout. Keep the UUID
         // for a possible existing session, but don't offer a fake status lookup.
         if (["LEGACY_PENDING","STRIPE_CONFIGURATION"].includes(result.code)) setId(null);
         throw new Error(result.message);
       }
+      setPreviousCheckout(null);
       await accept(result);
-      if (result.method==="pix") setWaiting(true);
+      if (result.method==="pix" && !["expired","cancelled","canceled"].includes(result.status)) setWaiting(true);
     } catch(failure) {setError(failure.message || "Não foi possível iniciar o pagamento.");}
     finally{setBusy(false);}
   }
@@ -118,7 +145,12 @@ function Checkout({onClose,isPro,planType,billingCycle,jurisAmount,aiCreditsAmou
               {!recurring&&<button type="button" className={styles.method} disabled={busy||Boolean(id)} aria-pressed={method==="pix"} onClick={()=>setMethod("pix")}><QrCode size={20}/> Pix</button>}
             </div>
             <p className={styles.securityCopy}>{recurring?"Assinatura com renovação automática no cartão. Você poderá concluir o pagamento aqui no site.":"Escolha como deseja pagar. A confirmação aparecerá aqui."}</p>
-            <button type="button" className={styles.primary} disabled={busy} onClick={start}>{busy?<><LoaderCircle size={18} className={styles.spinner}/> Preparando pagamento…</>:errorCode==="LEGACY_PENDING"?"Verificar tentativa anterior":id?"Retomar esta tentativa":method==="pix"?"Gerar Pix":"Continuar com cartão"}</button>
+            {!previousCheckout&&<button type="button" className={styles.primary} disabled={busy} onClick={()=>start()}>{busy?<><LoaderCircle size={18} className={styles.spinner}/> Preparando pagamento…</>:errorCode==="LEGACY_PENDING"?"Verificar tentativa anterior":id?"Retomar esta tentativa":method==="pix"?"Gerar Pix":"Continuar com cartão"}</button>}
+            {previousCheckout&&<div className={styles.notice} role="status">
+              <strong>Continuar com a nova opção?</strong>
+              <p>Existe uma tentativa do plano {previousCheckout.planType} por {previousCheckout.method==="pix"?"Pix":"cartão"}. Vamos encerrá-la antes de abrir este pagamento. O código ou formulário anterior deixará de funcionar.</p>
+              <button type="button" className={styles.primary} disabled={busy} onClick={()=>start(previousCheckout.id)}>{busy?"Encerrando tentativa anterior…":"Encerrar anterior e continuar"}</button>
+            </div>}
           </>}
           {data?.clientSecret&&data?.publicKey&&!waiting&&!terminal&&<div className={styles.stripeForm}><EmbeddedCheckoutProvider stripe={stripeFor(data.publicKey)} options={options}><EmbeddedCheckout/></EmbeddedCheckoutProvider></div>}
           {data?.qrCode&&!terminal&&<div className={styles.pix}>
@@ -130,8 +162,9 @@ function Checkout({onClose,isPro,planType,billingCycle,jurisAmount,aiCreditsAmou
             <button className={styles.primary} onClick={async()=>{try{await navigator.clipboard.writeText(data.qrCode);setCopied(true);}catch{setError("Selecione o código acima e copie manualmente.");}}}>{copied?<Check size={18}/>:<Copy size={18}/>} {copied?"Código copiado":"Copiar código Pix"}</button>
           </div>}
           {waiting&&!terminal&&<p role="status" className={styles.waiting}><LoaderCircle size={16} className={styles.spinner}/> Aguardando a confirmação do pagamento…</p>}
-          {(data?.checkoutId||initialId)&&!terminal&&<button className={styles.secondary} onClick={check}>Verificar pagamento</button>}
-          {terminal&&<div className={styles.status}><strong>Pagamento expirado</strong><p>Esta tentativa foi encerrada. Nenhum novo pagamento será iniciado automaticamente.</p><button className={styles.secondary} onClick={onClose}>Fechar e escolher novamente</button></div>}
+          {(data?.checkoutId||initialId)&&!terminal&&<button className={styles.secondary} disabled={busy} onClick={check}>Verificar pagamento</button>}
+          {data?.checkoutId&&!initialId&&!terminal&&<button className={styles.secondary} disabled={busy} onClick={changePayment}>{busy?"Encerrando tentativa…":"Encerrar tentativa e escolher novamente"}</button>}
+          {terminal&&<div className={styles.status}><strong>Tentativa encerrada</strong><p>Você pode escolher outra opção de pagamento.</p><button className={styles.secondary} onClick={initialId?onClose:resetAttempt}>{initialId?"Fechar":"Escolher novamente"}</button></div>}
         </>}
         {error&&<p role="alert" className={styles.error}>{error}</p>}
         <p className={styles.security}><ShieldCheck size={16}/> Pagamento protegido · Confirmação aqui no site</p>

@@ -223,6 +223,12 @@ export function getMercadoPagoOrder(orderId) {
   return mercadoPagoRequest(`/v1/orders/${encodeURIComponent(String(orderId))}`);
 }
 
+export function cancelMercadoPagoOrder(orderId, idempotencyKey) {
+  return mercadoPagoRequest(`/v1/orders/${encodeURIComponent(String(orderId))}/cancel`, {
+    method: "POST", idempotencyKey,
+  });
+}
+
 // Payments API permanece apenas para eventos/cobranças gerados pela API de
 // Assinaturas. Compras avulsas novas não passam mais por /v1/payments.
 export function getMercadoPagoPayment(paymentId) {
@@ -270,7 +276,8 @@ export function createMercadoPagoSubscription(body, idempotencyKey) {
 export function updateMercadoPagoSubscription(subscriptionId, body) {
   return mercadoPagoRequest(
     `/preapproval/${encodeURIComponent(String(subscriptionId))}`,
-    { method: "PUT", body },
+    // The live preapproval API accepts "cancelled" (it rejects "canceled").
+    { method: "PUT", body: body?.status === "canceled" ? {...body,status:"cancelled"} : body },
   );
 }
 

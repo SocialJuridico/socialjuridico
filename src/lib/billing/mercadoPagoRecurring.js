@@ -2,6 +2,11 @@ import { centsToBRL, subscriptionFrequencyFor } from "@/lib/billing/catalog";
 
 const SAFE_CODE = /^[A-Za-z0-9_.-]{1,100}$/;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Mercado Pago frequently ships the real rejection reason as a prefix of the
+// error message (e.g. "CC_VAL_433 Credit card validation has failed") instead
+// of populating cause[].code. This matches only that leading machine code so we
+// never serialize the human-readable remainder, which can carry sensitive data.
+const MESSAGE_CODE = /^\s*([A-Z]{2,4}(?:_[A-Z0-9]+){1,4})\b/;
 
 export function normalizeRecurringEmail(value) {
   return String(value || "").trim().toLowerCase();
@@ -59,6 +64,14 @@ function safeCode(value) {
   return SAFE_CODE.test(code) ? code : null;
 }
 
+// Extracts only the leading machine code from a provider message. Returns null
+// when the message does not start with a recognizable code, so the free-form
+// text is never propagated to logs or diagnostics.
+function messageCode(message) {
+  const match = MESSAGE_CODE.exec(String(message || ""));
+  return match ? safeCode(match[1]) : null;
+}
+
 // Explicit allowlist: provider errors can contain card, identity or request data.
 // Never serialize a complete provider error, cause, token or payer object.
 export function sanitizeRecurringProviderError(error) {
@@ -68,6 +81,9 @@ export function sanitizeRecurringProviderError(error) {
     providerStatus: Number(error?.providerStatus) || null,
     requestId: safeCode(error?.providerRequestId),
     code: safeCode(data?.code) || safeCode(data?.error),
+    // When cause[].code is empty, the real reason lives at the start of the
+    // message (e.g. CC_VAL_433). Surface it so logs record the actual cause.
+    messageCode: messageCode(data?.message) || messageCode(error?.message),
     causeCodes: causes.map((cause) => safeCode(cause?.code)).filter(Boolean).slice(0, 10),
   };
 }
@@ -89,13 +105,20 @@ export function recurringCheckoutDiagnostics({ product, paymentData, payerEmail 
 
 export function recurringProviderFailure(error) {
   const diagnostics = sanitizeRecurringProviderError(error);
-  const message = diagnostics.code === "CC_VAL_433" || String(error?.message || "").includes("CC_VAL_433")
+  const isCardValidation =
+    diagnostics.code === "CC_VAL_433" ||
+    diagnostics.messageCode === "CC_VAL_433" ||
+    diagnostics.causeCodes.includes("CC_VAL_433") ||
+    String(error?.message || "").includes("CC_VAL_433") ||
+    String(error?.providerData?.message || "").includes("CC_VAL_433");
+  const message = isCardValidation
     ? "O Mercado Pago não conseguiu validar o cartão para a assinatura. Nenhuma nova cobrança deve ser tentada até verificar o estado desta tentativa."
     : "Não foi possível confirmar a criação da assinatura. Consulte o estado da tentativa antes de tentar novamente.";
   const safe = recurringCheckoutError(message, Number(error?.status) || 502);
   safe.providerStatus = diagnostics.providerStatus;
   safe.providerRequestId = diagnostics.requestId;
   safe.providerCode = diagnostics.code;
+  safe.providerMessageCode = diagnostics.messageCode;
   safe.providerDiagnostics = diagnostics;
   return safe;
 }

@@ -54,11 +54,32 @@ describe("Mercado Pago recurring checkout", () => {
     expect(JSON.stringify(diagnostic)).not.toContain(secret);
     const providerData = { code: "rejected", message: "CC_VAL_433 Credit card validation has failed", cause: [{ code: "CC_VAL_433", description: secret, card_token_id: secret, identification: secret }] };
     const safe = sanitizeRecurringProviderError({ providerStatus: 400, providerRequestId: "request-1", providerData });
-    expect(safe).toEqual({ providerStatus: 400, requestId: "request-1", code: "rejected", causeCodes: ["CC_VAL_433"] });
+    expect(safe).toEqual({ providerStatus: 400, requestId: "request-1", code: "rejected", messageCode: "CC_VAL_433", causeCodes: ["CC_VAL_433"] });
     expect(JSON.stringify(safe)).not.toContain(secret);
     const failure = recurringProviderFailure({ status: 422, providerStatus: 400, providerRequestId: "request-1", providerData });
     expect(failure.status).toBe(422);
     expect(failure.message).toContain("validar");
     expect(JSON.stringify({ ...failure, message: failure.message })).not.toContain(secret);
+  });
+
+  test("extracts the leading rejection code when cause[].code is empty", () => {
+    const leakyMessage = "CC_VAL_433 Credit card validation has failed 4111111111111111";
+    const providerData = { code: "rejected", message: leakyMessage, cause: [] };
+    const safe = sanitizeRecurringProviderError({ providerStatus: 400, providerRequestId: "request-2", providerData });
+    expect(safe).toEqual({ providerStatus: 400, requestId: "request-2", code: "rejected", messageCode: "CC_VAL_433", causeCodes: [] });
+    // Only the machine code is surfaced; the free-form remainder never leaks.
+    expect(JSON.stringify(safe)).not.toContain("4111111111111111");
+    const failure = recurringProviderFailure({ status: 422, providerStatus: 400, providerRequestId: "request-2", providerData });
+    expect(failure.status).toBe(422);
+    expect(failure.message).toContain("validar");
+    expect(failure.providerMessageCode).toBe("CC_VAL_433");
+    expect(JSON.stringify({ ...failure, message: failure.message })).not.toContain("4111111111111111");
+  });
+
+  test("does not flag a card validation message for unrelated provider errors", () => {
+    const providerData = { code: "internal_error", message: "Something went wrong", cause: [] };
+    const failure = recurringProviderFailure({ status: 502, providerStatus: 500, providerRequestId: "request-3", providerData });
+    expect(failure.message).toContain("confirmar a criação");
+    expect(failure.providerMessageCode).toBeNull();
   });
 });

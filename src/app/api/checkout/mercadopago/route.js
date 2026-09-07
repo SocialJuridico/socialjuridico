@@ -530,6 +530,7 @@ export async function POST(request) {
         providerStatus: error.providerStatus || null,
         requestId: error.providerRequestId || null,
         code: error.providerCode || null,
+        messageCode: error.providerMessageCode || null,
       });
     } else {
       console.error("[Checkout/MercadoPago] Erro:", error);

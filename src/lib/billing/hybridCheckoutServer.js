@@ -250,7 +250,16 @@ export async function hybridCheckoutStatus(row, {includeClientSecret = true} = {
       qrCode:payment?.payment_method?.qr_code,qrCodeBase64:payment?.payment_method?.qr_code_base64};
   }
   const stripe = stripeClient();
-  const session = await stripe.checkout.sessions.retrieve(row.provider_id);
+  let session;
+  try {
+    session = await stripe.checkout.sessions.retrieve(row.provider_id);
+  } catch (error) {
+    if (error?.code === "resource_missing" || error?.statusCode === 404) {
+      await updateCheckout(row.id, { status: "expired" });
+      return { ...base, approved: false, status: "expired" };
+    }
+    throw error;
+  }
   if (session.client_reference_id !== checkoutReference(row.id)) throw new Error("SESSION_MISMATCH");
   let fulfilled;
   if (session.payment_status === "paid") {

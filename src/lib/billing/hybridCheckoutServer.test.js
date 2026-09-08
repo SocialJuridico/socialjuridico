@@ -73,3 +73,14 @@ test("subscription updates never activate benefits without a paid invoice",async
   await handleStripeBillingEvent({type:"customer.subscription.updated",data:{object:{id:"sub_fixture"}}});
   expect(db.rpc).not.toHaveBeenCalled();expect(db.from).not.toHaveBeenCalled();
 });
+test("missing Stripe session automatically expires checkout row instead of failing with 503",async()=>{
+  const {hybridCheckoutStatus} = require("./hybridCheckoutServer");
+  row = {id, method:"card", provider_id:"cs_missing", product:{priceInCents:3999}};
+  stripe.checkout = {sessions: {retrieve: jest.fn().mockRejectedValue({code: "resource_missing", statusCode: 404})}};
+  const update = jest.fn().mockReturnValue({eq: jest.fn().mockResolvedValue({error: null})});
+  db.from.mockImplementation(()=>({update}));
+  const res = await hybridCheckoutStatus(row);
+  expect(res).toMatchObject({approved: false, status: "expired"});
+  expect(update).toHaveBeenCalledWith({status: "expired"});
+});
+

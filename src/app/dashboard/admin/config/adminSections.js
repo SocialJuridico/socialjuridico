@@ -8,6 +8,7 @@ import {
   FileSignature,
   Film,
   GraduationCap,
+  HandCoins,
   Image as ImageIcon,
   Landmark,
   Mail,
@@ -74,6 +75,7 @@ export function createAdminSections(stats) {
       cards: [
         { title: "Gestão de casos", value: stats.totalCasos, href: "/dashboard/admin/casos", icon: FileText },
         { title: "Gestão financeira", value: "Ver vendas", href: "/dashboard/admin/transacoes", icon: DollarSign, tone: ADMIN_CARD_TONES.green },
+        { title: "Promoção Quer Investir Quanto?", value: "Compras e pagamentos", href: "/dashboard/admin/promocao-quer-investir", icon: HandCoins, tone: ADMIN_CARD_TONES.green },
         { title: "Anunciantes de serviços", value: "Gerenciar", href: "/dashboard/admin/anunciantes", icon: Megaphone, tone: ADMIN_CARD_TONES.purple },
         { title: "Gestão de afiliados", value: "Ver indicações", href: "/dashboard/admin/afiliados", icon: Scale, tone: ADMIN_CARD_TONES.gold },
       ],

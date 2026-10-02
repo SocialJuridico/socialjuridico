@@ -143,7 +143,7 @@ export async function createHybridCheckout(user, body, reconciled = false) {
   }
 }
 
-async function openHybridCheckout(row) {
+export async function openHybridCheckout(row) {
   if (ended(row.status)) throw Object.assign(checkoutError("Esta tentativa foi encerrada. Você já pode iniciar outra.",409),{code:"CHECKOUT_EXPIRED"});
   if (row.provider_id) return hybridCheckoutStatus(row);
   if (Date.now() - new Date(row.created_at).getTime() > 55*60*1000) {
@@ -194,10 +194,12 @@ async function deliver(row, key, amount, firstCharge, subscriptionId = null, per
       if (previous.status !== "canceled") await stripeClient().subscriptions.cancel(old);
     }
   }
-  const {data,error} = await db.rpc("fulfill_hybrid_checkout",{
-    p_checkout_id:row.id,p_provider_key:key,p_amount_cents:amount,p_first_charge:firstCharge,
-    p_subscription_id:subscriptionId,p_period_end:periodEnd,
-  });
+  const {data,error} = row.product.type === "PROMO_INVEST"
+    ? await db.rpc("fulfill_promo_invest_checkout",{p_checkout_id:row.id,p_provider_key:key,p_amount_cents:amount})
+    : await db.rpc("fulfill_hybrid_checkout",{
+      p_checkout_id:row.id,p_provider_key:key,p_amount_cents:amount,p_first_charge:firstCharge,
+      p_subscription_id:subscriptionId,p_period_end:periodEnd,
+    });
   if (error) throw checkoutError("Pagamento recebido; a confirmação dos benefícios precisa ser concluída.",503);
   if (firstCharge && row.coupon_id) await consumeCouponUsage(db,{token:row.coupon_token,couponId:row.coupon_id,
     userId:row.advogado_id,checkoutReference:checkoutReference(row.id)});

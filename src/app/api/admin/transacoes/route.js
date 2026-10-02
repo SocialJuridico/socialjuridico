@@ -127,6 +127,7 @@ function inferProduct(transaction) {
   if (type === "JURIS_PURCHASE") return "JURIS";
   if (type === "AI_CREDITS_PURCHASE") return "AI_CREDITS";
   if (type === "ADDON_PURCHASE") return "ADDON";
+  if (type === "PROMO_INVEST") return "PROMO_INVEST";
   if (type === "PRO_SUBSCRIPTION") {
     return jurisAmount === 7 ? "START" : "PRO";
   }

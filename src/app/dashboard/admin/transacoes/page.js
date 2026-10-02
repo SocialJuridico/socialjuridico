@@ -29,6 +29,7 @@ const PRODUCT_LABELS = {
   START: "Plano START",
   PRO: "Plano PRO",
   ADDON: "Expansão",
+  PROMO_INVEST: "Plano PRO · Quer Investir Quanto?",
   OTHER: "Outro produto",
 };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   BellRing,
   BookOpen,
@@ -11,6 +11,7 @@ import {
   FilePenLine,
   FileText,
   Globe,
+  HandCoins,
   Home,
   Library,
   Lock,
@@ -30,6 +31,7 @@ import {
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
+import PromoInvestModal from "@/components/PromoInvestCheckout/PromoInvestModal";
 import { useLawyerSession } from "../LawyerSessionContext";
 import sidebarStyles from "./LawyerRouteSidebar.module.css";
 import styles from "./LawyerShell.module.css";
@@ -113,12 +115,14 @@ function getPermission(profile, item) {
 export default function LawyerRouteSidebar({ activeRoute }) {
   const router = useRouter();
   const navScrollRef = useRef(null);
+  const [isPromoInvestOpen, setIsPromoInvestOpen] = useState(false);
   const {
     profileData,
     isSidebarOpen,
     setIsSidebarOpen,
     unreadMessagesCount,
     openPlansModal,
+    refreshProfile,
     oabVerified,
     openOabModal,
     logout,
@@ -196,8 +200,8 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     if (!getPermission(profileData, item)) {
       toast.error(
         profileData?.cargo === "secretaria" && item.legalOnly
-          ? "Acesso restrito para este perfil do escritÃ³rio."
-          : "Recurso bloqueado pelas permissÃµes do escritÃ³rio.",
+          ? "Acesso restrito para este perfil do escritório."
+          : "Recurso bloqueado pelas permissões do escritório.",
       );
       return;
     }
@@ -242,7 +246,7 @@ export default function LawyerRouteSidebar({ activeRoute }) {
         <Icon size={17} aria-hidden="true" />
         <span className={styles.navText}>{item.label}</span>
         {item.ai && (
-          <span className={styles.navAiBadge} title="Recurso com inteligÃªncia artificial">
+          <span className={styles.navAiBadge} title="Recurso com inteligência artificial">
             IA
           </span>
         )}
@@ -267,12 +271,26 @@ export default function LawyerRouteSidebar({ activeRoute }) {
         <div className={styles.workspaceBadge} title={profileData.nome_escritorio}><Users size={15} aria-hidden="true" /><span>{profileData.nome_escritorio}</span></div>
       )}
 
-      <button type="button" className={`${styles.planBadge} ${sidebarStyles.planTrigger}`} onClick={openPlansModal} title="Ver planos disponÃ­veis">
+      <button type="button" className={`${styles.planBadge} ${sidebarStyles.planTrigger}`} onClick={openPlansModal} title="Ver planos disponíveis">
         <Sparkles size={15} aria-hidden="true" /><span>Plano {hasPremium ? planType : "FREE"}</span>
       </button>
 
+      <button
+        type="button"
+        className={`${styles.planBadge} ${sidebarStyles.planTrigger} ${sidebarStyles.promoTrigger}`}
+        onClick={() => { closeSidebar(); setIsPromoInvestOpen(true); }}
+        title="Promoção: pague quanto quiser pelo Plano PRO"
+      >
+        <HandCoins size={15} aria-hidden="true" /><span>Quer Investir Quanto?</span>
+      </button>
+      <PromoInvestModal
+        isOpen={isPromoInvestOpen}
+        onClose={() => setIsPromoInvestOpen(false)}
+        onPaymentSuccess={refreshProfile}
+      />
+
       <div className={styles.navScroll} ref={navScrollRef}>
-        <nav className={styles.navGroup} aria-label="NavegaÃ§Ã£o principal"><span className={styles.navLabel}>NavegaÃ§Ã£o</span>{PRIMARY_ITEMS.map((item) => renderItem(item))}</nav>
+        <nav className={styles.navGroup} aria-label="Navegação principal"><span className={styles.navLabel}>Navegação</span>{PRIMARY_ITEMS.map((item) => renderItem(item))}</nav>
         <nav className={styles.navGroup} aria-label="Ferramentas profissionais"><span className={styles.navLabel}>Ferramentas profissionais</span>{PREMIUM_ITEMS.map((item) => renderItem(item, true))}</nav>
         <nav className={styles.navGroup} aria-label="Conta e suporte">
           <span className={styles.navLabel}>Conta e suporte</span>

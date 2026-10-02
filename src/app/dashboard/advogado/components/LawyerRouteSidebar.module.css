@@ -15,3 +15,17 @@
   outline: none;
   transform: translateY(-1px);
 }
+
+.promoTrigger {
+  margin-top: 8px;
+  border-color: rgba(52, 211, 153, 0.32);
+  background: rgba(16, 185, 129, 0.1);
+  color: #8ee6bf;
+}
+
+.promoTrigger:hover,
+.promoTrigger:focus-visible {
+  border-color: rgba(52, 211, 153, 0.55);
+  background: rgba(16, 185, 129, 0.18);
+  color: #b4f2d6;
+}

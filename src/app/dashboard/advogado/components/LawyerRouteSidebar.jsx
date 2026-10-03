@@ -32,6 +32,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 import PromoInvestModal from "@/components/PromoInvestCheckout/PromoInvestModal";
+import { hasActiveLawyerPlan } from "@/lib/billing/promoInvest";
 import { useLawyerSession } from "../LawyerSessionContext";
 import sidebarStyles from "./LawyerRouteSidebar.module.css";
 import styles from "./LawyerShell.module.css";
@@ -134,6 +135,27 @@ export default function LawyerRouteSidebar({ activeRoute }) {
     planType === "START" ||
     planType === "PRO" ||
     planType.startsWith("ENTERPRISE_");
+
+  // Botão da promoção: só para quem está sem plano. Depois das 2 compras da
+  // promoção, o mesmo botão leva ao checkout normal dos planos.
+  const hasActivePlan = hasActiveLawyerPlan(profileData);
+  const [promoInvest, setPromoInvest] = useState(null);
+  useEffect(() => {
+    if (!profileData?.id || hasActivePlan) return undefined;
+    let alive = true;
+    fetch("/api/checkout/quer-investir-quanto", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((result) => { if (alive) setPromoInvest(result); })
+      .catch(() => { if (alive) setPromoInvest(null); });
+    return () => { alive = false; };
+  }, [profileData?.id, hasActivePlan]);
+  const showPromoInvest = !hasActivePlan && Boolean(promoInvest?.enabled);
+
+  function openPromoInvest() {
+    closeSidebar();
+    if (promoInvest?.purchasesLeft > 0) setIsPromoInvestOpen(true);
+    else openPlansModal();
+  }
 
   const readSavedSidebarScroll = useCallback(() => {
     const savedScroll = Number(sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || 0);
@@ -275,14 +297,16 @@ export default function LawyerRouteSidebar({ activeRoute }) {
         <Sparkles size={15} aria-hidden="true" /><span>Plano {hasPremium ? planType : "FREE"}</span>
       </button>
 
-      <button
-        type="button"
-        className={`${styles.planBadge} ${sidebarStyles.planTrigger} ${sidebarStyles.promoTrigger}`}
-        onClick={() => { closeSidebar(); setIsPromoInvestOpen(true); }}
-        title="Promoção: pague quanto quiser pelo Plano PRO"
-      >
-        <HandCoins size={15} aria-hidden="true" /><span>Quer Investir Quanto?</span>
-      </button>
+      {showPromoInvest && (
+        <button
+          type="button"
+          className={`${styles.planBadge} ${sidebarStyles.planTrigger} ${sidebarStyles.promoTrigger}`}
+          onClick={openPromoInvest}
+          title="Promoção: pague quanto quiser pelo Plano PRO"
+        >
+          <HandCoins size={15} aria-hidden="true" /><span>Quer Investir Quanto?</span>
+        </button>
+      )}
       <PromoInvestModal
         isOpen={isPromoInvestOpen}
         onClose={() => setIsPromoInvestOpen(false)}

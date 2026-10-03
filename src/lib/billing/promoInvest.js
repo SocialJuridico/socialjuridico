@@ -44,3 +44,13 @@ export function buildPromoInvestProduct(priceInCents, purchaseNumber) {
     description: `${PROMO_INVEST_NAME} - Plano PRO ${purchaseNumber}º mês`,
   };
 }
+
+// A promoção é para quem está sem plano. Considera a data de validade porque o
+// cron que rebaixa planos vencidos para FREE pode ainda não ter rodado.
+export function hasActiveLawyerPlan(profile, now = Date.now()) {
+  const plan = String(profile?.plan_type || "").toUpperCase();
+  const paid = profile?.is_premium === true || ["START", "PRO"].includes(plan) || plan.startsWith("ENTERPRISE_");
+  if (!paid) return false;
+  const expiresAt = Date.parse(profile?.premium_expires_at || "");
+  return !(Number.isFinite(expiresAt) && expiresAt <= now);
+}

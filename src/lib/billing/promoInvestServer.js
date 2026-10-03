@@ -3,7 +3,7 @@ import { checkoutError } from "./hybridPayment";
 import { loadHybridCheckout, openHybridCheckout, cancelHybridCheckout } from "./hybridCheckoutServer";
 import {
   PROMO_INVEST_TYPE, PROMO_INVEST_MAX_PURCHASES, PROMO_INVEST_MIN_CENTS, PROMO_INVEST_MAX_CENTS,
-  parsePromoInvestCents, buildPromoInvestProduct,
+  parsePromoInvestCents, buildPromoInvestProduct, hasActiveLawyerPlan,
 } from "./promoInvest";
 
 const TABLE = "billing_checkouts";
@@ -36,6 +36,9 @@ export function promoInvestBlockReason(profile, paidCount) {
   if (paidCount >= PROMO_INVEST_MAX_PURCHASES) {
     return "Você já aproveitou os 2 meses da promoção. A partir de agora o plano PRO segue o valor normal.";
   }
+  if (hasActiveLawyerPlan(profile)) {
+    return "Você já tem um plano ativo. A promoção é para quem está sem plano; após o vencimento você poderá usá-la.";
+  }
   const status = String(profile?.subscription_status || "").toUpperCase();
   const cycle = String(profile?.plan_billing_cycle || "").toUpperCase();
   if (profile?.stripe_subscription_id && ["MONTHLY", "ANNUAL"].includes(cycle) && ACTIVE_SUBSCRIPTION.has(status)) {
@@ -46,7 +49,7 @@ export function promoInvestBlockReason(profile, paidCount) {
 
 async function loadProfile(userId) {
   const { data, error } = await db.from("advogados")
-    .select("id, email, oab_verification_status, subscription_status, plan_billing_cycle, stripe_subscription_id")
+    .select("id, email, oab_verification_status, subscription_status, plan_type, plan_billing_cycle, is_premium, premium_expires_at, stripe_subscription_id")
     .eq("id", userId).maybeSingle();
   if (error || !data) throw checkoutError("Perfil não localizado.", 404);
   return data;

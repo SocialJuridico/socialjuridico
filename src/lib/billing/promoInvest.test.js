@@ -7,7 +7,7 @@ jest.mock("@/lib/mercadopago/client",()=>({createMercadoPagoOrder:jest.fn(),getM
 jest.mock("@/lib/coupons/couponServer",()=>({COUPON_TYPES:{},consumeCouponUsage:jest.fn()}));
 import {supabaseAdmin as db} from "@/lib/supabase";
 import {createMercadoPagoOrder,getMercadoPagoOrder} from "@/lib/mercadopago/client";
-import {parsePromoInvestCents,buildPromoInvestProduct,PROMO_INVEST_MAX_CENTS} from "./promoInvest";
+import {parsePromoInvestCents,buildPromoInvestProduct,hasActiveLawyerPlan,PROMO_INVEST_MAX_CENTS} from "./promoInvest";
 import {promoInvestBlockReason,createPromoInvestCheckout,promoInvestEnabled} from "./promoInvestServer";
 import {fulfillHybridPix} from "./hybridCheckoutServer";
 
@@ -38,6 +38,17 @@ test("only two paid purchases and no active recurring subscription",()=>{
   expect(promoInvestBlockReason({stripe_subscription_id:"sub_1",plan_billing_cycle:"MONTHLY",subscription_status:"ACTIVE"},0)).toMatch(/recorrente/);
   expect(promoInvestBlockReason({stripe_subscription_id:"sub_1",plan_billing_cycle:"MONTHLY",subscription_status:"CANCELED"},0)).toBeNull();
   expect(promoInvestBlockReason({oab_verification_status:"ERROR"},0)).toMatch(/OAB/);
+});
+
+test("promo is only for lawyers without an active plan",()=>{
+  const future=new Date(Date.now()+86400000).toISOString();
+  const past=new Date(Date.now()-86400000).toISOString();
+  expect(hasActiveLawyerPlan({plan_type:"FREE"})).toBe(false);
+  expect(hasActiveLawyerPlan({plan_type:"PRO",is_premium:true,premium_expires_at:future})).toBe(true);
+  expect(hasActiveLawyerPlan({plan_type:"PRO",is_premium:true,premium_expires_at:past})).toBe(false);
+  expect(hasActiveLawyerPlan({plan_type:"ENTERPRISE_10"})).toBe(true);
+  expect(promoInvestBlockReason({plan_type:"PRO",is_premium:true,premium_expires_at:future},1)).toMatch(/plano ativo/);
+  expect(promoInvestBlockReason({plan_type:"PRO",is_premium:true,premium_expires_at:past},1)).toBeNull();
 });
 
 test("promo can be switched off by env",()=>{

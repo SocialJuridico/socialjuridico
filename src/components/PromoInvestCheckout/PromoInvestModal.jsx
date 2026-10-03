@@ -10,7 +10,6 @@ import styles from "./PromoInvestModal.module.css";
 
 const PROMO_ENDPOINT = "/api/checkout/quer-investir-quanto";
 const STATUS_ENDPOINT = "/api/checkout/hybrid";
-const SUGGESTIONS = [1000, 3000, 5000, 10000];
 const TERMINAL = ["expired", "cancelled", "canceled"];
 const money = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 
@@ -205,15 +204,6 @@ function Checkout({ onClose, onPaymentSuccess }) {
                   disabled={busy}
                 />
               </div>
-              <div className={styles.chips}>
-                {SUGGESTIONS.filter((value) => value <= info.maxCents).map((value) => (
-                  <button key={value} type="button" className={styles.chip} aria-pressed={cents === value} disabled={busy}
-                    onClick={() => { setAmount(String(value)); setPrevious(null); requestId.current = null; }}>
-                    {money(value)}
-                  </button>
-                ))}
-              </div>
-              <p className={styles.hint}>Valores de {money(info.minCents)} a {money(info.maxCents)}.</p>
               {!previous && (
                 <button type="button" className={base.primary} disabled={busy || !valid} onClick={() => start()}>
                   {busy ? <><LoaderCircle size={18} className={base.spinner} /> Gerando Pix…</> : <><QrCode size={18} /> Gerar Pix de {valid ? money(cents) : "—"}</>}

@@ -17,6 +17,8 @@ import {
   WandSparkles,
 } from "lucide-react";
 import Button from "@/components/Button";
+import { promoInvestEnabled } from "@/lib/billing/promoInvest";
+import BlackFridayPromo, { BlackFridayHeroBadge } from "./components/BlackFridayPromo/BlackFridayPromo";
 import styles from "./page.module.css";
 
 export const metadata = {
@@ -29,6 +31,8 @@ export const metadata = {
 };
 
 export default function SouAdvogadoPage() {
+  const showBlackFriday = promoInvestEnabled();
+
   return (
     <div className={styles.container}>
       {/* HERO SECTION */}
@@ -36,6 +40,8 @@ export default function SouAdvogadoPage() {
         <div className={styles.heroGlow} aria-hidden="true" />
 
         <div className={styles.heroContent}>
+          {showBlackFriday && <BlackFridayHeroBadge />}
+
           <h1 id="lawyer-hero-title" className={styles.title}>
             Mais oportunidades e mais organização
             <span className={styles.highlight}> para sua advocacia.</span>
@@ -118,6 +124,9 @@ export default function SouAdvogadoPage() {
           </div>
         </div>
       </section>
+
+      {/* BLACK FRIDAY: PROMOÇÃO QUER INVESTIR QUANTO? */}
+      {showBlackFriday && <BlackFridayPromo />}
 
       {/* COMO FUNCIONA (MINI TUTORIAL) */}
       <section

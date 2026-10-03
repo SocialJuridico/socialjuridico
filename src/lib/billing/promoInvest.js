@@ -10,6 +10,11 @@ export const PROMO_INVEST_MAX_PURCHASES = 3;
 export const PROMO_INVEST_MIN_CENTS = 1;
 export const PROMO_INVEST_MAX_CENTS = 1_000_000_000_000;
 
+// Desliga a promoção com PROMO_QUER_INVESTIR_QUANTO_ENABLED=false (servidor).
+export function promoInvestEnabled(env = process.env) {
+  return String(env.PROMO_QUER_INVESTIR_QUANTO_ENABLED ?? "true").toLowerCase() !== "false";
+}
+
 export function parsePromoInvestCents(value) {
   const normalized = typeof value === "string"
     ? value.replace(/[^\d,.-]/g, "").replace(/\.(?=\d{3}(\D|$))/g, "").replace(",", ".")

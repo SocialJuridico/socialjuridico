@@ -3,7 +3,7 @@ import { checkoutError } from "./hybridPayment";
 import { loadHybridCheckout, openHybridCheckout, cancelHybridCheckout } from "./hybridCheckoutServer";
 import {
   PROMO_INVEST_TYPE, PROMO_INVEST_MAX_PURCHASES, PROMO_INVEST_MIN_CENTS, PROMO_INVEST_MAX_CENTS,
-  parsePromoInvestCents, buildPromoInvestProduct, hasActiveLawyerPlan,
+  parsePromoInvestCents, buildPromoInvestProduct, hasActiveLawyerPlan, promoInvestEnabled,
 } from "./promoInvest";
 
 const TABLE = "billing_checkouts";
@@ -11,9 +11,7 @@ const uuid = (value) => /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valu
 const brl = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const ACTIVE_SUBSCRIPTION = new Set(["ACTIVE", "PAST_DUE", "TRIALING", "AUTHORIZED", "PENDING"]);
 
-export function promoInvestEnabled(env = process.env) {
-  return String(env.PROMO_QUER_INVESTIR_QUANTO_ENABLED ?? "true").toLowerCase() !== "false";
-}
+export { promoInvestEnabled };
 
 async function countPaidPromoPurchases(userId) {
   const { count, error } = await db.from(TABLE).select("id", { count: "exact", head: true })

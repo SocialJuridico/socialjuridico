@@ -494,3 +494,120 @@
     padding-right: 82px;
   }
 }
+
+/* Promoção "Quer Investir Quanto?" */
+.cycleTabsWithPromo {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.promoTab {
+  color: #8ee6bf;
+}
+
+.promoTab:hover {
+  color: #b4f2d6;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.promoTabActive {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(16, 185, 129, 0.14);
+  color: #b4f2d6;
+}
+
+.promoPanel {
+  display: flex;
+  gap: 18px;
+  padding: 26px;
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.1), transparent 45%),
+    rgba(255, 255, 255, 0.02);
+}
+
+.promoPanelIcon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #8ee6bf;
+}
+
+.promoPanelText {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.promoPanelText h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.25rem;
+}
+
+.promoPanelText p,
+.promoPanelText ul {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.promoPanelText ul {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 18px;
+}
+
+.promoPanelText strong {
+  color: #efd77c;
+}
+
+.promoPanelButton {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  margin-top: 4px;
+  padding: 12px 22px;
+  border: 1px solid #e7bd66;
+  border-radius: 11px;
+  background: #e7bd66;
+  color: #201909;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.promoPanelButton:hover {
+  background: #f0ca7a;
+}
+
+.promoPanelButton:focus-visible {
+  outline: 2px solid #e7bd66;
+  outline-offset: 3px;
+}
+
+@media (max-width: 560px) {
+  .cycleTabsWithPromo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .promoPanel {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .promoPanelButton {
+    align-self: stretch;
+    justify-content: center;
+  }
+}

@@ -32,7 +32,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
 import PromoInvestModal from "@/components/PromoInvestCheckout/PromoInvestModal";
-import { hasActiveLawyerPlan } from "@/lib/billing/promoInvest";
+import { usePromoInvestEligibility } from "@/components/PromoInvestCheckout/usePromoInvestEligibility";
 import { useLawyerSession } from "../LawyerSessionContext";
 import sidebarStyles from "./LawyerRouteSidebar.module.css";
 import styles from "./LawyerShell.module.css";
@@ -138,22 +138,12 @@ export default function LawyerRouteSidebar({ activeRoute }) {
 
   // Botão da promoção: só para quem está sem plano. Depois das 2 compras da
   // promoção, o mesmo botão leva ao checkout normal dos planos.
-  const hasActivePlan = hasActiveLawyerPlan(profileData);
-  const [promoInvest, setPromoInvest] = useState(null);
-  useEffect(() => {
-    if (!profileData?.id || hasActivePlan) return undefined;
-    let alive = true;
-    fetch("/api/checkout/quer-investir-quanto", { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((result) => { if (alive) setPromoInvest(result); })
-      .catch(() => { if (alive) setPromoInvest(null); });
-    return () => { alive = false; };
-  }, [profileData?.id, hasActivePlan]);
-  const showPromoInvest = !hasActivePlan && Boolean(promoInvest?.enabled);
+  const promoInvest = usePromoInvestEligibility(profileData);
+  const showPromoInvest = promoInvest.visible;
 
   function openPromoInvest() {
     closeSidebar();
-    if (promoInvest?.purchasesLeft > 0) setIsPromoInvestOpen(true);
+    if (promoInvest.canUsePromo) setIsPromoInvestOpen(true);
     else openPlansModal();
   }
 

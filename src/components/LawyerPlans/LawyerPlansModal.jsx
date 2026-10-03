@@ -2,13 +2,16 @@
 
 import {
   Check,
+  HandCoins,
   Loader2,
   LockKeyhole,
   Sparkles,
   TicketPercent,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { usePromoInvestEligibility } from "@/components/PromoInvestCheckout/usePromoInvestEligibility";
 
 import LawyerPlanCard from "./LawyerPlanCard";
 import { formatBRL } from "./planCatalog";
@@ -20,8 +23,15 @@ export default function LawyerPlansModal({
   profileData,
   onClose,
   onSelectPlan,
+  onSelectPromoInvest,
 }) {
   const closeRef = useRef(null);
+  // Aba da promoção "Quer Investir Quanto?": só para quem está sem plano e
+  // ainda tem compras da promoção disponíveis.
+  const promoInvest = usePromoInvestEligibility(profileData, isOpen);
+  const showPromoTab = Boolean(onSelectPromoInvest) && promoInvest.canUsePromo;
+  const [promoTabSelected, setPromoTabSelected] = useState(false);
+  const promoActive = showPromoTab && promoTabSelected;
   const controller = useLawyerPlans({
     isOpen,
     profileData,
@@ -105,7 +115,7 @@ export default function LawyerPlansModal({
             <div className={styles.controlGroup}>
               <span className={styles.controlLabel}>Forma de contratação</span>
               <div
-                className={styles.cycleTabs}
+                className={`${styles.cycleTabs} ${showPromoTab ? styles.cycleTabsWithPromo : ""}`}
                 role="tablist"
                 aria-label="Ciclo de cobrança"
               >
@@ -114,13 +124,16 @@ export default function LawyerPlansModal({
                     key={cycle.id}
                     type="button"
                     role="tab"
-                    aria-selected={controller.billingCycle === cycle.id}
+                    aria-selected={!promoActive && controller.billingCycle === cycle.id}
                     className={`${styles.cycleButton} ${
-                      controller.billingCycle === cycle.id
+                      !promoActive && controller.billingCycle === cycle.id
                         ? styles.cycleButtonActive
                         : ""
                     }`}
-                    onClick={() => controller.setBillingCycle(cycle.id)}
+                    onClick={() => {
+                      setPromoTabSelected(false);
+                      controller.setBillingCycle(cycle.id);
+                    }}
                   >
                     {cycle.label}
                     {cycle.id === "ANNUAL" && bestAnnualSaving > 0 && (
@@ -130,10 +143,24 @@ export default function LawyerPlansModal({
                     )}
                   </button>
                 ))}
+                {showPromoTab && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={promoActive}
+                    className={`${styles.cycleButton} ${styles.promoTab} ${
+                      promoActive ? styles.promoTabActive : ""
+                    }`}
+                    onClick={() => setPromoTabSelected(true)}
+                  >
+                    <HandCoins size={14} aria-hidden="true" />
+                    Quer Investir Quanto?
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className={styles.controlGroup}>
+            {!promoActive && <div className={styles.controlGroup}>
               <label
                 className={styles.controlLabel}
                 htmlFor="lawyer-plan-coupon"
@@ -204,9 +231,40 @@ export default function LawyerPlansModal({
                   </button>
                 </div>
               )}
-            </div>
+            </div>}
           </div>
 
+          {promoActive ? (
+            <div className={styles.promoPanel}>
+              <span className={styles.promoPanelIcon}>
+                <HandCoins size={22} aria-hidden="true" />
+              </span>
+              <div className={styles.promoPanelText}>
+                <h3>Quer Investir Quanto?</h3>
+                <p>
+                  Você escolhe quanto quer pagar e usa o <strong>Plano PRO por 30 dias</strong>,
+                  com os Juris do plano na sua carteira.
+                </p>
+                <ul>
+                  <li>Pagamento único via <strong>Pix</strong>, sem renovação automática.</li>
+                  <li>
+                    {promoInvest.purchasesLeft === 1
+                      ? "Você ainda pode usar a promoção mais 1 vez."
+                      : "Pode ser usada 2 vezes: 1º mês e uma renovação."}{" "}
+                    Do 3º mês em diante, vale o valor normal do plano.
+                  </li>
+                </ul>
+                <button
+                  type="button"
+                  className={styles.promoPanelButton}
+                  onClick={onSelectPromoInvest}
+                >
+                  <HandCoins size={17} aria-hidden="true" />
+                  Escolher meu valor
+                </button>
+              </div>
+            </div>
+          ) : (
           <div className={styles.planGrid}>
             {controller.planCards.map((plan) => (
               <LawyerPlanCard
@@ -218,6 +276,7 @@ export default function LawyerPlansModal({
               />
             ))}
           </div>
+          )}
 
           <p className={styles.securityNote}>
             <LockKeyhole size={13} aria-hidden="true" /> Pagamento processado em

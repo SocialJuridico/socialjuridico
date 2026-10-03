@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+import PromoInvestModal from "@/components/PromoInvestCheckout/PromoInvestModal";
 import StableTransparentCheckoutModal from "@/components/TransparentCheckout/StableTransparentCheckoutModal";
 
 import LawyerPlansModal from "./LawyerPlansModal";
@@ -13,6 +14,12 @@ export default function LawyerPlansModalHost({
   onProfileRefresh,
 }) {
   const [checkout, setCheckout] = useState(null);
+  const [isPromoInvestOpen, setIsPromoInvestOpen] = useState(false);
+
+  const handleSelectPromoInvest = useCallback(() => {
+    setIsPromoInvestOpen(true);
+    onClose?.();
+  }, [onClose]);
 
   const checkoutKey = useMemo(
     () =>
@@ -70,6 +77,13 @@ export default function LawyerPlansModalHost({
         profileData={profileData}
         onClose={onClose}
         onSelectPlan={handleSelectPlan}
+        onSelectPromoInvest={handleSelectPromoInvest}
+      />
+
+      <PromoInvestModal
+        isOpen={isPromoInvestOpen}
+        onClose={() => setIsPromoInvestOpen(false)}
+        onPaymentSuccess={onProfileRefresh}
       />
 
       <StableTransparentCheckoutModal key={checkoutKey} {...checkoutProps} />

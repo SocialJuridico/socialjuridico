@@ -6,3 +6,11 @@
 .inputWrap:focus-within { border-color: #e7bd66; }
 .inputWrap span { color: #f4d38e; font-size: 20px; font-weight: 700; }
 .input { flex: 1; min-width: 0; height: 58px; border: 0; background: transparent; color: #fafafa; font: inherit; font-size: 24px; font-weight: 700; outline: none; }
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.chip { min-height: 40px; padding: 8px 6px; border: 1px solid #3a3a3a; border-radius: 10px; background: #1b1b1b; color: #d4d4d4; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.chip[aria-pressed="true"] { border-color: #e7bd66; background: #2a2418; color: #f4d38e; }
+.chip:hover:not(:disabled) { background: #262626; }
+.chip:focus-visible { outline: 2px solid #e7bd66; outline-offset: 2px; }
+@media (max-width: 480px) {
+  .chips { grid-template-columns: repeat(2, 1fr); }
+}

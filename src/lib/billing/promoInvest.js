@@ -6,9 +6,9 @@ import { getLawyerPlan, getLawyerPlanPrice } from "./catalog";
 export const PROMO_INVEST_TYPE = "PROMO_INVEST";
 export const PROMO_INVEST_NAME = "Quer Investir Quanto?";
 export const PROMO_INVEST_MAX_PURCHASES = 2;
-export const PROMO_INVEST_MIN_CENTS = 100;
-// Teto no preço cheio do PRO avulso: acima disso a promoção não faz sentido.
-export const PROMO_INVEST_MAX_CENTS = getLawyerPlanPrice("PRO", "AVULSO").cents;
+// Valor livre: de R$ 0,01 a R$ 10.000.000.000,00 (em centavos).
+export const PROMO_INVEST_MIN_CENTS = 1;
+export const PROMO_INVEST_MAX_CENTS = 1_000_000_000_000;
 
 export function parsePromoInvestCents(value) {
   const normalized = typeof value === "string"

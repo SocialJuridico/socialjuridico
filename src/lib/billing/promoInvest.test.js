@@ -17,7 +17,10 @@ test("parses free amounts in BRL within the promo limits",()=>{
   expect(parsePromoInvestCents("25,50")).toBe(2550);
   expect(parsePromoInvestCents("25.50")).toBe(2550);
   expect(parsePromoInvestCents(10)).toBe(1000);
-  expect(parsePromoInvestCents("0,50")).toBeNull();
+  expect(parsePromoInvestCents("0,01")).toBe(1);
+  expect(parsePromoInvestCents("0,50")).toBe(50);
+  expect(parsePromoInvestCents("10.000.000.000,00")).toBe(1_000_000_000_000);
+  expect(parsePromoInvestCents("0")).toBeNull();
   expect(parsePromoInvestCents("-5")).toBeNull();
   expect(parsePromoInvestCents("abc")).toBeNull();
   expect(parsePromoInvestCents(PROMO_INVEST_MAX_CENTS/100+1)).toBeNull();
@@ -58,7 +61,7 @@ function mockDb({paidCount=0}={}) {
 
 test("rejects amounts outside the range before touching the provider",async()=>{
   mockDb();
-  await expect(createPromoInvestCheckout({id:"owner"},{requestId:id,amount:"0,10"})).rejects.toMatchObject({status:400});
+  await expect(createPromoInvestCheckout({id:"owner"},{requestId:id,amount:"0,00"})).rejects.toMatchObject({status:400});
   expect(createMercadoPagoOrder).not.toHaveBeenCalled();
 });
 

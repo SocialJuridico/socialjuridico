@@ -8,6 +8,7 @@ import {
 
 const TABLE = "billing_checkouts";
 const uuid = (value) => /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value || "");
+const brl = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 const ACTIVE_SUBSCRIPTION = new Set(["ACTIVE", "PAST_DUE", "TRIALING", "AUTHORIZED", "PENDING"]);
 
 export function promoInvestEnabled(env = process.env) {
@@ -77,7 +78,7 @@ export async function createPromoInvestCheckout(user, body) {
 
   const cents = parsePromoInvestCents(body.amount);
   if (!cents) {
-    throw checkoutError(`Informe um valor entre R$ ${(PROMO_INVEST_MIN_CENTS / 100).toFixed(2).replace(".", ",")} e R$ ${(PROMO_INVEST_MAX_CENTS / 100).toFixed(2).replace(".", ",")}.`, 400);
+    throw checkoutError(`Informe um valor entre ${brl(PROMO_INVEST_MIN_CENTS)} e ${brl(PROMO_INVEST_MAX_CENTS)}.`, 400);
   }
 
   if (body.replaceCheckoutId) {

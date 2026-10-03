@@ -15,7 +15,8 @@ const TERMINAL = ["expired", "cancelled", "canceled"];
 const money = (cents) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 
 function toCents(text) {
-  const digits = String(text || "").replace(/\D/g, "");
+  // 13 dígitos cobrem o teto de R$ 10.000.000.000,00.
+  const digits = String(text || "").replace(/\D/g, "").replace(/^0+/, "").slice(0, 13);
   return digits ? Number(digits) : 0;
 }
 

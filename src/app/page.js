@@ -31,11 +31,15 @@ import FAQ from "@/components/FAQ";
 import CTA from "@/components/CTA";
 import MobileNav from "@/components/MobileNav";
 import PartnershipPopup from "@/components/PartnershipPopup/PartnershipPopup";
+import BlackFridayPopup from "@/components/BlackFridayPopup/BlackFridayPopup";
+import { promoInvestEnabled } from "@/lib/billing/promoInvest";
 
 export default function Home() {
   return (
     <>
-      <PartnershipPopup />
+      {/* Durante a Black Friday o popup da promoção substitui o da parceria
+          OAB/RS na home, para não empilhar dois popups. */}
+      {promoInvestEnabled() ? <BlackFridayPopup /> : <PartnershipPopup />}
       <Header />
       <Hero />
       <Features />

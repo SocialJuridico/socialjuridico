@@ -2,11 +2,9 @@ import Link from "next/link";
 import { ArrowRight, CalendarClock, Coins, HandCoins, QrCode, ShieldCheck, Sparkles } from "lucide-react";
 
 import { getLawyerPlan } from "@/lib/billing/catalog";
-import { PROMO_INVEST_MAX_PURCHASES, PROMO_INVEST_MIN_CENTS } from "@/lib/billing/promoInvest";
+import { PROMO_INVEST_MAX_PURCHASES } from "@/lib/billing/promoInvest";
 import styles from "./BlackFridayPromo.module.css";
 
-const minPrice = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
-  .format(PROMO_INVEST_MIN_CENTS / 100);
 const proJuris = getLawyerPlan("PRO").juris;
 
 // Selo do topo da página que leva até a seção da Black Friday.
@@ -47,9 +45,9 @@ export default function BlackFridayPromo() {
           </p>
 
           <div className={styles.priceTag}>
-            <small>Plano PRO a partir de</small>
-            <strong>{minPrice}</strong>
-            <span>você escolhe o valor</span>
+            <small>Plano PRO na Black Friday</small>
+            <strong>Você escolhe o valor</strong>
+            <span>pague quanto quiser, direto no Pix</span>
           </div>
 
           <div className={styles.actions}>
@@ -73,7 +71,7 @@ export default function BlackFridayPromo() {
             <span className={styles.cardIcon}><QrCode size={22} aria-hidden="true" /></span>
             <div>
               <h3>Você escolhe o valor</h3>
-              <p>Pagamento único via Pix, a partir de {minPrice}. Sem cartão e sem renovação automática.</p>
+              <p>Você define quanto quer investir. Pagamento único via Pix, sem cartão e sem renovação automática.</p>
             </div>
           </li>
           <li className={styles.card}>

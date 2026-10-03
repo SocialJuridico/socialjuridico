@@ -34,7 +34,8 @@ test("promo product is a one-time 30-day PRO with the plan Juris",()=>{
 test("only two paid purchases and no active recurring subscription",()=>{
   expect(promoInvestBlockReason({},0)).toBeNull();
   expect(promoInvestBlockReason({},1)).toBeNull();
-  expect(promoInvestBlockReason({},2)).toMatch(/2 meses/);
+  expect(promoInvestBlockReason({},2)).toBeNull();
+  expect(promoInvestBlockReason({},3)).toMatch(/3 meses/);
   expect(promoInvestBlockReason({stripe_subscription_id:"sub_1",plan_billing_cycle:"MONTHLY",subscription_status:"ACTIVE"},0)).toMatch(/recorrente/);
   expect(promoInvestBlockReason({stripe_subscription_id:"sub_1",plan_billing_cycle:"MONTHLY",subscription_status:"CANCELED"},0)).toBeNull();
   expect(promoInvestBlockReason({oab_verification_status:"ERROR"},0)).toMatch(/OAB/);
@@ -76,8 +77,8 @@ test("rejects amounts outside the range before touching the provider",async()=>{
   expect(createMercadoPagoOrder).not.toHaveBeenCalled();
 });
 
-test("blocks a third purchase",async()=>{
-  const inserted=mockDb({paidCount:2});
+test("blocks a fourth purchase",async()=>{
+  const inserted=mockDb({paidCount:3});
   // 1ª consulta: tentativa existente (nenhuma); 2ª: perfil do advogado.
   db.from.mockImplementationOnce(()=>{const q={select:()=>q,eq:()=>q,maybeSingle:async()=>({data:null})};return q;})
     .mockImplementationOnce(()=>{const q={select:()=>q,eq:()=>q,maybeSingle:async()=>({data:{email:"a@example.invalid"},error:null})};return q;});

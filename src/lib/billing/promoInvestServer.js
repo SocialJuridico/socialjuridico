@@ -34,7 +34,7 @@ async function openPromoCheckout(userId) {
 export function promoInvestBlockReason(profile, paidCount) {
   if (profile?.oab_verification_status === "ERROR") return "Acesso restrito devido a pendências na OAB.";
   if (paidCount >= PROMO_INVEST_MAX_PURCHASES) {
-    return "Você já aproveitou os 2 meses da promoção. A partir de agora o plano PRO segue o valor normal.";
+    return `Você já aproveitou os ${PROMO_INVEST_MAX_PURCHASES} meses da promoção. A partir de agora o plano PRO segue o valor normal.`;
   }
   if (hasActiveLawyerPlan(profile)) {
     return "Você já tem um plano ativo. A promoção é para quem está sem plano; após o vencimento você poderá usá-la.";

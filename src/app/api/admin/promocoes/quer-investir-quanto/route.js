@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedAdmin } from "@/lib/adminAuth";
 import { supabaseAdmin } from "@/lib/supabase";
-import { PROMO_INVEST_TYPE } from "@/lib/billing/promoInvest";
+import { PROMO_INVEST_MAX_PURCHASES, PROMO_INVEST_TYPE } from "@/lib/billing/promoInvest";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,7 +54,8 @@ export async function GET() {
 
     const paid = items.filter((item) => item.status === "PAID");
     const buyers = new Set(paid.map((item) => item.lawyerId));
-    const renewals = new Set(paid.filter((item) => item.purchaseNumber === 2).map((item) => item.lawyerId));
+    const renewals = new Set(paid.filter((item) => item.purchaseNumber >= 2).map((item) => item.lawyerId));
+    const completed = new Set(paid.filter((item) => item.purchaseNumber >= PROMO_INVEST_MAX_PURCHASES).map((item) => item.lawyerId));
     const totalCents = paid.reduce((sum, item) => sum + item.amountCents, 0);
 
     return json({
@@ -62,6 +63,7 @@ export async function GET() {
       summary: {
         buyers: buyers.size,
         renewals: renewals.size,
+        completed: completed.size,
         confirmedPayments: paid.length,
         pendingPayments: items.filter((item) => item.status === "PENDING").length,
         totalCents,

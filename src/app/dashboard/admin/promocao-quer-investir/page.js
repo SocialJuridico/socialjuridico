@@ -119,7 +119,7 @@ export default function PromoQuerInvestirAdminPage() {
               <h1><HandCoins size={25} /> Quer Investir Quanto?</h1>
               <p>
                 Advogados que pagaram o valor que quiseram via Pix (Mercado Pago) pelo Plano PRO de 30 dias.
-                Limite de 2 compras por advogado.
+                Até 3 meses por advogado; do 4º mês em diante, valor cheio.
               </p>
             </div>
             <div className={styles.headerActions}>
@@ -157,9 +157,9 @@ export default function PromoQuerInvestirAdminPage() {
           <article className={styles.statCard}>
             <span className={styles.statIcon} data-tone="manual"><Repeat size={21} /></span>
             <div>
-              <span>Renovaram (2º mês)</span>
+              <span>Renovaram</span>
               <strong>{summary?.renewals || 0}</strong>
-              <small>no 3º mês pagam o valor cheio</small>
+              <small>{summary?.completed || 0} já usaram os 3 meses</small>
             </div>
           </article>
           <article className={styles.statCard}>

@@ -1,6 +1,6 @@
 -- Promoção "Quer Investir Quanto?": Pix avulso com valor livre que libera o
--- plano PRO por 30 dias e credita os Juris do PRO. Limitada a 2 compras pagas
--- por advogado (1º mês + 1 renovação); a partir do 3º mês vale o preço cheio.
+-- plano PRO por 30 dias e credita os Juris do PRO. Limitada a 3 compras pagas
+-- por advogado (limite aplicado no backend); a partir do 4º mês vale o preço cheio.
 -- Reutiliza billing_checkouts/billing_receipts do checkout híbrido.
 
 -- Só uma tentativa aberta da promoção por advogado.

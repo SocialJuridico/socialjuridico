@@ -254,10 +254,10 @@ export default function LawyerPlansModal({
                 <ul>
                   <li>Pagamento único via <strong>Pix</strong>, sem renovação automática.</li>
                   <li>
-                    {promoInvest.purchasesLeft === 1
-                      ? "Você ainda pode usar a promoção mais 1 vez."
-                      : "Pode ser usada 2 vezes: 1º mês e uma renovação."}{" "}
-                    Do 3º mês em diante, vale o valor normal do plano.
+                    {promoInvest.purchasesLeft < 3
+                      ? `Você ainda pode usar a promoção por mais ${promoInvest.purchasesLeft === 1 ? "1 mês" : `${promoInvest.purchasesLeft} meses`}.`
+                      : "Vale por até 3 meses."}{" "}
+                    Do 4º mês em diante, vale o valor normal do plano.
                   </li>
                 </ul>
                 <button

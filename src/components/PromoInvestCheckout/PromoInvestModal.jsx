@@ -189,7 +189,7 @@ function Checkout({ onClose, onPaymentSuccess }) {
               <ul className={styles.rules}>
                 <li>Pagamento único via <strong>Pix</strong>, sem renovação automática.</li>
                 <li>Libera o <strong>Plano PRO por 30 dias</strong> e os Juris do plano na sua carteira.</li>
-                <li>Pode ser usada <strong>{info.purchasesLeft === 1 ? "mais 1 vez" : "2 vezes"}</strong>: 1º mês e uma renovação. Do 3º mês em diante, vale o valor normal do plano.</li>
+                <li>Vale por <strong>até 3 meses</strong>{info.purchasesLeft < 3 ? <> (restam <strong>{info.purchasesLeft === 1 ? "1 mês" : `${info.purchasesLeft} meses`}</strong>)</> : null}. Do 4º mês em diante, vale o valor normal do plano.</li>
               </ul>
               <label className={styles.label} htmlFor="promo-invest-amount">Quanto você quer investir?</label>
               <div className={styles.inputWrap}>

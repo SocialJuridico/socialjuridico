@@ -153,8 +153,14 @@ export default function LawyerPlansModal({
                     }`}
                     onClick={() => setPromoTabSelected(true)}
                   >
-                    <HandCoins size={14} aria-hidden="true" />
-                    Quer Investir Quanto?
+                    <span className={styles.promoTabIcon}>
+                      <HandCoins size={17} aria-hidden="true" />
+                    </span>
+                    <span className={styles.promoTabText}>
+                      <strong>Quer Investir Quanto?</strong>
+                      <small>Pague quanto quiser pelo PRO · Pix</small>
+                    </span>
+                    <span className={styles.promoTabBadge}>Promoção</span>
                   </button>
                 )}
               </div>

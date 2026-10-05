@@ -5,6 +5,10 @@ import {
   ADVOCATE_SURVEY_COLUMNS,
   CLIENT_SURVEY_COLUMNS,
 } from "./reportUsageConfig";
+import {
+  loadHomeEventsViaSupabase,
+  loadTelemetryViaSupabase,
+} from "./reportUsageTelemetryFallback";
 
 export async function requireReportAdmin() {
   const auth = await getAuthenticatedAdmin();
@@ -12,12 +16,6 @@ export async function requireReportAdmin() {
   if (!auth.ok) {
     const error = new Error(auth.message);
     error.status = auth.status;
-    throw error;
-  }
-
-  if (!postgresPool) {
-    const error = new Error("Conexão de relatórios não configurada no servidor.");
-    error.status = 503;
     throw error;
   }
 
@@ -68,7 +66,7 @@ function ensureQuerySuccess(result, label) {
   }
 }
 
-async function loadTelemetry(period) {
+async function loadTelemetryViaPostgres(period) {
   const metricsPromise = postgresPool.query(
     `
       WITH metrics AS (
@@ -165,11 +163,12 @@ function isMissingConversionTable(error) {
   const message = String(error?.message || "").toLowerCase();
   return (
     error?.code === "42P01" ||
+    error?.code === "PGRST205" ||
     message.includes("public_conversion_events")
   );
 }
 
-async function loadHomeConversionAnalytics(period) {
+async function loadHomeEventsViaPostgres(period) {
   const homeViewsResult = await postgresPool.query(
     `
       SELECT
@@ -188,37 +187,75 @@ async function loadHomeConversionAnalytics(period) {
     [period],
   );
 
-  let eventRows = [];
-  let available = true;
+  const eventResult = await postgresPool.query(
+    `
+      SELECT
+        to_char(
+          date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo'),
+          'YYYY-MM-DD'
+        ) AS date,
+        count(*) FILTER (
+          WHERE event_name = 'hero_client_cta_click'
+        )::int AS client_clicks,
+        count(*) FILTER (
+          WHERE event_name = 'hero_lawyer_cta_click'
+        )::int AS lawyer_clicks
+      FROM public.public_conversion_events
+      WHERE path = '/'
+        AND created_at >= NOW() - ($1::int * INTERVAL '1 day')
+      GROUP BY date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo')
+      ORDER BY date ASC;
+    `,
+    [period],
+  ).catch((error) => {
+    if (isMissingConversionTable(error)) return null;
+    throw error;
+  });
 
-  try {
-    const eventResult = await postgresPool.query(
-      `
-        SELECT
-          to_char(
-            date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo'),
-            'YYYY-MM-DD'
-          ) AS date,
-          count(*) FILTER (
-            WHERE event_name = 'hero_client_cta_click'
-          )::int AS client_clicks,
-          count(*) FILTER (
-            WHERE event_name = 'hero_lawyer_cta_click'
-          )::int AS lawyer_clicks
-        FROM public.public_conversion_events
-        WHERE path = '/'
-          AND created_at >= NOW() - ($1::int * INTERVAL '1 day')
-        GROUP BY date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo')
-        ORDER BY date ASC;
-      `,
-      [period],
-    );
+  return {
+    homeViewRows: homeViewsResult.rows || [],
+    eventRows: eventResult?.rows || null,
+  };
+}
 
-    eventRows = eventResult.rows || [];
-  } catch (error) {
-    if (!isMissingConversionTable(error)) throw error;
-    available = false;
+// Tenta a conexão Postgres direta e, se ela não existir ou falhar
+// (DATABASE_URL ausente, SSL, rede), recalcula os dados via Supabase.
+async function withSupabaseFallback(label, viaPostgres, viaSupabase) {
+  if (postgresPool) {
+    try {
+      return await viaPostgres();
+    } catch (error) {
+      console.error(
+        `[Admin/Reports/Usage] ${label} via Postgres falhou; usando Supabase:`,
+        error,
+      );
+    }
   }
+
+  return viaSupabase();
+}
+
+async function loadTelemetry(db, period) {
+  return withSupabaseFallback(
+    "Telemetria",
+    () => loadTelemetryViaPostgres(period),
+    () => loadTelemetryViaSupabase(db, period),
+  );
+}
+
+async function loadHomeConversionAnalytics(db, period) {
+  const { homeViewRows, eventRows: rawEventRows } = await withSupabaseFallback(
+    "Conversão da home",
+    () => loadHomeEventsViaPostgres(period),
+    () =>
+      loadHomeEventsViaSupabase(db, period).catch((error) => {
+        if (!isMissingConversionTable(error)) throw error;
+        return loadHomeEventsViaSupabase(db, period, { skipEvents: true });
+      }),
+  );
+
+  const available = Array.isArray(rawEventRows);
+  const eventRows = rawEventRows || [];
 
   const valuesByDate = new Map();
 
@@ -236,7 +273,7 @@ async function loadHomeConversionAnalytics(period) {
     return valuesByDate.get(date);
   }
 
-  (homeViewsResult.rows || []).forEach((row) => {
+  homeViewRows.forEach((row) => {
     ensureDate(row.date).homeViews = Number(row.home_views) || 0;
   });
 
@@ -317,8 +354,8 @@ export async function buildUsageReportData(auth, options) {
     advocateSurveysResult,
     clientSurveysResult,
   ] = await Promise.all([
-    loadTelemetry(options.period),
-    loadHomeConversionAnalytics(options.period),
+    loadTelemetry(db, options.period),
+    loadHomeConversionAnalytics(db, options.period),
     totalLawyersPromise,
     totalClientsPromise,
     usagePromise,
